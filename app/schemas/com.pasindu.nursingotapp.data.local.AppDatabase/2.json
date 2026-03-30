@@ -1,0 +1,222 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "8241a8e74a4c2df8c0dfb478aabe5f73",
+    "entities": [
+      {
+        "tableName": "profile",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `fullName` TEXT NOT NULL, `serviceNo` TEXT NOT NULL, `unit` TEXT NOT NULL, `paySheetNo` TEXT NOT NULL, `grade` TEXT NOT NULL, `basicSalary` REAL NOT NULL, `otRate` REAL NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullName",
+            "columnName": "fullName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serviceNo",
+            "columnName": "serviceNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unit",
+            "columnName": "unit",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paySheetNo",
+            "columnName": "paySheetNo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grade",
+            "columnName": "grade",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "basicSalary",
+            "columnName": "basicSalary",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otRate",
+            "columnName": "otRate",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "claim_period",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startDate` TEXT NOT NULL, `endDate` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `wardType` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDate",
+            "columnName": "startDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDate",
+            "columnName": "endDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wardType",
+            "columnName": "wardType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "daily_entry",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `claimPeriodId` INTEGER NOT NULL, `date` TEXT NOT NULL, `isPH` INTEGER NOT NULL, `isDO` INTEGER NOT NULL, `isLeave` INTEGER NOT NULL, `leaveType` TEXT, `normalTimeIn` TEXT NOT NULL, `normalTimeOut` TEXT NOT NULL, `normalHours` REAL NOT NULL, `otTimeIn` TEXT NOT NULL, `otTimeOut` TEXT NOT NULL, `otHours` REAL NOT NULL, `wardOverride` TEXT NOT NULL, `reason` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "claimPeriodId",
+            "columnName": "claimPeriodId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPH",
+            "columnName": "isPH",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDO",
+            "columnName": "isDO",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isLeave",
+            "columnName": "isLeave",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leaveType",
+            "columnName": "leaveType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "normalTimeIn",
+            "columnName": "normalTimeIn",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalTimeOut",
+            "columnName": "normalTimeOut",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalHours",
+            "columnName": "normalHours",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otTimeIn",
+            "columnName": "otTimeIn",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otTimeOut",
+            "columnName": "otTimeOut",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otHours",
+            "columnName": "otHours",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wardOverride",
+            "columnName": "wardOverride",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8241a8e74a4c2df8c0dfb478aabe5f73')"
+    ]
+  }
+}
