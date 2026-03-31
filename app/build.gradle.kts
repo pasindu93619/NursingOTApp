@@ -43,19 +43,20 @@ android {
     }
 }
 
-// MOVED HERE: ksp block is a top-level configuration
+// Top-level KSP configuration for Room schema exports
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
+    // ─── Core Android & Lifecycle ───
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
+    // ─── Jetpack Compose (Managed by BOM) ───
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -63,42 +64,43 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
 
-    // Room
+    // Premium Material Icons (Version is managed automatically by the BOM)
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // ─── Room Database & Coroutines ───
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // PDF / Printing
+    // ─── PDF / Printing ───
     implementation(libs.androidx.print)
 
-    // Testing
+    // ─── UI Libraries (Lottie & Vico Charts) ───
+    implementation("com.airbnb.android:lottie-compose:6.4.0")
+
+    val vicoVersion = "1.13.0"
+    implementation("com.patrykandpatrick.vico:compose:$vicoVersion")
+    implementation("com.patrykandpatrick.vico:compose-m3:$vicoVersion")
+    implementation("com.patrykandpatrick.vico:core:$vicoVersion") // Fixed from core-model
+
+    // ─── CameraX for AR Split Screen Sync ───
+    val cameraxVersion = "1.4.0"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // ─── Unit & UI Testing ───
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-// Lottie for mind-blowing vector animations
-    implementation("com.airbnb.android:lottie-compose:6.4.0")
+
+    // ─── Debug Tooling ───
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // CameraX for AR Split Screen Sync
-    // Upgraded to 1.4.0 to fix the Android 15 16KB Page Size Error
-    val camerax_version = "1.4.0"
-    implementation("androidx.camera:camera-core:$camerax_version")
-    implementation("androidx.camera:camera-camera2:$camerax_version")
-    implementation("androidx.camera:camera-lifecycle:$camerax_version")
-    implementation("androidx.camera:camera-view:$camerax_version")
-    implementation("com.airbnb.android:lottie-compose:6.4.0")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.patrykandpatrick.vico:compose:1.13.0") // Or latest stable version
-    implementation("com.patrykandpatrick.vico:compose-m3:1.13.0")
-    implementation("com.patrykandpatrick.vico:core:1.13.0")
-    implementation("com.patrykandpatrick.vico:core-model:1.13.0")
-    implementation("com.patrykandpatrick.vico:compose:1.13.0") // Or latest stable version
-    implementation("com.patrykandpatrick.vico:compose-m3:1.13.0")
-    implementation("com.patrykandpatrick.vico:core:1.13.0")
 }
