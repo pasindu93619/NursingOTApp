@@ -1,17 +1,21 @@
 package com.pasindu.nursingotapp.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,13 +47,24 @@ data class SyringePumpState(
     val timeHours: Int = 0,
     val timeMinutes: Int = 0,
     val isRunning: Boolean = false,
-    val infusionProgress: Float = 0.0f // 0f = full, 1f = empty
+    val infusionProgress: Float = 0.0f
 )
 
-// Premium "Cool Tech Blue" Palette
+data class ClinicalProtocol(val name: String, val drugMg: String, val volumeMl: String, val defaultTarget: String)
+
+val standardProtocols = listOf(
+    ClinicalProtocol("Noradrenaline", "4", "50", "0.1"),
+    ClinicalProtocol("Adrenaline", "3", "50", "0.1"),
+    ClinicalProtocol("Dopamine", "200", "50", "5.0"),
+    ClinicalProtocol("Custom", "", "50", "")
+)
+
+// UX Blueprint Mandated Palette
 private val TechBluePrimary = Color(0xFF0277BD)
 private val TechBlueLight = Color(0xFFE1F5FE)
 private val BgSlateWhite = Color(0xFFF4F7FA)
+private val AlertCrimson = Color(0xFFD32F2F)
+private val AlertRubyBg = Color(0xFFFFEBEE)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN SCREEN
@@ -59,10 +74,12 @@ private val BgSlateWhite = Color(0xFFF4F7FA)
 fun VasoactiveInfusionsScreen(
     onNavigateBack: () -> Unit
 ) {
+    var selectedProtocol by remember { mutableStateOf(standardProtocols[0]) }
+
     var weight by remember { mutableStateOf("60") }
-    var drugAmountMg by remember { mutableStateOf("4") }
-    var volumeMl by remember { mutableStateOf("50") }
-    var targetDoseMcgKgMin by remember { mutableStateOf("0.1") }
+    var drugAmountMg by remember { mutableStateOf(selectedProtocol.drugMg) }
+    var volumeMl by remember { mutableStateOf(selectedProtocol.volumeMl) }
+    var targetDoseMcgKgMin by remember { mutableStateOf(selectedProtocol.defaultTarget) }
 
     // Calculation Engine
     val weightNum = weight.toFloatOrNull() ?: 0f
@@ -144,61 +161,94 @@ fun VasoactiveInfusionsScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            // ─── EMERGENCY PROTOCOL QUICK-SELECT ───
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+            ) {
+                items(standardProtocols) { protocol ->
+                    val isSelected = selectedProtocol == protocol
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            selectedProtocol = protocol
+                            drugAmountMg = protocol.drugMg
+                            volumeMl = protocol.volumeMl
+                            targetDoseMcgKgMin = protocol.defaultTarget
+                        },
+                        label = { Text(protocol.name, fontWeight = FontWeight.Bold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = TechBluePrimary,
+                            selectedLabelColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = TechBluePrimary
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // ─── PREMIUM GLASSMORPHISM INPUT DASHBOARD ───
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = TechBluePrimary.copy(alpha = 0.5f)),
+                    .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = TechBluePrimary.copy(alpha = 0.4f)),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(28.dp)
+                shape = RoundedCornerShape(24.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .background(Brush.linearGradient(listOf(Color.White, TechBlueLight.copy(alpha = 0.3f))))
-                        .padding(24.dp),
+                        .background(Brush.linearGradient(listOf(Color.White, TechBlueLight.copy(alpha = 0.4f))))
+                        .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        ClinicalInputField(
-                            value = weight,
-                            onValueChange = { weight = it },
-                            label = "Weight (kg)",
-                            icon = Icons.Default.Person,
-                            modifier = Modifier.weight(1f),
-                            enabled = !pumpState.isRunning
-                        )
-                        ClinicalInputField(
-                            value = drugAmountMg,
-                            onValueChange = { drugAmountMg = it },
-                            label = "Drug (mg)",
-                            icon = Icons.Default.MedicalServices,
-                            modifier = Modifier.weight(1f),
-                            enabled = !pumpState.isRunning
-                        )
+                        ClinicalInputField(value = weight, onValueChange = { weight = it }, label = "Weight (kg)", icon = Icons.Default.Person, modifier = Modifier.weight(1f), enabled = !pumpState.isRunning)
+                        ClinicalInputField(value = drugAmountMg, onValueChange = { drugAmountMg = it }, label = "Drug (mg)", icon = Icons.Default.MedicalServices, modifier = Modifier.weight(1f), enabled = !pumpState.isRunning)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        ClinicalInputField(
-                            value = volumeMl,
-                            onValueChange = { volumeMl = it },
-                            label = "Diluent (ml)",
-                            icon = Icons.Default.WaterDrop,
-                            modifier = Modifier.weight(1f),
-                            enabled = !pumpState.isRunning
-                        )
-                        ClinicalInputField(
-                            value = targetDoseMcgKgMin,
-                            onValueChange = { targetDoseMcgKgMin = it },
-                            label = "Target (mcg)",
-                            icon = Icons.Default.Speed,
-                            modifier = Modifier.weight(1f),
-                            enabled = !pumpState.isRunning,
-                            isHighlight = true
-                        )
+                        ClinicalInputField(value = volumeMl, onValueChange = { volumeMl = it }, label = "Diluent (ml)", icon = Icons.Default.WaterDrop, modifier = Modifier.weight(1f), enabled = !pumpState.isRunning)
+                        ClinicalInputField(value = targetDoseMcgKgMin, onValueChange = { targetDoseMcgKgMin = it }, label = "Target (mcg)", icon = Icons.Default.Speed, modifier = Modifier.weight(1f), enabled = !pumpState.isRunning, isHighlight = true)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // ─── DYNAMIC CLINICAL SAFETY WARNING ───
+            // Blueprint Mandate: High-stakes clinical warnings must use Crimson/Ruby backgrounds
+            AnimatedVisibility(
+                visible = calculatedRateMlHr > 20f && !pumpState.isRunning,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                        .border(1.5.dp, AlertCrimson.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = AlertRubyBg),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Warning, contentDescription = "Warning", tint = AlertCrimson, modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("High Infusion Rate Alert", color = AlertCrimson, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text("Calculated rate is ${"%.1f".format(calculatedRateMlHr)} ml/h. Please verify concentration and target dose before starting.", color = AlertCrimson.copy(alpha = 0.8f), fontSize = 12.sp, lineHeight = 16.sp)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // ─── 3D HARDWARE PUMP VISUALIZATION ───
             Box(
@@ -220,7 +270,7 @@ fun VasoactiveInfusionsScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     val isRunning = pumpState.isRunning
-                    val buttonGlow = if (isRunning) Color(0xFFFF1744) else Color(0xFF00E676)
+                    val buttonGlow = if (isRunning) AlertCrimson else Color(0xFF00E676)
 
                     Box(
                         modifier = Modifier
@@ -230,7 +280,7 @@ fun VasoactiveInfusionsScreen(
                             .clip(RoundedCornerShape(32.dp))
                             .background(
                                 Brush.horizontalGradient(
-                                    if (isRunning) listOf(Color(0xFFD32F2F), Color(0xFFB71C1C))
+                                    if (isRunning) listOf(AlertCrimson, Color(0xFFB71C1C))
                                     else listOf(Color(0xFF00C853), Color(0xFF009624))
                                 )
                             )
@@ -297,8 +347,8 @@ fun ClinicalInputField(
             focusedBorderColor = TechBluePrimary,
             unfocusedBorderColor = Color(0xFFE2E8F0),
             focusedLabelColor = TechBluePrimary,
-            unfocusedContainerColor = Color(0xFFF8FAFC),
-            focusedContainerColor = TechBlueLight.copy(alpha = 0.1f)
+            unfocusedContainerColor = Color(0xAAFFFFFF),
+            focusedContainerColor = TechBlueLight.copy(alpha = 0.2f)
         )
     )
 }
@@ -380,7 +430,7 @@ fun SyringePumpPerfectLive(
             val statusColor = if (blink) Color(0xFF00FF88) else DisplayWhite
             drawText(textMeasurer, "▶ INFUSING", Offset(textLeft, textTop + dispH * 0.75f), style = textStyle.copy(color = statusColor))
         } else {
-            drawText(textMeasurer, "■ STOPPED", Offset(textLeft, textTop + dispH * 0.75f), style = textStyle.copy(color = Color(0xFFFF4444)))
+            drawText(textMeasurer, "■ STOPPED", Offset(textLeft, textTop + dispH * 0.75f), style = textStyle.copy(color = AlertCrimson))
         }
 
         // ── Numpad ────────────────────────────────
@@ -439,7 +489,7 @@ fun SyringePumpPerfectLive(
         val redX = arrowRX + arrowSize + w*0.06f
         val greenX = redX + btnR*2f + btnGap
 
-        val activeRed = if (!state.isRunning) Color(0xFFFF1744) else Color(0xFF6A0D22)
+        val activeRed = if (!state.isRunning) AlertCrimson else Color(0xFF6A0D22)
         val activeGreen = if (state.isRunning) Color(0xFF00E676) else Color(0xFF134E2C)
         drawCircle(activeRed, btnR, Offset(redX, btnY))
         drawCircle(activeGreen, btnR, Offset(greenX, btnY))

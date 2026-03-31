@@ -1,4 +1,3 @@
-// com/pasindu/nursingotapp/ui/navigation/AppNavigation.kt
 package com.pasindu.nursingotapp.ui.navigation
 
 import android.net.Uri
@@ -34,7 +33,7 @@ import com.pasindu.nursingotapp.ui.screens.UnitConversionsScreen
 import com.pasindu.nursingotapp.ui.screens.SpecialCalculationsScreen
 import com.pasindu.nursingotapp.ui.screens.EmergencyCalculatorsScreen
 import com.pasindu.nursingotapp.ui.screens.IcuCalculatorsScreen
-import com.pasindu.nursingotapp.ui.screens.VasoactiveInfusionsScreen // NEW: Import the Vasoactive Screen
+import com.pasindu.nursingotapp.ui.screens.VasoactiveInfusionsScreen
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -140,19 +139,22 @@ fun AppNavigation() {
             SpecialCalculationsScreen()
         }
 
+        // ✅ THE FIX IS HERE: We added the required back parameter
         composable("emergency_calcs") {
-            EmergencyCalculatorsScreen()
+            EmergencyCalculatorsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         // --- ICU CALCULATORS MENU & SUB-ROUTES ---
         composable("icu_calcs") {
             IcuCalculatorsScreen(
-                onNavigateToVasoactive = { navController.navigate("vasoactive_infusions") }, // NEW: Parameter passed
+                onNavigateToVasoactive = { navController.navigate("vasoactive_infusions") },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        composable("vasoactive_infusions") { // NEW: Destination registered
+        composable("vasoactive_infusions") {
             VasoactiveInfusionsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
