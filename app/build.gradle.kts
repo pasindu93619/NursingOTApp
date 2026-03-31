@@ -94,4 +94,11 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax_version")
     implementation("com.airbnb.android:lottie-compose:6.4.0")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.patrykandpatrick.vico:compose:1.13.0") // Or latest stable version
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.0")
+    implementation("com.patrykandpatrick.vico:core:1.13.0")
+    implementation("com.patrykandpatrick.vico:core-model:1.13.0")
+    implementation("com.patrykandpatrick.vico:compose:1.13.0") // Or latest stable version
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.0")
+    implementation("com.patrykandpatrick.vico:core:1.13.0")
 }

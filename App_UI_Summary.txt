@@ -1,0 +1,1434 @@
+===== APP UI SUMMARY =====
+
+?? COLOR PALETTE:
+AnalyticsScreen.kt | Line 545 | Color(0xFF2196F3)
+AnalyticsScreen.kt | Line 553 | Color(0xFFE91E63)
+AnalyticsScreen.kt | Line 58 | Color(0xFFFFCA28)
+AnalyticsScreen.kt | Line 59 | Color(0xFFAB47BC)
+AnalyticsScreen.kt | Line 592 | Color(0xFF1E88E5)
+AnalyticsScreen.kt | Line 60 | Color(0xFF42A5F5)
+AnalyticsScreen.kt | Line 605 | Color(0xFF8E24AA)
+BsaCalculatorScreen.kt | Line 261 | Color(0xFFFFEBEE)
+BsaCalculatorScreen.kt | Line 264 | Color(0xFFEF5350)
+BsaCalculatorScreen.kt | Line 266 | Color(0xFFC62828)
+BsaCalculatorScreen.kt | Line 269 | Color(0xFFB71C1C)
+BsaCalculatorScreen.kt | Line 38 | Color(0xFFC2185B)
+BsaCalculatorScreen.kt | Line 39 | Color(0xFFF48FB1)
+BsaCalculatorScreen.kt | Line 40 | Color(0xFFE91E63)
+BsaCalculatorScreen.kt | Line 41 | Color(0xFFF8BBD0)
+BurnoutMeterCard.kt | Line 39 | Color(0xFF4CAF50)
+BurnoutMeterCard.kt | Line 40 | Color(0xFFFFC107)
+BurnoutMeterCard.kt | Line 41 | Color(0xFFF44336)
+BurnoutMeterCard.kt | Line 42 | Color(0xFFE0E0E0)
+ClinicalToolsScreen.kt | Line 101 | Color(0xFF5E35B1)
+ClinicalToolsScreen.kt | Line 110 | Color(0xFFD32F2F)
+ClinicalToolsScreen.kt | Line 119 | Color(0xFF00BCD4)
+ClinicalToolsScreen.kt | Line 128 | Color(0xFFD0BCFF)
+ClinicalToolsScreen.kt | Line 137 | Color(0xFF26A69A)
+ClinicalToolsScreen.kt | Line 146 | Color(0xFFF48FB1)
+ClinicalToolsScreen.kt | Line 155 | Color(0xFFFFB74D)
+ClinicalToolsScreen.kt | Line 83 | Color(0xFFE53935)
+ClinicalToolsScreen.kt | Line 92 | Color(0xFF001945)
+Color.kt | Line 10 | Color(0xFF001945)
+Color.kt | Line 12 | Color(0xFF0EA5E9)
+Color.kt | Line 13 | Color(0xFFFFFFFF)
+Color.kt | Line 14 | Color(0xFFBAE6FD)
+Color.kt | Line 15 | Color(0xFF001F2A)
+Color.kt | Line 17 | Color(0xFF6366F1)
+Color.kt | Line 18 | Color(0xFFFFFFFF)
+Color.kt | Line 19 | Color(0xFFE0E7FF)
+Color.kt | Line 20 | Color(0xFF11133C)
+Color.kt | Line 22 | Color(0xFFEF4444)
+Color.kt | Line 23 | Color(0xFFFEE2E2)
+Color.kt | Line 24 | Color(0xFFFFFFFF)
+Color.kt | Line 25 | Color(0xFF410002)
+Color.kt | Line 27 | Color(0xFFF8FAFC)
+Color.kt | Line 28 | Color(0xFF0F172A)
+Color.kt | Line 29 | Color(0xFFFFFFFF)
+Color.kt | Line 30 | Color(0xFF0F172A)
+Color.kt | Line 31 | Color(0xFFF1F5F9)
+Color.kt | Line 32 | Color(0xFF475569)
+Color.kt | Line 33 | Color(0xFF94A3B8)
+Color.kt | Line 7 | Color(0xFF2563EB)
+Color.kt | Line 8 | Color(0xFFFFFFFF)
+Color.kt | Line 9 | Color(0xFFD6E4FF)
+DailyEntryScreen.kt | Line 379 | Color(0xFF1B5E20)
+DailyEntryScreen.kt | Line 383 | Color(0xFF0D47A1)
+DailyEntryScreen.kt | Line 388 | Color(0xFFC62828)
+DailyEntryScreen.kt | Line 59 | Color(0xFFFFE0B2)
+DailyEntryScreen.kt | Line 60 | Color(0xFFE8EAF6)
+DailyEntryScreen.kt | Line 61 | Color(0xFFEF9A9A)
+DailyEntryScreen.kt | Line 62 | Color(0xFFFFF59D)
+DailyEntryScreen.kt | Line 63 | Color(0xFFC8E6C9)
+DailyEntryScreen.kt | Line 64 | Color(0xFFE0E0E0)
+DailyEntryScreen.kt | Line 65 | Color(0xFFBBDEFB)
+DosageCalculatorScreen.kt | Line 47 | Color(0xFF6650a4)
+DosageCalculatorScreen.kt | Line 48 | Color(0xFFD0BCFF)
+DosageCalculatorScreen.kt | Line 49 | Color(0xFF7D5260)
+DosageCalculatorScreen.kt | Line 50 | Color(0xFFEFB8C8)
+DosageCalculatorScreen.kt | Line 51 | Color(0xFF29B6F6)
+DosageCalculatorScreen.kt | Line 52 | Color(0xFF81D4FA)
+DosageCalculatorScreen.kt | Line 53 | Color(0xFF26A69A)
+DosageCalculatorScreen.kt | Line 54 | Color(0xFF80CBC4)
+DosageCalculatorScreen.kt | Line 699 | Color(0xFFFFEBEE)
+DosageCalculatorScreen.kt | Line 700 | Color(0xFFEF5350)
+DosageCalculatorScreen.kt | Line 705 | Color(0xFFEF5350)
+DosageCalculatorScreen.kt | Line 709 | Color(0xFFC62828)
+DosageCalculatorScreen.kt | Line 712 | Color(0xFFB71C1C)
+EmergencyCalculatorsScreen.kt | Line 100 | Color(0xFF4CAF50)
+EmergencyCalculatorsScreen.kt | Line 1007 | Color(0x8090A4AE)
+EmergencyCalculatorsScreen.kt | Line 101 | Color(0xFFE91E63)
+EmergencyCalculatorsScreen.kt | Line 1010 | Color(0xFF607D8B)
+EmergencyCalculatorsScreen.kt | Line 1011 | Color(0xFFE0F2F1)
+EmergencyCalculatorsScreen.kt | Line 1018 | Color(0xFF263238)
+EmergencyCalculatorsScreen.kt | Line 1019 | Color(0xFF1A2E35)
+EmergencyCalculatorsScreen.kt | Line 102 | Color(0xFF2196F3)
+EmergencyCalculatorsScreen.kt | Line 1020 | Color(0xFF00E676)
+EmergencyCalculatorsScreen.kt | Line 1039 | Color(0xFF4CAF50)
+EmergencyCalculatorsScreen.kt | Line 1040 | Color(0xFFF44336)
+EmergencyCalculatorsScreen.kt | Line 1049 | Color(0xFF546E7A)
+EmergencyCalculatorsScreen.kt | Line 1050 | Color(0xFF37474F)
+EmergencyCalculatorsScreen.kt | Line 1051 | Color(0x8090A4AE)
+EmergencyCalculatorsScreen.kt | Line 193 | Color(0xFF5E35B1)
+EmergencyCalculatorsScreen.kt | Line 398 | Color(0xFFF0F8FF)
+EmergencyCalculatorsScreen.kt | Line 399 | Color(0xFFF3E5F5)
+EmergencyCalculatorsScreen.kt | Line 403 | Color(0xFFE0F7FA)
+EmergencyCalculatorsScreen.kt | Line 404 | Color(0xFFFFF0F5)
+EmergencyCalculatorsScreen.kt | Line 408 | Color(0xFFE8F5E9)
+EmergencyCalculatorsScreen.kt | Line 409 | Color(0xFFFFF3E0)
+EmergencyCalculatorsScreen.kt | Line 428 | Color(0xFF00E676)
+EmergencyCalculatorsScreen.kt | Line 75 | Color(0xFFF4F7FB)
+EmergencyCalculatorsScreen.kt | Line 76 | Color(0xFF1E293B)
+EmergencyCalculatorsScreen.kt | Line 77 | Color(0xFF64748B)
+EmergencyCalculatorsScreen.kt | Line 782 | Color(0xFFCFD8DC)
+EmergencyCalculatorsScreen.kt | Line 785 | Color(0xFFB0BEC5)
+EmergencyCalculatorsScreen.kt | Line 786 | Color(0xFF90A4AE)
+EmergencyCalculatorsScreen.kt | Line 79 | Color(0xFFFF5252)
+EmergencyCalculatorsScreen.kt | Line 791 | Color(0xFF90A4AE)
+EmergencyCalculatorsScreen.kt | Line 794 | Color(0xFF78909C)
+EmergencyCalculatorsScreen.kt | Line 799 | Color(0xFF263238)
+EmergencyCalculatorsScreen.kt | Line 80 | Color(0xFFD32F2F)
+EmergencyCalculatorsScreen.kt | Line 81 | Color(0xFFFFB74D)
+EmergencyCalculatorsScreen.kt | Line 816 | Color(0xFF90A4AE)
+EmergencyCalculatorsScreen.kt | Line 82 | Color(0xFFF57C00)
+EmergencyCalculatorsScreen.kt | Line 822 | Color(0xFF64B5F6)
+EmergencyCalculatorsScreen.kt | Line 83 | Color(0xFFCE93D8)
+EmergencyCalculatorsScreen.kt | Line 834 | Color(0xFF1E293B)
+EmergencyCalculatorsScreen.kt | Line 84 | Color(0xFF8E24AA)
+EmergencyCalculatorsScreen.kt | Line 85 | Color(0xFF4DD0E1)
+EmergencyCalculatorsScreen.kt | Line 86 | Color(0xFF0097A6)
+EmergencyCalculatorsScreen.kt | Line 87 | Color(0xFF64B5F6)
+EmergencyCalculatorsScreen.kt | Line 872 | Color(0xFFCFD8DC)
+EmergencyCalculatorsScreen.kt | Line 873 | Color(0xFF90A4AE)
+EmergencyCalculatorsScreen.kt | Line 877 | Color(0xFFBDBDBD)
+EmergencyCalculatorsScreen.kt | Line 88 | Color(0xFF1976D2)
+EmergencyCalculatorsScreen.kt | Line 90 | Color(0xFF00E5FF)
+EmergencyCalculatorsScreen.kt | Line 91 | Color(0xFFFF00FF)
+EmergencyCalculatorsScreen.kt | Line 920 | Color(0xFF9E9E9E)
+EmergencyCalculatorsScreen.kt | Line 924 | Color(0xFF9E9E9E)
+EmergencyCalculatorsScreen.kt | Line 93 | Color(0xFFF8FAFC)
+EmergencyCalculatorsScreen.kt | Line 94 | Color(0xFFE2E8F0)
+EmergencyCalculatorsScreen.kt | Line 940 | Color(0xFF607D8B)
+EmergencyCalculatorsScreen.kt | Line 95 | Color(0xFFCBD5E1)
+EmergencyCalculatorsScreen.kt | Line 951 | Color(0xFFB0BEC5)
+EmergencyCalculatorsScreen.kt | Line 963 | Color(0xFF90A4AE)
+EmergencyCalculatorsScreen.kt | Line 971 | Color(0xFF1E88E5)
+EmergencyCalculatorsScreen.kt | Line 973 | Color(0xFF0D47A1)
+EmergencyCalculatorsScreen.kt | Line 975 | Color(0xFFB0BEC5)
+EmergencyCalculatorsScreen.kt | Line 98 | Color(0xFFFF9800)
+EmergencyCalculatorsScreen.kt | Line 983 | Color(0x72B2EBF2)
+EmergencyCalculatorsScreen.kt | Line 984 | Color(0xFF80DEEA)
+EmergencyCalculatorsScreen.kt | Line 99 | Color(0xFF9E9E9E)
+EmergencyCalculatorsScreen.kt | Line 995 | Color(0xFF80CBC4)
+HomeScreen.kt | Line 153 | Color(0xFF64B5F6)
+HomeScreen.kt | Line 157 | Color(0xFFBA68C8)
+HomeScreen.kt | Line 161 | Color(0xFF4DD0E1)
+HomeScreen.kt | Line 212 | Color(0xFF00BCD4)
+HomeScreen.kt | Line 220 | Color(0xFF1E293B)
+HomeScreen.kt | Line 221 | Color(0xFF64748B)
+HomeScreen.kt | Line 243 | Color(0xFFF1F5F9)
+HomeScreen.kt | Line 246 | Color(0xFF64748B)
+HomeScreen.kt | Line 70 | Color(0xFF1E88E5)
+HomeScreen.kt | Line 71 | Color(0xFF8E24AA)
+HomeScreen.kt | Line 72 | Color(0xFF43A047)
+HomeScreen.kt | Line 73 | Color(0xFFE53935)
+HomeScreen.kt | Line 74 | Color(0xFFF57C00)
+HomeScreen.kt | Line 78 | Color(0xFFF8FAFC)
+HomeScreen.kt | Line 99 | Color(0xFF1E293B)
+IcuCalculatorsScreen.kt | Line 105 | Color(0xFFF57C00)
+IcuCalculatorsScreen.kt | Line 114 | Color(0xFF1E88E5)
+IcuCalculatorsScreen.kt | Line 123 | Color(0xFF43A047)
+IcuCalculatorsScreen.kt | Line 75 | Color(0xFFD32F2F)
+IcuCalculatorsScreen.kt | Line 87 | Color(0xFF5E35B1)
+IcuCalculatorsScreen.kt | Line 96 | Color(0xFF00897B)
+IvDripCalculatorCard.kt | Line 224 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 227 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 265 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 271 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 275 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 279 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 280 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 287 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 297 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 313 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 315 | Color(0xFFE53935)
+IvDripCalculatorCard.kt | Line 367 | Color(0xFF8E24AA)
+IvDripCalculatorCard.kt | Line 382 | Color(0xFFE53935)
+IvDripCalculatorCard.kt | Line 385 | Color(0xFF8E24AA)
+IvDripCalculatorCard.kt | Line 433 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 483 | Color(0xFF0F172A)
+IvDripCalculatorCard.kt | Line 493 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 497 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 551 | Color(0xFF1E293B)
+IvDripCalculatorCard.kt | Line 565 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 576 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 594 | Color(0xFF020617)
+IvDripCalculatorCard.kt | Line 595 | Color(0xFF334155)
+IvDripCalculatorCard.kt | Line 606 | Color(0xFF475569)
+IvDripCalculatorCard.kt | Line 647 | Color(0xFFE53935)
+IvDripCalculatorCard.kt | Line 650 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 656 | Color(0xFF00E676)
+IvDripCalculatorCard.kt | Line 662 | Color(0xFF9C27B0)
+IvDripCalculatorCard.kt | Line 668 | Color(0xFFFFEBEE)
+IvDripCalculatorCard.kt | Line 671 | Color(0xFFEF5350)
+IvDripCalculatorCard.kt | Line 673 | Color(0xFFC62828)
+IvDripCalculatorCard.kt | Line 676 | Color(0xFFB71C1C)
+IvDripCalculatorCard.kt | Line 692 | Color(0xFFFFB74D)
+IvDripCalculatorCard.kt | Line 708 | Color(0xFF00FFCC)
+IvDripCalculatorCard.kt | Line 821 | Color(0xFFFFB74D)
+IvDripCalculatorCard.kt | Line 822 | Color(0xFF4CAF50)
+IvDripCalculatorCard.kt | Line 823 | Color(0xFFFFB74D)
+IvDripCalculatorCard.kt | Line 824 | Color(0xFFE53935)
+PediatricRulesScreen.kt | Line 141 | Color(0xFFFFF3E0)
+PediatricRulesScreen.kt | Line 292 | Color(0xFFFFEBEE)
+PediatricRulesScreen.kt | Line 295 | Color(0xFFEF5350)
+PediatricRulesScreen.kt | Line 297 | Color(0xFFC62828)
+PediatricRulesScreen.kt | Line 300 | Color(0xFFB71C1C)
+PediatricRulesScreen.kt | Line 42 | Color(0xFFF57C00)
+PediatricRulesScreen.kt | Line 43 | Color(0xFFFFB74D)
+PediatricRulesScreen.kt | Line 44 | Color(0xFFFFE0B2)
+ProfileScreen.kt | Line 335 | Color(0xFF64B5F6)
+ProfileScreen.kt | Line 339 | Color(0xFFBA68C8)
+ProfileScreen.kt | Line 343 | Color(0xFF4DD0E1)
+ProfileScreen.kt | Line 48 | Color(0xFFF8FAFC)
+ProfileScreen.kt | Line 49 | Color(0xFF1E293B)
+ProfileScreen.kt | Line 50 | Color(0xFF64748B)
+ProfileScreen.kt | Line 52 | Color(0xFF00BCD4)
+ProfileScreen.kt | Line 53 | Color(0xFF1E88E5)
+ProfileScreen.kt | Line 54 | Color(0xFFAB47BC)
+ProfileScreen.kt | Line 55 | Color(0xFF8E24AA)
+SpecialCalculationsScreen.kt | Line 397 | Color(0xFFFFEBEE)
+SpecialCalculationsScreen.kt | Line 400 | Color(0xFFEF5350)
+SpecialCalculationsScreen.kt | Line 402 | Color(0xFFC62828)
+SpecialCalculationsScreen.kt | Line 405 | Color(0xFFB71C1C)
+SpecialCalculationsScreen.kt | Line 44 | Color(0xFFD32F2F)
+SpecialCalculationsScreen.kt | Line 45 | Color(0xFF455A64)
+SpecialCalculationsScreen.kt | Line 46 | Color(0xFF0288D1)
+SpecialCalculationsScreen.kt | Line 47 | Color(0xFF8E24AA)
+UnitConversionsScreen.kt | Line 211 | Color(0xFFE3F2FD)
+UnitConversionsScreen.kt | Line 214 | Color(0xFF1565C0)
+UnitConversionsScreen.kt | Line 244 | Color(0xFFF3E5F5)
+UnitConversionsScreen.kt | Line 322 | Color(0xFFFFEBEE)
+UnitConversionsScreen.kt | Line 325 | Color(0xFFEF5350)
+UnitConversionsScreen.kt | Line 327 | Color(0xFFC62828)
+UnitConversionsScreen.kt | Line 330 | Color(0xFFB71C1C)
+UnitConversionsScreen.kt | Line 34 | Color(0xFF3949AB)
+UnitConversionsScreen.kt | Line 35 | Color(0xFF5E35B1)
+UnitConversionsScreen.kt | Line 36 | Color(0xFFC5CAE9)
+VasoactiveInfusionsScreen.kt | Line 207 | Color(0xFF0F172A)
+VasoactiveInfusionsScreen.kt | Line 209 | Color(0xFFE2E8F0)
+VasoactiveInfusionsScreen.kt | Line 223 | Color(0xFFFF1744)
+VasoactiveInfusionsScreen.kt | Line 233 | Color(0xFFD32F2F)
+VasoactiveInfusionsScreen.kt | Line 234 | Color(0xFF00C853)
+VasoactiveInfusionsScreen.kt | Line 298 | Color(0xFFE2E8F0)
+VasoactiveInfusionsScreen.kt | Line 300 | Color(0xFFF8FAFC)
+VasoactiveInfusionsScreen.kt | Line 330 | Color(0xFFF5F5F5)
+VasoactiveInfusionsScreen.kt | Line 331 | Color(0xFF1E5FA8)
+VasoactiveInfusionsScreen.kt | Line 332 | Color(0xFF0F172A)
+VasoactiveInfusionsScreen.kt | Line 333 | Color(0xFF475569)
+VasoactiveInfusionsScreen.kt | Line 334 | Color(0xFFEEEEEE)
+VasoactiveInfusionsScreen.kt | Line 335 | Color(0xFFAAAAAA)
+VasoactiveInfusionsScreen.kt | Line 336 | Color(0xFF888888)
+VasoactiveInfusionsScreen.kt | Line 337 | Color(0xFFDDDDDD)
+VasoactiveInfusionsScreen.kt | Line 338 | Color(0xAAFFFFFF)
+VasoactiveInfusionsScreen.kt | Line 339 | Color(0xFF94A3B8)
+VasoactiveInfusionsScreen.kt | Line 340 | Color(0xFF888888)
+VasoactiveInfusionsScreen.kt | Line 341 | Color(0xCC03A9F4)
+VasoactiveInfusionsScreen.kt | Line 352 | Color(0x22000000)
+VasoactiveInfusionsScreen.kt | Line 354 | Color(0xFFCCCCCC)
+VasoactiveInfusionsScreen.kt | Line 373 | Color(0xFF00FF88)
+VasoactiveInfusionsScreen.kt | Line 381 | Color(0xFF00FF88)
+VasoactiveInfusionsScreen.kt | Line 384 | Color(0xFFFF4444)
+VasoactiveInfusionsScreen.kt | Line 444 | Color(0xFFFF1744)
+VasoactiveInfusionsScreen.kt | Line 445 | Color(0xFF00E676)
+VasoactiveInfusionsScreen.kt | Line 482 | Color(0xFF999999)
+VasoactiveInfusionsScreen.kt | Line 488 | Color(0xFFDDDDDD)
+VasoactiveInfusionsScreen.kt | Line 50 | Color(0xFF0277BD)
+VasoactiveInfusionsScreen.kt | Line 502 | Color(0xFF1E293B)
+VasoactiveInfusionsScreen.kt | Line 507 | Color(0xFFCBD5E1)
+VasoactiveInfusionsScreen.kt | Line 51 | Color(0xFFE1F5FE)
+VasoactiveInfusionsScreen.kt | Line 513 | Color(0xFF64748B)
+VasoactiveInfusionsScreen.kt | Line 52 | Color(0xFFF4F7FA)
+WeightInfusionScreen.kt | Line 102 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 106 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 113 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 116 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 124 | Color(0xFF1E293B)
+WeightInfusionScreen.kt | Line 126 | Color(0xFF38BDF8)
+WeightInfusionScreen.kt | Line 130 | Color(0xFF0EA5E9)
+WeightInfusionScreen.kt | Line 131 | Color(0xFF38BDF8)
+WeightInfusionScreen.kt | Line 138 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 155 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 177 | Color(0xFF26A69A)
+WeightInfusionScreen.kt | Line 182 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 183 | Color(0xFF26A69A)
+WeightInfusionScreen.kt | Line 205 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 211 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 217 | Color(0xFF1E88E5)
+WeightInfusionScreen.kt | Line 220 | Color(0xFFFFEBEE)
+WeightInfusionScreen.kt | Line 223 | Color(0xFFEF5350)
+WeightInfusionScreen.kt | Line 225 | Color(0xFFC62828)
+WeightInfusionScreen.kt | Line 228 | Color(0xFFB71C1C)
+WeightInfusionScreen.kt | Line 232 | Color(0xFF00796B)
+WeightInfusionScreen.kt | Line 89 | Color(0xFFB2DFDB)
+WeightInfusionScreen.kt | Line 99 | Color(0xFF00796B)
+
+?? THEME USAGE:
+AnalyticsScreen.kt | Line 249 | containerColor = MaterialTheme.colorScheme.background,
+AnalyticsScreen.kt | Line 255 | Text(if (selectedDutyType == "Special") "Special Unit Mode" else "Normal Ward Mode", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+AnalyticsScreen.kt | Line 261 | Icon(Icons.Default.Settings, "Change Ward Type", tint = MaterialTheme.colorScheme.primary)
+AnalyticsScreen.kt | Line 264 | colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+AnalyticsScreen.kt | Line 280 | Text("OT Hours (Last 6 Claims)", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+AnalyticsScreen.kt | Line 281 | IconButton(onClick = { guideBar = !guideBar }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "Info", tint = if (guideBar) MaterialTheme.colorScheme.primary else Color.LightGray) }
+AnalyticsScreen.kt | Line 286 | Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(12.dp)) {
+AnalyticsScreen.kt | Line 287 | Text("💡 The taller the bar, the more Overtime hours you logged. Automatically includes the 36-Hour Rule for Special Units!", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer, lineHeight = 18.sp)
+AnalyticsScreen.kt | Line 293 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+AnalyticsScreen.kt | Line 298 | repeat(4) { HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)) }
+AnalyticsScreen.kt | Line 306 | Box(modifier = Modifier.padding(bottom = 8.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+AnalyticsScreen.kt | Line 307 | Text(text = "${hours.toInt()}h", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+AnalyticsScreen.kt | Line 311 | Box(modifier = Modifier.width(28.dp).fillMaxHeight().clip(RoundedCornerShape(100.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)))
+AnalyticsScreen.kt | Line 312 | if (safeFraction > 0f) Box(modifier = Modifier.width(28.dp).fillMaxHeight(safeFraction.coerceAtLeast(0.05f)).clip(RoundedCornerShape(100.dp)).background(Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))))
+AnalyticsScreen.kt | Line 321 | Text(text = month, fontSize = 12.sp, color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Gray, fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+AnalyticsScreen.kt | Line 333 | IconButton(onClick = { guideDonut = !guideDonut }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "Info", tint = if(guideDonut) MaterialTheme.colorScheme.primary else Color.LightGray) }
+AnalyticsScreen.kt | Line 338 | Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha=0.5f), RoundedCornerShape(12.dp)).padding(12.dp)) {
+AnalyticsScreen.kt | Line 339 | Text("💡 Filter by specific months or weeks using the dropdowns below. Tap the donut chart to see exact numbers.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer, lineHeight = 18.sp)
+AnalyticsScreen.kt | Line 345 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+AnalyticsScreen.kt | Line 353 | Row(modifier = Modifier.clickable { showMonthDropdown = true }.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp)).padding(8.dp)) {
+AnalyticsScreen.kt | Line 365 | Row(modifier = Modifier.clickable { showWeekDropdown = true }.background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)).padding(8.dp)) {
+AnalyticsScreen.kt | Line 464 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+AnalyticsScreen.kt | Line 468 | Text("Rest Balance Taken", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.align(Alignment.Start))
+AnalyticsScreen.kt | Line 472 | Text("$totalRest", fontSize = 48.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+AnalyticsScreen.kt | Line 475 | HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+AnalyticsScreen.kt | Line 521 | containerColor = MaterialTheme.colorScheme.background,
+AnalyticsScreen.kt | Line 530 | .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), CircleShape)
+AnalyticsScreen.kt | Line 532 | Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onSurface)
+AnalyticsScreen.kt | Line 572 | val textGradient = Brush.linearGradient(colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))
+AnalyticsScreen.kt | Line 692 | Text("$count", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold)
+AnimatedSuccessOverlay.kt | Line 12 | import androidx.compose.material3.MaterialTheme
+AnimatedSuccessOverlay.kt | Line 67 | .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
+AnimatedSuccessOverlay.kt | Line 84 | color = MaterialTheme.colorScheme.primary
+BsaCalculatorScreen.kt | Line 112 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+BsaCalculatorScreen.kt | Line 167 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+BsaCalculatorScreen.kt | Line 234 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+BsaCalculatorScreen.kt | Line 81 | val bgGradient = Brush.verticalGradient(listOf(ThemeRoseLight.copy(alpha = 0.3f), MaterialTheme.colorScheme.surface))
+BurnoutMeterCard.kt | Line 102 | style = MaterialTheme.typography.titleMedium,
+BurnoutMeterCard.kt | Line 103 | color = MaterialTheme.colorScheme.onSurface,
+BurnoutMeterCard.kt | Line 108 | style = MaterialTheme.typography.bodySmall,
+BurnoutMeterCard.kt | Line 109 | color = MaterialTheme.colorScheme.primary,
+BurnoutMeterCard.kt | Line 114 | Icon(Icons.Default.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.primary)
+BurnoutMeterCard.kt | Line 146 | color = MaterialTheme.colorScheme.onSurface
+BurnoutMeterCard.kt | Line 161 | style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold
+BurnoutMeterCard.kt | Line 168 | if (isNightShiftCritical) dangerColor else MaterialTheme.colorScheme.primary
+BurnoutMeterCard.kt | Line 190 | color = MaterialTheme.colorScheme.onSurface,
+BurnoutMeterCard.kt | Line 85 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+ClaimPeriodScreen.kt | Line 100 | containerColor = MaterialTheme.colorScheme.background,
+ClaimPeriodScreen.kt | Line 106 | Icon(Icons.Default.Info, contentDescription = "Analytics", tint = MaterialTheme.colorScheme.primary)
+ClaimPeriodScreen.kt | Line 109 | Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = MaterialTheme.colorScheme.primary)
+ClaimPeriodScreen.kt | Line 112 | colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+ClaimPeriodScreen.kt | Line 124 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+ClaimPeriodScreen.kt | Line 131 | Text("View Smart Insights", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+ClaimPeriodScreen.kt | Line 132 | Text("Analyze your shifts and earnings", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+ClaimPeriodScreen.kt | Line 139 | colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+ClaimPeriodScreen.kt | Line 145 | Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+ClaimPeriodScreen.kt | Line 146 | Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+ClaimPeriodScreen.kt | Line 150 | Text("Create New Claim", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+ClaimPeriodScreen.kt | Line 178 | Text("Saved History", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+ClaimPeriodScreen.kt | Line 183 | Text("Clear All", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+ClaimPeriodScreen.kt | Line 204 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+ClaimPeriodScreen.kt | Line 208 | Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+ClaimPeriodScreen.kt | Line 215 | fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface
+ClaimPeriodScreen.kt | Line 217 | Text("Unit Type: ${period.wardType}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+ClaimPeriodScreen.kt | Line 220 | Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+ClaimPeriodScreen.kt | Line 260 | colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+ClaimPeriodScreen.kt | Line 283 | colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+ClaimPeriodScreen.kt | Line 295 | title = { Text("Delete ALL History?", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) },
+ClaimPeriodScreen.kt | Line 307 | colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+ClaimPeriodScreen.kt | Line 337 | Box(modifier = Modifier.fillMaxWidth().animateContentSize(spring(stiffness = Spring.StiffnessLow)).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)).padding(16.dp)) {
+ClaimPeriodScreen.kt | Line 342 | HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+ClaimPeriodScreen.kt | Line 345 | Text("⚠️ No full Sunday-to-Saturday weeks found.", color = MaterialTheme.colorScheme.error, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+ClaimPeriodScreen.kt | Line 354 | Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+ClaimPeriodScreen.kt | Line 355 | Text(text = value, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
+ClinicalToolsScreen.kt | Line 177 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+ClinicalToolsScreen.kt | Line 195 | Text(title, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+ClinicalToolsScreen.kt | Line 62 | colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+ClinicalToolsScreen.kt | Line 65 | containerColor = MaterialTheme.colorScheme.background
+DailyEntryScreen.kt | Line 117 | containerColor = MaterialTheme.colorScheme.background,
+DailyEntryScreen.kt | Line 122 | colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+DailyEntryScreen.kt | Line 126 | Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = MaterialTheme.colorScheme.surface) {
+DailyEntryScreen.kt | Line 129 | Text("Total Hours", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+DailyEntryScreen.kt | Line 132 | fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary
+DailyEntryScreen.kt | Line 158 | Button(onClick = { showAutoFillDialog = true }, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Text("Smart Auto-Fill Month (7-16)", fontWeight = FontWeight.Bold) }
+DailyEntryScreen.kt | Line 162 | Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+DailyEntryScreen.kt | Line 164 | Text("Step 1: Paint your Exceptions!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+DailyEntryScreen.kt | Line 165 | Text("Mark your Leaves, DOs, and PHs below. When you hit Save, we will auto-fill all the empty days with normal shifts!", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+DailyEntryScreen.kt | Line 177 | color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
+DailyEntryScreen.kt | Line 202 | val brushBgColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, animationSpec = tween(300))
+DailyEntryScreen.kt | Line 220 | ) { Text(brush, color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold) }
+DailyEntryScreen.kt | Line 348 | else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+DailyEntryScreen.kt | Line 353 | val borderColor by animateColorAsState(if (staged != null) MaterialTheme.colorScheme.primary else Color.LightGray)
+DailyEntryScreen.kt | Line 376 | Text(date.dayOfMonth.toString(), modifier = Modifier.align(Alignment.Center), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+DailyEntryScreen.kt | Line 392 | Icon(Icons.Default.CheckCircle, "Staged", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(12.dp))
+DailyEntryScreen.kt | Line 521 | Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.background) {
+DailyEntryScreen.kt | Line 542 | colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+DailyEntryScreen.kt | Line 555 | Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
+DailyEntryScreen.kt | Line 557 | CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+DailyEntryScreen.kt | Line 605 | Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+DosageCalculatorScreen.kt | Line 198 | val bgGradient = Brush.verticalGradient(listOf(ThemePurpleLight.copy(alpha = 0.3f), MaterialTheme.colorScheme.surface))
+DosageCalculatorScreen.kt | Line 253 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+DosageCalculatorScreen.kt | Line 420 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+DosageCalculatorScreen.kt | Line 597 | shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+IcuCalculatorsScreen.kt | Line 148 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+IcuCalculatorsScreen.kt | Line 166 | Text(title, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+IcuCalculatorsScreen.kt | Line 54 | colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+IcuCalculatorsScreen.kt | Line 57 | containerColor = MaterialTheme.colorScheme.background
+IvDripCalculatorCard.kt | Line 291 | Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); calibrationTaps = calibrationTaps + System.currentTimeMillis(); if (calibrationTaps.size == 4) { val intervals = calibrationTaps.zipWithNext { a, b -> b - a }; val avgInterval = intervals.average(); measuredDpm = (60000 / avgInterval).roundToInt(); currentArState = ArState.RESULT } }, modifier = Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(16.dp)) { Text(if (calibrationTaps.isEmpty()) "TAP EXACTLY ON DROP 1" else "TAP ON NEXT DROP", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold) }
+IvDripCalculatorCard.kt | Line 329 | Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp), shape = RoundedCornerShape(24.dp)) {
+IvDripCalculatorCard.kt | Line 336 | val bgColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, label = "")
+IvDripCalculatorCard.kt | Line 359 | Text("Select IV Giving Set", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+IvDripCalculatorCard.kt | Line 360 | IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Info, contentDescription = "Learn more", tint = MaterialTheme.colorScheme.primary) }
+IvDripCalculatorCard.kt | Line 367 | val bgColor by animateColorAsState(if (isSelected) { if (isMicro) Color(0xFF8E24AA) else MaterialTheme.colorScheme.primary } else Color(0xFFF5F5F5), label = "")
+IvDripCalculatorCard.kt | Line 383 | 15 -> Triple(MaterialTheme.colorScheme.primary, "MACRO (15 gtt/mL)", "Standard Adult Infusion. Used for normal Saline, Hydration & IV meds.")
+IvDripCalculatorCard.kt | Line 384 | 20 -> Triple(MaterialTheme.colorScheme.primary, "MACRO (20 gtt/mL)", "Standard Adult Infusion. Used for normal Saline, Hydration & IV meds.")
+IvDripCalculatorCard.kt | Line 394 | Text(text = guideText, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), fontWeight = FontWeight.SemiBold, lineHeight = 18.sp)
+IvDripCalculatorCard.kt | Line 400 | Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(24.dp), contentAlignment = Alignment.Center) {
+IvDripCalculatorCard.kt | Line 402 | Text("Required Infusion Rate", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+IvDripCalculatorCard.kt | Line 404 | Text(text = if (dropsPerMinute > 0) dropsPerMinute.toString() else "0", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+IvDripCalculatorCard.kt | Line 408 | Text("drops/min", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+IvDripCalculatorCard.kt | Line 414 | Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showSafetyWarning = true }.padding(horizontal = 16.dp, vertical = 12.dp)) {
+IvDripCalculatorCard.kt | Line 419 | Box(modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); showScienceDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+IvDripCalculatorCard.kt | Line 626 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+IvDripCalculatorCard.kt | Line 633 | Text(mode.title, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
+IvDripCalculatorCard.kt | Line 641 | Text("What is a Drop Factor?", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+IvDripCalculatorCard.kt | Line 644 | Text("Physical Differences", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+IvDripCalculatorCard.kt | Line 787 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+IvDripCalculatorCard.kt | Line 790 | Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(24.dp).verticalScroll(rememberScrollState())) {
+IvDripCalculatorCard.kt | Line 793 | Text("The Science of AR Sync", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
+IvDripCalculatorCard.kt | Line 797 | Text("1. Phase Matching (The Illusion of One)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+IvDripCalculatorCard.kt | Line 803 | Text("2. Why We Don't Use AI Cameras", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+IvDripCalculatorCard.kt | Line 811 | Text("Dynamic Accuracy Spectrum", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+IvDripCalculatorCard.kt | Line 813 | Text("Based on your calculated rate of $dropsPerMinute drops/min:", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+MainActivity.kt | Line 27 | color = MaterialTheme.colorScheme.background
+MainActivity.kt | Line 9 | import androidx.compose.material3.MaterialTheme
+PediatricRulesScreen.kt | Line 103 | val bgGradient = Brush.verticalGradient(listOf(ThemeOrangeLight.copy(alpha = 0.4f), MaterialTheme.colorScheme.surface))
+PediatricRulesScreen.kt | Line 160 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+PediatricRulesScreen.kt | Line 188 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+PediatricRulesScreen.kt | Line 242 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+SpecialCalculationsScreen.kt | Line 125 | val bgGradient = Brush.verticalGradient(listOf(currentMode.themeColor.copy(alpha = 0.15f), MaterialTheme.colorScheme.surface))
+SpecialCalculationsScreen.kt | Line 169 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+SpecialCalculationsScreen.kt | Line 234 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+SpecialCalculationsScreen.kt | Line 333 | colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+SpecialCalculationsScreen.kt | Line 336 | Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(24.dp).verticalScroll(rememberScrollState())) {
+SpecialCalculationsScreen.kt | Line 352 | Text("1 IU of insulin ≈ 0.0347 mg. Always process dose orders as \"units\" and calculate fluids in units/mL.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
+SpecialCalculationsScreen.kt | Line 360 | Text("Rate (mL/hr) = [ (Ordered U/kg/hr) × Weight (kg) ] ÷ Concentration (U/mL)", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f), fontWeight = FontWeight.Bold)
+SpecialCalculationsScreen.kt | Line 364 | Text("Heparin is completely weight-dependent and must be calculated in two precise steps.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
+SpecialCalculationsScreen.kt | Line 378 | Text("Titration Adjustments: If a nomogram dictates a change in dose (ΔU/kg/hr), you MUST recalculate the new total Units/hr from scratch and repeat the formula.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
+SpecialCalculationsScreen.kt | Line 382 | Text("Verifying a patient cannot exceed their safe maximum hourly limit.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
+SpecialCalculationsScreen.kt | Line 390 | Text("Example: A 5-minute lockout allows a max of 12 doses per hour (60/5). If the bolus is 1 mg, the maximum limit is 12 mg/h.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
+Theme.kt | Line 4 | import androidx.compose.material3.MaterialTheme
+Theme.kt | Line 45 | MaterialTheme(
+UnitConversionsScreen.kt | Line 125 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+UnitConversionsScreen.kt | Line 262 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+UnitConversionsScreen.kt | Line 281 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+UnitConversionsScreen.kt | Line 88 | val bgGradient = Brush.verticalGradient(listOf(ThemeIndigoLight.copy(alpha = 0.4f), MaterialTheme.colorScheme.surface))
+WeightInfusionScreen.kt | Line 151 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+WeightInfusionScreen.kt | Line 178 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+WeightInfusionScreen.kt | Line 198 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+WeightInfusionScreen.kt | Line 89 | val bgGradient = Brush.verticalGradient(listOf(Color(0xFFB2DFDB).copy(alpha = 0.3f), MaterialTheme.colorScheme.surface))
+
+?? LAYOUT STRUCTURE:
+AnalyticsScreen.kt | Line 268 | Column(
+AnalyticsScreen.kt | Line 269 | modifier = Modifier
+AnalyticsScreen.kt | Line 276 | Spacer(modifier = Modifier.height(16.dp))
+AnalyticsScreen.kt | Line 279 | Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+AnalyticsScreen.kt | Line 280 | Text("OT Hours (Last 6 Claims)", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+AnalyticsScreen.kt | Line 281 | IconButton(onClick = { guideBar = !guideBar }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "Info", tint = if (guideBar) MaterialTheme.colorScheme.primary else Color.LightGray) }
+AnalyticsScreen.kt | Line 283 | Spacer(modifier = Modifier.height(8.dp))
+AnalyticsScreen.kt | Line 286 | Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(12.dp)) {
+AnalyticsScreen.kt | Line 29 | import androidx.compose.ui.Modifier
+AnalyticsScreen.kt | Line 292 | modifier = Modifier.fillMaxWidth().height(320.dp),
+AnalyticsScreen.kt | Line 296 | Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 20.dp)) {
+AnalyticsScreen.kt | Line 297 | Column(modifier = Modifier.fillMaxSize().padding(bottom = 32.dp), verticalArrangement = Arrangement.SpaceBetween) {
+AnalyticsScreen.kt | Line 300 | Column(modifier = Modifier.fillMaxSize()) {
+AnalyticsScreen.kt | Line 301 | Row(modifier = Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+AnalyticsScreen.kt | Line 304 | Column(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+AnalyticsScreen.kt | Line 306 | Box(modifier = Modifier.padding(bottom = 8.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+AnalyticsScreen.kt | Line 310 | Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.BottomCenter) {
+AnalyticsScreen.kt | Line 311 | Box(modifier = Modifier.width(28.dp).fillMaxHeight().clip(RoundedCornerShape(100.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)))
+AnalyticsScreen.kt | Line 312 | if (safeFraction > 0f) Box(modifier = Modifier.width(28.dp).fillMaxHeight(safeFraction.coerceAtLeast(0.05f)).clip(RoundedCornerShape(100.dp)).background(Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))))
+AnalyticsScreen.kt | Line 317 | Spacer(modifier = Modifier.height(12.dp))
+AnalyticsScreen.kt | Line 318 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+AnalyticsScreen.kt | Line 321 | Text(text = month, fontSize = 12.sp, color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Gray, fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+AnalyticsScreen.kt | Line 328 | Spacer(modifier = Modifier.height(32.dp))
+AnalyticsScreen.kt | Line 331 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+AnalyticsScreen.kt | Line 333 | IconButton(onClick = { guideDonut = !guideDonut }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "Info", tint = if(guideDonut) MaterialTheme.colorScheme.primary else Color.LightGray) }
+AnalyticsScreen.kt | Line 335 | Spacer(modifier = Modifier.height(8.dp))
+AnalyticsScreen.kt | Line 338 | Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha=0.5f), RoundedCornerShape(12.dp)).padding(12.dp)) {
+AnalyticsScreen.kt | Line 344 | modifier = Modifier.fillMaxWidth().height(320.dp),
+AnalyticsScreen.kt | Line 348 | Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+AnalyticsScreen.kt | Line 351 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+AnalyticsScreen.kt | Line 353 | Row(modifier = Modifier.clickable { showMonthDropdown = true }.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp)).padding(8.dp)) {
+AnalyticsScreen.kt | Line 355 | Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(16.dp))
+AnalyticsScreen.kt | Line 363 | Spacer(modifier = Modifier.width(8.dp))
+AnalyticsScreen.kt | Line 365 | Row(modifier = Modifier.clickable { showWeekDropdown = true }.background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)).padding(8.dp)) {
+AnalyticsScreen.kt | Line 367 | Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(16.dp))
+AnalyticsScreen.kt | Line 379 | Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+AnalyticsScreen.kt | Line 398 | Canvas(
+AnalyticsScreen.kt | Line 399 | modifier = Modifier.size(160.dp).pointerInput(selectedDutyType) {
+AnalyticsScreen.kt | Line 424 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+AnalyticsScreen.kt | Line 439 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+AnalyticsScreen.kt | Line 453 | Spacer(modifier = Modifier.height(32.dp))
+AnalyticsScreen.kt | Line 463 | modifier = Modifier.fillMaxWidth().height(240.dp),
+AnalyticsScreen.kt | Line 467 | Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
+AnalyticsScreen.kt | Line 468 | Text("Rest Balance Taken", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.align(Alignment.Start))
+AnalyticsScreen.kt | Line 471 | Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.weight(1f)) {
+AnalyticsScreen.kt | Line 476 | Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+AnalyticsScreen.kt | Line 484 | Spacer(modifier = Modifier.height(40.dp))
+AnalyticsScreen.kt | Line 528 | modifier = Modifier
+AnalyticsScreen.kt | Line 539 | Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+AnalyticsScreen.kt | Line 541 | Canvas(modifier = Modifier.fillMaxSize()) {
+AnalyticsScreen.kt | Line 560 | Column(
+AnalyticsScreen.kt | Line 561 | modifier = Modifier
+AnalyticsScreen.kt | Line 568 | Column(
+AnalyticsScreen.kt | Line 569 | modifier = Modifier.offset(y = titleOffsetY).alpha(titleAlpha),
+AnalyticsScreen.kt | Line 578 | Spacer(modifier = Modifier.height(8.dp))
+AnalyticsScreen.kt | Line 585 | Spacer(modifier = Modifier.height(48.dp))
+AnalyticsScreen.kt | Line 598 | Spacer(modifier = Modifier.height(24.dp))
+AnalyticsScreen.kt | Line 639 | modifier = Modifier
+AnalyticsScreen.kt | Line 648 | Box(
+AnalyticsScreen.kt | Line 649 | modifier = Modifier.fillMaxSize().background(Brush.linearGradient(gradientColors))
+AnalyticsScreen.kt | Line 652 | Canvas(modifier = Modifier.fillMaxSize()) {
+AnalyticsScreen.kt | Line 658 | Row(modifier = Modifier.fillMaxSize().padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
+AnalyticsScreen.kt | Line 660 | Box(
+AnalyticsScreen.kt | Line 661 | modifier = Modifier.size(56.dp).background(Color.White.copy(alpha = 0.2f), CircleShape).border(2.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+AnalyticsScreen.kt | Line 667 | Spacer(modifier = Modifier.width(20.dp))
+AnalyticsScreen.kt | Line 671 | Spacer(modifier = Modifier.height(4.dp))
+AnalyticsScreen.kt | Line 681 | Row(verticalAlignment = Alignment.CenterVertically) {
+AnalyticsScreen.kt | Line 682 | Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
+AnalyticsScreen.kt | Line 683 | Spacer(modifier = Modifier.width(6.dp))
+AnalyticsScreen.kt | Line 690 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+AnimatedSuccessOverlay.kt | Line 18 | import androidx.compose.ui.Modifier
+AnimatedSuccessOverlay.kt | Line 59 | Box(
+AnimatedSuccessOverlay.kt | Line 60 | modifier = Modifier
+AnimatedSuccessOverlay.kt | Line 65 | Column(
+AnimatedSuccessOverlay.kt | Line 66 | modifier = Modifier
+AnimatedSuccessOverlay.kt | Line 75 | modifier = Modifier.size(150.dp)
+AnimatedSuccessOverlay.kt | Line 78 | Spacer(modifier = Modifier.height(16.dp))
+AnimatedSuccessOverlay.kt | Line 86 | Spacer(modifier = Modifier.height(8.dp))
+AppNavigation.kt | Line 115 | IvDripCalculatorCard(modifier = Modifier.fillMaxSize().padding(padding))
+AppNavigation.kt | Line 42 | import androidx.compose.ui.Modifier
+BsaCalculatorScreen.kt | Line 101 | Spacer(modifier = Modifier.height(32.dp))
+BsaCalculatorScreen.kt | Line 105 | Box(modifier = Modifier.height(240.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+BsaCalculatorScreen.kt | Line 109 | Spacer(modifier = Modifier.height(32.dp))
+BsaCalculatorScreen.kt | Line 112 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+BsaCalculatorScreen.kt | Line 113 | Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+BsaCalculatorScreen.kt | Line 115 | Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+BsaCalculatorScreen.kt | Line 117 | Spacer(modifier = Modifier.height(8.dp))
+BsaCalculatorScreen.kt | Line 118 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+BsaCalculatorScreen.kt | Line 123 | Spacer(modifier = Modifier.height(8.dp))
+BsaCalculatorScreen.kt | Line 127 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+BsaCalculatorScreen.kt | Line 128 | OutlinedTextField(value = heightCm, onValueChange = { heightCm = it }, label = { Text("Height (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+BsaCalculatorScreen.kt | Line 129 | OutlinedTextField(value = weightKg, onValueChange = { weightKg = it }, label = { Text("Weight (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+BsaCalculatorScreen.kt | Line 132 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+BsaCalculatorScreen.kt | Line 136 | OutlinedTextField(value = orderedDoseMgM2, onValueChange = { orderedDoseMgM2 = it }, label = { Text("Ordered Dose (mg/m²)") }, placeholder = { Text("e.g. 500") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+BsaCalculatorScreen.kt | Line 139 | Spacer(modifier = Modifier.height(32.dp))
+BsaCalculatorScreen.kt | Line 143 | Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+BsaCalculatorScreen.kt | Line 150 | Spacer(modifier = Modifier.height(60.dp))
+BsaCalculatorScreen.kt | Line 159 | Box(modifier = Modifier.background(bgColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+BsaCalculatorScreen.kt | Line 166 | Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(color1, color2)), RoundedCornerShape(20.dp)).padding(2.dp)) {
+BsaCalculatorScreen.kt | Line 167 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+BsaCalculatorScreen.kt | Line 168 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+BsaCalculatorScreen.kt | Line 170 | Row(verticalAlignment = Alignment.Bottom) {
+BsaCalculatorScreen.kt | Line 172 | Text(" $unit", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color1.copy(alpha = 0.7f), modifier = Modifier.padding(bottom = 6.dp))
+BsaCalculatorScreen.kt | Line 18 | import androidx.compose.ui.Modifier
+BsaCalculatorScreen.kt | Line 190 | Canvas(modifier = Modifier.fillMaxSize()) {
+BsaCalculatorScreen.kt | Line 234 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+BsaCalculatorScreen.kt | Line 235 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+BsaCalculatorScreen.kt | Line 236 | Row(verticalAlignment = Alignment.CenterVertically) {
+BsaCalculatorScreen.kt | Line 238 | Spacer(modifier = Modifier.width(16.dp))
+BsaCalculatorScreen.kt | Line 244 | Spacer(modifier = Modifier.height(24.dp))
+BsaCalculatorScreen.kt | Line 248 | Spacer(modifier = Modifier.height(16.dp))
+BsaCalculatorScreen.kt | Line 250 | Box(modifier = Modifier.fillMaxWidth().background(ThemeRoseLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+BsaCalculatorScreen.kt | Line 253 | Spacer(modifier = Modifier.height(20.dp))
+BsaCalculatorScreen.kt | Line 258 | Spacer(modifier = Modifier.height(24.dp))
+BsaCalculatorScreen.kt | Line 261 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
+BsaCalculatorScreen.kt | Line 263 | Row(verticalAlignment = Alignment.CenterVertically) {
+BsaCalculatorScreen.kt | Line 264 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
+BsaCalculatorScreen.kt | Line 265 | Spacer(modifier = Modifier.width(12.dp))
+BsaCalculatorScreen.kt | Line 268 | Spacer(modifier = Modifier.height(12.dp))
+BsaCalculatorScreen.kt | Line 272 | Spacer(modifier = Modifier.height(32.dp))
+BsaCalculatorScreen.kt | Line 273 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = ThemeCrimson)) { Text("Understood", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+BsaCalculatorScreen.kt | Line 83 | Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+BsaCalculatorScreen.kt | Line 84 | Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+BsaCalculatorScreen.kt | Line 85 | Spacer(modifier = Modifier.height(24.dp))
+BsaCalculatorScreen.kt | Line 89 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+BsaCalculatorScreen.kt | Line 90 | Row(verticalAlignment = Alignment.CenterVertically) {
+BsaCalculatorScreen.kt | Line 91 | Box(modifier = Modifier.size(48.dp).background(ThemeCrimson, CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("📏", fontSize = 24.sp) }
+BsaCalculatorScreen.kt | Line 92 | Spacer(modifier = Modifier.width(16.dp))
+BsaCalculatorScreen.kt | Line 98 | Box(modifier = Modifier.size(42.dp).background(ThemeCrimson.copy(alpha = 0.2f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+BurnoutMeterCard.kt | Line 113 | IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(24.dp)) {
+BurnoutMeterCard.kt | Line 118 | Spacer(modifier = Modifier.height(24.dp))
+BurnoutMeterCard.kt | Line 121 | Box(
+BurnoutMeterCard.kt | Line 122 | modifier = Modifier.size(200.dp, 100.dp),
+BurnoutMeterCard.kt | Line 125 | Canvas(modifier = Modifier.fillMaxSize()) {
+BurnoutMeterCard.kt | Line 142 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+BurnoutMeterCard.kt | Line 154 | Spacer(modifier = Modifier.height(24.dp))
+BurnoutMeterCard.kt | Line 158 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+BurnoutMeterCard.kt | Line 16 | import androidx.compose.ui.Modifier
+BurnoutMeterCard.kt | Line 163 | Spacer(modifier = Modifier.height(8.dp))
+BurnoutMeterCard.kt | Line 164 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+BurnoutMeterCard.kt | Line 170 | Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(circleColor))
+BurnoutMeterCard.kt | Line 175 | Spacer(modifier = Modifier.height(24.dp))
+BurnoutMeterCard.kt | Line 178 | Box(
+BurnoutMeterCard.kt | Line 179 | modifier = Modifier
+BurnoutMeterCard.kt | Line 37 | modifier: Modifier = Modifier
+BurnoutMeterCard.kt | Line 84 | modifier = modifier.fillMaxWidth(),
+BurnoutMeterCard.kt | Line 89 | Column(
+BurnoutMeterCard.kt | Line 90 | modifier = Modifier.padding(20.dp).fillMaxWidth(),
+BurnoutMeterCard.kt | Line 94 | Row(
+BurnoutMeterCard.kt | Line 95 | modifier = Modifier.fillMaxWidth(),
+BurnoutMeterCard.kt | Line 99 | Column(modifier = Modifier.weight(1f)) {
+ClaimPeriodScreen.kt | Line 116 | Column(
+ClaimPeriodScreen.kt | Line 117 | modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 24.dp).verticalScroll(rememberScrollState()),
+ClaimPeriodScreen.kt | Line 123 | modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clickable { onNavigateToAnalytics() },
+ClaimPeriodScreen.kt | Line 127 | Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+ClaimPeriodScreen.kt | Line 129 | Spacer(modifier = Modifier.width(12.dp))
+ClaimPeriodScreen.kt | Line 138 | modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+ClaimPeriodScreen.kt | Line 143 | Column(modifier = Modifier.padding(20.dp)) {
+ClaimPeriodScreen.kt | Line 144 | Row(verticalAlignment = Alignment.CenterVertically) {
+ClaimPeriodScreen.kt | Line 145 | Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+ClaimPeriodScreen.kt | Line 148 | Spacer(modifier = Modifier.width(12.dp))
+ClaimPeriodScreen.kt | Line 155 | Spacer(modifier = Modifier.height(20.dp))
+ClaimPeriodScreen.kt | Line 157 | Spacer(modifier = Modifier.height(12.dp))
+ClaimPeriodScreen.kt | Line 159 | Spacer(modifier = Modifier.height(16.dp))
+ClaimPeriodScreen.kt | Line 167 | modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(50.dp),
+ClaimPeriodScreen.kt | Line 174 | Spacer(modifier = Modifier.height(32.dp))
+ClaimPeriodScreen.kt | Line 176 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+ClaimPeriodScreen.kt | Line 177 | Column(modifier = Modifier.weight(1f)) {
+ClaimPeriodScreen.kt | Line 187 | Spacer(modifier = Modifier.height(16.dp))
+ClaimPeriodScreen.kt | Line 190 | Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+ClaimPeriodScreen.kt | Line 201 | modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable {
+ClaimPeriodScreen.kt | Line 207 | Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+ClaimPeriodScreen.kt | Line 208 | Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+ClaimPeriodScreen.kt | Line 211 | Spacer(modifier = Modifier.width(16.dp))
+ClaimPeriodScreen.kt | Line 212 | Column(modifier = Modifier.weight(1f)) {
+ClaimPeriodScreen.kt | Line 228 | Spacer(modifier = Modifier.height(40.dp))
+ClaimPeriodScreen.kt | Line 237 | Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+ClaimPeriodScreen.kt | Line 247 | modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
+ClaimPeriodScreen.kt | Line 259 | modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp),
+ClaimPeriodScreen.kt | Line 30 | import androidx.compose.ui.Modifier
+ClaimPeriodScreen.kt | Line 321 | Text(text = title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.padding(bottom = 4.dp, start = 4.dp))
+ClaimPeriodScreen.kt | Line 322 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+ClaimPeriodScreen.kt | Line 323 | OutlinedTextField(value = year, onValueChange = { if (it.length <= 4) onYearChange(it) }, label = { Text("YYYY") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1.2f), singleLine = true, shape = RoundedCornerShape(10.dp))
+ClaimPeriodScreen.kt | Line 324 | OutlinedTextField(value = month, onValueChange = { if (it.length <= 2) onMonthChange(it) }, label = { Text("MM") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(10.dp))
+ClaimPeriodScreen.kt | Line 325 | OutlinedTextField(value = day, onValueChange = { if (it.length <= 2) onDayChange(it) }, label = { Text("DD") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(10.dp))
+ClaimPeriodScreen.kt | Line 337 | Box(modifier = Modifier.fillMaxWidth().animateContentSize(spring(stiffness = Spring.StiffnessLow)).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)).padding(16.dp)) {
+ClaimPeriodScreen.kt | Line 338 | Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+ClaimPeriodScreen.kt | Line 340 | SummaryRow("First Sunday:", firstSunday.format(formatter))
+ClaimPeriodScreen.kt | Line 341 | SummaryRow("Last Saturday:", lastSaturday.format(formatter))
+ClaimPeriodScreen.kt | Line 342 | HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+ClaimPeriodScreen.kt | Line 343 | SummaryRow("Valid Weeks:", "$fullWeeks (For 36h Rule)")
+ClaimPeriodScreen.kt | Line 352 | fun SummaryRow(label: String, value: String) {
+ClaimPeriodScreen.kt | Line 353 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+ClinicalToolsScreen.kt | Line 159 | Spacer(modifier = Modifier.height(24.dp))
+ClinicalToolsScreen.kt | Line 171 | modifier = Modifier
+ClinicalToolsScreen.kt | Line 179 | Row(
+ClinicalToolsScreen.kt | Line 180 | modifier = Modifier
+ClinicalToolsScreen.kt | Line 187 | Box(
+ClinicalToolsScreen.kt | Line 188 | modifier = Modifier.size(56.dp).background(Brush.linearGradient(listOf(color1, color2)), CircleShape).shadow(4.dp, CircleShape),
+ClinicalToolsScreen.kt | Line 19 | import androidx.compose.ui.Modifier
+ClinicalToolsScreen.kt | Line 193 | Spacer(modifier = Modifier.width(16.dp))
+ClinicalToolsScreen.kt | Line 197 | Spacer(modifier = Modifier.height(8.dp))
+ClinicalToolsScreen.kt | Line 67 | Column(
+ClinicalToolsScreen.kt | Line 68 | modifier = Modifier
+ClinicalToolsScreen.kt | Line 75 | Spacer(modifier = Modifier.height(8.dp))
+DailyEntryScreen.kt | Line 126 | Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = MaterialTheme.colorScheme.surface) {
+DailyEntryScreen.kt | Line 127 | Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+DailyEntryScreen.kt | Line 154 | Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
+DailyEntryScreen.kt | Line 155 | Spacer(modifier = Modifier.height(16.dp))
+DailyEntryScreen.kt | Line 158 | Button(onClick = { showAutoFillDialog = true }, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Text("Smart Auto-Fill Month (7-16)", fontWeight = FontWeight.Bold) }
+DailyEntryScreen.kt | Line 162 | Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+DailyEntryScreen.kt | Line 163 | Column(modifier = Modifier.padding(12.dp)) {
+DailyEntryScreen.kt | Line 170 | Text("1. Pick a category & tool. 2. Tap dates to apply.", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
+DailyEntryScreen.kt | Line 172 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+DailyEntryScreen.kt | Line 178 | modifier = Modifier.clickable {
+DailyEntryScreen.kt | Line 190 | HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+DailyEntryScreen.kt | Line 199 | LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 16.dp)) {
+DailyEntryScreen.kt | Line 204 | Box(
+DailyEntryScreen.kt | Line 205 | modifier = Modifier.clip(RoundedCornerShape(8.dp))
+DailyEntryScreen.kt | Line 231 | modifier = Modifier.weight(1f)
+DailyEntryScreen.kt | Line 234 | Text(day, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
+DailyEntryScreen.kt | Line 236 | items(emptyDaysBefore) { Spacer(modifier = Modifier.size(40.dp)) }
+DailyEntryScreen.kt | Line 31 | import androidx.compose.ui.Modifier
+DailyEntryScreen.kt | Line 359 | Box(
+DailyEntryScreen.kt | Line 360 | modifier = Modifier
+DailyEntryScreen.kt | Line 363 | .then(if (isGradient) Modifier.background(gradientBrush!!) else Modifier.background(animatedCellColor))
+DailyEntryScreen.kt | Line 376 | Text(date.dayOfMonth.toString(), modifier = Modifier.align(Alignment.Center), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+DailyEntryScreen.kt | Line 379 | Text(shortShift, modifier = Modifier.align(Alignment.TopStart).padding(start = 4.dp, top = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B5E20))
+DailyEntryScreen.kt | Line 383 | Text(shortOt, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0D47A1))
+DailyEntryScreen.kt | Line 388 | Text(shortLabel, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
+DailyEntryScreen.kt | Line 392 | Icon(Icons.Default.CheckCircle, "Staged", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(12.dp))
+DailyEntryScreen.kt | Line 399 | Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+DailyEntryScreen.kt | Line 400 | Box(modifier = Modifier.size(14.dp).background(shift_background_highlight, RoundedCornerShape(2.dp)))
+DailyEntryScreen.kt | Line 401 | Text(" Duty (M, E, N, D)", fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp, end = 16.dp), color = Color.DarkGray, fontWeight = FontWeight.Medium)
+DailyEntryScreen.kt | Line 403 | Box(modifier = Modifier.size(14.dp).background(ot_background_highlight, RoundedCornerShape(2.dp)))
+DailyEntryScreen.kt | Line 404 | Text(" OT (M, E, N, C)", fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp), color = Color.DarkGray, fontWeight = FontWeight.Medium)
+DailyEntryScreen.kt | Line 408 | Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DailyEntryScreen.kt | Line 416 | modifier = Modifier.weight(1f).height(56.dp),
+DailyEntryScreen.kt | Line 512 | modifier = Modifier.weight(2f).height(56.dp),
+DailyEntryScreen.kt | Line 516 | Spacer(modifier = Modifier.height(40.dp))
+DailyEntryScreen.kt | Line 522 | Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+DailyEntryScreen.kt | Line 527 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Button(onClick = { showCustomDialog = false }) { Text("Set Brush") } }
+DailyEntryScreen.kt | Line 556 | Row(modifier = Modifier.padding(24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+DailyEntryScreen.kt | Line 600 | Surface(modifier = Modifier.fillMaxSize().padding(16.dp), shape = RoundedCornerShape(16.dp)) {
+DailyEntryScreen.kt | Line 601 | Column(modifier = Modifier.fillMaxSize()) {
+DailyEntryScreen.kt | Line 602 | Text("PDF Preview", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+DailyEntryScreen.kt | Line 604 | Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+DailyEntryScreen.kt | Line 608 | Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+DailyEntryScreen.kt | Line 610 | Box(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds().pointerInput(Unit) {
+DailyEntryScreen.kt | Line 619 | Column(modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+DailyEntryScreen.kt | Line 620 | bitmaps.forEach { bmp -> Image(bitmap = bmp, contentDescription = "PDF Page", modifier = Modifier.fillMaxWidth().border(1.dp, Color.LightGray)) }
+DailyEntryScreen.kt | Line 625 | Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+DosageCalculatorScreen.kt | Line 20 | import androidx.compose.ui.Modifier
+DosageCalculatorScreen.kt | Line 200 | Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+DosageCalculatorScreen.kt | Line 201 | Column(
+DosageCalculatorScreen.kt | Line 202 | modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()),
+DosageCalculatorScreen.kt | Line 205 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 209 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 210 | Row(verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 211 | Box(modifier = Modifier.size(48.dp).background(ThemePurple, CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("🏥", fontSize = 24.sp) }
+DosageCalculatorScreen.kt | Line 212 | Spacer(modifier = Modifier.width(16.dp))
+DosageCalculatorScreen.kt | Line 218 | Box(modifier = Modifier.size(42.dp).background(ThemePurpleLight.copy(alpha = 0.5f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+DosageCalculatorScreen.kt | Line 221 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 224 | LazyRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DosageCalculatorScreen.kt | Line 229 | Box(
+DosageCalculatorScreen.kt | Line 230 | modifier = Modifier.height(40.dp).background(bgColor, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentMode = mode }.padding(horizontal = 16.dp),
+DosageCalculatorScreen.kt | Line 235 | Spacer(modifier = Modifier.height(32.dp))
+DosageCalculatorScreen.kt | Line 239 | Box(modifier = Modifier.height(240.dp), contentAlignment = Alignment.Center) {
+DosageCalculatorScreen.kt | Line 250 | Spacer(modifier = Modifier.height(32.dp))
+DosageCalculatorScreen.kt | Line 253 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+DosageCalculatorScreen.kt | Line 255 | Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+DosageCalculatorScreen.kt | Line 258 | Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+DosageCalculatorScreen.kt | Line 260 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 261 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DosageCalculatorScreen.kt | Line 267 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 268 | OutlinedTextField(value = orderedDose, onValueChange = { orderedDose = it }, label = { Text("Desired Dose (D)") }, placeholder = { Text("e.g. 4") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 269 | Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 270 | Text("÷", fontSize = 24.sp, color = ThemePurple, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(end = 12.dp))
+DosageCalculatorScreen.kt | Line 271 | OutlinedTextField(value = availableDose, onValueChange = { availableDose = it }, label = { Text("Have Dose (H)") }, placeholder = { Text("e.g. 2") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 273 | Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 274 | Text("×", fontSize = 24.sp, color = ThemePink, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(end = 12.dp))
+DosageCalculatorScreen.kt | Line 275 | OutlinedTextField(value = availableVolume, onValueChange = { availableVolume = it }, label = { Text("Volume (Q)") }, placeholder = { Text("e.g. 1") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 279 | Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+DosageCalculatorScreen.kt | Line 281 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 282 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DosageCalculatorScreen.kt | Line 288 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 290 | Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 291 | OutlinedTextField(value = patientWeight, onValueChange = { patientWeight = it }, label = { Text("Patient Weight (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 292 | Text("×", fontSize = 24.sp, color = ThemeTeal, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
+DosageCalculatorScreen.kt | Line 293 | OutlinedTextField(value = dosePerKg, onValueChange = { dosePerKg = it }, label = { Text("Dose (mg/kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 295 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+DosageCalculatorScreen.kt | Line 297 | Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 298 | Text("÷", fontSize = 24.sp, color = ThemePurple, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(end = 8.dp))
+DosageCalculatorScreen.kt | Line 299 | OutlinedTextField(value = availableDose, onValueChange = { availableDose = it }, label = { Text("Have Dose") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 300 | Text("×", fontSize = 24.sp, color = ThemePink, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
+DosageCalculatorScreen.kt | Line 301 | OutlinedTextField(value = availableVolume, onValueChange = { availableVolume = it }, label = { Text("Volume (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 305 | Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+DosageCalculatorScreen.kt | Line 307 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 308 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DosageCalculatorScreen.kt | Line 314 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 315 | OutlinedTextField(value = percentValue, onValueChange = { percentValue = it }, label = { Text("Solution Percentage (%)") }, placeholder = { Text("e.g. 5 for 5% Dextrose") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 316 | OutlinedTextField(value = percentTotalVol, onValueChange = { percentTotalVol = it }, label = { Text("Total Bag Volume (mL) - Optional") }, placeholder = { Text("e.g. 500") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 319 | Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+DosageCalculatorScreen.kt | Line 321 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 322 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DosageCalculatorScreen.kt | Line 328 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 330 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+DosageCalculatorScreen.kt | Line 331 | OutlinedTextField(value = targetConc, onValueChange = { targetConc = it }, label = { Text("Target Conc (C₂)") }, placeholder = { Text("e.g. 1") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 332 | OutlinedTextField(value = targetVol, onValueChange = { targetVol = it }, label = { Text("Target Vol (V₂)") }, placeholder = { Text("e.g. 500") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 334 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+DosageCalculatorScreen.kt | Line 336 | OutlinedTextField(value = stockConc, onValueChange = { stockConc = it }, label = { Text("Stock Conc (C₁)") }, placeholder = { Text("e.g. 10") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 339 | Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+DosageCalculatorScreen.kt | Line 341 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 342 | Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+DosageCalculatorScreen.kt | Line 348 | Spacer(modifier = Modifier.height(8.dp))
+DosageCalculatorScreen.kt | Line 350 | Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 351 | OutlinedTextField(value = vialPowderMg, onValueChange = { vialPowderMg = it }, label = { Text("Powder (mg)") }, placeholder = { Text("e.g. 500") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 352 | Text("÷", fontSize = 24.sp, color = ThemePurple, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 8.dp))
+DosageCalculatorScreen.kt | Line 353 | OutlinedTextField(value = diluentAddedMl, onValueChange = { diluentAddedMl = it }, label = { Text("Diluent (mL)") }, placeholder = { Text("e.g. 10") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 355 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+DosageCalculatorScreen.kt | Line 357 | OutlinedTextField(value = reconOrderedDose, onValueChange = { reconOrderedDose = it }, label = { Text("Desired Dose (Order)") }, placeholder = { Text("e.g. 1000 for 1g") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+DosageCalculatorScreen.kt | Line 363 | Spacer(modifier = Modifier.height(32.dp))
+DosageCalculatorScreen.kt | Line 372 | Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+DosageCalculatorScreen.kt | Line 380 | Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+DosageCalculatorScreen.kt | Line 388 | Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+DosageCalculatorScreen.kt | Line 396 | Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+DosageCalculatorScreen.kt | Line 403 | Spacer(modifier = Modifier.height(60.dp))
+DosageCalculatorScreen.kt | Line 412 | Box(modifier = Modifier.background(bgColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+DosageCalculatorScreen.kt | Line 419 | Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(color1, color2)), RoundedCornerShape(20.dp)).padding(2.dp)) {
+DosageCalculatorScreen.kt | Line 420 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+DosageCalculatorScreen.kt | Line 421 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+DosageCalculatorScreen.kt | Line 423 | Row(verticalAlignment = Alignment.Bottom) {
+DosageCalculatorScreen.kt | Line 425 | Text(" $unit", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color1.copy(alpha = 0.7f), modifier = Modifier.padding(bottom = 6.dp))
+DosageCalculatorScreen.kt | Line 439 | Canvas(modifier = Modifier.fillMaxSize()) {
+DosageCalculatorScreen.kt | Line 490 | Canvas(modifier = Modifier.fillMaxSize()) {
+DosageCalculatorScreen.kt | Line 535 | Canvas(modifier = Modifier.fillMaxSize()) {
+DosageCalculatorScreen.kt | Line 565 | Canvas(modifier = Modifier.fillMaxSize()) {
+DosageCalculatorScreen.kt | Line 596 | modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
+DosageCalculatorScreen.kt | Line 599 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+DosageCalculatorScreen.kt | Line 601 | Row(verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 603 | Spacer(modifier = Modifier.width(16.dp))
+DosageCalculatorScreen.kt | Line 610 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 612 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 618 | Spacer(modifier = Modifier.height(16.dp))
+DosageCalculatorScreen.kt | Line 619 | Box(modifier = Modifier.fillMaxWidth().background(ThemePurpleLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+DosageCalculatorScreen.kt | Line 622 | Spacer(modifier = Modifier.height(20.dp))
+DosageCalculatorScreen.kt | Line 625 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 626 | WarningBox("• Match units (convert mg to g if needed).\n• Beware decimal errors (e.g. 0.2 vs 0.02 mL).\n• Round only the final answer to a safe syringe measurement.\n• Verify vial strength matches calculation.")
+DosageCalculatorScreen.kt | Line 631 | Spacer(modifier = Modifier.height(16.dp))
+DosageCalculatorScreen.kt | Line 632 | Box(modifier = Modifier.fillMaxWidth().background(ThemeTealLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+DosageCalculatorScreen.kt | Line 635 | Spacer(modifier = Modifier.height(20.dp))
+DosageCalculatorScreen.kt | Line 638 | Spacer(modifier = Modifier.height(16.dp))
+DosageCalculatorScreen.kt | Line 641 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 642 | WarningBox("• Confirm weight units (KG vs LBS) strictly.\n• Red flag extreme weights.\n• Do NOT exceed adult maximums.\n• Check institutional guidance if using IBW/AdjBW for obesity.\n• Ensure decimal points are visible to avoid 2.0 becoming 20.0.")
+DosageCalculatorScreen.kt | Line 647 | Spacer(modifier = Modifier.height(16.dp))
+DosageCalculatorScreen.kt | Line 648 | Box(modifier = Modifier.fillMaxWidth().background(ThemeTealLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+DosageCalculatorScreen.kt | Line 651 | Spacer(modifier = Modifier.height(20.dp))
+DosageCalculatorScreen.kt | Line 654 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 655 | WarningBox("• Do not confuse percentages with milligrams.\n• Formula assumes strength is the active drug moiety in mg.\n• Verify if solution is w/v or v/v (v/v is rare).\n• Treat IU (International Units) as standard \"units\" in math.")
+DosageCalculatorScreen.kt | Line 660 | Spacer(modifier = Modifier.height(16.dp))
+DosageCalculatorScreen.kt | Line 661 | Box(modifier = Modifier.fillMaxWidth().background(ThemeBlueLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+DosageCalculatorScreen.kt | Line 664 | Spacer(modifier = Modifier.height(20.dp))
+DosageCalculatorScreen.kt | Line 667 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 668 | WarningBox("• Ensure units match on both sides (don't mix % with mg/mL).\n• Mix gently and clearly label new solution with concentration and time.\n• Double-check calculations for electrolytes and high-risk meds.")
+DosageCalculatorScreen.kt | Line 673 | Spacer(modifier = Modifier.height(16.dp))
+DosageCalculatorScreen.kt | Line 674 | Box(modifier = Modifier.fillMaxWidth().background(ThemePurpleLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+DosageCalculatorScreen.kt | Line 677 | Spacer(modifier = Modifier.height(20.dp))
+DosageCalculatorScreen.kt | Line 680 | Spacer(modifier = Modifier.height(24.dp))
+DosageCalculatorScreen.kt | Line 681 | WarningBox("• Only use recommended diluents; do not overfill vial.\n• Ensure powder is fully dissolved after mixing.\n• Consider volume contributed by medication powder if significant.\n• Label reconstituted syringe/vial with drug name, concentration, date/time, and expiration (usually 24h for IV).")
+DosageCalculatorScreen.kt | Line 685 | Spacer(modifier = Modifier.height(40.dp))
+DosageCalculatorScreen.kt | Line 686 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = ThemePurple)) {
+DosageCalculatorScreen.kt | Line 695 | fun WarningBox(text: String) {
+DosageCalculatorScreen.kt | Line 696 | Box(
+DosageCalculatorScreen.kt | Line 697 | modifier = Modifier
+DosageCalculatorScreen.kt | Line 704 | Row(verticalAlignment = Alignment.CenterVertically) {
+DosageCalculatorScreen.kt | Line 705 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) {
+DosageCalculatorScreen.kt | Line 708 | Spacer(modifier = Modifier.width(12.dp))
+DosageCalculatorScreen.kt | Line 711 | Spacer(modifier = Modifier.height(12.dp))
+EmergencyCalculatorsScreen.kt | Line 1066 | Box(
+EmergencyCalculatorsScreen.kt | Line 1067 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 1076 | Row(
+EmergencyCalculatorsScreen.kt | Line 1077 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 1091 | Column(modifier = Modifier.weight(1f)) {
+EmergencyCalculatorsScreen.kt | Line 1093 | Spacer(modifier = Modifier.height(2.dp))
+EmergencyCalculatorsScreen.kt | Line 1102 | modifier = Modifier.size(32.dp)
+EmergencyCalculatorsScreen.kt | Line 1111 | Column(modifier = Modifier.background(EmergencyBgWhite)) {
+EmergencyCalculatorsScreen.kt | Line 1114 | Column(modifier = Modifier.padding(16.dp)) {
+EmergencyCalculatorsScreen.kt | Line 1117 | Spacer(modifier = Modifier.height(16.dp))
+EmergencyCalculatorsScreen.kt | Line 1120 | Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+EmergencyCalculatorsScreen.kt | Line 1124 | Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+EmergencyCalculatorsScreen.kt | Line 1130 | Column(modifier = Modifier.fillMaxWidth().background(ClinicalPanelBg).border(1.dp, ClinicalBorder).padding(16.dp)) {
+EmergencyCalculatorsScreen.kt | Line 1131 | Row(verticalAlignment = Alignment.Top) {
+EmergencyCalculatorsScreen.kt | Line 1132 | Icon(Icons.Default.Warning, contentDescription = null, tint = AlertOrangeStart, modifier = Modifier.size(18.dp))
+EmergencyCalculatorsScreen.kt | Line 1133 | Spacer(modifier = Modifier.width(8.dp))
+EmergencyCalculatorsScreen.kt | Line 1136 | Spacer(modifier = Modifier.height(12.dp))
+EmergencyCalculatorsScreen.kt | Line 1138 | Spacer(modifier = Modifier.height(12.dp))
+EmergencyCalculatorsScreen.kt | Line 1149 | fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifier = Modifier) {
+EmergencyCalculatorsScreen.kt | Line 1150 | Column(modifier = modifier) {
+EmergencyCalculatorsScreen.kt | Line 1152 | Row(
+EmergencyCalculatorsScreen.kt | Line 1153 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 1164 | modifier = Modifier.weight(1f)
+EmergencyCalculatorsScreen.kt | Line 1172 | modifier = Modifier.weight(1f)
+EmergencyCalculatorsScreen.kt | Line 1179 | modifier = Modifier.weight(1.3f)
+EmergencyCalculatorsScreen.kt | Line 1183 | Spacer(modifier = Modifier.height(8.dp))
+EmergencyCalculatorsScreen.kt | Line 1185 | Row(
+EmergencyCalculatorsScreen.kt | Line 1186 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 1193 | DiluentBadge(modifier = Modifier.weight(1f).fillMaxHeight(), drug)
+EmergencyCalculatorsScreen.kt | Line 1197 | modifier = Modifier.weight(1.2f).fillMaxHeight()
+EmergencyCalculatorsScreen.kt | Line 1201 | Spacer(modifier = Modifier.height(8.dp))
+EmergencyCalculatorsScreen.kt | Line 1203 | Box(
+EmergencyCalculatorsScreen.kt | Line 1204 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 1218 | Column(verticalArrangement = Arrangement.Center) {
+EmergencyCalculatorsScreen.kt | Line 1220 | Spacer(modifier = Modifier.height(6.dp))
+EmergencyCalculatorsScreen.kt | Line 1229 | Box(modifier = Modifier.width(1.dp).fillMaxHeight().background(DividerColor))
+EmergencyCalculatorsScreen.kt | Line 1233 | fun DashboardCell(title: String, value: String, color: Color, isBold: Boolean = false, modifier: Modifier = Modifier) {
+EmergencyCalculatorsScreen.kt | Line 1234 | Column(
+EmergencyCalculatorsScreen.kt | Line 1235 | modifier = modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+EmergencyCalculatorsScreen.kt | Line 1240 | Spacer(modifier = Modifier.height(4.dp))
+EmergencyCalculatorsScreen.kt | Line 1253 | fun DiluentBadge(modifier: Modifier = Modifier, drug: EmergencyDrug) {
+EmergencyCalculatorsScreen.kt | Line 1254 | Box(
+EmergencyCalculatorsScreen.kt | Line 1255 | modifier = modifier.padding(vertical = 12.dp, horizontal = 10.dp),
+EmergencyCalculatorsScreen.kt | Line 1258 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+EmergencyCalculatorsScreen.kt | Line 1260 | Spacer(modifier = Modifier.height(4.dp))
+EmergencyCalculatorsScreen.kt | Line 1267 | fun AccessDashboardCell(drug: EmergencyDrug, modifier: Modifier = Modifier) {
+EmergencyCalculatorsScreen.kt | Line 1268 | Box(
+EmergencyCalculatorsScreen.kt | Line 1269 | modifier = modifier.padding(vertical = 12.dp, horizontal = 10.dp),
+EmergencyCalculatorsScreen.kt | Line 1272 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+EmergencyCalculatorsScreen.kt | Line 1274 | Spacer(modifier = Modifier.height(4.dp))
+EmergencyCalculatorsScreen.kt | Line 1275 | Row(verticalAlignment = Alignment.CenterVertically) {
+EmergencyCalculatorsScreen.kt | Line 1276 | Box(modifier = Modifier.size(10.dp).background(drug.cannulaColor, CircleShape).shadow(4.dp, CircleShape, spotColor = drug.cannulaColor))
+EmergencyCalculatorsScreen.kt | Line 1277 | Spacer(modifier = Modifier.width(6.dp))
+EmergencyCalculatorsScreen.kt | Line 1297 | Canvas(modifier = Modifier.fillMaxSize().alpha(alphaAnim).blur(120.dp, BlurredEdgeTreatment.Unbounded)) {
+EmergencyCalculatorsScreen.kt | Line 27 | import androidx.compose.ui.Modifier
+EmergencyCalculatorsScreen.kt | Line 274 | Box(modifier = Modifier.fillMaxSize().background(EmergencyBgWhite)) {
+EmergencyCalculatorsScreen.kt | Line 277 | Column(
+EmergencyCalculatorsScreen.kt | Line 278 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 293 | LazyColumn(
+EmergencyCalculatorsScreen.kt | Line 294 | modifier = Modifier.fillMaxSize(),
+EmergencyCalculatorsScreen.kt | Line 310 | item { Spacer(modifier = Modifier.height(60.dp)) }
+EmergencyCalculatorsScreen.kt | Line 320 | fun AnimatedHeart(rhythm: EcgRhythm, modifier: Modifier = Modifier) {
+EmergencyCalculatorsScreen.kt | Line 369 | modifier = modifier.scale(scale)
+EmergencyCalculatorsScreen.kt | Line 451 | Box(
+EmergencyCalculatorsScreen.kt | Line 452 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 478 | Row(
+EmergencyCalculatorsScreen.kt | Line 479 | modifier = Modifier.fillMaxSize(),
+EmergencyCalculatorsScreen.kt | Line 483 | Box(
+EmergencyCalculatorsScreen.kt | Line 484 | modifier = Modifier.padding(end = 16.dp),
+EmergencyCalculatorsScreen.kt | Line 489 | modifier = Modifier.size(64.dp)
+EmergencyCalculatorsScreen.kt | Line 494 | Box(
+EmergencyCalculatorsScreen.kt | Line 495 | modifier = Modifier.weight(1f).fillMaxHeight()
+EmergencyCalculatorsScreen.kt | Line 497 | Canvas(modifier = Modifier.fillMaxSize()) {
+EmergencyCalculatorsScreen.kt | Line 592 | modifier = Modifier.align(Alignment.BottomStart)
+EmergencyCalculatorsScreen.kt | Line 598 | Box(
+EmergencyCalculatorsScreen.kt | Line 599 | modifier = Modifier.padding(start = 16.dp),
+EmergencyCalculatorsScreen.kt | Line 602 | Column(
+EmergencyCalculatorsScreen.kt | Line 605 | modifier = Modifier
+EmergencyCalculatorsScreen.kt | Line 617 | Spacer(modifier = Modifier.height(2.dp))
+EmergencyCalculatorsScreen.kt | Line 631 | Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.width(65.dp)) {
+EmergencyCalculatorsScreen.kt | Line 696 | Canvas(modifier = Modifier.fillMaxWidth().height(260.dp)) {
+EmergencyCalculatorsScreen.kt | Line 907 | Box(modifier = Modifier.padding(top = 16.dp)) {
+EmergencyCalculatorsScreen.kt | Line 908 | Canvas(modifier = Modifier.width(110.dp).height(240.dp)) {
+HomeScreen.kt | Line 100 | modifier = Modifier.graphicsLayer { alpha = if (isVisible) 1f else 0f }
+HomeScreen.kt | Line 103 | Spacer(modifier = Modifier.height(20.dp))
+HomeScreen.kt | Line 110 | modifier = Modifier.fillMaxSize(),
+HomeScreen.kt | Line 142 | Canvas(
+HomeScreen.kt | Line 143 | modifier = Modifier
+HomeScreen.kt | Line 179 | Box(
+HomeScreen.kt | Line 180 | modifier = Modifier
+HomeScreen.kt | Line 20 | import androidx.compose.ui.Modifier
+HomeScreen.kt | Line 207 | Row(verticalAlignment = Alignment.CenterVertically) {
+HomeScreen.kt | Line 209 | Box(
+HomeScreen.kt | Line 210 | modifier = Modifier
+HomeScreen.kt | Line 218 | Spacer(modifier = Modifier.width(16.dp))
+HomeScreen.kt | Line 249 | modifier = Modifier
+HomeScreen.kt | Line 275 | Box(
+HomeScreen.kt | Line 276 | modifier = Modifier
+HomeScreen.kt | Line 281 | Canvas(modifier = Modifier.fillMaxSize()) {
+HomeScreen.kt | Line 286 | Column(
+HomeScreen.kt | Line 287 | modifier = Modifier.fillMaxSize().padding(20.dp),
+HomeScreen.kt | Line 291 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+HomeScreen.kt | Line 292 | Box(
+HomeScreen.kt | Line 293 | modifier = Modifier
+HomeScreen.kt | Line 303 | Box(modifier = Modifier.background(Color.White, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+HomeScreen.kt | Line 315 | Spacer(modifier = Modifier.height(4.dp))
+HomeScreen.kt | Line 78 | Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
+HomeScreen.kt | Line 83 | Column(
+HomeScreen.kt | Line 84 | modifier = Modifier
+HomeScreen.kt | Line 89 | Spacer(modifier = Modifier.height(24.dp))
+HomeScreen.kt | Line 94 | Spacer(modifier = Modifier.height(32.dp))
+IcuCalculatorsScreen.kt | Line 127 | Spacer(modifier = Modifier.height(24.dp))
+IcuCalculatorsScreen.kt | Line 142 | modifier = Modifier
+IcuCalculatorsScreen.kt | Line 150 | Row(
+IcuCalculatorsScreen.kt | Line 151 | modifier = Modifier
+IcuCalculatorsScreen.kt | Line 158 | Box(
+IcuCalculatorsScreen.kt | Line 159 | modifier = Modifier.size(56.dp).background(Brush.linearGradient(listOf(color1, color2)), CircleShape).shadow(4.dp, CircleShape),
+IcuCalculatorsScreen.kt | Line 164 | Spacer(modifier = Modifier.width(16.dp))
+IcuCalculatorsScreen.kt | Line 168 | Spacer(modifier = Modifier.height(8.dp))
+IcuCalculatorsScreen.kt | Line 19 | import androidx.compose.ui.Modifier
+IcuCalculatorsScreen.kt | Line 59 | Column(
+IcuCalculatorsScreen.kt | Line 60 | modifier = Modifier
+IcuCalculatorsScreen.kt | Line 67 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 212 | Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+IvDripCalculatorCard.kt | Line 216 | LiveCameraPreview(isFlashlightOn = isFlashlightOn, modifier = Modifier.fillMaxSize())
+IvDripCalculatorCard.kt | Line 218 | Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+IvDripCalculatorCard.kt | Line 224 | Box(modifier = Modifier.fillMaxSize().background(Color(0xFF00FFCC).copy(alpha = flashAlpha * 0.15f)).border(width = 8.dp, color = Color(0xFF00FFCC).copy(alpha = flashAlpha))) {
+IvDripCalculatorCard.kt | Line 225 | Canvas(modifier = Modifier.fillMaxSize()) {
+IvDripCalculatorCard.kt | Line 242 | Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTransformGestures { _, pan, zoom, _ -> scale = (scale * zoom).coerceIn(0.5f, 4f); offset += pan } }) {
+IvDripCalculatorCard.kt | Line 243 | HologramDripChamberGraphic(factor = selectedDropFactor, progress = dropProgress.value, modifier = Modifier.align(Alignment.Center).graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y).size(100.dp, 200.dp))
+IvDripCalculatorCard.kt | Line 248 | Row(modifier = Modifier.align(Alignment.TopCenter).padding(top = 24.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 249 | Text("ℹ️", fontSize = 22.sp, modifier = Modifier.clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentArState = ArState.INSTRUCTIONS })
+IvDripCalculatorCard.kt | Line 250 | Text("📳", fontSize = 22.sp, modifier = Modifier.graphicsLayer(alpha = if (isHapticEnabled) 1f else 0.4f).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); isHapticEnabled = !isHapticEnabled })
+IvDripCalculatorCard.kt | Line 251 | Text("🔦", fontSize = 22.sp, modifier = Modifier.graphicsLayer(alpha = if (isFlashlightOn) 1f else 0.4f).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); isFlashlightOn = !isFlashlightOn })
+IvDripCalculatorCard.kt | Line 252 | Text("❌", fontSize = 22.sp, modifier = Modifier.clickable { showSyncMode = false; isFlashlightOn = false })
+IvDripCalculatorCard.kt | Line 256 | Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.BottomCenter) {
+IvDripCalculatorCard.kt | Line 260 | Column(modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 262 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 264 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 265 | Button(onClick = { currentArState = ArState.SYNCING }, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC))) { Text("BEGIN SYNCING", color = Color.Black, fontWeight = FontWeight.ExtraBold) }
+IvDripCalculatorCard.kt | Line 269 | Column(modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(24.dp)).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 270 | Row(verticalAlignment = Alignment.Bottom) {
+IvDripCalculatorCard.kt | Line 272 | Text(" drops/min target", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, start = 8.dp))
+IvDripCalculatorCard.kt | Line 274 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 275 | Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); calibrationTaps = emptyList(); currentArState = ArState.CALIBRATING }, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC)), shape = RoundedCornerShape(16.dp)) { Text("SYNC COMPLETE - VERIFY", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold) }
+IvDripCalculatorCard.kt | Line 279 | Column(modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.9f), RoundedCornerShape(24.dp)).border(2.dp, Color(0xFF00FFCC), RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 281 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 283 | Spacer(modifier = Modifier.height(20.dp))
+IvDripCalculatorCard.kt | Line 284 | Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+IvDripCalculatorCard.kt | Line 287 | Box(modifier = Modifier.size(24.dp).background(if(isFilled) Color(0xFF00FFCC) else Color.Transparent, CircleShape).border(2.dp, Color(0xFF00FFCC), CircleShape))
+IvDripCalculatorCard.kt | Line 290 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 291 | Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); calibrationTaps = calibrationTaps + System.currentTimeMillis(); if (calibrationTaps.size == 4) { val intervals = calibrationTaps.zipWithNext { a, b -> b - a }; val avgInterval = intervals.average(); measuredDpm = (60000 / avgInterval).roundToInt(); currentArState = ArState.RESULT } }, modifier = Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(16.dp)) { Text(if (calibrationTaps.isEmpty()) "TAP EXACTLY ON DROP 1" else "TAP ON NEXT DROP", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold) }
+IvDripCalculatorCard.kt | Line 298 | Column(modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.95f), RoundedCornerShape(24.dp)).border(2.dp, resultColor, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 300 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 301 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+IvDripCalculatorCard.kt | Line 302 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 306 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 311 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 313 | Button(onClick = { showSyncMode = false }, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC))) { Text("FINISH & CLOSE", color = Color.Black, fontWeight = FontWeight.ExtraBold) }
+IvDripCalculatorCard.kt | Line 315 | Button(onClick = { calibrationTaps = emptyList(); currentArState = ArState.CALIBRATING }, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))) { Text("RETRY CALIBRATION", color = Color.White, fontWeight = FontWeight.ExtraBold) }
+IvDripCalculatorCard.kt | Line 316 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 329 | Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp), shape = RoundedCornerShape(24.dp)) {
+IvDripCalculatorCard.kt | Line 33 | import androidx.compose.ui.Modifier
+IvDripCalculatorCard.kt | Line 330 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+IvDripCalculatorCard.kt | Line 333 | Row(modifier = Modifier.fillMaxWidth().background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp)).padding(4.dp)) {
+IvDripCalculatorCard.kt | Line 338 | Box(
+IvDripCalculatorCard.kt | Line 339 | modifier = Modifier.weight(1f).height(45.dp).background(bgColor, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentMode = mode }.padding(horizontal = 16.dp),
+IvDripCalculatorCard.kt | Line 344 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 350 | OutlinedTextField(value = volumeMl, onValueChange = { volumeMl = it }, label = { Text("Total Volume (mL)", fontWeight = FontWeight.SemiBold) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 351 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 352 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+IvDripCalculatorCard.kt | Line 353 | OutlinedTextField(value = timeHours, onValueChange = { timeHours = it }, label = { Text("Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 354 | OutlinedTextField(value = timeMinutes, onValueChange = { timeMinutes = it }, label = { Text("Minutes") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 356 | Spacer(modifier = Modifier.height(32.dp))
+IvDripCalculatorCard.kt | Line 358 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 360 | IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Info, contentDescription = "Learn more", tint = MaterialTheme.colorScheme.primary) }
+IvDripCalculatorCard.kt | Line 362 | Spacer(modifier = Modifier.height(12.dp))
+IvDripCalculatorCard.kt | Line 363 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+IvDripCalculatorCard.kt | Line 370 | Surface(modifier = Modifier.weight(1f).padding(horizontal = 4.dp).height(60.dp).clickable { selectedDropFactor = factor; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }, shape = RoundedCornerShape(12.dp), color = bgColor, shadowElevation = if (isSelected) 6.dp else 0.dp) {
+IvDripCalculatorCard.kt | Line 371 | Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+IvDripCalculatorCard.kt | Line 378 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 388 | Row(modifier = Modifier.fillMaxWidth().background(guideColor.copy(alpha = 0.08f), RoundedCornerShape(16.dp)).border(1.dp, guideColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 389 | AnimatedMiniDripChamberGraphic(factor = factor, accentColor = guideColor, progress = dropProgress.value, modifier = Modifier.size(36.dp, 60.dp))
+IvDripCalculatorCard.kt | Line 390 | Spacer(modifier = Modifier.width(16.dp))
+IvDripCalculatorCard.kt | Line 393 | Spacer(modifier = Modifier.height(2.dp))
+IvDripCalculatorCard.kt | Line 399 | Spacer(modifier = Modifier.height(32.dp))
+IvDripCalculatorCard.kt | Line 400 | Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(24.dp), contentAlignment = Alignment.Center) {
+IvDripCalculatorCard.kt | Line 401 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+IvDripCalculatorCard.kt | Line 403 | Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 8.dp)) {
+IvDripCalculatorCard.kt | Line 405 | Spacer(modifier = Modifier.width(8.dp))
+IvDripCalculatorCard.kt | Line 406 | Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 12.dp)) {
+IvDripCalculatorCard.kt | Line 407 | Text("💧", fontSize = 24.sp, modifier = Modifier.graphicsLayer(scaleX = mainScreenDropScale, scaleY = mainScreenDropScale))
+IvDripCalculatorCard.kt | Line 412 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 413 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 414 | Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showSafetyWarning = true }.padding(horizontal = 16.dp, vertical = 12.dp)) {
+IvDripCalculatorCard.kt | Line 415 | Text("👁️", fontSize = 14.sp); Spacer(modifier = Modifier.width(8.dp))
+IvDripCalculatorCard.kt | Line 418 | Spacer(modifier = Modifier.width(12.dp))
+IvDripCalculatorCard.kt | Line 419 | Box(modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); showScienceDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+IvDripCalculatorCard.kt | Line 430 | Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+IvDripCalculatorCard.kt | Line 434 | Box(modifier = Modifier.weight(1f).background(bgColor, RoundedCornerShape(12.dp)).clickable { pumpCalcMode = mode; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }.padding(8.dp), contentAlignment = Alignment.Center) {
+IvDripCalculatorCard.kt | Line 444 | OutlinedTextField(value = pumpVolMl, onValueChange = { pumpVolMl = it }, label = { Text("Total Volume (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 445 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 446 | OutlinedTextField(value = pumpTimeHrs, onValueChange = { pumpTimeHrs = it }, label = { Text("Total Time (Decimal Hours)") }, placeholder = { Text("e.g. 8 or 2.5") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 451 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+IvDripCalculatorCard.kt | Line 452 | OutlinedTextField(value = pumpWeightKg, onValueChange = { pumpWeightKg = it }, label = { Text("Weight (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 453 | OutlinedTextField(value = pumpDoseMcg, onValueChange = { pumpDoseMcg = it }, label = { Text("mcg/kg/min") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 455 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 456 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+IvDripCalculatorCard.kt | Line 457 | OutlinedTextField(value = pumpDrugMg, onValueChange = { pumpDrugMg = it }, label = { Text("Drug (mg)") }, placeholder = { Text("e.g. 400") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 458 | OutlinedTextField(value = pumpBagMl, onValueChange = { pumpBagMl = it }, label = { Text("Bag Vol (mL)") }, placeholder = { Text("e.g. 250") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 464 | OutlinedTextField(value = titrateCurrentRate, onValueChange = { titrateCurrentRate = it }, label = { Text("Current Pump Rate (mL/hr)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 465 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 466 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 467 | OutlinedTextField(value = titrateOldDose, onValueChange = { titrateOldDose = it }, label = { Text("Current Dose") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 469 | OutlinedTextField(value = titrateNewDose, onValueChange = { titrateNewDose = it }, label = { Text("New Target Dose") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+IvDripCalculatorCard.kt | Line 476 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 477 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+IvDripCalculatorCard.kt | Line 478 | Box(modifier = Modifier.size(36.dp).background(Color.LightGray.copy(alpha = 0.3f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 16.sp) }
+IvDripCalculatorCard.kt | Line 480 | Spacer(modifier = Modifier.height(12.dp))
+IvDripCalculatorCard.kt | Line 483 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF0F172A), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFF334155), RoundedCornerShape(16.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
+IvDripCalculatorCard.kt | Line 484 | Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+IvDripCalculatorCard.kt | Line 487 | Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
+IvDripCalculatorCard.kt | Line 492 | Column(horizontalAlignment = Alignment.End) {
+IvDripCalculatorCard.kt | Line 494 | Spacer(modifier = Modifier.height(4.dp))
+IvDripCalculatorCard.kt | Line 495 | Row(verticalAlignment = Alignment.Bottom) {
+IvDripCalculatorCard.kt | Line 497 | Text(" mL/hr", fontSize = 16.sp, color = Color(0xFF00E676), modifier = Modifier.padding(bottom = 6.dp, start = 4.dp))
+IvDripCalculatorCard.kt | Line 542 | Canvas(modifier = Modifier.fillMaxSize()) {
+IvDripCalculatorCard.kt | Line 626 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+IvDripCalculatorCard.kt | Line 627 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+IvDripCalculatorCard.kt | Line 628 | Row(verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 630 | Spacer(modifier = Modifier.width(16.dp))
+IvDripCalculatorCard.kt | Line 636 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 638 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 643 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 646 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 652 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 655 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 658 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 661 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 664 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 667 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 668 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
+IvDripCalculatorCard.kt | Line 670 | Row(verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 671 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
+IvDripCalculatorCard.kt | Line 672 | Spacer(modifier = Modifier.width(12.dp))
+IvDripCalculatorCard.kt | Line 675 | Spacer(modifier = Modifier.height(12.dp))
+IvDripCalculatorCard.kt | Line 681 | Spacer(modifier = Modifier.height(32.dp))
+IvDripCalculatorCard.kt | Line 682 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Understood", fontWeight = FontWeight.Bold) }
+IvDripCalculatorCard.kt | Line 695 | Canvas(modifier = Modifier.fillMaxWidth().height(24.dp)) {
+IvDripCalculatorCard.kt | Line 706 | fun HologramDripChamberGraphic(factor: Int, progress: Float, modifier: Modifier = Modifier) {
+IvDripCalculatorCard.kt | Line 710 | Canvas(modifier = modifier) {
+IvDripCalculatorCard.kt | Line 72 | fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
+IvDripCalculatorCard.kt | Line 732 | fun AnimatedMiniDripChamberGraphic(factor: Int, accentColor: Color, progress: Float, modifier: Modifier = Modifier) {
+IvDripCalculatorCard.kt | Line 734 | Canvas(modifier = modifier) {
+IvDripCalculatorCard.kt | Line 754 | fun LiveCameraPreview(isFlashlightOn: Boolean, modifier: Modifier = Modifier) {
+IvDripCalculatorCard.kt | Line 778 | modifier = modifier
+IvDripCalculatorCard.kt | Line 785 | modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
+IvDripCalculatorCard.kt | Line 790 | Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(24.dp).verticalScroll(rememberScrollState())) {
+IvDripCalculatorCard.kt | Line 791 | Row(verticalAlignment = Alignment.CenterVertically) {
+IvDripCalculatorCard.kt | Line 792 | Text("🔬", fontSize = 28.sp); Spacer(modifier = Modifier.width(12.dp))
+IvDripCalculatorCard.kt | Line 795 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 798 | Spacer(modifier = Modifier.height(4.dp))
+IvDripCalculatorCard.kt | Line 801 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 804 | Spacer(modifier = Modifier.height(4.dp))
+IvDripCalculatorCard.kt | Line 807 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 809 | Spacer(modifier = Modifier.height(24.dp))
+IvDripCalculatorCard.kt | Line 812 | Spacer(modifier = Modifier.height(8.dp))
+IvDripCalculatorCard.kt | Line 814 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 817 | Spacer(modifier = Modifier.height(16.dp))
+IvDripCalculatorCard.kt | Line 827 | Row(modifier = Modifier.background(statusColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+IvDripCalculatorCard.kt | Line 829 | Spacer(modifier = Modifier.width(8.dp))
+IvDripCalculatorCard.kt | Line 832 | Spacer(modifier = Modifier.height(32.dp))
+IvDripCalculatorCard.kt | Line 833 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp)) {
+MainActivity.kt | Line 11 | import androidx.compose.ui.Modifier
+MainActivity.kt | Line 26 | modifier = Modifier.fillMaxSize(),
+PediatricRulesScreen.kt | Line 105 | Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+PediatricRulesScreen.kt | Line 106 | Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+PediatricRulesScreen.kt | Line 107 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 111 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+PediatricRulesScreen.kt | Line 112 | Row(verticalAlignment = Alignment.CenterVertically) {
+PediatricRulesScreen.kt | Line 113 | Box(modifier = Modifier.size(48.dp).background(ThemeOrange, CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("🧒", fontSize = 24.sp) }
+PediatricRulesScreen.kt | Line 114 | Spacer(modifier = Modifier.width(16.dp))
+PediatricRulesScreen.kt | Line 120 | Box(modifier = Modifier.size(42.dp).background(ThemeAmber.copy(alpha = 0.3f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+PediatricRulesScreen.kt | Line 123 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 126 | LazyRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+PediatricRulesScreen.kt | Line 131 | Box(
+PediatricRulesScreen.kt | Line 132 | modifier = Modifier.height(40.dp).background(bgColor, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentMode = mode }.padding(horizontal = 16.dp),
+PediatricRulesScreen.kt | Line 137 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 141 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3E0), RoundedCornerShape(12.dp)).border(1.dp, ThemeOrange, RoundedCornerShape(12.dp)).padding(12.dp)) {
+PediatricRulesScreen.kt | Line 142 | Row(verticalAlignment = Alignment.CenterVertically) {
+PediatricRulesScreen.kt | Line 144 | Spacer(modifier = Modifier.width(8.dp))
+PediatricRulesScreen.kt | Line 149 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 153 | Box(modifier = Modifier.height(220.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+PediatricRulesScreen.kt | Line 157 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 160 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+PediatricRulesScreen.kt | Line 162 | Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+PediatricRulesScreen.kt | Line 163 | OutlinedTextField(value = adultDoseMg, onValueChange = { adultDoseMg = it }, label = { Text("Standard Adult Dose (mg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+PediatricRulesScreen.kt | Line 164 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 4.dp))
+PediatricRulesScreen.kt | Line 169 | OutlinedTextField(value = childWeightKg, onValueChange = { childWeightKg = it }, label = { Text("Child Weight (kg)") }, placeholder = { Text("e.g. 30") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+PediatricRulesScreen.kt | Line 173 | OutlinedTextField(value = childAgeYears, onValueChange = { childAgeYears = it }, label = { Text("Child Age (Years)") }, placeholder = { Text("e.g. 8") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+PediatricRulesScreen.kt | Line 177 | OutlinedTextField(value = infantAgeMonths, onValueChange = { infantAgeMonths = it }, label = { Text("Infant Age (Months)") }, placeholder = { Text("e.g. 6") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+PediatricRulesScreen.kt | Line 183 | Spacer(modifier = Modifier.height(32.dp))
+PediatricRulesScreen.kt | Line 187 | Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(ThemeOrange, ThemeAmber)), RoundedCornerShape(20.dp)).padding(2.dp)) {
+PediatricRulesScreen.kt | Line 188 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+PediatricRulesScreen.kt | Line 189 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+PediatricRulesScreen.kt | Line 191 | Row(verticalAlignment = Alignment.Bottom) {
+PediatricRulesScreen.kt | Line 193 | Text(" mg", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ThemeAmber, modifier = Modifier.padding(bottom = 8.dp, start = 6.dp))
+PediatricRulesScreen.kt | Line 199 | Spacer(modifier = Modifier.height(60.dp))
+PediatricRulesScreen.kt | Line 20 | import androidx.compose.ui.Modifier
+PediatricRulesScreen.kt | Line 209 | Canvas(modifier = Modifier.fillMaxSize()) {
+PediatricRulesScreen.kt | Line 242 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+PediatricRulesScreen.kt | Line 243 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+PediatricRulesScreen.kt | Line 244 | Row(verticalAlignment = Alignment.CenterVertically) {
+PediatricRulesScreen.kt | Line 246 | Spacer(modifier = Modifier.width(16.dp))
+PediatricRulesScreen.kt | Line 252 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 254 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 259 | Spacer(modifier = Modifier.height(8.dp))
+PediatricRulesScreen.kt | Line 260 | Box(modifier = Modifier.fillMaxWidth().background(ThemeOrangeLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+PediatricRulesScreen.kt | Line 263 | Spacer(modifier = Modifier.height(20.dp))
+PediatricRulesScreen.kt | Line 269 | Spacer(modifier = Modifier.height(8.dp))
+PediatricRulesScreen.kt | Line 270 | Box(modifier = Modifier.fillMaxWidth().background(ThemeOrangeLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+PediatricRulesScreen.kt | Line 273 | Spacer(modifier = Modifier.height(20.dp))
+PediatricRulesScreen.kt | Line 279 | Spacer(modifier = Modifier.height(8.dp))
+PediatricRulesScreen.kt | Line 280 | Box(modifier = Modifier.fillMaxWidth().background(ThemeOrangeLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+PediatricRulesScreen.kt | Line 283 | Spacer(modifier = Modifier.height(20.dp))
+PediatricRulesScreen.kt | Line 289 | Spacer(modifier = Modifier.height(24.dp))
+PediatricRulesScreen.kt | Line 292 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
+PediatricRulesScreen.kt | Line 294 | Row(verticalAlignment = Alignment.CenterVertically) {
+PediatricRulesScreen.kt | Line 295 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
+PediatricRulesScreen.kt | Line 296 | Spacer(modifier = Modifier.width(12.dp))
+PediatricRulesScreen.kt | Line 299 | Spacer(modifier = Modifier.height(12.dp))
+PediatricRulesScreen.kt | Line 303 | Spacer(modifier = Modifier.height(32.dp))
+PediatricRulesScreen.kt | Line 304 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = ThemeOrange)) { Text("Acknowledge & Close", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+ProfileScreen.kt | Line 105 | Box(modifier = Modifier.navigationBarsPadding().fillMaxWidth().padding(24.dp)) {
+ProfileScreen.kt | Line 106 | Box(
+ProfileScreen.kt | Line 107 | modifier = Modifier
+ProfileScreen.kt | Line 133 | Row(verticalAlignment = Alignment.CenterVertically) {
+ProfileScreen.kt | Line 138 | Spacer(modifier = Modifier.width(12.dp))
+ProfileScreen.kt | Line 147 | Box(modifier = Modifier.fillMaxSize().background(BaseWhiteBg)) {
+ProfileScreen.kt | Line 151 | Column(
+ProfileScreen.kt | Line 152 | modifier = Modifier
+ProfileScreen.kt | Line 158 | Spacer(modifier = Modifier.height(32.dp))
+ProfileScreen.kt | Line 163 | Spacer(modifier = Modifier.height(24.dp))
+ProfileScreen.kt | Line 168 | Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+ProfileScreen.kt | Line 169 | Row(verticalAlignment = Alignment.CenterVertically) {
+ProfileScreen.kt | Line 171 | Box(
+ProfileScreen.kt | Line 172 | modifier = Modifier.size(46.dp).background(Brush.linearGradient(listOf(BlueGradStart, BlueGradEnd)), RoundedCornerShape(14.dp)),
+ProfileScreen.kt | Line 175 | Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+ProfileScreen.kt | Line 177 | Spacer(modifier = Modifier.width(12.dp))
+ProfileScreen.kt | Line 188 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+ProfileScreen.kt | Line 189 | FrostedTextField(value = serviceNo, onValueChange = { serviceNo = it }, label = "Service No", modifier = Modifier.weight(1f))
+ProfileScreen.kt | Line 190 | FrostedTextField(value = grade, onValueChange = { grade = it }, label = "Grade", modifier = Modifier.weight(1f))
+ProfileScreen.kt | Line 193 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+ProfileScreen.kt | Line 194 | FrostedTextField(value = unit, onValueChange = { unit = it }, label = "Unit/Ward", modifier = Modifier.weight(1f))
+ProfileScreen.kt | Line 195 | FrostedTextField(value = paySheetNo, onValueChange = { paySheetNo = it }, label = "Pay Sheet No", modifier = Modifier.weight(1f))
+ProfileScreen.kt | Line 204 | Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+ProfileScreen.kt | Line 205 | Row(verticalAlignment = Alignment.CenterVertically) {
+ProfileScreen.kt | Line 207 | Box(
+ProfileScreen.kt | Line 208 | modifier = Modifier.size(46.dp).background(Brush.linearGradient(listOf(PurpleGradStart, PurpleGradEnd)), RoundedCornerShape(14.dp)),
+ProfileScreen.kt | Line 211 | Icon(Icons.Default.List, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+ProfileScreen.kt | Line 213 | Spacer(modifier = Modifier.width(12.dp))
+ProfileScreen.kt | Line 23 | import androidx.compose.ui.Modifier
+ProfileScreen.kt | Line 234 | Spacer(modifier = Modifier.height(80.dp))
+ProfileScreen.kt | Line 250 | Box(
+ProfileScreen.kt | Line 251 | modifier = Modifier
+ProfileScreen.kt | Line 278 | Row(verticalAlignment = Alignment.CenterVertically) {
+ProfileScreen.kt | Line 279 | Box(
+ProfileScreen.kt | Line 280 | modifier = Modifier
+ProfileScreen.kt | Line 289 | Spacer(modifier = Modifier.width(16.dp))
+ProfileScreen.kt | Line 301 | Box(
+ProfileScreen.kt | Line 302 | modifier = Modifier
+ProfileScreen.kt | Line 325 | Canvas(
+ProfileScreen.kt | Line 326 | modifier = Modifier
+ProfileScreen.kt | Line 353 | modifier: Modifier = Modifier, keyboardType: KeyboardType = KeyboardType.Text, prefix: String = ""
+ProfileScreen.kt | Line 360 | leadingIcon = if (prefix.isNotEmpty()) { { Text(prefix, color = BlueGradEnd, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 8.dp)) } } else null,
+ProfileScreen.kt | Line 361 | modifier = modifier.fillMaxWidth(),
+SpecialCalculationsScreen.kt | Line 127 | Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+SpecialCalculationsScreen.kt | Line 128 | Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+SpecialCalculationsScreen.kt | Line 129 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 133 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+SpecialCalculationsScreen.kt | Line 134 | Row(verticalAlignment = Alignment.CenterVertically) {
+SpecialCalculationsScreen.kt | Line 135 | Box(modifier = Modifier.size(48.dp).background(currentMode.themeColor, CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text(currentMode.emoji, fontSize = 24.sp) }
+SpecialCalculationsScreen.kt | Line 136 | Spacer(modifier = Modifier.width(16.dp))
+SpecialCalculationsScreen.kt | Line 142 | Box(modifier = Modifier.size(42.dp).background(currentMode.themeColor.copy(alpha = 0.2f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+SpecialCalculationsScreen.kt | Line 145 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 148 | LazyRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+SpecialCalculationsScreen.kt | Line 153 | Box(modifier = Modifier.height(40.dp).background(bgColor, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentMode = mode }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+SpecialCalculationsScreen.kt | Line 158 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 162 | Box(modifier = Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
+SpecialCalculationsScreen.kt | Line 166 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 169 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+SpecialCalculationsScreen.kt | Line 171 | Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+SpecialCalculationsScreen.kt | Line 175 | OutlinedTextField(value = bgLevel, onValueChange = { bgLevel = it }, label = { Text("Blood Glucose (mg/dL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 178 | Row(modifier = Modifier.fillMaxWidth().background(ThemeInsulinBlue.copy(alpha=0.1f), RoundedCornerShape(12.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+SpecialCalculationsScreen.kt | Line 179 | Text("💉", fontSize = 24.sp); Spacer(modifier = Modifier.width(16.dp))
+SpecialCalculationsScreen.kt | Line 184 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+SpecialCalculationsScreen.kt | Line 186 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+SpecialCalculationsScreen.kt | Line 187 | OutlinedTextField(value = insWeight, onValueChange = { insWeight = it }, label = { Text("Weight (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 188 | OutlinedTextField(value = insUkghr, onValueChange = { insUkghr = it }, label = { Text("Order (U/kg/hr)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 190 | OutlinedTextField(value = insUml, onValueChange = { insUml = it }, label = { Text("Concentration (U/mL)") }, placeholder = { Text("e.g. 1") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 195 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+SpecialCalculationsScreen.kt | Line 196 | OutlinedTextField(value = hepWeight, onValueChange = { hepWeight = it }, label = { Text("Weight (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 197 | OutlinedTextField(value = hepUkghr, onValueChange = { hepUkghr = it }, label = { Text("Order (U/kg/hr)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 20 | import androidx.compose.ui.Modifier
+SpecialCalculationsScreen.kt | Line 203 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+SpecialCalculationsScreen.kt | Line 205 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+SpecialCalculationsScreen.kt | Line 206 | OutlinedTextField(value = hepBagUnits, onValueChange = { hepBagUnits = it }, label = { Text("Bag Units") }, placeholder = { Text("e.g. 25000") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 207 | OutlinedTextField(value = hepBagMl, onValueChange = { hepBagMl = it }, label = { Text("Bag Vol (mL)") }, placeholder = { Text("e.g. 250") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 214 | Spacer(modifier = Modifier.height(8.dp))
+SpecialCalculationsScreen.kt | Line 216 | OutlinedTextField(value = pcaBolusDose, onValueChange = { pcaBolusDose = it }, label = { Text("Bolus Dose") }, placeholder = { Text("e.g. 1 mg") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 217 | OutlinedTextField(value = pcaLockoutMins, onValueChange = { pcaLockoutMins = it }, label = { Text("Lockout Interval (Mins)") }, placeholder = { Text("e.g. 5") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+SpecialCalculationsScreen.kt | Line 223 | Spacer(modifier = Modifier.height(32.dp))
+SpecialCalculationsScreen.kt | Line 233 | Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(currentMode.themeColor, ThemeSlate)), RoundedCornerShape(20.dp)).padding(2.dp)) {
+SpecialCalculationsScreen.kt | Line 234 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+SpecialCalculationsScreen.kt | Line 235 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+SpecialCalculationsScreen.kt | Line 237 | Row(verticalAlignment = Alignment.Bottom) {
+SpecialCalculationsScreen.kt | Line 239 | Text(" ${resultUnit as String}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = currentMode.themeColor.copy(alpha = 0.7f), modifier = Modifier.padding(bottom = 8.dp, start = 6.dp))
+SpecialCalculationsScreen.kt | Line 245 | Spacer(modifier = Modifier.height(60.dp))
+SpecialCalculationsScreen.kt | Line 255 | Canvas(modifier = Modifier.fillMaxSize()) {
+SpecialCalculationsScreen.kt | Line 331 | modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
+SpecialCalculationsScreen.kt | Line 336 | Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(24.dp).verticalScroll(rememberScrollState())) {
+SpecialCalculationsScreen.kt | Line 337 | Row(verticalAlignment = Alignment.CenterVertically) {
+SpecialCalculationsScreen.kt | Line 339 | Spacer(modifier = Modifier.width(16.dp))
+SpecialCalculationsScreen.kt | Line 345 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 347 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 353 | Spacer(modifier = Modifier.height(20.dp))
+SpecialCalculationsScreen.kt | Line 355 | Box(modifier = Modifier.fillMaxWidth().background(ThemeInsulinBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+SpecialCalculationsScreen.kt | Line 358 | Spacer(modifier = Modifier.height(20.dp))
+SpecialCalculationsScreen.kt | Line 365 | Spacer(modifier = Modifier.height(20.dp))
+SpecialCalculationsScreen.kt | Line 368 | Box(modifier = Modifier.fillMaxWidth().background(ThemeRuby.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+SpecialCalculationsScreen.kt | Line 371 | Spacer(modifier = Modifier.height(16.dp))
+SpecialCalculationsScreen.kt | Line 374 | Box(modifier = Modifier.fillMaxWidth().background(ThemeRuby.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+SpecialCalculationsScreen.kt | Line 377 | Spacer(modifier = Modifier.height(16.dp))
+SpecialCalculationsScreen.kt | Line 383 | Spacer(modifier = Modifier.height(20.dp))
+SpecialCalculationsScreen.kt | Line 386 | Box(modifier = Modifier.fillMaxWidth().background(ThemePCAPurple.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+SpecialCalculationsScreen.kt | Line 389 | Spacer(modifier = Modifier.height(16.dp))
+SpecialCalculationsScreen.kt | Line 394 | Spacer(modifier = Modifier.height(24.dp))
+SpecialCalculationsScreen.kt | Line 397 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
+SpecialCalculationsScreen.kt | Line 399 | Row(verticalAlignment = Alignment.CenterVertically) {
+SpecialCalculationsScreen.kt | Line 400 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
+SpecialCalculationsScreen.kt | Line 401 | Spacer(modifier = Modifier.width(12.dp))
+SpecialCalculationsScreen.kt | Line 404 | Spacer(modifier = Modifier.height(12.dp))
+SpecialCalculationsScreen.kt | Line 408 | Spacer(modifier = Modifier.height(32.dp))
+SpecialCalculationsScreen.kt | Line 409 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = currentMode.themeColor)) { Text("Acknowledge Risk & Close", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+UnitConversionsScreen.kt | Line 105 | Box(modifier = Modifier.size(42.dp).background(ThemeViolet.copy(alpha = 0.2f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+UnitConversionsScreen.kt | Line 108 | Spacer(modifier = Modifier.height(24.dp))
+UnitConversionsScreen.kt | Line 111 | LazyRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+UnitConversionsScreen.kt | Line 116 | Box(
+UnitConversionsScreen.kt | Line 117 | modifier = Modifier.height(40.dp).background(bgColor, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentMode = mode }.padding(horizontal = 16.dp),
+UnitConversionsScreen.kt | Line 122 | Spacer(modifier = Modifier.height(24.dp))
+UnitConversionsScreen.kt | Line 125 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+UnitConversionsScreen.kt | Line 127 | Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+UnitConversionsScreen.kt | Line 133 | Spacer(modifier = Modifier.height(8.dp))
+UnitConversionsScreen.kt | Line 141 | label = { Text("Micrograms (µg / mcg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 149 | label = { Text("Milligrams (mg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 157 | label = { Text("Grams (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 165 | label = { Text("Kilograms (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 172 | Spacer(modifier = Modifier.height(8.dp))
+UnitConversionsScreen.kt | Line 180 | label = { Text("Milliliters (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 188 | label = { Text("Teaspoons (tsp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 19 | import androidx.compose.ui.Modifier
+UnitConversionsScreen.kt | Line 196 | label = { Text("Tablespoons (tbsp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 204 | label = { Text("Fluid Ounces (oz)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)
+UnitConversionsScreen.kt | Line 210 | Spacer(modifier = Modifier.height(8.dp))
+UnitConversionsScreen.kt | Line 211 | Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFE3F2FD), RoundedCornerShape(12.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+UnitConversionsScreen.kt | Line 213 | Spacer(modifier = Modifier.width(12.dp))
+UnitConversionsScreen.kt | Line 222 | Spacer(modifier = Modifier.height(8.dp))
+UnitConversionsScreen.kt | Line 224 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+UnitConversionsScreen.kt | Line 228 | Box(modifier = Modifier.weight(1f).background(bgColor, RoundedCornerShape(12.dp)).clickable { selectedIon = ion; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }.padding(12.dp), contentAlignment = Alignment.Center) {
+UnitConversionsScreen.kt | Line 233 | Spacer(modifier = Modifier.height(16.dp))
+UnitConversionsScreen.kt | Line 239 | keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
+UnitConversionsScreen.kt | Line 242 | Spacer(modifier = Modifier.height(16.dp))
+UnitConversionsScreen.kt | Line 244 | Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFF3E5F5), RoundedCornerShape(12.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+UnitConversionsScreen.kt | Line 246 | Spacer(modifier = Modifier.width(12.dp))
+UnitConversionsScreen.kt | Line 257 | Spacer(modifier = Modifier.height(32.dp))
+UnitConversionsScreen.kt | Line 261 | Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(ThemeViolet, ThemeIndigo)), RoundedCornerShape(20.dp)).padding(2.dp)) {
+UnitConversionsScreen.kt | Line 262 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+UnitConversionsScreen.kt | Line 263 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+UnitConversionsScreen.kt | Line 265 | Row(verticalAlignment = Alignment.Bottom) {
+UnitConversionsScreen.kt | Line 267 | Text(" mg", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ThemeViolet, modifier = Modifier.padding(bottom = 8.dp, start = 6.dp))
+UnitConversionsScreen.kt | Line 273 | Spacer(modifier = Modifier.height(60.dp))
+UnitConversionsScreen.kt | Line 281 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+UnitConversionsScreen.kt | Line 282 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+UnitConversionsScreen.kt | Line 283 | Row(verticalAlignment = Alignment.CenterVertically) {
+UnitConversionsScreen.kt | Line 285 | Spacer(modifier = Modifier.width(16.dp))
+UnitConversionsScreen.kt | Line 291 | Spacer(modifier = Modifier.height(24.dp))
+UnitConversionsScreen.kt | Line 293 | Spacer(modifier = Modifier.height(24.dp))
+UnitConversionsScreen.kt | Line 298 | Spacer(modifier = Modifier.height(8.dp))
+UnitConversionsScreen.kt | Line 301 | Spacer(modifier = Modifier.height(20.dp))
+UnitConversionsScreen.kt | Line 303 | Spacer(modifier = Modifier.height(8.dp))
+UnitConversionsScreen.kt | Line 309 | Spacer(modifier = Modifier.height(16.dp))
+UnitConversionsScreen.kt | Line 310 | Box(modifier = Modifier.fillMaxWidth().background(ThemeIndigoLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp)).padding(16.dp)) {
+UnitConversionsScreen.kt | Line 313 | Spacer(modifier = Modifier.height(20.dp))
+UnitConversionsScreen.kt | Line 319 | Spacer(modifier = Modifier.height(24.dp))
+UnitConversionsScreen.kt | Line 322 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
+UnitConversionsScreen.kt | Line 324 | Row(verticalAlignment = Alignment.CenterVertically) {
+UnitConversionsScreen.kt | Line 325 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
+UnitConversionsScreen.kt | Line 326 | Spacer(modifier = Modifier.width(12.dp))
+UnitConversionsScreen.kt | Line 329 | Spacer(modifier = Modifier.height(12.dp))
+UnitConversionsScreen.kt | Line 333 | Spacer(modifier = Modifier.height(32.dp))
+UnitConversionsScreen.kt | Line 334 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = ThemeIndigo)) { Text("Acknowledge & Close", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+UnitConversionsScreen.kt | Line 90 | Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+UnitConversionsScreen.kt | Line 91 | Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+UnitConversionsScreen.kt | Line 92 | Spacer(modifier = Modifier.height(24.dp))
+UnitConversionsScreen.kt | Line 96 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+UnitConversionsScreen.kt | Line 97 | Row(verticalAlignment = Alignment.CenterVertically) {
+UnitConversionsScreen.kt | Line 98 | Box(modifier = Modifier.size(48.dp).background(ThemeIndigo, CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("🔄", fontSize = 24.sp) }
+UnitConversionsScreen.kt | Line 99 | Spacer(modifier = Modifier.width(16.dp))
+VasoactiveInfusionsScreen.kt | Line 138 | Column(
+VasoactiveInfusionsScreen.kt | Line 139 | modifier = Modifier
+VasoactiveInfusionsScreen.kt | Line 149 | modifier = Modifier
+VasoactiveInfusionsScreen.kt | Line 155 | Column(
+VasoactiveInfusionsScreen.kt | Line 156 | modifier = Modifier
+VasoactiveInfusionsScreen.kt | Line 161 | Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+VasoactiveInfusionsScreen.kt | Line 167 | modifier = Modifier.weight(1f),
+VasoactiveInfusionsScreen.kt | Line 175 | modifier = Modifier.weight(1f),
+VasoactiveInfusionsScreen.kt | Line 179 | Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+VasoactiveInfusionsScreen.kt | Line 18 | import androidx.compose.ui.Modifier
+VasoactiveInfusionsScreen.kt | Line 185 | modifier = Modifier.weight(1f),
+VasoactiveInfusionsScreen.kt | Line 193 | modifier = Modifier.weight(1f),
+VasoactiveInfusionsScreen.kt | Line 201 | Spacer(modifier = Modifier.height(32.dp))
+VasoactiveInfusionsScreen.kt | Line 204 | Box(
+VasoactiveInfusionsScreen.kt | Line 205 | modifier = Modifier
+VasoactiveInfusionsScreen.kt | Line 213 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+VasoactiveInfusionsScreen.kt | Line 217 | modifier = Modifier.fillMaxWidth()
+VasoactiveInfusionsScreen.kt | Line 220 | Spacer(modifier = Modifier.height(32.dp))
+VasoactiveInfusionsScreen.kt | Line 225 | Box(
+VasoactiveInfusionsScreen.kt | Line 226 | modifier = Modifier
+VasoactiveInfusionsScreen.kt | Line 240 | Row(
+VasoactiveInfusionsScreen.kt | Line 248 | modifier = Modifier.size(32.dp)
+VasoactiveInfusionsScreen.kt | Line 261 | Spacer(modifier = Modifier.height(40.dp))
+VasoactiveInfusionsScreen.kt | Line 276 | modifier: Modifier = Modifier,
+VasoactiveInfusionsScreen.kt | Line 289 | modifier = Modifier.size(20.dp)
+VasoactiveInfusionsScreen.kt | Line 293 | modifier = modifier.height(64.dp),
+VasoactiveInfusionsScreen.kt | Line 312 | modifier: Modifier = Modifier
+VasoactiveInfusionsScreen.kt | Line 322 | Canvas(
+VasoactiveInfusionsScreen.kt | Line 323 | modifier = modifier
+VasoactiveInfusionsScreen.kt | Line 419 | fun drawArrow(cx: Float, cy: Float, left: Boolean){
+VasoactiveInfusionsScreen.kt | Line 434 | drawArrow(arrowLX + arrowSize/2f, arrowY, true)
+VasoactiveInfusionsScreen.kt | Line 435 | drawArrow(arrowRX + arrowSize/2f, arrowY, false)
+WeightInfusionScreen.kt | Line 100 | Spacer(modifier = Modifier.width(16.dp))
+WeightInfusionScreen.kt | Line 106 | Box(modifier = Modifier.size(42.dp).background(Color(0xFF00796B).copy(alpha = 0.2f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+WeightInfusionScreen.kt | Line 109 | Spacer(modifier = Modifier.height(24.dp))
+WeightInfusionScreen.kt | Line 112 | Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp)).padding(4.dp)) {
+WeightInfusionScreen.kt | Line 113 | Box(modifier = Modifier.weight(1f).height(40.dp).background(if (!isInfusionMode) Color(0xFF00796B) else Color.Transparent, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { isInfusionMode = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+WeightInfusionScreen.kt | Line 116 | Box(modifier = Modifier.weight(1f).height(40.dp).background(if (isInfusionMode) Color(0xFF00796B) else Color.Transparent, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { isInfusionMode = true }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+WeightInfusionScreen.kt | Line 120 | Spacer(modifier = Modifier.height(32.dp))
+WeightInfusionScreen.kt | Line 124 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFF38BDF8), RoundedCornerShape(16.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+WeightInfusionScreen.kt | Line 125 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+WeightInfusionScreen.kt | Line 127 | Spacer(modifier = Modifier.height(8.dp))
+WeightInfusionScreen.kt | Line 128 | Row(verticalAlignment = Alignment.Bottom) {
+WeightInfusionScreen.kt | Line 131 | Text(" mL/hr", fontSize = 24.sp, color = Color(0xFF38BDF8), modifier = Modifier.padding(bottom = 10.dp, start = 8.dp))
+WeightInfusionScreen.kt | Line 138 | Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF00796B), Color(0xFF26A69A))), RoundedCornerShape(16.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+WeightInfusionScreen.kt | Line 139 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+WeightInfusionScreen.kt | Line 141 | Row(verticalAlignment = Alignment.Bottom) {
+WeightInfusionScreen.kt | Line 143 | Text(" mg", fontSize = 24.sp, color = Color.White, modifier = Modifier.padding(bottom = 10.dp, start = 8.dp))
+WeightInfusionScreen.kt | Line 148 | Spacer(modifier = Modifier.height(32.dp))
+WeightInfusionScreen.kt | Line 151 | Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+WeightInfusionScreen.kt | Line 152 | Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+WeightInfusionScreen.kt | Line 155 | OutlinedTextField(value = weightKg, onValueChange = { weightKg = it }, label = { Text("Patient Weight (kg)") }, leadingIcon = { Text("⚖️") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF00796B)))
+WeightInfusionScreen.kt | Line 156 | HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+WeightInfusionScreen.kt | Line 159 | OutlinedTextField(value = doseMgKg, onValueChange = { doseMgKg = it }, label = { Text("Prescribed Dose (mg/kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+WeightInfusionScreen.kt | Line 160 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+WeightInfusionScreen.kt | Line 161 | OutlinedTextField(value = availableMg, onValueChange = { availableMg = it }, label = { Text("Have Dose (mg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+WeightInfusionScreen.kt | Line 162 | OutlinedTextField(value = availableMl, onValueChange = { availableMl = it }, label = { Text("Volume (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+WeightInfusionScreen.kt | Line 165 | OutlinedTextField(value = doseMcgKgMin, onValueChange = { doseMcgKgMin = it }, label = { Text("Rate (mcg/kg/min)") }, leadingIcon = { Text("⏱️") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+WeightInfusionScreen.kt | Line 166 | Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+WeightInfusionScreen.kt | Line 167 | OutlinedTextField(value = drugTotalMg, onValueChange = { drugTotalMg = it }, label = { Text("Drug in Bag (mg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+WeightInfusionScreen.kt | Line 168 | OutlinedTextField(value = ivBagTotalMl, onValueChange = { ivBagTotalMl = it }, label = { Text("Bag Vol (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+WeightInfusionScreen.kt | Line 17 | import androidx.compose.ui.Modifier
+WeightInfusionScreen.kt | Line 173 | Spacer(modifier = Modifier.height(32.dp))
+WeightInfusionScreen.kt | Line 177 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF26A69A), RoundedCornerShape(20.dp)).padding(2.dp)) {
+WeightInfusionScreen.kt | Line 178 | Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+WeightInfusionScreen.kt | Line 179 | Column(horizontalAlignment = Alignment.CenterHorizontally) {
+WeightInfusionScreen.kt | Line 181 | Row(verticalAlignment = Alignment.Bottom) {
+WeightInfusionScreen.kt | Line 183 | Text(" mL", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF26A69A), modifier = Modifier.padding(bottom = 6.dp))
+WeightInfusionScreen.kt | Line 189 | Spacer(modifier = Modifier.height(60.dp))
+WeightInfusionScreen.kt | Line 198 | Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+WeightInfusionScreen.kt | Line 199 | Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+WeightInfusionScreen.kt | Line 200 | Row(verticalAlignment = Alignment.CenterVertically) {
+WeightInfusionScreen.kt | Line 202 | Spacer(modifier = Modifier.width(16.dp))
+WeightInfusionScreen.kt | Line 208 | Spacer(modifier = Modifier.height(24.dp))
+WeightInfusionScreen.kt | Line 212 | Spacer(modifier = Modifier.height(24.dp))
+WeightInfusionScreen.kt | Line 214 | Spacer(modifier = Modifier.height(24.dp))
+WeightInfusionScreen.kt | Line 219 | Spacer(modifier = Modifier.height(24.dp))
+WeightInfusionScreen.kt | Line 220 | Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
+WeightInfusionScreen.kt | Line 222 | Row(verticalAlignment = Alignment.CenterVertically) {
+WeightInfusionScreen.kt | Line 223 | Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
+WeightInfusionScreen.kt | Line 224 | Spacer(modifier = Modifier.width(12.dp))
+WeightInfusionScreen.kt | Line 227 | Spacer(modifier = Modifier.height(12.dp))
+WeightInfusionScreen.kt | Line 231 | Spacer(modifier = Modifier.height(32.dp))
+WeightInfusionScreen.kt | Line 232 | Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00796B))) { Text("Understood", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+WeightInfusionScreen.kt | Line 91 | Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+WeightInfusionScreen.kt | Line 92 | Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+WeightInfusionScreen.kt | Line 93 | Spacer(modifier = Modifier.height(24.dp))
+WeightInfusionScreen.kt | Line 97 | Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+WeightInfusionScreen.kt | Line 98 | Row(verticalAlignment = Alignment.CenterVertically) {
+WeightInfusionScreen.kt | Line 99 | Box(modifier = Modifier.size(48.dp).background(Color(0xFF00796B), CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("⚖️", fontSize = 24.sp) }
