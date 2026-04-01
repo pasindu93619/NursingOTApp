@@ -112,12 +112,14 @@ enum class EcgRhythm(val displayName: String, val color: Color, val pattern: Str
     ASYSTOLE("ASYSTOLE", Color(0xFF616161), "Flat line. No electrical activity.", "The H's and T's (Hypoxia, Hypovolemia, Tension Pneumo, etc.)", "1. High-quality CPR\n2. Epinephrine 1mg IV\n3. DO NOT DEFIBRILLATE")
 }
 
+data class MoAStep(val title: String, val description: String)
+
 data class EmergencyDrug(
     val category: String, val name: String, val concentration: String, val doseText: String, val volumeText: String,
     val diluent: String, val pushSpeed: String, val cannulaGauge: String, val cannulaColor: Color, val preparation: String,
     val safetyTip: String, val clinicalPearl: String, val mechanism: String, val halfLife: String,
-    val gradientStart: Color, val gradientEnd: Color,
-    val deliveryType: DeliveryType, val maxContainerVolume: Float, val calculatedVolume: Float
+    val gradientStart: Color, val gradientEnd: Color, val deliveryType: DeliveryType, val maxContainerVolume: Float, val calculatedVolume: Float,
+    val moaSteps: List<MoAStep>
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,7 +129,6 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
     var weightInput by remember { mutableStateOf("") }
     var isVisible by remember { mutableStateOf(false) }
 
-    // Using selectedDrugIndex so that when weight changes, the drug math automatically updates in the overlay!
     var selectedDrugIndex by remember { mutableStateOf<Int?>(null) }
     var zoomedEcg by remember { mutableStateOf<EcgRhythm?>(null) }
 
@@ -141,85 +142,165 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
                 val dose = if (weight == 0f) 0f else if (weight >= 50f) 1f else min(1f, weight * 0.01f)
                 val vol = dose / 0.1f
                 EmergencyDrug(
-                    "CARDIAC ARREST", "Epinephrine (1:10,000)", "Ampoule: 0.1 mg/mL", "${String.format("%.2f", dose)} mg", "${String.format("%.1f", vol)} mL",
+                    "CARDIAC ARREST", "Epinephrine (1:10,000)", "Ampoule: 0.1 mg/mL",
+                    "${String.format("%.2f", dose)} mg", "${String.format("%.1f", vol)} mL",
                     "FLUSH 20mL NS", "RAPID PUSH", "18G (Green) / IO", CannulaGreen,
-                    "Use 1:10,000 pre-filled syringe. Round calculated volumes to nearest 0.1 mL.", "Flush line rapidly with 20mL NS to force into central circulation.", "Epi has a half-life of 2-3 mins. Rapid flush is required to trigger alpha-1 vasoconstriction.",
-                    "Potent α/β adrenergic agonist", "2-3 minutes", AlertRedStart, AlertRedEnd, DeliveryType.SYRINGE_PUSH, 10f, vol
+                    "Use 1:10,000 pre-filled syringe. Round calculated volumes to nearest 0.1 mL.",
+                    "Flush line rapidly with 20mL NS to force into central circulation.",
+                    "Epi has a half-life of 2-3 mins. Rapid flush is required to trigger alpha-1 vasoconstriction.",
+                    "Potent α/β adrenergic agonist", "2-3 minutes",
+                    AlertRedStart, AlertRedEnd, DeliveryType.SYRINGE_PUSH, 10f, vol,
+                    listOf(
+                        MoAStep("Receptor Binding", "Binds powerfully as a nonselective α and β adrenergic agonist."),
+                        MoAStep("Vascular Constriction", "α1 activation causes intense peripheral vasoconstriction, shunting blood to the core."),
+                        MoAStep("Cardiac Stimulation", "β1 activation drastically increases heart rate and myocardial contractility."),
+                        MoAStep("Systemic Perfusion", "Restores critical coronary and cerebral blood flow during CPR.")
+                    )
                 )
             },
             run {
                 val dose = if (weight == 0f) 0f else min(0.5f, weight * 0.01f)
                 val vol = dose / 1.0f
                 EmergencyDrug(
-                    "ANAPHYLAXIS", "Epinephrine (1:1,000)", "Ampoule: 1.0 mg/mL", "${String.format("%.2f", dose)} mg", "${String.format("%.2f", vol)} mL",
+                    "ANAPHYLAXIS", "Epinephrine (1:1,000)", "Ampoule: 1.0 mg/mL",
+                    "${String.format("%.2f", dose)} mg", "${String.format("%.2f", vol)} mL",
                     "DO NOT DILUTE", "IM INJECTION", "21G-23G IM", CannulaBlue,
-                    "Use a strict 1 mL syringe for exact precision. Give IM in vastus lateralis.", "WARNING: 10x stronger! DO NOT GIVE IV PUSH.", "IV push in a beating heart can cause lethal arrhythmias. Vastus Lateralis allows massive absorption.",
-                    "Reverses vasodilation & bronchoconstriction", "2-3 minutes", AlertOrangeStart, AlertOrangeEnd, DeliveryType.SYRINGE_PUSH, 1f, vol
+                    "Use a strict 1 mL syringe for exact precision. Give IM in vastus lateralis.",
+                    "WARNING: 10x stronger! DO NOT GIVE IV PUSH.",
+                    "IV push in a beating heart can cause lethal arrhythmias. Vastus Lateralis allows massive absorption.",
+                    "Reverses vasodilation & bronchoconstriction", "2-3 minutes",
+                    AlertOrangeStart, AlertOrangeEnd, DeliveryType.SYRINGE_PUSH, 1f, vol,
+                    listOf(
+                        MoAStep("Receptor Binding", "Triggers systemic α/β adrenergic activation via muscular absorption."),
+                        MoAStep("Bronchodilation", "β2 agonism immediately relaxes bronchial smooth muscle, opening airways."),
+                        MoAStep("Edema Reduction", "α1 vasoconstriction decreases mucosal edema and airway swelling."),
+                        MoAStep("Mast Cell Stabilization", "Inhibits further release of histamine and inflammatory mediators.")
+                    )
                 )
             },
             run {
                 val dose = if (weight == 0f) 0f else if (weight > 40f) 300f else min(300f, weight * 5f)
                 val vol = dose / 50f
                 EmergencyDrug(
-                    "PULSELESS VT/VF", "Amiodarone", "Ampoule: 50 mg/mL", "${String.format("%.0f", dose)} mg", "${String.format("%.1f", vol)} mL",
+                    "PULSELESS VT/VF", "Amiodarone", "Ampoule: 50 mg/mL",
+                    "${String.format("%.0f", dose)} mg", "${String.format("%.1f", vol)} mL",
                     "LIVE: D5W ONLY", "RAPID PUSH", "18G (Green)", CannulaGreen,
-                    "Draw with large bore needle (foams easily due to polysorbate 80).", "Give undiluted ONLY for arrest. Do not shake.", "If giving as a live infusion, it MUST be diluted in D5W, never Saline.",
-                    "Class III antiarrhythmic (K+ channel block)", "Up to 58 days", AlertPurpleStart, AlertRedEnd, DeliveryType.SYRINGE_PUSH, 10f, vol
+                    "Draw with large bore needle (foams easily due to polysorbate 80).",
+                    "Give undiluted ONLY for arrest. Do not shake.",
+                    "If giving as a live infusion, it MUST be diluted in D5W, never Saline.",
+                    "Class III antiarrhythmic (K+ channel block)", "Up to 58 days",
+                    AlertPurpleStart, AlertRedEnd, DeliveryType.SYRINGE_PUSH, 10f, vol,
+                    listOf(
+                        MoAStep("Channel Blockade", "Primarily blocks myocardial Potassium (K+) channels across the heart."),
+                        MoAStep("Repolarization Delay", "Significantly prolongs Phase 3 of the cardiac action potential."),
+                        MoAStep("Refractory Extension", "Increases the effective refractory period and prolongs the QT interval."),
+                        MoAStep("Rhythm Stabilization", "Suppresses chaotic ectopic foci, halting ventricular arrhythmias.")
+                    )
                 )
             },
             run {
                 val dose = if (weight == 0f) 0f else weight * 1f
                 val vol = dose / 1f
                 EmergencyDrug(
-                    "METABOLIC ACIDOSIS", "Sodium Bicarb 8.4%", "Ampoule: 1 mEq/mL", "${String.format("%.0f", dose)} mEq", "${String.format("%.1f", vol)} mL",
+                    "METABOLIC ACIDOSIS", "Sodium Bicarb 8.4%", "Ampoule: 1 mEq/mL",
+                    "${String.format("%.0f", dose)} mEq", "${String.format("%.1f", vol)} mL",
                     "UNDILUTED", "SLOW PUSH", "18G (Green)", CannulaGreen,
-                    "Give 1 mEq/kg slow IV push. Typically supplied in 50mL pre-filled syringes.", "Flush line thoroughly before/after. Precipitates with Calcium.", "Used for severe acidosis (pH < 7.1), TCA overdose, or hyperkalemia.",
-                    "Systemic alkalinizing agent", "Requires ventilation to clear", AlertBlueStart, AlertCyanEnd, DeliveryType.SYRINGE_PUSH, 50f, vol
+                    "Give 1 mEq/kg slow IV push. Typically supplied in 50mL pre-filled syringes.",
+                    "Flush line thoroughly before/after. Precipitates with Calcium.",
+                    "Used for severe acidosis (pH < 7.1), TCA overdose, or hyperkalemia.",
+                    "Systemic alkalinizing agent", "Requires ventilation to clear",
+                    AlertBlueStart, AlertCyanEnd, DeliveryType.SYRINGE_PUSH, 60f, vol,
+                    listOf(
+                        MoAStep("Ionic Dissociation", "Rapidly dissociates into Na+ and HCO3- directly in the plasma."),
+                        MoAStep("Proton Binding", "HCO3- acts as a sponge, actively binding to excess circulating H+ ions."),
+                        MoAStep("Carbonic Acid Conversion", "Forms H2CO3, which breaks down into H2O and CO2."),
+                        MoAStep("pH Normalization", "Raises systemic pH, reversing severe cellular metabolic acidosis.")
+                    )
                 )
             },
             run {
                 val dose = if (weight == 0f) 0f else min(2f, 0.4f)
                 val vol = dose / 0.4f
                 EmergencyDrug(
-                    "OPIOID OVERDOSE", "Naloxone (Narcan)", "Ampoule: 0.4 mg/mL", "${String.format("%.1f", dose)} mg", "${String.format("%.1f", vol)} mL",
+                    "OPIOID OVERDOSE", "Naloxone (Narcan)", "Ampoule: 0.4 mg/mL",
+                    "${String.format("%.1f", dose)} mg", "${String.format("%.1f", vol)} mL",
                     "UNDILUTED", "SLOW PUSH", "20G (Pink)", CannulaPink,
-                    "Titrate to respiratory rate, not full consciousness.", "Rapid push may cause acute withdrawal, vomiting, and flash pulmonary edema.", "Half-life is shorter than opioids. May require repeat doses or continuous infusion.",
-                    "Competitive µ-opioid antagonist", "30-81 mins (Watch for relapse)", AlertPurpleStart, AlertBlueEnd, DeliveryType.SYRINGE_PUSH, 5f, vol
+                    "Titrate to respiratory rate, not full consciousness.",
+                    "Rapid push may cause acute withdrawal, vomiting, and flash pulmonary edema.",
+                    "Half-life is shorter than opioids. May require repeat doses or continuous infusion.",
+                    "Competitive µ-opioid antagonist", "30-81 mins (Watch for relapse)",
+                    AlertPurpleStart, AlertBlueEnd, DeliveryType.SYRINGE_PUSH, 3f, vol,
+                    listOf(
+                        MoAStep("BBB Crossing", "Rapidly crosses the blood-brain barrier into the Central Nervous System."),
+                        MoAStep("Receptor Competition", "Fiercely competes for µ (mu), κ (kappa), and σ (sigma) opioid receptors."),
+                        MoAStep("Opioid Displacement", "Due to higher affinity, it physically displaces bound synthetic and natural opioids."),
+                        MoAStep("Instant Reversal", "Instantly reverses respiratory depression, sedation, and hypotension.")
+                    )
                 )
             },
             run {
                 val totalDose = if (weight == 0f) 0f else min(90f, weight * 0.9f)
                 val bolusDose = totalDose * 0.1f
                 EmergencyDrug(
-                    "ISCHEMIC STROKE", "Alteplase (tPA)", "Reconstituted: 1 mg/mL", "Bolus: ${String.format("%.1f", bolusDose)} mg\nInfuse: ${String.format("%.1f", totalDose * 0.9f)} mg", "${String.format("%.1f", totalDose)} mL",
+                    "ISCHEMIC STROKE", "Alteplase (tPA)", "Reconstituted: 1 mg/mL",
+                    "Bolus: ${String.format("%.1f", bolusDose)} mg\nInfuse: ${String.format("%.1f", totalDose * 0.9f)} mg",
+                    "${String.format("%.1f", totalDose)} mL",
                     "STERILE WATER", "1 HR INFUSION", "18G (Green) x2", CannulaGreen,
-                    "Give 10% as a rapid bolus, and infuse the remainder via IV pump over 60 minutes.", "DO NOT shake to avoid degrading fragile protein chains.", "Strict BP control < 185/110 required before administration. Fibrinolytic agent.",
-                    "Tissue plasminogen activator (Fibrinolysis)", "5 minutes", AlertPurpleStart, AlertPurpleEnd, DeliveryType.IV_INFUSION, 100f, totalDose
+                    "Give 10% as a rapid bolus, and infuse the remainder via IV pump over 60 minutes.",
+                    "DO NOT shake to avoid degrading fragile protein chains.",
+                    "Strict BP control < 185/110 required before administration. Fibrinolytic agent.",
+                    "Tissue plasminogen activator (Fibrinolysis)", "5 minutes",
+                    AlertPurpleStart, AlertPurpleEnd, DeliveryType.IV_INFUSION, 100f, totalDose,
+                    listOf(
+                        MoAStep("Fibrin Binding", "Directly binds to fibrin strands embedded within an occlusive thrombus."),
+                        MoAStep("Enzymatic Activation", "Converts trapped, inactive plasminogen into active plasmin."),
+                        MoAStep("Proteolytic Cleavage", "Plasmin aggressively degrades the structural fibrin matrix of the clot."),
+                        MoAStep("Clot Lysis", "Dissolves the physical clot, immediately restoring distal blood flow.")
+                    )
                 )
             },
             run {
                 val vol = if (weight == 0f) 0f else (weight * 20f)
                 EmergencyDrug(
-                    "HYPOVOLEMIA", "Fluid Resuscitation", "Normal Saline 0.9%", "${(weight * 20).toInt()}-${(weight * 30).toInt()} mL", "${vol.toInt()} mL",
+                    "HYPOVOLEMIA", "Fluid Resuscitation", "Normal Saline 0.9%",
+                    "${(weight * 20).toInt()}-${(weight * 30).toInt()} mL", "${vol.toInt()} mL",
                     "CRYSTALLOID", "WIDE OPEN", "14G (Orange)", CannulaOrange,
-                    "Use pressure bag for rapid infusion. Assess lungs every 500mL.", "If a pump is unavailable, strictly use microdrip sets (60 gtt/mL).", "With a 60 gtt/mL microdrip set, 1 drop/min exactly equals 1 mL/hr. Poiseuille's Law: doubling diameter increases flow 16x!",
-                    "Isotonic intravascular volume expansion", "Redistributes in 20-30 mins", AlertBlueStart, AlertBlueEnd, DeliveryType.IV_INFUSION, 1000f, vol
+                    "Use pressure bag for rapid infusion. Assess lungs every 500mL.",
+                    "If a pump is unavailable, strictly use microdrip sets (60 gtt/mL).",
+                    "With a 60 gtt/mL microdrip set, 1 drop/min exactly equals 1 mL/hr. Poiseuille's Law: doubling diameter increases flow 16x!",
+                    "Isotonic intravascular volume expansion", "Redistributes in 20-30 mins",
+                    AlertBlueStart, AlertBlueEnd, DeliveryType.IV_INFUSION, 1000f, vol,
+                    listOf(
+                        MoAStep("Intravascular Expansion", "Isotonic crystalloid directly fills the depleted vascular space."),
+                        MoAStep("Venous Return", "Increases the volume of preload returning to the right atrium."),
+                        MoAStep("Starling's Mechanism", "Myocardial stretch increases overall ventricular stroke volume."),
+                        MoAStep("Hemodynamic Boost", "Elevates overall cardiac output and stabilizes systemic blood pressure.")
+                    )
                 )
             },
             run {
                 val dose = if (weight == 0f) 0f else weight * 2f
                 val vol = dose / 50f
                 EmergencyDrug(
-                    "RSI: INDUCTION", "Ketamine", "Vial: 50 mg/mL", "${String.format("%.0f", dose)} mg", "${String.format("%.1f", vol)} mL",
+                    "RSI: INDUCTION", "Ketamine", "Vial: 50 mg/mL",
+                    "${String.format("%.0f", dose)} mg", "${String.format("%.1f", vol)} mL",
                     "NS / D5W", "SLOW (60s)", "20G (Pink)", CannulaPink,
-                    "Dilute in NS or D5W if needed.", "Push slowly over 60s to prevent emergence delirium.", "Excellent for asthmatics (bronchodilation) and shock (catecholamine release).",
-                    "NMDA receptor antagonist (Dissociative)", "2.5 hours", AlertCyanStart, AlertCyanEnd, DeliveryType.SYRINGE_PUSH, 10f, vol
+                    "Dilute in NS or D5W if needed.",
+                    "Push slowly over 60s to prevent emergence delirium.",
+                    "Excellent for asthmatics (bronchodilation) and shock (catecholamine release).",
+                    "NMDA receptor antagonist (Dissociative)", "2.5 hours",
+                    AlertCyanStart, AlertCyanEnd, DeliveryType.SYRINGE_PUSH, 10f, vol,
+                    listOf(
+                        MoAStep("CNS Penetration", "Highly lipophilic, it rapidly crosses into the central nervous system."),
+                        MoAStep("NMDA Antagonism", "Non-competitively blocks NMDA receptors in the cerebral cortex."),
+                        MoAStep("Glutamate Inhibition", "Prevents critical excitatory neurotransmission pathways."),
+                        MoAStep("Dissociation", "Induces profound analgesia, amnesia, and sensory detachment.")
+                    )
                 )
             }
         )
     }
 
-    // Capture hardware back button if overlay is open
     BackHandler(enabled = selectedDrugIndex != null) {
         selectedDrugIndex = null
     }
@@ -227,7 +308,6 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            // Hides the "disturbing" top title when the full screen overlay is active
             AnimatedVisibility(visible = selectedDrugIndex == null, enter = fadeIn(), exit = fadeOut()) {
                 TopAppBar(
                     title = { Text("Emergency & Resuscitation", fontWeight = FontWeight.Black, color = EmergencySlateDark, fontSize = 20.sp) },
@@ -238,10 +318,8 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().background(EmergencyBgWhite)) {
 
-            // ─── BACKGROUND MESH ───
             SmoothMeshBackground(isVisible)
 
-            // ─── MAIN LIST VIEW ───
             Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
                 EcgTelemetryDeck(
@@ -254,7 +332,10 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
                     }
                 )
 
-                AnimatedVisibility(visible = isVisible, enter = slideInVertically(initialOffsetY = { 100 }, animationSpec = tween(600)) + fadeIn()) {
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = slideInVertically(initialOffsetY = { 100 }, animationSpec = tween(600)) + fadeIn()
+                ) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -275,14 +356,12 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
                 }
             }
 
-            // ─── FULL SCREEN PROTOCOL OVERLAY ───
             AnimatedVisibility(
                 visible = selectedDrugIndex != null,
                 enter = slideInVertically(initialOffsetY = { it }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeIn(tween(300)),
                 exit = slideOutVertically(targetOffsetY = { it }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeOut(tween(300)),
                 modifier = Modifier.zIndex(50f)
             ) {
-                // We fetch from 'drugs' so the math recalculates instantly if weight changes inside the overlay!
                 selectedDrugIndex?.let { index ->
                     val drug = drugs.getOrNull(index)
                     if (drug != null) {
@@ -300,7 +379,6 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
                 }
             }
 
-            // ─── 3D MASSIVE DARK-MODE ECG ZOOM OVERLAY ───
             if (zoomedEcg != null) {
                 EcgZoomedOverlay(rhythm = zoomedEcg!!) { zoomedEcg = null }
             }
@@ -308,7 +386,7 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
     }
 }
 
-// ─── PROTOCOL TRIGGER CARD (COMPACT LIST ITEM) ───
+// ─── PROTOCOL TRIGGER CARD ───
 @Composable
 fun EmergencyProtocolTriggerCard(drug: EmergencyDrug, isActive: Boolean, onCardClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -337,14 +415,16 @@ fun EmergencyProtocolTriggerCard(drug: EmergencyDrug, isActive: Boolean, onCardC
                 Text(drug.category.uppercase(), color = EmergencySlateLight, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(drug.name, color = EmergencySlateDark, fontSize = 19.sp, fontWeight = FontWeight.Black)
-
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    Box(modifier = Modifier.size(8.dp).background(if(isActive) drug.gradientEnd else Color(0xFFCBD5E1), CircleShape))
+                    Box(modifier = Modifier.size(8.dp).background(if (isActive) drug.gradientEnd else Color(0xFFCBD5E1), CircleShape))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if(isActive) drug.doseText else "Enter Weight", color = if(isActive) drug.gradientEnd else EmergencySlateLight, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (isActive) drug.doseText else "Enter Weight",
+                        color = if (isActive) drug.gradientEnd else EmergencySlateLight,
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold
+                    )
                 }
             }
-
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -360,30 +440,34 @@ fun EmergencyProtocolTriggerCard(drug: EmergencyDrug, isActive: Boolean, onCardC
 
 // ─── IMMERSIVE FULL SCREEN DRUG PROTOCOL OVERLAY ───
 @Composable
-fun DrugDetailFullScreenOverlay(drug: EmergencyDrug, isActive: Boolean, weightInput: String, onWeightChange: (String) -> Unit, onClose: () -> Unit) {
+fun DrugDetailFullScreenOverlay(
+    drug: EmergencyDrug,
+    isActive: Boolean,
+    weightInput: String,
+    onWeightChange: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    var showMoAPathway by remember { mutableStateOf(false) }
+
     val infiniteTransitionAura = rememberInfiniteTransition(label = "expanded_aura")
-    val phase by infiniteTransitionAura.animateFloat(0f, 2f*PI.toFloat(), infiniteRepeatable(tween(10000, easing = LinearEasing)), label = "")
+    val phase by infiniteTransitionAura.animateFloat(0f, 2f * PI.toFloat(), infiniteRepeatable(tween(10000, easing = LinearEasing)), label = "")
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF4F7FB).copy(alpha = 0.98f)) // Heavily frosted solid look
+            .background(Color(0xFFF4F7FB).copy(alpha = 0.98f))
             .drawBehind {
                 val w = size.width; val h = size.height
                 if (w <= 0f || h <= 0f) return@drawBehind
-
-                // Medical Blueprint Grid Background
                 val gridColor = drug.gradientStart.copy(alpha = 0.05f)
                 for (x in 0..(w / 40f).toInt()) drawLine(gridColor, Offset(x * 40f, 0f), Offset(x * 40f, h), 2f)
                 for (y in 0..(h / 40f).toInt()) drawLine(gridColor, Offset(0f, y * 40f), Offset(w, y * 40f), 2f)
-
-                // Drifting Auras
                 val cx1 = w * 0.2f + sin(phase) * w * 0.2f
                 val cy1 = h * 0.2f + cos(phase) * h * 0.1f
                 val cx2 = w * 0.8f + cos(phase + PI.toFloat()) * w * 0.2f
                 val cy2 = h * 0.8f + sin(phase + PI.toFloat()) * h * 0.1f
                 val safeRadius = maxOf(1f, w * 0.7f)
-
                 drawCircle(brush = Brush.radialGradient(listOf(drug.gradientStart.copy(alpha = 0.15f), Color.Transparent), center = Offset(cx1, cy1), radius = safeRadius), center = Offset(cx1, cy1), radius = safeRadius)
                 drawCircle(brush = Brush.radialGradient(listOf(drug.gradientEnd.copy(alpha = 0.15f), Color.Transparent), center = Offset(cx2, cy2), radius = safeRadius), center = Offset(cx2, cy2), radius = safeRadius)
             }
@@ -412,7 +496,7 @@ fun DrugDetailFullScreenOverlay(drug: EmergencyDrug, isActive: Boolean, weightIn
                 }
             }
 
-            // --- IN-OVERLAY WEIGHT INPUT (Reactive Math!) ---
+            // --- IN-OVERLAY WEIGHT INPUT ---
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End) {
                 Box(
                     modifier = Modifier
@@ -467,8 +551,14 @@ fun DrugDetailFullScreenOverlay(drug: EmergencyDrug, isActive: Boolean, weightIn
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // --- BIO-PULSE EDUCATIONAL HUD ---
-                Text("PHARMACODYNAMICS", color = EmergencySlateLight, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, modifier = Modifier.padding(start=4.dp, bottom=8.dp))
-                AnimatedBioPulseHUD(drug)
+                Text("PHARMACODYNAMICS", color = EmergencySlateLight, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                AnimatedBioPulseHUD(
+                    drug = drug,
+                    onLongPressMechanism = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        showMoAPathway = true
+                    }
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -493,39 +583,51 @@ fun DrugDetailFullScreenOverlay(drug: EmergencyDrug, isActive: Boolean, weightIn
                 }
             }
         }
+
+        // --- MoA PATHWAY OVERLAY ---
+        if (showMoAPathway) {
+            MoAPathwayOverlay(drug = drug, onClose = { showMoAPathway = false })
+        }
     }
 }
 
 // ─── BIOLUMINESCENT PHARMACODYNAMICS HUD ───
 @Composable
-fun AnimatedBioPulseHUD(drug: EmergencyDrug) {
+fun AnimatedBioPulseHUD(drug: EmergencyDrug, onLongPressMechanism: () -> Unit) {
     val infiniteTransition = rememberInfiniteTransition(label = "bio_pulse")
     val pulse by infiniteTransition.animateFloat(0.5f, 1f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
 
     Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
                 .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientStart.copy(alpha = 0.3f))
                 .background(Color.White, RoundedCornerShape(16.dp))
                 .border(1.dp, drug.gradientStart.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                .pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPressMechanism() }) }
                 .padding(16.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(50.dp)) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawCircle(drug.gradientStart.copy(alpha = 0.2f * pulse), radius = size.width/2f * pulse)
-                        drawCircle(drug.gradientStart.copy(alpha = 0.5f), radius = size.width/4f)
+                        drawCircle(drug.gradientStart.copy(alpha = 0.2f * pulse), radius = size.width / 2f * pulse)
+                        drawCircle(drug.gradientStart.copy(alpha = 0.5f), radius = size.width / 4f)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("MECHANISM", color = EmergencySlateLight, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(drug.mechanism, color = drug.gradientStart, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 18.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Hold to view pathway", color = drug.gradientStart.copy(alpha = pulse), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             }
         }
 
         Box(
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
                 .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientEnd.copy(alpha = 0.3f))
                 .background(Color.White, RoundedCornerShape(16.dp))
                 .border(1.dp, drug.gradientEnd.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
@@ -553,35 +655,18 @@ fun SmoothMeshBackground(isVisible: Boolean) {
     val infiniteTransition = rememberInfiniteTransition(label = "mesh")
     val phase1 by infiniteTransition.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(25000, easing = LinearEasing)), label = "")
     val phase2 by infiniteTransition.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(18000, easing = LinearEasing)), label = "")
-
     val alphaAnim by animateFloatAsState(if (isVisible) 1f else 0f, tween(2000), label = "")
 
     Canvas(modifier = Modifier.fillMaxSize().alpha(alphaAnim)) {
-        val w = size.width
-        val h = size.height
+        val w = size.width; val h = size.height
         if (w <= 0f || h <= 0f) return@Canvas
-
         drawRect(Color(0xFFF4F7FB))
-
         val r1 = maxOf(1f, w * 0.8f)
         val r2 = maxOf(1f, w * 0.9f)
         val r3 = maxOf(1f, w * 0.7f)
-
-        drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0xFFE3F2FD).copy(alpha = 0.8f), Color.Transparent), center = Offset(w * 0.3f + (sin(phase1) * w * 0.3f).toFloat(), h * 0.2f + (cos(phase2) * h * 0.1f).toFloat()), radius = r1),
-            center = Offset(w * 0.3f + (sin(phase1) * w * 0.3f).toFloat(), h * 0.2f + (cos(phase2) * h * 0.1f).toFloat()),
-            radius = r1
-        )
-        drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0xFFE0F7FA).copy(alpha = 0.6f), Color.Transparent), center = Offset(w * 0.7f + (cos(phase1) * w * 0.2f).toFloat(), h * 0.6f + (sin(phase2) * h * 0.2f).toFloat()), radius = r2),
-            center = Offset(w * 0.7f + (cos(phase1) * w * 0.2f).toFloat(), h * 0.6f + (sin(phase2) * h * 0.2f).toFloat()),
-            radius = r2
-        )
-        drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0xFFF3E5F5).copy(alpha = 0.5f), Color.Transparent), center = Offset(w * 0.5f + (sin(phase2) * w * 0.4f).toFloat(), h * 0.8f), radius = r3),
-            center = Offset(w * 0.5f + (sin(phase2) * w * 0.4f).toFloat(), h * 0.8f),
-            radius = r3
-        )
+        drawCircle(brush = Brush.radialGradient(listOf(Color(0xFFE3F2FD).copy(alpha = 0.8f), Color.Transparent), center = Offset(w * 0.3f + (sin(phase1) * w * 0.3f).toFloat(), h * 0.2f + (cos(phase2) * h * 0.1f).toFloat()), radius = r1), center = Offset(w * 0.3f + (sin(phase1) * w * 0.3f).toFloat(), h * 0.2f + (cos(phase2) * h * 0.1f).toFloat()), radius = r1)
+        drawCircle(brush = Brush.radialGradient(listOf(Color(0xFFE0F7FA).copy(alpha = 0.6f), Color.Transparent), center = Offset(w * 0.7f + (cos(phase1) * w * 0.2f).toFloat(), h * 0.6f + (sin(phase2) * h * 0.2f).toFloat()), radius = r2), center = Offset(w * 0.7f + (cos(phase1) * w * 0.2f).toFloat(), h * 0.6f + (sin(phase2) * h * 0.2f).toFloat()), radius = r2)
+        drawCircle(brush = Brush.radialGradient(listOf(Color(0xFFF3E5F5).copy(alpha = 0.5f), Color.Transparent), center = Offset(w * 0.5f + (sin(phase2) * w * 0.4f).toFloat(), h * 0.8f), radius = r3), center = Offset(w * 0.5f + (sin(phase2) * w * 0.4f).toFloat(), h * 0.8f), radius = r3)
     }
 }
 
@@ -593,14 +678,14 @@ fun getEcgY(t: Float, rhythm: EcgRhythm, cy: Float, ampH: Float): Float {
             val localT = t % 800f
             if (localT in 100f..180f) y -= sin((localT - 100f) / 80f * PI).toFloat() * ampH * 0.15f
             if (localT in 220f..280f) {
-                if (localT < 235f) y += ampH * 0.1f // Q
-                else if (localT < 245f) y -= ampH * 0.85f // R
-                else if (localT < 265f) y += ampH * 0.25f // S
+                if (localT < 235f) y += ampH * 0.1f
+                else if (localT < 245f) y -= ampH * 0.85f
+                else if (localT < 265f) y += ampH * 0.25f
             }
             if (localT in 400f..560f) y -= sin((localT - 400f) / 160f * PI).toFloat() * ampH * 0.25f
         }
         EcgRhythm.VFIB -> y -= (sin(t * 0.015f) * ampH * 0.25f + cos(t * 0.04f) * ampH * 0.15f + sin(t * 0.008f) * ampH * 0.2f).toFloat()
-        EcgRhythm.VTACH -> y -= sin(( (t % 350f) / 350f) * 2 * PI).toFloat() * ampH * 0.5f
+        EcgRhythm.VTACH -> y -= sin(((t % 350f) / 350f) * 2 * PI).toFloat() * ampH * 0.5f
         EcgRhythm.SVT -> {
             val localT = t % 200f
             if (localT in 80f..120f) {
@@ -714,11 +799,9 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
         Canvas(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
             val w = size.width; val h = size.height; val cy = h / 2f
             if (w <= 0f || h <= 0f) return@Canvas
-
             val gridColor = Color(0xFFF1F5F9)
             for (x in 0..(w / 15f).toInt()) drawLine(gridColor, Offset(x * 15f, 0f), Offset(x * 15f, h))
             for (y in 0..(h / 15f).toInt()) drawLine(gridColor, Offset(0f, y * 15f), Offset(w, y * 15f))
-
             val ecgPath = Path().apply {
                 val startY = getEcgY(0f, rhythm, cy, 25f)
                 moveTo(0f, startY)
@@ -729,9 +812,8 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
                 }
             }
             val headX = ecgPhase * w
-
             clipRect(left = 0f, right = headX, top = 0f, bottom = h) {
-                drawPath(ecgPath, color = rhythm.color.copy(alpha=0.25f), style = Stroke(width = 8f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(ecgPath, color = rhythm.color.copy(alpha = 0.25f), style = Stroke(width = 8f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                 drawPath(ecgPath, color = rhythm.color, style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
         }
@@ -743,7 +825,6 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
             charCount <= 20 -> 9.sp
             else -> 8.sp
         }
-
         Text(
             text = rhythm.displayName,
             color = EmergencySlateDark,
@@ -760,7 +841,6 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
 @Composable
 fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
     var ecgPhase by remember { mutableFloatStateOf(0f) }
-
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val isZoomed = scale > 1.1f
@@ -806,13 +886,8 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onDoubleTap = {
-                                    if (scale > 1.1f) {
-                                        scale = 1f
-                                        offset = Offset.Zero
-                                    } else {
-                                        scale = 2.5f
-                                        offset = Offset.Zero
-                                    }
+                                    if (scale > 1.1f) { scale = 1f; offset = Offset.Zero }
+                                    else { scale = 2.5f; offset = Offset.Zero }
                                 }
                             )
                         }
@@ -830,10 +905,8 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                                translationX = offset.x
-                                translationY = offset.y
+                                scaleX = scale; scaleY = scale
+                                translationX = offset.x; translationY = offset.y
                             }
                     ) {
                         val w = size.width; val h = size.height; val cy = h / 2f
@@ -846,21 +919,20 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                             val gridRedMinor = Color(0xFFEF5350).copy(alpha = 0.4f)
                             val majorStroke = 2.5f / scale
                             val minorStroke = 1.2f / scale
-
                             for (i in -150..300) {
                                 val px = i * smallSq
-                                if (i % 5 == 0) drawLine(gridRedMajor, Offset(px, -h), Offset(px, h*2), strokeWidth = majorStroke)
-                                else drawLine(gridRedMinor, Offset(px, -h), Offset(px, h*2), strokeWidth = minorStroke)
+                                if (i % 5 == 0) drawLine(gridRedMajor, Offset(px, -h), Offset(px, h * 2), strokeWidth = majorStroke)
+                                else drawLine(gridRedMinor, Offset(px, -h), Offset(px, h * 2), strokeWidth = minorStroke)
                             }
                             for (i in -100..100) {
                                 val py = cy + (i * smallSq)
-                                if (i % 5 == 0) drawLine(gridRedMajor, Offset(-w, py), Offset(w*2, py), strokeWidth = majorStroke)
-                                else drawLine(gridRedMinor, Offset(-w, py), Offset(w*2, py), strokeWidth = minorStroke)
+                                if (i % 5 == 0) drawLine(gridRedMajor, Offset(-w, py), Offset(w * 2, py), strokeWidth = majorStroke)
+                                else drawLine(gridRedMinor, Offset(-w, py), Offset(w * 2, py), strokeWidth = minorStroke)
                             }
                         } else {
                             val gridColor = Color.White.copy(alpha = 0.05f)
-                            for (x in -50..(w / 20f).toInt() + 50) drawLine(gridColor, Offset(x * 20f, -h), Offset(x * 20f, h*2))
-                            for (y in -50..(h / 20f).toInt() + 50) drawLine(gridColor, Offset(-w, y * 20f), Offset(w*2, y * 20f))
+                            for (x in -50..(w / 20f).toInt() + 50) drawLine(gridColor, Offset(x * 20f, -h), Offset(x * 20f, h * 2))
+                            for (y in -50..(h / 20f).toInt() + 50) drawLine(gridColor, Offset(-w, y * 20f), Offset(w * 2, y * 20f))
                         }
 
                         val ecgPath = Path().apply {
@@ -872,28 +944,21 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                 lineTo(progress * w, getEcgY(progress * 6000f, rhythm, cy, 60f))
                             }
                         }
-
                         val currentHeadX = if (isZoomed) Float.POSITIVE_INFINITY else ecgPhase * w
 
-                        clipRect(left = Float.NEGATIVE_INFINITY, right = currentHeadX, top = -h, bottom = h*2) {
-
-                            drawPath(ecgPath, color = rhythm.color.copy(alpha=0.4f), style = Stroke(width = 8f / scale, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        clipRect(left = Float.NEGATIVE_INFINITY, right = currentHeadX, top = -h, bottom = h * 2) {
+                            drawPath(ecgPath, color = rhythm.color.copy(alpha = 0.4f), style = Stroke(width = 8f / scale, cap = StrokeCap.Round, join = StrokeJoin.Round))
                             drawPath(ecgPath, color = rhythm.color, style = Stroke(width = 3.5f / scale, cap = StrokeCap.Round, join = StrokeJoin.Round))
 
                             if (scale > 1.4f) {
                                 val labelAlpha = ((scale - 1.4f) * 2f).coerceIn(0f, 1f)
                                 val textPaint = Paint().apply {
-                                    color = android.graphics.Color.WHITE
-                                    textSize = 34f / scale
-                                    isFakeBoldText = true
-                                    textAlign = Paint.Align.CENTER
-                                    alpha = (255 * labelAlpha).toInt()
+                                    color = android.graphics.Color.WHITE; textSize = 34f / scale; isFakeBoldText = true
+                                    textAlign = Paint.Align.CENTER; alpha = (255 * labelAlpha).toInt()
                                 }
                                 val textPaintSmall = Paint().apply {
-                                    color = android.graphics.Color.parseColor("#00E676")
-                                    textSize = 24f / scale
-                                    textAlign = Paint.Align.CENTER
-                                    alpha = (255 * labelAlpha).toInt()
+                                    color = android.graphics.Color.parseColor("#00E676"); textSize = 24f / scale
+                                    textAlign = Paint.Align.CENTER; alpha = (255 * labelAlpha).toInt()
                                 }
 
                                 if (rhythm == EcgRhythm.NSR) {
@@ -903,7 +968,6 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                         val pxP = ((baseT + 100f) / 6000f) * w
                                         val pxQ = ((baseT + 220f) / 6000f) * w
                                         val pxS = ((baseT + 265f) / 6000f) * w
-
                                         points.forEach { (label, offsetT) ->
                                             val tMs = baseT + offsetT
                                             if (tMs <= 6000f) {
@@ -913,20 +977,17 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                                 drawContext.canvas.nativeCanvas.drawText(label, px, py + yOffset, textPaint)
                                             }
                                         }
-
                                         val caliperColor = Color(0xFF00E676).copy(alpha = labelAlpha)
                                         val caliperY = cy + (120f / scale)
                                         val caliperYTop = cy - (120f / scale)
-
-                                        drawLine(caliperColor, Offset(pxP, caliperY - 10f/scale), Offset(pxP, caliperY + 10f/scale), 2f/scale)
-                                        drawLine(caliperColor, Offset(pxQ, caliperY - 10f/scale), Offset(pxQ, caliperY + 10f/scale), 2f/scale)
-                                        drawLine(caliperColor, Offset(pxP, caliperY), Offset(pxQ, caliperY), 2f/scale)
-                                        drawContext.canvas.nativeCanvas.drawText("PR", (pxP+pxQ)/2, caliperY + 30f/scale, textPaintSmall)
-
-                                        drawLine(caliperColor, Offset(pxQ, caliperYTop - 10f/scale), Offset(pxQ, caliperYTop + 10f/scale), 2f/scale)
-                                        drawLine(caliperColor, Offset(pxS, caliperYTop - 10f/scale), Offset(pxS, caliperYTop + 10f/scale), 2f/scale)
-                                        drawLine(caliperColor, Offset(pxQ, caliperYTop), Offset(pxS, caliperYTop), 2f/scale)
-                                        drawContext.canvas.nativeCanvas.drawText("QRS", (pxQ+pxS)/2, caliperYTop - 15f/scale, textPaintSmall)
+                                        drawLine(caliperColor, Offset(pxP, caliperY - 10f / scale), Offset(pxP, caliperY + 10f / scale), 2f / scale)
+                                        drawLine(caliperColor, Offset(pxQ, caliperY - 10f / scale), Offset(pxQ, caliperY + 10f / scale), 2f / scale)
+                                        drawLine(caliperColor, Offset(pxP, caliperY), Offset(pxQ, caliperY), 2f / scale)
+                                        drawContext.canvas.nativeCanvas.drawText("PR", (pxP + pxQ) / 2, caliperY + 30f / scale, textPaintSmall)
+                                        drawLine(caliperColor, Offset(pxQ, caliperYTop - 10f / scale), Offset(pxQ, caliperYTop + 10f / scale), 2f / scale)
+                                        drawLine(caliperColor, Offset(pxS, caliperYTop - 10f / scale), Offset(pxS, caliperYTop + 10f / scale), 2f / scale)
+                                        drawLine(caliperColor, Offset(pxQ, caliperYTop), Offset(pxS, caliperYTop), 2f / scale)
+                                        drawContext.canvas.nativeCanvas.drawText("QRS", (pxQ + pxS) / 2, caliperYTop - 15f / scale, textPaintSmall)
                                     }
                                 } else if (rhythm == EcgRhythm.SVT) {
                                     val points = listOf("Q" to 85f, "R" to 95f, "S" to 105f, "T" to 160f)
@@ -1046,46 +1107,14 @@ fun RhythmAnalysisDetails(rhythm: EcgRhythm) {
     val analysisColor: Color
 
     when (rhythm) {
-        EcgRhythm.NSR -> {
-            analysisTitle = "NORMAL INTERVALS"
-            analysisBody = "• PR Interval: 0.12 - 0.20s\n• QRS Duration: < 0.12s\n• QT Interval: < 0.44s\n• Rhythm: Regular"
-            analysisColor = Color(0xFF00E676)
-        }
-        EcgRhythm.VFIB -> {
-            analysisTitle = "VFIB CHARACTERISTICS"
-            analysisBody = "• Rate: Indeterminable\n• Rhythm: Chaotic & disorganized\n• P-waves: Absent\n• QRS: Absent"
-            analysisColor = Color(0xFFFF1744)
-        }
-        EcgRhythm.VTACH -> {
-            analysisTitle = "VTACH CHARACTERISTICS"
-            analysisBody = "• Rate: > 100 bpm (Fast)\n• Rhythm: Regular\n• P-waves: Usually absent/hidden\n• QRS Duration: > 0.12s (Wide)"
-            analysisColor = Color(0xFFFF9100)
-        }
-        EcgRhythm.SVT -> {
-            analysisTitle = "SVT CHARACTERISTICS"
-            analysisBody = "• Rate: 150 - 250 bpm\n• Rhythm: Regular\n• P-waves: Hidden in T-waves\n• QRS Duration: < 0.12s (Narrow)"
-            analysisColor = Color(0xFFD500F9)
-        }
-        EcgRhythm.AFIB -> {
-            analysisTitle = "AFIB CHARACTERISTICS"
-            analysisBody = "• Rate: Variable\n• Rhythm: Irregularly Irregular\n• P-waves: Fibrillatory waves\n• QRS Duration: < 0.12s (Normal)"
-            analysisColor = Color(0xFF00E5FF)
-        }
-        EcgRhythm.TORSADES -> {
-            analysisTitle = "TORSADES CHARACTERISTICS"
-            analysisBody = "• Rate: 150 - 250 bpm\n• Rhythm: Irregular (twisting)\n• P-waves: Absent\n• QRS Duration: Wide & polymorphic"
-            analysisColor = Color(0xFFFFEA00)
-        }
-        EcgRhythm.HEART_BLOCK -> {
-            analysisTitle = "3rd DEGREE BLOCK CHARACTERISTICS"
-            analysisBody = "• Rate: Slow (Escape Rhythm)\n• Rhythm: P-P regular, R-R regular\n• P-waves: Independent from QRS\n• QRS Duration: Usually wide"
-            analysisColor = Color(0xFF00E676)
-        }
-        EcgRhythm.ASYSTOLE -> {
-            analysisTitle = "ASYSTOLE CHARACTERISTICS"
-            analysisBody = "• Rate: Absent\n• Rhythm: Flatline\n• P-waves: Absent\n• QRS: Absent"
-            analysisColor = Color(0xFF9E9E9E)
-        }
+        EcgRhythm.NSR -> { analysisTitle = "NORMAL INTERVALS"; analysisBody = "• PR Interval: 0.12 - 0.20s\n• QRS Duration: < 0.12s\n• QT Interval: < 0.44s\n• Rhythm: Regular"; analysisColor = Color(0xFF00E676) }
+        EcgRhythm.VFIB -> { analysisTitle = "VFIB CHARACTERISTICS"; analysisBody = "• Rate: Indeterminable\n• Rhythm: Chaotic & disorganized\n• P-waves: Absent\n• QRS: Absent"; analysisColor = Color(0xFFFF1744) }
+        EcgRhythm.VTACH -> { analysisTitle = "VTACH CHARACTERISTICS"; analysisBody = "• Rate: > 100 bpm (Fast)\n• Rhythm: Regular\n• P-waves: Usually absent/hidden\n• QRS Duration: > 0.12s (Wide)"; analysisColor = Color(0xFFFF9100) }
+        EcgRhythm.SVT -> { analysisTitle = "SVT CHARACTERISTICS"; analysisBody = "• Rate: 150 - 250 bpm\n• Rhythm: Regular\n• P-waves: Hidden in T-waves\n• QRS Duration: < 0.12s (Narrow)"; analysisColor = Color(0xFFD500F9) }
+        EcgRhythm.AFIB -> { analysisTitle = "AFIB CHARACTERISTICS"; analysisBody = "• Rate: Variable\n• Rhythm: Irregularly Irregular\n• P-waves: Fibrillatory waves\n• QRS Duration: < 0.12s (Normal)"; analysisColor = Color(0xFF00E5FF) }
+        EcgRhythm.TORSADES -> { analysisTitle = "TORSADES CHARACTERISTICS"; analysisBody = "• Rate: 150 - 250 bpm\n• Rhythm: Irregular (twisting)\n• P-waves: Absent\n• QRS Duration: Wide & polymorphic"; analysisColor = Color(0xFFFFEA00) }
+        EcgRhythm.HEART_BLOCK -> { analysisTitle = "3rd DEGREE BLOCK CHARACTERISTICS"; analysisBody = "• Rate: Slow (Escape Rhythm)\n• Rhythm: P-P regular, R-R regular\n• P-waves: Independent from QRS\n• QRS Duration: Usually wide"; analysisColor = Color(0xFF00E676) }
+        EcgRhythm.ASYSTOLE -> { analysisTitle = "ASYSTOLE CHARACTERISTICS"; analysisBody = "• Rate: Absent\n• Rhythm: Flatline\n• P-waves: Absent\n• QRS: Absent"; analysisColor = Color(0xFF9E9E9E) }
     }
 
     Column(
@@ -1173,7 +1202,9 @@ fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifie
 }
 
 @Composable
-fun VerticalDivider(drug: EmergencyDrug) { Box(modifier = Modifier.width(1.dp).fillMaxHeight().background(drug.gradientStart.copy(alpha = 0.2f))) }
+fun VerticalDivider(drug: EmergencyDrug) {
+    Box(modifier = Modifier.width(1.dp).fillMaxHeight().background(drug.gradientStart.copy(alpha = 0.2f)))
+}
 
 @Composable
 fun DashboardCell(title: String, value: String, color: Color, isBold: Boolean = false, modifier: Modifier = Modifier) {
@@ -1231,12 +1262,12 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
         phase < 0.25f -> phase / 0.25f
         phase < 0.40f -> 1f
         phase < 0.70f -> 1f - ((phase - 0.40f) / 0.30f)
-        else          -> 0f
+        else -> 0f
     }
 
-    val isDrawPhase  = isActive && phase < 0.25f
+    val isDrawPhase = isActive && phase < 0.25f
     val isReadyPhase = isActive && phase in 0.25f..0.40f
-    val isPushPhase  = isActive && phase in 0.40f..0.70f
+    val isPushPhase = isActive && phase in 0.40f..0.70f
 
     val pushProgress = if (!isActive) 0f else when {
         phase < 0.40f -> 0f
@@ -1250,18 +1281,16 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
     val currentFill = maxFillPct * fillRatio
 
     val actionText = when {
-        !isActive    -> ""
-        isDrawPhase  -> "DRAWING MEDICATION..."
+        !isActive -> ""
+        isDrawPhase -> "DRAWING MEDICATION..."
         isReadyPhase -> "READY TO PUSH"
-        isPushPhase  -> "PUSH! (${drug.pushSpeed})"
-        else         -> "FLUSH LINE"
+        isPushPhase -> "PUSH! (${drug.pushSpeed})"
+        else -> "FLUSH LINE"
     }
 
     Canvas(modifier = Modifier.fillMaxWidth().height(160.dp)) {
-        val w = size.width
-        val h = size.height
+        val w = size.width; val h = size.height
         if (w <= 0f || h <= 0f) return@Canvas
-
         val cy = h * 0.5f
 
         val barrelHalf = when {
@@ -1279,16 +1308,13 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
 
         val barrelW = barrelRight - barrelLeft
         val maxLiquidLength = barrelW * 0.90f
-
         val liquidLength = maxLiquidLength * currentFill
         val stopperX = barrelRight - liquidLength
         val stopperXFinal = stopperX + if (isPushPhase) plungerWobble * 2f else 0f
-
         val rodLength = maxLiquidLength + 40f
         val handleX = stopperXFinal - rodLength
 
         clipRect(left = 0f, right = w, top = 0f, bottom = h) {
-
             val needleLen = 40f
             val hubW = 18f
             val needleStartX = barrelRight + hubW + 8f
@@ -1297,111 +1323,54 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
             if (isPushPhase && isActive) {
                 val speedMultiplier = if (drug.pushSpeed.contains("RAPID", true)) 2.0f else 0.8f
                 val squirtIntensity = sin(pushProgress * PI).toFloat() * speedMultiplier
-
                 val streamStartX = needleEndX
                 val streamMaxDist = w - streamStartX
                 val streamDistance = streamMaxDist * squirtIntensity
-
                 if (streamDistance > 5f) {
-                    drawLine(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(Color.White, drug.gradientEnd, Color.Transparent),
-                            startX = streamStartX, endX = streamStartX + streamDistance
-                        ),
-                        start = Offset(streamStartX, cy), end = Offset(streamStartX + streamDistance, cy),
-                        strokeWidth = 6f * squirtIntensity, cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.0f)),
-                            startX = streamStartX, endX = streamStartX + streamDistance * 0.8f
-                        ),
-                        start = Offset(streamStartX, cy), end = Offset(streamStartX + streamDistance * 0.8f, cy),
-                        strokeWidth = 4f * squirtIntensity, cap = StrokeCap.Round
-                    )
+                    drawLine(brush = Brush.horizontalGradient(colors = listOf(Color.White, drug.gradientEnd, Color.Transparent), startX = streamStartX, endX = streamStartX + streamDistance), start = Offset(streamStartX, cy), end = Offset(streamStartX + streamDistance, cy), strokeWidth = 6f * squirtIntensity, cap = StrokeCap.Round)
+                    drawLine(brush = Brush.horizontalGradient(colors = listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.0f)), startX = streamStartX, endX = streamStartX + streamDistance * 0.8f), start = Offset(streamStartX, cy), end = Offset(streamStartX + streamDistance * 0.8f, cy), strokeWidth = 4f * squirtIntensity, cap = StrokeCap.Round)
                 }
             }
 
-            drawRoundRect(
-                brush = Brush.verticalGradient(listOf(Color(0xFFCFD8DC), Color(0xFFFFFFFF), Color(0xFF90A4AE)), startY = cy - 4f, endY = cy + 4f),
-                topLeft = Offset(handleX, cy - 4f), size = Size(stopperXFinal - handleX, 8f)
-            )
+            drawRoundRect(brush = Brush.verticalGradient(listOf(Color(0xFFCFD8DC), Color(0xFFFFFFFF), Color(0xFF90A4AE)), startY = cy - 4f, endY = cy + 4f), topLeft = Offset(handleX, cy - 4f), size = Size(stopperXFinal - handleX, 8f))
             drawRoundRect(Color(0xFFB0BEC5), Offset(handleX, cy - barrelHalf * 0.5f), Size(stopperXFinal - handleX, 2f))
             drawRoundRect(Color(0xFF90A4AE), Offset(handleX, cy + barrelHalf * 0.5f - 2f), Size(stopperXFinal - handleX, 2f))
 
             val thumbW = 12f
             val thumbH = barrelHalf * 3.2f
-            drawRoundRect(
-                brush = Brush.verticalGradient(listOf(Color(0xFF90A4AE), Color(0xFFECEFF1), Color(0xFF607D8B)), startY = cy - thumbH/2, endY = cy + thumbH/2),
-                topLeft = Offset(handleX - thumbW, cy - thumbH/2), size = Size(thumbW, thumbH), cornerRadius = CornerRadius(4f)
-            )
-            drawRoundRect(Color(0xFF78909C), Offset(handleX - thumbW + 2f, cy - thumbH/2 + 2f), Size(thumbW - 4f, thumbH - 4f), CornerRadius(2f))
+            drawRoundRect(brush = Brush.verticalGradient(listOf(Color(0xFF90A4AE), Color(0xFFECEFF1), Color(0xFF607D8B)), startY = cy - thumbH / 2, endY = cy + thumbH / 2), topLeft = Offset(handleX - thumbW, cy - thumbH / 2), size = Size(thumbW, thumbH), cornerRadius = CornerRadius(4f))
+            drawRoundRect(Color(0xFF78909C), Offset(handleX - thumbW + 2f, cy - thumbH / 2 + 2f), Size(thumbW - 4f, thumbH - 4f), CornerRadius(2f))
 
             val stopperW = 16f
             val stopperH = barrelHalf * 1.9f
-            drawRoundRect(Color(0xFF1E293B), Offset(stopperXFinal - stopperW, cy - stopperH/2), Size(stopperW, stopperH), CornerRadius(4f))
-            drawLine(Color.Black, Offset(stopperXFinal - stopperW + 3f, cy - stopperH/2), Offset(stopperXFinal - stopperW + 3f, cy + stopperH/2), strokeWidth = 2f)
-            drawLine(Color.Black, Offset(stopperXFinal - 3f, cy - stopperH/2), Offset(stopperXFinal - 3f, cy + stopperH/2), strokeWidth = 2f)
+            drawRoundRect(Color(0xFF1E293B), Offset(stopperXFinal - stopperW, cy - stopperH / 2), Size(stopperW, stopperH), CornerRadius(4f))
+            drawLine(Color.Black, Offset(stopperXFinal - stopperW + 3f, cy - stopperH / 2), Offset(stopperXFinal - stopperW + 3f, cy + stopperH / 2), strokeWidth = 2f)
+            drawLine(Color.Black, Offset(stopperXFinal - 3f, cy - stopperH / 2), Offset(stopperXFinal - 3f, cy + stopperH / 2), strokeWidth = 2f)
 
             if (liquidLength > 1f) {
                 val shimmerOffset = (globalTime * 200f) % (barrelW * 2)
-
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(drug.gradientEnd.copy(alpha=0.7f), drug.gradientStart, drug.gradientEnd.copy(alpha=0.7f)),
-                        startX = stopperXFinal - shimmerOffset,
-                        endX = stopperXFinal + barrelW - shimmerOffset
-                    ),
-                    topLeft = Offset(stopperXFinal, cy - barrelHalf + 3f),
-                    size = Size(barrelRight - stopperXFinal, (barrelHalf - 3f) * 2f),
-                    cornerRadius = CornerRadius(3f)
-                )
-
-                drawRoundRect(
-                    brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.Transparent)),
-                    topLeft = Offset(stopperXFinal, cy - barrelHalf + 3f),
-                    size = Size(barrelRight - stopperXFinal, (barrelHalf - 3f)),
-                    cornerRadius = CornerRadius(3f)
-                )
-
-                drawLine(
-                    color = drug.gradientEnd,
-                    start = Offset(stopperXFinal + 2f, cy - barrelHalf + 4f),
-                    end = Offset(stopperXFinal + 2f, cy + barrelHalf - 4f),
-                    strokeWidth = 4f, cap = StrokeCap.Round
-                )
+                drawRoundRect(brush = Brush.horizontalGradient(colors = listOf(drug.gradientEnd.copy(alpha = 0.7f), drug.gradientStart, drug.gradientEnd.copy(alpha = 0.7f)), startX = stopperXFinal - shimmerOffset, endX = stopperXFinal + barrelW - shimmerOffset), topLeft = Offset(stopperXFinal, cy - barrelHalf + 3f), size = Size(barrelRight - stopperXFinal, (barrelHalf - 3f) * 2f), cornerRadius = CornerRadius(3f))
+                drawRoundRect(brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.Transparent)), topLeft = Offset(stopperXFinal, cy - barrelHalf + 3f), size = Size(barrelRight - stopperXFinal, (barrelHalf - 3f)), cornerRadius = CornerRadius(3f))
+                drawLine(color = drug.gradientEnd, start = Offset(stopperXFinal + 2f, cy - barrelHalf + 4f), end = Offset(stopperXFinal + 2f, cy + barrelHalf - 4f), strokeWidth = 4f, cap = StrokeCap.Round)
 
                 if (isPushPhase) {
                     val flowCount = 6
                     val flowSpeed = if (drug.pushSpeed.contains("RAPID")) 250f else 100f
                     for (i in 0 until flowCount) {
                         val flowOffset = ((globalTime * flowSpeed) + (i * 30f)) % liquidLength
-                        drawLine(
-                            color = Color.White.copy(alpha = 0.5f),
-                            start = Offset(stopperXFinal + flowOffset, cy - barrelHalf * 0.4f),
-                            end = Offset(stopperXFinal + flowOffset + 20f, cy - barrelHalf * 0.4f),
-                            strokeWidth = 2f, cap = StrokeCap.Round
-                        )
-                        drawLine(
-                            color = Color.White.copy(alpha = 0.3f),
-                            start = Offset(stopperXFinal + flowOffset - 10f, cy + barrelHalf * 0.3f),
-                            end = Offset(stopperXFinal + flowOffset + 10f, cy + barrelHalf * 0.3f),
-                            strokeWidth = 2f, cap = StrokeCap.Round
-                        )
+                        drawLine(color = Color.White.copy(alpha = 0.5f), start = Offset(stopperXFinal + flowOffset, cy - barrelHalf * 0.4f), end = Offset(stopperXFinal + flowOffset + 20f, cy - barrelHalf * 0.4f), strokeWidth = 2f, cap = StrokeCap.Round)
+                        drawLine(color = Color.White.copy(alpha = 0.3f), start = Offset(stopperXFinal + flowOffset - 10f, cy + barrelHalf * 0.3f), end = Offset(stopperXFinal + flowOffset + 10f, cy + barrelHalf * 0.3f), strokeWidth = 2f, cap = StrokeCap.Round)
                     }
                 }
             }
 
             val flangeW = 18f
             val flangeH = barrelHalf * 3.4f
-            drawRoundRect(Color.White.copy(alpha = 0.6f), Offset(barrelLeft - flangeW, cy - flangeH/2), Size(flangeW, flangeH), CornerRadius(6f))
-            drawRoundRect(Color(0xFF90A4AE).copy(alpha = 0.8f), Offset(barrelLeft - flangeW, cy - flangeH/2), Size(flangeW, flangeH), CornerRadius(6f), style = Stroke(4f))
+            drawRoundRect(Color.White.copy(alpha = 0.6f), Offset(barrelLeft - flangeW, cy - flangeH / 2), Size(flangeW, flangeH), CornerRadius(6f))
+            drawRoundRect(Color(0xFF90A4AE).copy(alpha = 0.8f), Offset(barrelLeft - flangeW, cy - flangeH / 2), Size(flangeW, flangeH), CornerRadius(6f), style = Stroke(4f))
 
-            drawRoundRect(
-                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha=0.5f), Color.Transparent, Color.Black.copy(alpha=0.15f)), startY = cy - barrelHalf, endY = cy + barrelHalf),
-                topLeft = Offset(barrelLeft, cy - barrelHalf), size = Size(barrelW, barrelHalf * 2f), cornerRadius = CornerRadius(6f)
-            )
-            drawRoundRect(Color(0xFF94A3B8).copy(alpha=0.6f), Offset(barrelLeft, cy - barrelHalf), Size(barrelW, barrelHalf * 2f), CornerRadius(6f), style = Stroke(4f))
+            drawRoundRect(brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.Transparent, Color.Black.copy(alpha = 0.15f)), startY = cy - barrelHalf, endY = cy + barrelHalf), topLeft = Offset(barrelLeft, cy - barrelHalf), size = Size(barrelW, barrelHalf * 2f), cornerRadius = CornerRadius(6f))
+            drawRoundRect(Color(0xFF94A3B8).copy(alpha = 0.6f), Offset(barrelLeft, cy - barrelHalf), Size(barrelW, barrelHalf * 2f), CornerRadius(6f), style = Stroke(4f))
 
             val tickCount = if (maxContainer <= 1f) 5 else 10
             val tickStep = maxLiquidLength / tickCount
@@ -1411,22 +1380,14 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
                 val tickX = barrelRight - (i * tickStep)
                 val isMajor = i % 2 == 0 || tickCount <= 5
                 val tickH = if (isMajor) barrelHalf * 0.65f else barrelHalf * 0.35f
-
-                drawLine(Color(0xFF0F172A).copy(alpha=0.85f), Offset(tickX, cy), Offset(tickX, cy + tickH), strokeWidth = if(isMajor) 4f else 2.5f)
-
+                drawLine(Color(0xFF0F172A).copy(alpha = 0.85f), Offset(tickX, cy), Offset(tickX, cy + tickH), strokeWidth = if (isMajor) 4f else 2.5f)
                 if (isMajor) {
                     val volValue = volStep * i
-                    val textStr = if (maxContainer <= 1f) String.format("%.1f", volValue).replace(".0","") else volValue.toInt().toString()
+                    val textStr = if (maxContainer <= 1f) String.format("%.1f", volValue).replace(".0", "") else volValue.toInt().toString()
                     val textY = cy - 10f
-
-                    val shadowPaint = Paint().apply {
-                        color = android.graphics.Color.WHITE; textSize = if (maxContainer <= 1f) 18f else 26f; isFakeBoldText = true; textAlign = Paint.Align.CENTER; isAntiAlias = true; style = Paint.Style.STROKE; strokeWidth = 4f
-                    }
+                    val shadowPaint = Paint().apply { color = android.graphics.Color.WHITE; textSize = if (maxContainer <= 1f) 18f else 26f; isFakeBoldText = true; textAlign = Paint.Align.CENTER; isAntiAlias = true; style = Paint.Style.STROKE; strokeWidth = 4f }
                     drawContext.canvas.nativeCanvas.drawText(textStr, tickX, textY, shadowPaint)
-
-                    val paint = Paint().apply {
-                        color = android.graphics.Color.parseColor("#0F172A"); textSize = if (maxContainer <= 1f) 18f else 26f; isFakeBoldText = true; textAlign = Paint.Align.CENTER; isAntiAlias = true
-                    }
+                    val paint = Paint().apply { color = android.graphics.Color.parseColor("#0F172A"); textSize = if (maxContainer <= 1f) 18f else 26f; isFakeBoldText = true; textAlign = Paint.Align.CENTER; isAntiAlias = true }
                     drawContext.canvas.nativeCanvas.drawText(textStr, tickX, textY, paint)
                 }
             }
@@ -1438,22 +1399,18 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
             }
 
             val hubH = barrelHalf * 0.8f
-            val hubPath = Path().apply { moveTo(barrelRight, cy - hubH/2); lineTo(barrelRight + hubW, cy - 6f); lineTo(barrelRight + hubW, cy + 6f); lineTo(barrelRight, cy + hubH/2); close() }
+            val hubPath = Path().apply { moveTo(barrelRight, cy - hubH / 2); lineTo(barrelRight + hubW, cy - 6f); lineTo(barrelRight + hubW, cy + 6f); lineTo(barrelRight, cy + hubH / 2); close() }
             drawPath(hubPath, Color(0xFFCFD8DC))
             drawPath(hubPath, Color(0xFF94A3B8), style = Stroke(3f))
 
             drawRect(drug.cannulaColor, Offset(barrelRight + hubW, cy - 8f), Size(8f, 16f))
-
             drawLine(Color(0xFFBDBDBD), Offset(needleStartX, cy), Offset(needleEndX, cy), strokeWidth = 6f)
             drawLine(Color.White, Offset(needleStartX, cy - 1.5f), Offset(needleEndX, cy - 1.5f), strokeWidth = 2.5f)
 
             if (isActive && actionText.isNotEmpty()) {
                 val bannerPaint = Paint().apply {
                     color = if (isPushPhase) android.graphics.Color.parseColor("#D32F2F") else if (isReadyPhase) android.graphics.Color.parseColor("#388E3C") else android.graphics.Color.parseColor("#1565C0")
-                    textSize = 34f
-                    isFakeBoldText = true
-                    textAlign = Paint.Align.CENTER
-                    isAntiAlias = true
+                    textSize = 34f; isFakeBoldText = true; textAlign = Paint.Align.CENTER; isAntiAlias = true
                 }
                 drawContext.canvas.nativeCanvas.drawText(actionText, w / 2f, cy - barrelHalf - 26f, bannerPaint)
             }
@@ -1465,21 +1422,13 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
 @Composable
 fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
     val infiniteTransition = rememberInfiniteTransition(label = "drip")
-    val dropPhase by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing)), label = ""
-    )
-    val pumpArrowsPhase by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)), label = ""
-    )
+    val dropPhase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing)), label = "")
+    val pumpArrowsPhase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "")
 
     Box(modifier = Modifier.padding(top = 16.dp)) {
         Canvas(modifier = Modifier.width(110.dp).height(240.dp)) {
-            val baseW = 240f
-            val baseH = 580f
+            val baseW = 240f; val baseH = 580f
             if (size.width <= 0f || size.height <= 0f) return@Canvas
-
             val scaleFactor = min(size.width / baseW, size.height / baseH)
             if (scaleFactor <= 0f) return@Canvas
 
@@ -1489,48 +1438,33 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
             }) {
                 val cx = baseW / 2f
 
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(listOf(Color(0xFF9E9E9E), Color(0xFFE8E8E8), Color(0xFF757575))),
-                    topLeft = Offset(cx - 5f, 10f), size = Size(10f, 560f), cornerRadius = CornerRadius(5f)
-                )
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(listOf(Color(0xFF9E9E9E), Color(0xFFE8E8E8), Color(0xFF9E9E9E))),
-                    topLeft = Offset(cx - 90f, 10f), size = Size(180f, 8f), cornerRadius = CornerRadius(4f)
-                )
+                drawRoundRect(brush = Brush.horizontalGradient(listOf(Color(0xFF9E9E9E), Color(0xFFE8E8E8), Color(0xFF757575))), topLeft = Offset(cx - 5f, 10f), size = Size(10f, 560f), cornerRadius = CornerRadius(5f))
+                drawRoundRect(brush = Brush.horizontalGradient(listOf(Color(0xFF9E9E9E), Color(0xFFE8E8E8), Color(0xFF9E9E9E))), topLeft = Offset(cx - 90f, 10f), size = Size(180f, 8f), cornerRadius = CornerRadius(4f))
 
-                val bagTop = 30f
-                val bagBot = 160f
-                val bagLeft = cx - 45f
-                val bagRight = cx + 45f
-                val bagH = bagBot - bagTop
+                val bagTop = 30f; val bagBot = 160f; val bagLeft = cx - 45f; val bagRight = cx + 45f; val bagH = bagBot - bagTop
 
                 val loopPath = Path().apply {
-                    moveTo(cx, bagTop)
-                    quadraticBezierTo(cx, bagTop - 9f, cx - 6f, bagTop - 11f)
+                    moveTo(cx, bagTop); quadraticBezierTo(cx, bagTop - 9f, cx - 6f, bagTop - 11f)
                     quadraticBezierTo(cx - 12f, bagTop - 13f, cx - 13f, bagTop - 5f)
                     quadraticBezierTo(cx - 14f, bagTop + 3f, cx - 6f, bagTop + 3f)
                 }
                 drawPath(loopPath, Color(0xFF607D8B), style = Stroke(width = 3f, cap = StrokeCap.Round))
 
                 val bagPath = Path().apply {
-                    moveTo(bagLeft + 15f, bagTop)
-                    lineTo(bagRight - 15f, bagTop)
+                    moveTo(bagLeft + 15f, bagTop); lineTo(bagRight - 15f, bagTop)
                     quadraticBezierTo(bagRight + 4f, bagTop + 20f, bagRight + 6f, bagTop + bagH * 0.55f)
                     quadraticBezierTo(bagRight + 6f, bagBot, cx, bagBot + 5f)
                     quadraticBezierTo(bagLeft - 6f, bagBot, bagLeft - 6f, bagTop + bagH * 0.55f)
-                    quadraticBezierTo(bagLeft - 4f, bagTop + 20f, bagLeft + 15f, bagTop)
-                    close()
+                    quadraticBezierTo(bagLeft - 4f, bagTop + 20f, bagLeft + 15f, bagTop); close()
                 }
                 drawPath(bagPath, Brush.horizontalGradient(listOf(Color(0xFFB0BEC5), Color(0xFFECEFF1), Color(0xFFECEFF1), Color(0xFF90A4AE))))
 
                 val fluidTop = bagTop + bagH * 0.42f
                 val fluidPath = Path().apply {
-                    moveTo(bagLeft - 6f, fluidTop)
-                    lineTo(bagRight + 6f, fluidTop)
+                    moveTo(bagLeft - 6f, fluidTop); lineTo(bagRight + 6f, fluidTop)
                     lineTo(bagRight + 6f, bagTop + bagH * 0.55f)
                     quadraticBezierTo(bagRight + 6f, bagBot, cx, bagBot + 5f)
-                    quadraticBezierTo(bagLeft - 6f, bagBot, bagLeft - 6f, bagTop + bagH * 0.55f)
-                    close()
+                    quadraticBezierTo(bagLeft - 6f, bagBot, bagLeft - 6f, bagTop + bagH * 0.55f); close()
                 }
                 drawPath(fluidPath, Brush.verticalGradient(listOf(drug.gradientStart.copy(alpha = 0.6f), drug.gradientEnd.copy(alpha = 0.9f)), startY = fluidTop, endY = bagBot))
                 drawPath(path = bagPath, color = Color(0xFF90A4AE), style = Stroke(width = 1.5f))
@@ -1548,10 +1482,7 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
                 drawLine(color = Color(0xFFB0BEC5), start = Offset(cx, spikeY + 10f), end = Offset(cx, 210f), strokeWidth = 6f)
                 drawLine(color = drug.gradientEnd.copy(alpha = 0.3f), start = Offset(cx, spikeY + 10f), end = Offset(cx, 210f), strokeWidth = 2f)
 
-                val chamberTop = 210f
-                val chamberH2  = 70f
-                val chamberBot = chamberTop + chamberH2
-                val chamberW2  = 32f
+                val chamberTop = 210f; val chamberH2 = 70f; val chamberBot = chamberTop + chamberH2; val chamberW2 = 32f
 
                 drawRoundRect(Brush.horizontalGradient(listOf(Color(0x72B2EBF2), Color(0xF2E0F7FA), Color(0x7280DEEA))), topLeft = Offset(cx - chamberW2 / 2f, chamberTop), size = Size(chamberW2, chamberH2), cornerRadius = CornerRadius(16f))
                 drawRoundRect(color = Color(0xFF80DEEA), topLeft = Offset(cx - chamberW2 / 2f, chamberTop), size = Size(chamberW2, chamberH2), cornerRadius = CornerRadius(16f), style = Stroke(width = 1.5f))
@@ -1567,11 +1498,7 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
 
                 drawRoundRect(color = Color(0xFF80CBC4), topLeft = Offset(cx - 5f, chamberBot), size = Size(10f, 8f), cornerRadius = CornerRadius(2f))
 
-                val pumpTop2 = 330f
-                val pumpH2   = 180f
-                val pumpW2   = 120f
-                val pumpL2   = cx - 60f
-                val pumpR2   = cx + 60f
+                val pumpTop2 = 330f; val pumpH2 = 180f; val pumpW2 = 120f; val pumpL2 = cx - 60f; val pumpR2 = cx + 60f
 
                 val tubePath = Path().apply {
                     moveTo(cx, chamberBot + 8f)
@@ -1583,10 +1510,7 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
                 drawRoundRect(Brush.horizontalGradient(listOf(Color(0xFF607D8B), Color(0xFFCFD8DC), Color(0xFFB0BEC5), Color(0xFF546E7A))), topLeft = Offset(pumpL2, pumpTop2), size = Size(pumpW2, pumpH2), cornerRadius = CornerRadius(8f))
                 drawRoundRect(Brush.verticalGradient(listOf(Color(0xFFE0F2F1), Color(0xFF80CBC4)), startY = pumpTop2, endY = pumpTop2 + pumpH2), topLeft = Offset(pumpL2 + 4f, pumpTop2 + 4f), size = Size(pumpW2 - 8f, pumpH2 - 8f), cornerRadius = CornerRadius(6f))
 
-                val scrW3 = 90f
-                val scrH3 = 60f
-                val scrL2 = pumpL2 + 10f
-                val scrT2 = pumpTop2 + 12f
+                val scrW3 = 90f; val scrH3 = 60f; val scrL2 = pumpL2 + 10f; val scrT2 = pumpTop2 + 12f
 
                 drawRoundRect(color = Color(0xFF0F172A), topLeft = Offset(scrL2, scrT2), size = Size(scrW3, scrH3), cornerRadius = CornerRadius(8f))
                 drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF1E293B), Color(0xFF020617)), startY = scrT2, endY = scrT2 + scrH3), topLeft = Offset(scrL2 + 4f, scrT2 + 4f), size = Size(scrW3 - 8f, scrH3 - 8f), cornerRadius = CornerRadius(6f))
@@ -1596,7 +1520,6 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
                     val rateText = if (isActive) String.format("%.0f", drug.calculatedVolume) else "---"
                     drawText(rateText, scrL2 + 15f, scrT2 + 38f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 26f; isFakeBoldText = true; typeface = android.graphics.Typeface.MONOSPACE; isAntiAlias = true })
                     drawText("mL/hr", scrL2 + 58f, scrT2 + 34f, android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#80CBC4"); textSize = 11f; isAntiAlias = true })
-
                     if (isActive) {
                         val runAlpha = ((sin(pumpArrowsPhase * PI) * 0.5 + 0.5) * 255).toInt()
                         drawText("RUNNING >>>", scrL2 + 12f, scrT2 + 52f, android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#69F0AE"); textSize = 9f; isAntiAlias = true; alpha = runAlpha })
@@ -1608,7 +1531,6 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
                 val bpT2 = scrT2 + scrH3 + 12f
                 drawRoundRect(color = drug.gradientStart.copy(alpha = 0.85f), topLeft = Offset(scrL2, bpT2), size = Size(40f, 22f), cornerRadius = CornerRadius(4f))
                 drawRoundRect(color = drug.gradientStart.copy(alpha = 0.85f), topLeft = Offset(scrL2 + 50f, bpT2), size = Size(40f, 22f), cornerRadius = CornerRadius(4f))
-
                 drawRoundRect(color = Color(0xFF4CAF50), topLeft = Offset(scrL2, bpT2 + 32f), size = Size(40f, 22f), cornerRadius = CornerRadius(4f))
                 drawRoundRect(color = Color(0xFFF44336), topLeft = Offset(scrL2 + 50f, bpT2 + 32f), size = Size(40f, 22f), cornerRadius = CornerRadius(4f))
 
@@ -1622,6 +1544,178 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
                 drawRoundRect(color = Color(0xFF546E7A), topLeft = Offset(pumpR2 - 14f, pumpTop2 + 10f), size = Size(10f, pumpH2 - 20f), cornerRadius = CornerRadius(5f))
                 drawRoundRect(color = Color(0xFF37474F), topLeft = Offset(pumpR2 - 12f, pumpTop2 + 12f), size = Size(6f, pumpH2 - 24f), cornerRadius = CornerRadius(3f))
                 drawRoundRect(Brush.horizontalGradient(listOf(Color(0x8090A4AE), Color(0xF0CFD8DC), Color(0x8078909C))), topLeft = Offset(pumpR2 - 12f, pumpTop2 + 12f), size = Size(5f, pumpH2 - 24f), cornerRadius = CornerRadius(2f))
+            }
+        }
+    }
+}
+
+// ─── NEW: ANIMATED RECEPTOR BINDING & MoA PATHWAY ───
+@Composable
+fun MoAPathwayOverlay(drug: EmergencyDrug, onClose: () -> Unit) {
+    var visibleStepCount by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        for (i in 0..drug.moaSteps.size) {
+            delay(500)
+            visibleStepCount = i
+        }
+    }
+
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0B1120).copy(alpha = 0.98f))
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose)
+        ) {
+            AnimatedReceptorBinding(drug)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 220.dp)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                drug.moaSteps.forEachIndexed { index, step ->
+                    AnimatedVisibility(
+                        visible = visibleStepCount > index,
+                        enter = slideInHorizontally(initialOffsetX = { 200 }, animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)) + fadeIn(tween(300))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 32.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Box(modifier = Modifier.size(36.dp).padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                                Canvas(Modifier.fillMaxSize()) {
+                                    drawLine(drug.gradientStart.copy(alpha = 0.5f), Offset(size.width / 2, size.height), Offset(size.width / 2, size.height + 200f), strokeWidth = 4f)
+                                    drawCircle(drug.gradientStart.copy(alpha = 0.3f), radius = size.width / 2)
+                                    drawCircle(drug.gradientEnd, radius = size.width / 4)
+                                    drawCircle(Color.White, radius = size.width / 8)
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .shadow(16.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientEnd.copy(alpha = 0.4f))
+                                    .background(Color(0xFF1E293B).copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                                    .border(1.dp, drug.gradientEnd.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                                    .padding(16.dp)
+                            ) {
+                                Text("PHASE ${index + 1}", color = drug.gradientEnd, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(step.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(step.description, color = Color(0xFF94A3B8), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(80.dp))
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp, start = 16.dp, end = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("PHARMACOLOGICAL PATHWAY", color = drug.gradientEnd, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    Text(drug.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                }
+                IconButton(onClick = onClose, modifier = Modifier.background(Color(0xFF1E293B), CircleShape)) {
+                    Icon(Icons.Default.Close, "Close", tint = Color.White)
+                }
+            }
+        }
+    }
+}
+
+// ─── THE MOLECULAR BINDING ENGINE ───
+@Composable
+fun AnimatedReceptorBinding(drug: EmergencyDrug) {
+    val infiniteTransition = rememberInfiniteTransition(label = "receptor_binding")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing)), label = ""
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .padding(top = 80.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            if (w <= 0f || h <= 0f) return@Canvas
+            val cx = w / 2f; val cy = h * 0.6f
+
+            // Cell Membrane
+            drawLine(Color(0xFF334155), Offset(0f, cy + 20f), Offset(w, cy + 20f), strokeWidth = 8f)
+            drawLine(drug.gradientEnd.copy(alpha = 0.2f), Offset(0f, cy + 20f), Offset(w, cy + 20f), strokeWidth = 24f)
+
+            // Receptor
+            val receptorPath = Path().apply {
+                moveTo(cx - 35f, cy - 25f); lineTo(cx - 35f, cy + 10f)
+                quadraticBezierTo(cx, cy + 40f, cx + 35f, cy + 10f)
+                lineTo(cx + 35f, cy - 25f)
+            }
+            drawPath(receptorPath, color = Color(0xFF475569), style = Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+
+            val drugStartY = cy - 120f; val drugEndY = cy - 5f
+            val currentDrugY = when {
+                phase < 0.3f -> drugStartY + (drugEndY - drugStartY) * (phase / 0.3f)
+                phase < 0.8f -> drugEndY
+                else -> drugStartY
+            }
+            val drugAlpha = when {
+                phase < 0.1f -> phase / 0.1f
+                phase < 0.8f -> 1f
+                else -> 1f - ((phase - 0.8f) / 0.2f)
+            }
+
+            // Spinning Drug Molecule
+            if (phase < 0.8f) {
+                withTransform({ rotate(if (phase < 0.3f) phase * 360f else 0f, Offset(cx, currentDrugY)) }) {
+                    val hexRadius = 20f
+                    val drugPath = Path().apply {
+                        for (i in 0..5) {
+                            val angle = i * 60.0 * Math.PI / 180.0
+                            val px = cx + (hexRadius * Math.cos(angle)).toFloat()
+                            val py = currentDrugY + (hexRadius * Math.sin(angle)).toFloat()
+                            if (i == 0) moveTo(px, py) else lineTo(px, py)
+                        }
+                        close()
+                    }
+                    drawPath(drugPath, color = drug.gradientStart.copy(alpha = drugAlpha))
+                    drawPath(drugPath, color = drug.gradientEnd.copy(alpha = drugAlpha), style = Stroke(4f, join = StrokeJoin.Round))
+                }
+            }
+
+            // Energy Ripple upon Binding
+            if (phase in 0.3f..0.8f) {
+                drawPath(receptorPath, color = drug.gradientEnd.copy(alpha = 0.8f), style = Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(receptorPath, color = Color.White.copy(alpha = 0.5f), style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                val rippleProgress = (phase - 0.3f) / 0.5f
+                val rippleRadius = 20f + (150f * rippleProgress)
+                val rippleAlpha = 1f - rippleProgress
+                drawCircle(color = drug.gradientEnd.copy(alpha = rippleAlpha * 0.6f), radius = rippleRadius, center = Offset(cx, cy + 10f), style = Stroke(width = 8f))
+                drawCircle(color = drug.gradientStart.copy(alpha = rippleAlpha * 0.3f), radius = rippleRadius * 0.7f, center = Offset(cx, cy + 10f), style = Stroke(width = 4f))
+            }
+
+            // Intracellular Signal Cascade Particles
+            if (phase > 0.35f && phase < 0.9f) {
+                val particlePhase = ((phase - 0.35f) * 2f) % 1f
+                val pY = cy + 20f + (h - cy) * particlePhase
+                drawCircle(drug.gradientStart.copy(alpha = 1f - particlePhase), radius = 6f, center = Offset(cx - 30f, pY))
+                drawCircle(drug.gradientEnd.copy(alpha = 1f - particlePhase), radius = 8f, center = Offset(cx + 30f, pY + 15f))
+                drawCircle(Color.White.copy(alpha = 1f - particlePhase), radius = 4f, center = Offset(cx, pY + 30f))
             }
         }
     }
