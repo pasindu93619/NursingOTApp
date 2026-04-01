@@ -2,6 +2,7 @@ package com.pasindu.nursingotapp.ui.screens
 
 import android.graphics.Paint
 import android.graphics.Typeface
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -17,16 +18,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -125,7 +127,8 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
     var weightInput by remember { mutableStateOf("") }
     var isVisible by remember { mutableStateOf(false) }
 
-    var expandedCardIndex by remember { mutableStateOf<Int?>(null) }
+    // Using selectedDrugIndex so that when weight changes, the drug math automatically updates in the overlay!
+    var selectedDrugIndex by remember { mutableStateOf<Int?>(null) }
     var zoomedEcg by remember { mutableStateOf<EcgRhythm?>(null) }
 
     LaunchedEffect(Unit) { delay(100); isVisible = true }
@@ -216,27 +219,35 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
         )
     }
 
+    // Capture hardware back button if overlay is open
+    BackHandler(enabled = selectedDrugIndex != null) {
+        selectedDrugIndex = null
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text("Emergency & Resuscitation", fontWeight = FontWeight.Black, color = EmergencySlateDark, fontSize = 20.sp) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
+            // Hides the "disturbing" top title when the full screen overlay is active
+            AnimatedVisibility(visible = selectedDrugIndex == null, enter = fadeIn(), exit = fadeOut()) {
+                TopAppBar(
+                    title = { Text("Emergency & Resuscitation", fontWeight = FontWeight.Black, color = EmergencySlateDark, fontSize = 20.sp) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().background(EmergencyBgWhite)) {
 
-            // ─── SMOOTH LIQUID MESH BACKGROUND ───
+            // ─── BACKGROUND MESH ───
             SmoothMeshBackground(isVisible)
 
+            // ─── MAIN LIST VIEW ───
             Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
 
-                // ─── BRIGHT HORIZONTAL ECG DECK & WEIGHT INPUT ───
                 EcgTelemetryDeck(
                     isVisible = isVisible,
                     weight = weightInput,
-                    onWeightChange = { newWeight -> weightInput = newWeight; expandedCardIndex = null },
+                    onWeightChange = { newWeight -> weightInput = newWeight },
                     onEcgLongPress = { rhythm ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         zoomedEcg = rhythm
@@ -247,16 +258,44 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         itemsIndexed(drugs) { index, drug ->
-                            val isExpanded = expandedCardIndex == index
-                            EmergencyAccordionCard(
-                                drug = drug, isActive = weight > 0f, isExpanded = isExpanded,
-                                onCardClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); expandedCardIndex = if (isExpanded) null else index }
+                            EmergencyProtocolTriggerCard(
+                                drug = drug,
+                                isActive = weight > 0f,
+                                onCardClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedDrugIndex = index
+                                }
                             )
                         }
-                        item { Spacer(modifier = Modifier.height(60.dp)) }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
+                    }
+                }
+            }
+
+            // ─── FULL SCREEN PROTOCOL OVERLAY ───
+            AnimatedVisibility(
+                visible = selectedDrugIndex != null,
+                enter = slideInVertically(initialOffsetY = { it }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeIn(tween(300)),
+                exit = slideOutVertically(targetOffsetY = { it }, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeOut(tween(300)),
+                modifier = Modifier.zIndex(50f)
+            ) {
+                // We fetch from 'drugs' so the math recalculates instantly if weight changes inside the overlay!
+                selectedDrugIndex?.let { index ->
+                    val drug = drugs.getOrNull(index)
+                    if (drug != null) {
+                        DrugDetailFullScreenOverlay(
+                            drug = drug,
+                            isActive = weight > 0f,
+                            weightInput = weightInput,
+                            onWeightChange = { newWeight -> weightInput = newWeight },
+                            onClose = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedDrugIndex = null
+                            }
+                        )
                     }
                 }
             }
@@ -264,6 +303,245 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
             // ─── 3D MASSIVE DARK-MODE ECG ZOOM OVERLAY ───
             if (zoomedEcg != null) {
                 EcgZoomedOverlay(rhythm = zoomedEcg!!) { zoomedEcg = null }
+            }
+        }
+    }
+}
+
+// ─── PROTOCOL TRIGGER CARD (COMPACT LIST ITEM) ───
+@Composable
+fun EmergencyProtocolTriggerCard(drug: EmergencyDrug, isActive: Boolean, onCardClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (isPressed) 0.95f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "")
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = drug.gradientEnd.copy(alpha = 0.3f))
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onCardClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.horizontalGradient(listOf(Color.White, drug.gradientStart.copy(alpha = 0.08f))))
+                .drawBehind { drawRoundRect(drug.gradientEnd, Offset.Zero, Size(12f, size.height), CornerRadius(20f, 0f)) }
+                .padding(start = 24.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(drug.category.uppercase(), color = EmergencySlateLight, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(drug.name, color = EmergencySlateDark, fontSize = 19.sp, fontWeight = FontWeight.Black)
+
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    Box(modifier = Modifier.size(8.dp).background(if(isActive) drug.gradientEnd else Color(0xFFCBD5E1), CircleShape))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if(isActive) drug.doseText else "Enter Weight", color = if(isActive) drug.gradientEnd else EmergencySlateLight, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(drug.gradientStart.copy(alpha = 0.1f), CircleShape)
+                    .border(1.dp, drug.gradientEnd.copy(alpha = 0.3f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open Protocol", tint = drug.gradientEnd, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+// ─── IMMERSIVE FULL SCREEN DRUG PROTOCOL OVERLAY ───
+@Composable
+fun DrugDetailFullScreenOverlay(drug: EmergencyDrug, isActive: Boolean, weightInput: String, onWeightChange: (String) -> Unit, onClose: () -> Unit) {
+    val infiniteTransitionAura = rememberInfiniteTransition(label = "expanded_aura")
+    val phase by infiniteTransitionAura.animateFloat(0f, 2f*PI.toFloat(), infiniteRepeatable(tween(10000, easing = LinearEasing)), label = "")
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF4F7FB).copy(alpha = 0.98f)) // Heavily frosted solid look
+            .drawBehind {
+                val w = size.width; val h = size.height
+                if (w <= 0f || h <= 0f) return@drawBehind
+
+                // Medical Blueprint Grid Background
+                val gridColor = drug.gradientStart.copy(alpha = 0.05f)
+                for (x in 0..(w / 40f).toInt()) drawLine(gridColor, Offset(x * 40f, 0f), Offset(x * 40f, h), 2f)
+                for (y in 0..(h / 40f).toInt()) drawLine(gridColor, Offset(0f, y * 40f), Offset(w, y * 40f), 2f)
+
+                // Drifting Auras
+                val cx1 = w * 0.2f + sin(phase) * w * 0.2f
+                val cy1 = h * 0.2f + cos(phase) * h * 0.1f
+                val cx2 = w * 0.8f + cos(phase + PI.toFloat()) * w * 0.2f
+                val cy2 = h * 0.8f + sin(phase + PI.toFloat()) * h * 0.1f
+                val safeRadius = maxOf(1f, w * 0.7f)
+
+                drawCircle(brush = Brush.radialGradient(listOf(drug.gradientStart.copy(alpha = 0.15f), Color.Transparent), center = Offset(cx1, cy1), radius = safeRadius), center = Offset(cx1, cy1), radius = safeRadius)
+                drawCircle(brush = Brush.radialGradient(listOf(drug.gradientEnd.copy(alpha = 0.15f), Color.Transparent), center = Offset(cx2, cy2), radius = safeRadius), center = Offset(cx2, cy2), radius = safeRadius)
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 60.dp)
+        ) {
+            // --- HEADER ---
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 40.dp, start = 20.dp, end = 16.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(drug.category.uppercase(), color = drug.gradientEnd, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(drug.name, color = EmergencySlateDark, fontSize = 32.sp, fontWeight = FontWeight.Black, lineHeight = 36.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(drug.concentration, color = EmergencySlateLight, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = onClose, modifier = Modifier.background(Color.White, CircleShape).shadow(4.dp, CircleShape)) {
+                    Icon(Icons.Default.Close, "Close", tint = EmergencySlateDark)
+                }
+            }
+
+            // --- IN-OVERLAY WEIGHT INPUT (Reactive Math!) ---
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End) {
+                Box(
+                    modifier = Modifier
+                        .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientStart.copy(alpha = 0.3f))
+                        .background(Color.White, RoundedCornerShape(16.dp))
+                        .border(1.dp, drug.gradientStart.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    BasicTextField(
+                        value = weightInput, onValueChange = onWeightChange,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        textStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Black, color = EmergencySlateDark, textAlign = TextAlign.End),
+                        singleLine = true,
+                        decorationBox = { innerTextField ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (weightInput.isEmpty()) "WT" else "KG", color = EmergencySlateLight, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(end = 8.dp))
+                                Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.width(60.dp)) {
+                                    if (weightInput.isEmpty()) Text("0.0", color = Color(0xFFCBD5E1), fontSize = 24.sp, fontWeight = FontWeight.Black)
+                                    innerTextField()
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // --- PHYSICS ENGINE BOX ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = drug.gradientEnd.copy(alpha = 0.4f))
+                    .background(Color.White.copy(alpha = 0.95f), RoundedCornerShape(24.dp))
+                    .border(2.dp, drug.gradientEnd.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                    .padding(16.dp)
+            ) {
+                if (drug.deliveryType == DeliveryType.IV_INFUSION) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) { AnimatedProIVPump(drug, isActive) }
+                } else {
+                    AnimatedMassiveSyringe(drug, isActive)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- DATA GRIDS ---
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                CardDetailsContent(drug, isActive)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- BIO-PULSE EDUCATIONAL HUD ---
+                Text("PHARMACODYNAMICS", color = EmergencySlateLight, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, modifier = Modifier.padding(start=4.dp, bottom=8.dp))
+                AnimatedBioPulseHUD(drug)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- WARNING PEARL ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = AlertOrangeEnd.copy(alpha = 0.3f))
+                        .background(Color.White, RoundedCornerShape(16.dp))
+                        .border(1.dp, AlertOrangeEnd.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .padding(20.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Icon(Icons.Default.Warning, null, tint = AlertOrangeEnd, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(drug.safetyTip, color = EmergencySlateDark, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = AlertOrangeEnd.copy(alpha = 0.1f))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(drug.clinicalPearl, color = EmergencySlateLight, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp)
+                }
+            }
+        }
+    }
+}
+
+// ─── BIOLUMINESCENT PHARMACODYNAMICS HUD ───
+@Composable
+fun AnimatedBioPulseHUD(drug: EmergencyDrug) {
+    val infiniteTransition = rememberInfiniteTransition(label = "bio_pulse")
+    val pulse by infiniteTransition.animateFloat(0.5f, 1f, infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
+
+    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            modifier = Modifier.weight(1f).fillMaxHeight()
+                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientStart.copy(alpha = 0.3f))
+                .background(Color.White, RoundedCornerShape(16.dp))
+                .border(1.dp, drug.gradientStart.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                .padding(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(50.dp)) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawCircle(drug.gradientStart.copy(alpha = 0.2f * pulse), radius = size.width/2f * pulse)
+                        drawCircle(drug.gradientStart.copy(alpha = 0.5f), radius = size.width/4f)
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("MECHANISM", color = EmergencySlateLight, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(drug.mechanism, color = drug.gradientStart, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 18.sp)
+            }
+        }
+
+        Box(
+            modifier = Modifier.weight(1f).fillMaxHeight()
+                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientEnd.copy(alpha = 0.3f))
+                .background(Color.White, RoundedCornerShape(16.dp))
+                .border(1.dp, drug.gradientEnd.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                .padding(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(50.dp)) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawArc(color = drug.gradientEnd.copy(alpha = 0.2f), startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(4f))
+                        drawArc(color = drug.gradientEnd, startAngle = -90f, sweepAngle = 360f * pulse, useCenter = false, style = Stroke(6f, cap = StrokeCap.Round))
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("HALF-LIFE", color = EmergencySlateLight, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(drug.halfLife, color = drug.gradientEnd, fontSize = 14.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
             }
         }
     }
@@ -313,15 +591,12 @@ fun getEcgY(t: Float, rhythm: EcgRhythm, cy: Float, ampH: Float): Float {
     when (rhythm) {
         EcgRhythm.NSR -> {
             val localT = t % 800f
-            // P wave
             if (localT in 100f..180f) y -= sin((localT - 100f) / 80f * PI).toFloat() * ampH * 0.15f
-            // QRS
             if (localT in 220f..280f) {
                 if (localT < 235f) y += ampH * 0.1f // Q
                 else if (localT < 245f) y -= ampH * 0.85f // R
                 else if (localT < 265f) y += ampH * 0.25f // S
             }
-            // T wave
             if (localT in 400f..560f) y -= sin((localT - 400f) / 160f * PI).toFloat() * ampH * 0.25f
         }
         EcgRhythm.VFIB -> y -= (sin(t * 0.015f) * ampH * 0.25f + cos(t * 0.04f) * ampH * 0.15f + sin(t * 0.008f) * ampH * 0.2f).toFloat()
@@ -486,7 +761,6 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
 fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
     var ecgPhase by remember { mutableFloatStateOf(0f) }
 
-    // Zoom & Pan State
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val isZoomed = scale > 1.1f
@@ -568,10 +842,10 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                         if (isZoomed) {
                             val largeSq = w / 30f
                             val smallSq = largeSq / 5f
-                            val gridRedMajor = Color(0xFFEF5350).copy(alpha = 0.7f) // INCREASED OPACITY
-                            val gridRedMinor = Color(0xFFEF5350).copy(alpha = 0.4f) // INCREASED OPACITY
-                            val majorStroke = 2.5f / scale // THICKER LINES
-                            val minorStroke = 1.2f / scale // THICKER LINES
+                            val gridRedMajor = Color(0xFFEF5350).copy(alpha = 0.7f)
+                            val gridRedMinor = Color(0xFFEF5350).copy(alpha = 0.4f)
+                            val majorStroke = 2.5f / scale
+                            val minorStroke = 1.2f / scale
 
                             for (i in -150..300) {
                                 val px = i * smallSq
@@ -848,144 +1122,6 @@ fun ClinicalSection(title: String, body: String, tint: Color) {
 }
 
 @Composable
-fun EmergencyAccordionCard(drug: EmergencyDrug, isActive: Boolean, isExpanded: Boolean, onCardClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "")
-
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(0.3f, 0.8f, infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
-
-    Box(
-        modifier = Modifier.fillMaxWidth().zIndex(if (isExpanded || isPressed) 10f else 0f).scale(scale).animateContentSize(tween(300, easing = FastOutSlowInEasing))
-            .shadow(if (isExpanded) 24.dp else 8.dp, RoundedCornerShape(24.dp), spotColor = if (isExpanded) drug.gradientEnd.copy(alpha = 0.5f) else Color.Black)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.White)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onCardClick)
-            .border(
-                width = if (isExpanded) 1.5.dp else 0.dp,
-                brush = Brush.linearGradient(listOf(drug.gradientStart.copy(alpha = if (isExpanded) pulseAlpha else 0f), drug.gradientEnd.copy(alpha = if (isExpanded) pulseAlpha else 0f))),
-                shape = RoundedCornerShape(24.dp)
-            )
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color.White, drug.gradientStart.copy(alpha = 0.05f))))
-                    .drawBehind { drawRoundRect(drug.gradientEnd, Offset.Zero, Size(16f, size.height), CornerRadius(24f, 0f)) }
-                    .padding(start = 28.dp, top = 18.dp, end = 16.dp, bottom = 18.dp),
-                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(drug.category.uppercase(), color = EmergencySlateLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(drug.name, color = EmergencySlateDark, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(drug.concentration, color = drug.gradientEnd, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-                Icon(if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, "Expand", tint = drug.gradientEnd, modifier = Modifier.size(32.dp).background(drug.gradientEnd.copy(alpha=0.1f), CircleShape).padding(4.dp))
-            }
-
-            AnimatedVisibility(
-                visible = isExpanded, enter = expandVertically(tween(300)) + fadeIn(tween(250)), exit = shrinkVertically(tween(300)) + fadeOut(tween(250))
-            ) {
-                val infiniteTransitionAura = rememberInfiniteTransition(label = "expanded_aura")
-                val phase by infiniteTransitionAura.animateFloat(0f, 2f*PI.toFloat(), infiniteRepeatable(tween(8000, easing = LinearEasing)), label = "")
-
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .drawBehind {
-                        val w = size.width; val h = size.height
-                        if (w <= 0f || h <= 0f) return@drawBehind
-
-                        drawRect(Color(0xFFF4F7FB))
-
-                        // Medical Blueprint Grid Background
-                        val gridColor = drug.gradientStart.copy(alpha = 0.05f)
-                        for (x in 0..(w / 40f).toInt()) drawLine(gridColor, Offset(x * 40f, 0f), Offset(x * 40f, h), 2f)
-                        for (y in 0..(h / 40f).toInt()) drawLine(gridColor, Offset(0f, y * 40f), Offset(w, y * 40f), 2f)
-
-                        val cx1 = w * 0.2f + sin(phase) * w * 0.2f
-                        val cy1 = h * 0.3f + cos(phase) * h * 0.2f
-                        val cx2 = w * 0.8f + cos(phase + PI.toFloat()) * w * 0.2f
-                        val cy2 = h * 0.7f + sin(phase + PI.toFloat()) * h * 0.2f
-
-                        val safeRadius = maxOf(1f, w * 0.6f)
-
-                        drawCircle(brush = Brush.radialGradient(listOf(drug.gradientStart.copy(alpha = 0.08f), Color.Transparent), center = Offset(cx1, cy1), radius = safeRadius), center = Offset(cx1, cy1), radius = safeRadius)
-                        drawCircle(brush = Brush.radialGradient(listOf(drug.gradientEnd.copy(alpha = 0.08f), Color.Transparent), center = Offset(cx2, cy2), radius = safeRadius), center = Offset(cx2, cy2), radius = safeRadius)
-                    }
-                ) {
-                    HorizontalDivider(color = drug.gradientEnd.copy(alpha=0.15f))
-
-                    Row(modifier = Modifier.padding(16.dp).height(IntrinsicSize.Min)) {
-                        // Thicker, glowing Neon Accent Bar
-                        Box(modifier = Modifier
-                            .width(6.dp)
-                            .fillMaxHeight()
-                            .shadow(4.dp, RoundedCornerShape(6.dp), spotColor = drug.gradientEnd)
-                            .background(Brush.verticalGradient(listOf(drug.gradientStart, drug.gradientEnd)), RoundedCornerShape(6.dp))
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column {
-                            CardDetailsContent(drug, isActive)
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = drug.gradientEnd.copy(alpha = 0.3f))
-                                    .background(Color.White.copy(alpha = 0.98f), RoundedCornerShape(20.dp))
-                                    .border(1.5.dp, drug.gradientEnd.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                                    .padding(12.dp)
-                            ) {
-                                if (drug.deliveryType == DeliveryType.IV_INFUSION) {
-                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) { AnimatedProIVPump(drug, isActive) }
-                                } else {
-                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                        AnimatedMassiveSyringe(drug, isActive)
-                                        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            EduCard(title = "MECHANISM", text = drug.mechanism, color = drug.gradientStart, modifier = Modifier.weight(1f))
-                                            EduCard(title = "HALF-LIFE", text = drug.halfLife, color = drug.gradientEnd, modifier = Modifier.weight(1f))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Column(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.98f)).padding(20.dp)) {
-                        Row(verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.Warning, null, tint = AlertOrangeEnd, modifier = Modifier.size(22.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(drug.safetyTip, color = EmergencySlateDark.copy(alpha=0.9f), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = drug.gradientEnd.copy(alpha=0.15f))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(drug.clinicalPearl, color = drug.gradientEnd, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun EduCard(title: String, text: String, color: Color, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = color.copy(alpha = 0.2f))
-            .background(Brush.verticalGradient(listOf(Color.White, color.copy(alpha = 0.05f))), RoundedCornerShape(12.dp))
-            .border(1.dp, color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-            .padding(12.dp)
-    ) {
-        Text(title, color = color, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(text, color = EmergencySlateDark, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
-    }
-}
-
-@Composable
 fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Row(
@@ -1074,7 +1210,6 @@ fun AccessDashboardCell(drug: EmergencyDrug, modifier: Modifier = Modifier) {
     }
 }
 
-// ─── MASSIVE HYDRODYNAMIC SYRINGE ───
 @Composable
 fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
     val infiniteTransition = rememberInfiniteTransition(label = "syringe_engine")
