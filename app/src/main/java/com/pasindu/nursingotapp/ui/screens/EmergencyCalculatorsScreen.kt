@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Warning
@@ -85,9 +86,8 @@ val AlertCyanStart = Color(0xFF00E5FF)
 val AlertCyanEnd = Color(0xFF00838F)
 val AlertBlueStart = Color(0xFF2979FF)
 val AlertBlueEnd = Color(0xFF1565C0)
-
-val ClinicalPanelBg = Color(0xFFF8FAFC)
-val ClinicalBorder = Color(0xFFE2E8F0)
+val AlertGreenStart = Color(0xFF00E676)
+val AlertGreenEnd = Color(0xFF1B5E20)
 
 // Universal IV Cannula Color Codes
 val CannulaOrange = Color(0xFFFF9800) // 14G
@@ -281,7 +281,7 @@ fun SmoothMeshBackground(isVisible: Boolean) {
     Canvas(modifier = Modifier.fillMaxSize().alpha(alphaAnim)) {
         val w = size.width
         val h = size.height
-        if (w <= 0f || h <= 0f) return@Canvas // CRASH FIX
+        if (w <= 0f || h <= 0f) return@Canvas
 
         drawRect(Color(0xFFF4F7FB))
 
@@ -329,15 +329,15 @@ fun getEcgY(t: Float, rhythm: EcgRhythm, cy: Float, ampH: Float): Float {
         EcgRhythm.SVT -> {
             val localT = t % 200f
             if (localT in 80f..120f) {
-                if (localT < 90f) y += ampH * 0.15f // Qish
-                else if (localT < 100f) y -= ampH * 0.8f // R
-                else if (localT < 110f) y += ampH * 0.25f // S
+                if (localT < 90f) y += ampH * 0.15f
+                else if (localT < 100f) y -= ampH * 0.8f
+                else if (localT < 110f) y += ampH * 0.25f
             }
-            if (localT in 140f..180f) y -= sin((localT - 140f) / 40f * PI).toFloat() * ampH * 0.15f // T
+            if (localT in 140f..180f) y -= sin((localT - 140f) / 40f * PI).toFloat() * ampH * 0.15f
         }
         EcgRhythm.AFIB -> {
             val localT = t % 750f
-            y -= (sin(t * 0.03f) * ampH * 0.08f + cos(t * 0.06f) * ampH * 0.05f).toFloat() // Wavy baseline
+            y -= (sin(t * 0.03f) * ampH * 0.08f + cos(t * 0.06f) * ampH * 0.05f).toFloat()
             if (localT in 200f..280f) {
                 if (localT < 220f) y += ampH * 0.1f
                 else if (localT < 240f) y -= ampH * 0.8f
@@ -350,15 +350,14 @@ fun getEcgY(t: Float, rhythm: EcgRhythm, cy: Float, ampH: Float): Float {
             y -= (sin((t % 300f) / 300f * 2 * PI) * spindle).toFloat()
         }
         EcgRhythm.HEART_BLOCK -> {
-            // P Waves marching independently
             if (t % 500f in 100f..180f) y -= sin(((t % 500f) - 100f) / 80f * PI).toFloat() * ampH * 0.15f
-            // Wide Slow QRS
             val qrsT = t % 1500f
             if (qrsT in 600f..680f) {
                 if (qrsT < 620f) y += ampH * 0.1f
                 else if (qrsT < 640f) y -= ampH * 0.7f
                 else if (qrsT < 660f) y += ampH * 0.2f
             }
+            if (qrsT in 800f..1000f) y -= sin((qrsT - 800f) / 200f * PI).toFloat() * ampH * 0.3f
         }
         EcgRhythm.ASYSTOLE -> y -= (sin(t * 0.005f) * ampH * 0.03f).toFloat()
     }
@@ -416,7 +415,6 @@ fun EcgTelemetryDeck(isVisible: Boolean, weight: String, onWeightChange: (String
     }
 }
 
-// ─── BRIGHT ECG MINI CARD (ULTRA CRISP LINES) ───
 @Composable
 fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
     var ecgPhase by remember { mutableFloatStateOf(0f) }
@@ -440,7 +438,7 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
     ) {
         Canvas(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
             val w = size.width; val h = size.height; val cy = h / 2f
-            if (w <= 0f || h <= 0f) return@Canvas // CRASH FIX
+            if (w <= 0f || h <= 0f) return@Canvas
 
             val gridColor = Color(0xFFF1F5F9)
             for (x in 0..(w / 15f).toInt()) drawLine(gridColor, Offset(x * 15f, 0f), Offset(x * 15f, h))
@@ -448,7 +446,7 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
 
             val ecgPath = Path().apply {
                 val startY = getEcgY(0f, rhythm, cy, 25f)
-                moveTo(0f, startY) // Start perfectly at first point to fix vertical line bug
+                moveTo(0f, startY)
                 val steps = 200
                 for (i in 1..steps) {
                     val progress = i.toFloat() / steps
@@ -458,9 +456,8 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
             val headX = ecgPhase * w
 
             clipRect(left = 0f, right = headX, top = 0f, bottom = h) {
-                // Completely removed blurry shadows. Only sharp clear lines.
-                drawPath(ecgPath, color = rhythm.color.copy(alpha=0.3f), style = Stroke(width = 8f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawPath(ecgPath, color = rhythm.color, style = Stroke(width = 3.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(ecgPath, color = rhythm.color.copy(alpha=0.25f), style = Stroke(width = 8f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(ecgPath, color = rhythm.color, style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
         }
 
@@ -484,7 +481,7 @@ fun EcgMiniCardLight(rhythm: EcgRhythm, onLongPress: () -> Unit) {
     }
 }
 
-// ─── MASSIVE DARK-MODE ECG ZOOM OVERLAY (PERFECT HIGH CONTRAST) ───
+// ─── MASSIVE DARK-MODE ECG ZOOM OVERLAY WITH PINCH/DOUBLE-TAP TO ZOOM ───
 @Composable
 fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
     var ecgPhase by remember { mutableFloatStateOf(0f) }
@@ -492,6 +489,7 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
     // Zoom & Pan State
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    val isZoomed = scale > 1.1f
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -525,13 +523,25 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                     }
                 }
 
-                // Interactive Canvas Container in DARK MODE for maximum contrast
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(240.dp)
-                        .background(Color(0xFF0B1120)) // Deep slate dark mode
+                        .background(Color(0xFF0B1120))
                         .clipToBounds()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    if (scale > 1.1f) {
+                                        scale = 1f
+                                        offset = Offset.Zero
+                                    } else {
+                                        scale = 2.5f
+                                        offset = Offset.Zero
+                                    }
+                                }
+                            )
+                        }
                         .pointerInput(Unit) {
                             detectTransformGestures { _, pan, zoom, _ ->
                                 scale = (scale * zoom).coerceIn(1f, 4f)
@@ -555,10 +565,29 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                         val w = size.width; val h = size.height; val cy = h / 2f
                         if (w <= 0f || h <= 0f) return@Canvas
 
-                        // White subtle grid for dark mode
-                        val gridColor = Color.White.copy(alpha = 0.05f)
-                        for (x in -50..(w / 20f).toInt() + 50) drawLine(gridColor, Offset(x * 20f, -h), Offset(x * 20f, h*2))
-                        for (y in -50..(h / 20f).toInt() + 50) drawLine(gridColor, Offset(-w, y * 20f), Offset(w*2, y * 20f))
+                        if (isZoomed) {
+                            val largeSq = w / 30f
+                            val smallSq = largeSq / 5f
+                            val gridRedMajor = Color(0xFFEF5350).copy(alpha = 0.7f) // INCREASED OPACITY
+                            val gridRedMinor = Color(0xFFEF5350).copy(alpha = 0.4f) // INCREASED OPACITY
+                            val majorStroke = 2.5f / scale // THICKER LINES
+                            val minorStroke = 1.2f / scale // THICKER LINES
+
+                            for (i in -150..300) {
+                                val px = i * smallSq
+                                if (i % 5 == 0) drawLine(gridRedMajor, Offset(px, -h), Offset(px, h*2), strokeWidth = majorStroke)
+                                else drawLine(gridRedMinor, Offset(px, -h), Offset(px, h*2), strokeWidth = minorStroke)
+                            }
+                            for (i in -100..100) {
+                                val py = cy + (i * smallSq)
+                                if (i % 5 == 0) drawLine(gridRedMajor, Offset(-w, py), Offset(w*2, py), strokeWidth = majorStroke)
+                                else drawLine(gridRedMinor, Offset(-w, py), Offset(w*2, py), strokeWidth = minorStroke)
+                            }
+                        } else {
+                            val gridColor = Color.White.copy(alpha = 0.05f)
+                            for (x in -50..(w / 20f).toInt() + 50) drawLine(gridColor, Offset(x * 20f, -h), Offset(x * 20f, h*2))
+                            for (y in -50..(h / 20f).toInt() + 50) drawLine(gridColor, Offset(-w, y * 20f), Offset(w*2, y * 20f))
+                        }
 
                         val ecgPath = Path().apply {
                             val startY = getEcgY(0f, rhythm, cy, 60f)
@@ -569,20 +598,26 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                 lineTo(progress * w, getEcgY(progress * 6000f, rhythm, cy, 60f))
                             }
                         }
-                        val headX = ecgPhase * w
 
-                        clipRect(left = 0f, right = headX, top = -h, bottom = h*2) {
-                            // Two-pass ultra-crisp neon line (Removed muddy wide strokes)
+                        val currentHeadX = if (isZoomed) Float.POSITIVE_INFINITY else ecgPhase * w
+
+                        clipRect(left = Float.NEGATIVE_INFINITY, right = currentHeadX, top = -h, bottom = h*2) {
+
                             drawPath(ecgPath, color = rhythm.color.copy(alpha=0.4f), style = Stroke(width = 8f / scale, cap = StrokeCap.Round, join = StrokeJoin.Round))
                             drawPath(ecgPath, color = rhythm.color, style = Stroke(width = 3.5f / scale, cap = StrokeCap.Round, join = StrokeJoin.Round))
 
-                            // --- DYNAMIC P-Q-R-S-T LABELS ON ZOOM FOR MULTIPLE RHYTHMS ---
                             if (scale > 1.4f) {
                                 val labelAlpha = ((scale - 1.4f) * 2f).coerceIn(0f, 1f)
                                 val textPaint = Paint().apply {
-                                    color = android.graphics.Color.WHITE // Bright white text on dark background
+                                    color = android.graphics.Color.WHITE
                                     textSize = 34f / scale
                                     isFakeBoldText = true
+                                    textAlign = Paint.Align.CENTER
+                                    alpha = (255 * labelAlpha).toInt()
+                                }
+                                val textPaintSmall = Paint().apply {
+                                    color = android.graphics.Color.parseColor("#00E676")
+                                    textSize = 24f / scale
                                     textAlign = Paint.Align.CENTER
                                     alpha = (255 * labelAlpha).toInt()
                                 }
@@ -591,24 +626,41 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                     val points = listOf("P" to 140f, "Q" to 230f, "R" to 240f, "S" to 255f, "T" to 480f)
                                     for (p in 0..10) {
                                         val baseT = p * 800f
+                                        val pxP = ((baseT + 100f) / 6000f) * w
+                                        val pxQ = ((baseT + 220f) / 6000f) * w
+                                        val pxS = ((baseT + 265f) / 6000f) * w
+
                                         points.forEach { (label, offsetT) ->
                                             val tMs = baseT + offsetT
-                                            if (tMs <= 6000f && tMs < (headX / w) * 6000f) {
+                                            if (tMs <= 6000f) {
                                                 val px = (tMs / 6000f) * w
                                                 val py = getEcgY(tMs, rhythm, cy, 60f)
                                                 val yOffset = if (label == "R") -40f / scale else 50f / scale
                                                 drawContext.canvas.nativeCanvas.drawText(label, px, py + yOffset, textPaint)
                                             }
                                         }
+
+                                        val caliperColor = Color(0xFF00E676).copy(alpha = labelAlpha)
+                                        val caliperY = cy + (120f / scale)
+                                        val caliperYTop = cy - (120f / scale)
+
+                                        drawLine(caliperColor, Offset(pxP, caliperY - 10f/scale), Offset(pxP, caliperY + 10f/scale), 2f/scale)
+                                        drawLine(caliperColor, Offset(pxQ, caliperY - 10f/scale), Offset(pxQ, caliperY + 10f/scale), 2f/scale)
+                                        drawLine(caliperColor, Offset(pxP, caliperY), Offset(pxQ, caliperY), 2f/scale)
+                                        drawContext.canvas.nativeCanvas.drawText("PR", (pxP+pxQ)/2, caliperY + 30f/scale, textPaintSmall)
+
+                                        drawLine(caliperColor, Offset(pxQ, caliperYTop - 10f/scale), Offset(pxQ, caliperYTop + 10f/scale), 2f/scale)
+                                        drawLine(caliperColor, Offset(pxS, caliperYTop - 10f/scale), Offset(pxS, caliperYTop + 10f/scale), 2f/scale)
+                                        drawLine(caliperColor, Offset(pxQ, caliperYTop), Offset(pxS, caliperYTop), 2f/scale)
+                                        drawContext.canvas.nativeCanvas.drawText("QRS", (pxQ+pxS)/2, caliperYTop - 15f/scale, textPaintSmall)
                                     }
                                 } else if (rhythm == EcgRhythm.SVT) {
-                                    // SVT hides P waves, shows rapid QRS-T
                                     val points = listOf("Q" to 85f, "R" to 95f, "S" to 105f, "T" to 160f)
                                     for (p in 0..30) {
                                         val baseT = p * 200f
                                         points.forEach { (label, offsetT) ->
                                             val tMs = baseT + offsetT
-                                            if (tMs <= 6000f && tMs < (headX / w) * 6000f) {
+                                            if (tMs <= 6000f) {
                                                 val px = (tMs / 6000f) * w
                                                 val py = getEcgY(tMs, rhythm, cy, 60f)
                                                 val yOffset = if (label == "R") -40f / scale else 50f / scale
@@ -617,21 +669,20 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                         }
                                     }
                                 } else if (rhythm == EcgRhythm.HEART_BLOCK) {
-                                    // Heart Block: P waves march independently from QRS
                                     for (p in 0..20) {
                                         val tMs = p * 500f + 140f
-                                        if (tMs <= 6000f && tMs < (headX / w) * 6000f) {
+                                        if (tMs <= 6000f) {
                                             val px = (tMs / 6000f) * w
                                             val py = getEcgY(tMs, rhythm, cy, 60f)
                                             drawContext.canvas.nativeCanvas.drawText("P", px, py + 50f / scale, textPaint)
                                         }
                                     }
-                                    val qrsPoints = listOf("Q" to 610f, "R" to 630f, "S" to 650f)
+                                    val qrsPoints = listOf("Q" to 610f, "R" to 630f, "S" to 650f, "T" to 900f)
                                     for (p in 0..10) {
                                         val baseT = p * 1500f
                                         qrsPoints.forEach { (label, offsetT) ->
                                             val tMs = baseT + offsetT
-                                            if (tMs <= 6000f && tMs < (headX / w) * 6000f) {
+                                            if (tMs <= 6000f) {
                                                 val px = (tMs / 6000f) * w
                                                 val py = getEcgY(tMs, rhythm, cy, 60f)
                                                 val yOffset = if (label == "R") -40f / scale else 50f / scale
@@ -639,15 +690,57 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                                             }
                                         }
                                     }
+                                } else if (rhythm == EcgRhythm.AFIB) {
+                                    val qrsPoints = listOf("Q" to 230f, "R" to 240f, "S" to 250f, "T" to 385f)
+                                    for (p in 0..10) {
+                                        val baseT = p * 750f
+                                        qrsPoints.forEach { (label, offsetT) ->
+                                            val tMs = baseT + offsetT
+                                            if (tMs <= 6000f) {
+                                                val px = (tMs / 6000f) * w
+                                                val py = getEcgY(tMs, rhythm, cy, 60f)
+                                                val yOffset = if (label == "R") -40f / scale else 50f / scale
+                                                drawContext.canvas.nativeCanvas.drawText(label, px, py + yOffset, textPaint)
+                                            }
+                                        }
+                                    }
+                                } else if (rhythm == EcgRhythm.VTACH) {
+                                    for (p in 0..20) {
+                                        val tMs = p * 350f + 87.5f
+                                        if (tMs <= 6000f) {
+                                            val px = (tMs / 6000f) * w
+                                            val py = getEcgY(tMs, rhythm, cy, 60f)
+                                            drawContext.canvas.nativeCanvas.drawText("R", px, py - 40f / scale, textPaint)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Zoom Hint overlay
-                    if (scale <= 1.1f) {
+                    if (isZoomed) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(12.dp)
+                                .background(Color(0xFF0F172A).copy(alpha = 0.85f), RoundedCornerShape(8.dp))
+                                .border(1.dp, Color(0xFFEF5350).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.size(10.dp).background(Color(0xFFEF5350).copy(alpha = 0.5f)))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("1mm = 0.04s", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(modifier = Modifier.size(10.dp).border(1.5.dp, Color(0xFFEF5350).copy(alpha = 0.8f)))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("5mm = 0.20s", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Speed: 25mm/s", color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
                         Text(
-                            "Pinch to zoom & analyze points",
+                            "Pinch or double-tap to zoom & analyze points",
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -656,14 +749,86 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
                     }
                 }
 
-                // Clinical Data
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    ClinicalSection("PATTERN", rhythm.pattern, rhythm.color)
-                    ClinicalSection("CAUSES", rhythm.causes, AlertOrangeEnd)
-                    ClinicalSection("TREATMENT", rhythm.treatment, AlertCyanEnd)
+                AnimatedContent(targetState = isZoomed, label = "hud_crossfade") { zoomed ->
+                    if (zoomed) {
+                        RhythmAnalysisDetails(rhythm)
+                    } else {
+                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            ClinicalSection("PATTERN", rhythm.pattern, rhythm.color)
+                            ClinicalSection("CAUSES", rhythm.causes, AlertOrangeEnd)
+                            ClinicalSection("TREATMENT", rhythm.treatment, AlertCyanEnd)
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RhythmAnalysisDetails(rhythm: EcgRhythm) {
+    val analysisTitle: String
+    val analysisBody: String
+    val analysisColor: Color
+
+    when (rhythm) {
+        EcgRhythm.NSR -> {
+            analysisTitle = "NORMAL INTERVALS"
+            analysisBody = "• PR Interval: 0.12 - 0.20s\n• QRS Duration: < 0.12s\n• QT Interval: < 0.44s\n• Rhythm: Regular"
+            analysisColor = Color(0xFF00E676)
+        }
+        EcgRhythm.VFIB -> {
+            analysisTitle = "VFIB CHARACTERISTICS"
+            analysisBody = "• Rate: Indeterminable\n• Rhythm: Chaotic & disorganized\n• P-waves: Absent\n• QRS: Absent"
+            analysisColor = Color(0xFFFF1744)
+        }
+        EcgRhythm.VTACH -> {
+            analysisTitle = "VTACH CHARACTERISTICS"
+            analysisBody = "• Rate: > 100 bpm (Fast)\n• Rhythm: Regular\n• P-waves: Usually absent/hidden\n• QRS Duration: > 0.12s (Wide)"
+            analysisColor = Color(0xFFFF9100)
+        }
+        EcgRhythm.SVT -> {
+            analysisTitle = "SVT CHARACTERISTICS"
+            analysisBody = "• Rate: 150 - 250 bpm\n• Rhythm: Regular\n• P-waves: Hidden in T-waves\n• QRS Duration: < 0.12s (Narrow)"
+            analysisColor = Color(0xFFD500F9)
+        }
+        EcgRhythm.AFIB -> {
+            analysisTitle = "AFIB CHARACTERISTICS"
+            analysisBody = "• Rate: Variable\n• Rhythm: Irregularly Irregular\n• P-waves: Fibrillatory waves\n• QRS Duration: < 0.12s (Normal)"
+            analysisColor = Color(0xFF00E5FF)
+        }
+        EcgRhythm.TORSADES -> {
+            analysisTitle = "TORSADES CHARACTERISTICS"
+            analysisBody = "• Rate: 150 - 250 bpm\n• Rhythm: Irregular (twisting)\n• P-waves: Absent\n• QRS Duration: Wide & polymorphic"
+            analysisColor = Color(0xFFFFEA00)
+        }
+        EcgRhythm.HEART_BLOCK -> {
+            analysisTitle = "3rd DEGREE BLOCK CHARACTERISTICS"
+            analysisBody = "• Rate: Slow (Escape Rhythm)\n• Rhythm: P-P regular, R-R regular\n• P-waves: Independent from QRS\n• QRS Duration: Usually wide"
+            analysisColor = Color(0xFF00E676)
+        }
+        EcgRhythm.ASYSTOLE -> {
+            analysisTitle = "ASYSTOLE CHARACTERISTICS"
+            analysisBody = "• Rate: Absent\n• Rhythm: Flatline\n• P-waves: Absent\n• QRS: Absent"
+            analysisColor = Color(0xFF9E9E9E)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp)
+            .background(analysisColor.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .border(1.5.dp, analysisColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Info, contentDescription = "Analysis", tint = analysisColor, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(analysisTitle, color = analysisColor, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(analysisBody, color = EmergencySlateDark, fontSize = 15.sp, fontWeight = FontWeight.Black, lineHeight = 24.sp)
     }
 }
 
@@ -682,14 +847,12 @@ fun ClinicalSection(title: String, body: String, tint: Color) {
     }
 }
 
-// ─── ACCORDION DRUG CARD WITH CREATIVE NEON BORDERS ───
 @Composable
 fun EmergencyAccordionCard(drug: EmergencyDrug, isActive: Boolean, isExpanded: Boolean, onCardClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "")
 
-    // Create an animated pulsing border color when expanded
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseAlpha by infiniteTransition.animateFloat(0.3f, 0.8f, infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
 
@@ -699,7 +862,6 @@ fun EmergencyAccordionCard(drug: EmergencyDrug, isActive: Boolean, isExpanded: B
             .clip(RoundedCornerShape(24.dp))
             .background(Color.White)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onCardClick)
-            // Creative animated glowing border for extreme clarity when scrolled
             .border(
                 width = if (isExpanded) 1.5.dp else 0.dp,
                 brush = Brush.linearGradient(listOf(drug.gradientStart.copy(alpha = if (isExpanded) pulseAlpha else 0f), drug.gradientEnd.copy(alpha = if (isExpanded) pulseAlpha else 0f))),
@@ -725,13 +887,43 @@ fun EmergencyAccordionCard(drug: EmergencyDrug, isActive: Boolean, isExpanded: B
             AnimatedVisibility(
                 visible = isExpanded, enter = expandVertically(tween(300)) + fadeIn(tween(250)), exit = shrinkVertically(tween(300)) + fadeOut(tween(250))
             ) {
-                // High Opacity Inner Background so scrolling is super clear
-                Column(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.98f))) {
+                val infiniteTransitionAura = rememberInfiniteTransition(label = "expanded_aura")
+                val phase by infiniteTransitionAura.animateFloat(0f, 2f*PI.toFloat(), infiniteRepeatable(tween(8000, easing = LinearEasing)), label = "")
+
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .drawBehind {
+                        val w = size.width; val h = size.height
+                        if (w <= 0f || h <= 0f) return@drawBehind
+
+                        drawRect(Color(0xFFF4F7FB))
+
+                        // Medical Blueprint Grid Background
+                        val gridColor = drug.gradientStart.copy(alpha = 0.05f)
+                        for (x in 0..(w / 40f).toInt()) drawLine(gridColor, Offset(x * 40f, 0f), Offset(x * 40f, h), 2f)
+                        for (y in 0..(h / 40f).toInt()) drawLine(gridColor, Offset(0f, y * 40f), Offset(w, y * 40f), 2f)
+
+                        val cx1 = w * 0.2f + sin(phase) * w * 0.2f
+                        val cy1 = h * 0.3f + cos(phase) * h * 0.2f
+                        val cx2 = w * 0.8f + cos(phase + PI.toFloat()) * w * 0.2f
+                        val cy2 = h * 0.7f + sin(phase + PI.toFloat()) * h * 0.2f
+
+                        val safeRadius = maxOf(1f, w * 0.6f)
+
+                        drawCircle(brush = Brush.radialGradient(listOf(drug.gradientStart.copy(alpha = 0.08f), Color.Transparent), center = Offset(cx1, cy1), radius = safeRadius), center = Offset(cx1, cy1), radius = safeRadius)
+                        drawCircle(brush = Brush.radialGradient(listOf(drug.gradientEnd.copy(alpha = 0.08f), Color.Transparent), center = Offset(cx2, cy2), radius = safeRadius), center = Offset(cx2, cy2), radius = safeRadius)
+                    }
+                ) {
                     HorizontalDivider(color = drug.gradientEnd.copy(alpha=0.15f))
 
                     Row(modifier = Modifier.padding(16.dp).height(IntrinsicSize.Min)) {
-                        // Creative Neon left accent bar connecting the data grids
-                        Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(Brush.verticalGradient(listOf(drug.gradientStart, drug.gradientEnd)), RoundedCornerShape(4.dp)))
+                        // Thicker, glowing Neon Accent Bar
+                        Box(modifier = Modifier
+                            .width(6.dp)
+                            .fillMaxHeight()
+                            .shadow(4.dp, RoundedCornerShape(6.dp), spotColor = drug.gradientEnd)
+                            .background(Brush.verticalGradient(listOf(drug.gradientStart, drug.gradientEnd)), RoundedCornerShape(6.dp))
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
 
                         Column {
@@ -743,7 +935,7 @@ fun EmergencyAccordionCard(drug: EmergencyDrug, isActive: Boolean, isExpanded: B
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = drug.gradientEnd.copy(alpha = 0.3f))
-                                    .background(Color.White, RoundedCornerShape(20.dp))
+                                    .background(Color.White.copy(alpha = 0.98f), RoundedCornerShape(20.dp))
                                     .border(1.5.dp, drug.gradientEnd.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
                                     .padding(12.dp)
                             ) {
@@ -761,7 +953,7 @@ fun EmergencyAccordionCard(drug: EmergencyDrug, isActive: Boolean, isExpanded: B
                             }
                         }
                     }
-                    Column(modifier = Modifier.fillMaxWidth().background(drug.gradientStart.copy(alpha = 0.05f)).padding(20.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.98f)).padding(20.dp)) {
                         Row(verticalAlignment = Alignment.Top) {
                             Icon(Icons.Default.Warning, null, tint = AlertOrangeEnd, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(12.dp))
@@ -793,7 +985,6 @@ fun EduCard(title: String, text: String, color: Color, modifier: Modifier = Modi
     }
 }
 
-// ─── TINTED GLASSMORPHISM DASHBOARD GRID ───
 @Composable
 fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
@@ -802,7 +993,7 @@ fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifie
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
                 .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientEnd.copy(alpha = 0.25f))
-                .background(Color.White, RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = 0.98f), RoundedCornerShape(16.dp))
                 .border(1.dp, drug.gradientStart.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -818,7 +1009,7 @@ fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifie
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
                 .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientStart.copy(alpha = 0.25f))
-                .background(Color.White, RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = 0.98f), RoundedCornerShape(16.dp))
                 .border(1.dp, drug.gradientEnd.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -831,9 +1022,10 @@ fun CardDetailsContent(drug: EmergencyDrug, isActive: Boolean, modifier: Modifie
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(6.dp, RoundedCornerShape(12.dp), spotColor = drug.gradientEnd.copy(alpha = 0.2f))
-                .background(Color.White, RoundedCornerShape(12.dp))
+                .background(Color.White.copy(alpha = 0.98f), RoundedCornerShape(12.dp))
+                .drawBehind { drawRoundRect(drug.gradientEnd, Offset.Zero, Size(12f, size.height), CornerRadius(12f, 0f)) }
                 .border(1.dp, drug.gradientStart.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
+                .padding(start = 24.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
         ) {
             Column(verticalArrangement = Arrangement.Center) {
                 Text("PREPARATION", color = drug.gradientEnd, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
@@ -933,7 +1125,7 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
     Canvas(modifier = Modifier.fillMaxWidth().height(160.dp)) {
         val w = size.width
         val h = size.height
-        if (w <= 0f || h <= 0f) return@Canvas // CRASH FIX
+        if (w <= 0f || h <= 0f) return@Canvas
 
         val cy = h * 0.5f
 
@@ -962,7 +1154,6 @@ fun AnimatedMassiveSyringe(drug: EmergencyDrug, isActive: Boolean) {
 
         clipRect(left = 0f, right = w, top = 0f, bottom = h) {
 
-            // --- 1. HIGH-VELOCITY HYDRODYNAMIC STREAM (No Puddle) ---
             val needleLen = 40f
             val hubW = 18f
             val needleStartX = barrelRight + hubW + 8f
@@ -1152,10 +1343,10 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
         Canvas(modifier = Modifier.width(110.dp).height(240.dp)) {
             val baseW = 240f
             val baseH = 580f
-            if (size.width <= 0f || size.height <= 0f) return@Canvas // CRASH FIX
+            if (size.width <= 0f || size.height <= 0f) return@Canvas
 
             val scaleFactor = min(size.width / baseW, size.height / baseH)
-            if (scaleFactor <= 0f) return@Canvas // CRASH FIX
+            if (scaleFactor <= 0f) return@Canvas
 
             withTransform({
                 scale(scaleFactor, scaleFactor, Offset(0f, 0f))
