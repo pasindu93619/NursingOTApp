@@ -586,10 +586,13 @@ fun DrugDetailFullScreenOverlay(
             }
         }
 
-        // ── MoA PATHWAY OVERLAY ─────────────────────────────────────────────
-        // Composable is defined in MoAPathwayComponents.kt (same package)
+// ── MoA PATHWAY OVERLAY ─────────────────────────────────────────────
+        // Composable is defined in Moapathwaycomponents.kt (same package)
         if (showMoAPathway) {
-            MoAPathwayOverlay(drug = drug, onClose = { showMoAPathway = false })
+            MoAPathwayOverlay(
+                drug = drug,
+                onClose = { showMoAPathway = false }
+            )
         }
     }
 }
