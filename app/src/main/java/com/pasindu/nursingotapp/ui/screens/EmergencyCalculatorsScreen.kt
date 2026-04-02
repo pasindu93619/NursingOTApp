@@ -448,6 +448,8 @@ fun DrugDetailFullScreenOverlay(
     onClose: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    // ── MoA overlay toggle ──────────────────────────────────────────────────
+    // MoAPathwayOverlay lives in MoAPathwayComponents.kt (same package)
     var showMoAPathway by remember { mutableStateOf(false) }
 
     val infiniteTransitionAura = rememberInfiniteTransition(label = "expanded_aura")
@@ -584,7 +586,8 @@ fun DrugDetailFullScreenOverlay(
             }
         }
 
-        // --- MoA PATHWAY OVERLAY ---
+        // ── MoA PATHWAY OVERLAY ─────────────────────────────────────────────
+        // Composable is defined in MoAPathwayComponents.kt (same package)
         if (showMoAPathway) {
             MoAPathwayOverlay(drug = drug, onClose = { showMoAPathway = false })
         }
@@ -862,7 +865,6 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Column(
-
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(32.dp, RoundedCornerShape(24.dp), spotColor = rhythm.color.copy(alpha = 0.6f))
@@ -1545,178 +1547,6 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
                 drawRoundRect(color = Color(0xFF546E7A), topLeft = Offset(pumpR2 - 14f, pumpTop2 + 10f), size = Size(10f, pumpH2 - 20f), cornerRadius = CornerRadius(5f))
                 drawRoundRect(color = Color(0xFF37474F), topLeft = Offset(pumpR2 - 12f, pumpTop2 + 12f), size = Size(6f, pumpH2 - 24f), cornerRadius = CornerRadius(3f))
                 drawRoundRect(Brush.horizontalGradient(listOf(Color(0x8090A4AE), Color(0xF0CFD8DC), Color(0x8078909C))), topLeft = Offset(pumpR2 - 12f, pumpTop2 + 12f), size = Size(5f, pumpH2 - 24f), cornerRadius = CornerRadius(2f))
-            }
-        }
-    }
-}
-
-// ─── NEW: ANIMATED RECEPTOR BINDING & MoA PATHWAY ───
-@Composable
-fun MoAPathwayOverlay(drug: EmergencyDrug, onClose: () -> Unit) {
-    var visibleStepCount by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        for (i in 0..drug.moaSteps.size) {
-            delay(500)
-            visibleStepCount = i
-        }
-    }
-
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF0B1120).copy(alpha = 0.98f))
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose)
-        ) {
-            AnimatedReceptorBinding(drug)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 220.dp)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                drug.moaSteps.forEachIndexed { index, step ->
-                    AnimatedVisibility(
-                        visible = visibleStepCount > index,
-                        enter = slideInHorizontally(initialOffsetX = { 200 }, animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)) + fadeIn(tween(300))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 32.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Box(modifier = Modifier.size(36.dp).padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                                Canvas(Modifier.fillMaxSize()) {
-                                    drawLine(drug.gradientStart.copy(alpha = 0.5f), Offset(size.width / 2, size.height), Offset(size.width / 2, size.height + 200f), strokeWidth = 4f)
-                                    drawCircle(drug.gradientStart.copy(alpha = 0.3f), radius = size.width / 2)
-                                    drawCircle(drug.gradientEnd, radius = size.width / 4)
-                                    drawCircle(Color.White, radius = size.width / 8)
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .shadow(16.dp, RoundedCornerShape(16.dp), spotColor = drug.gradientEnd.copy(alpha = 0.4f))
-                                    .background(Color(0xFF1E293B).copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                                    .border(1.dp, drug.gradientEnd.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                                    .padding(16.dp)
-                            ) {
-                                Text("PHASE ${index + 1}", color = drug.gradientEnd, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(step.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(step.description, color = Color(0xFF94A3B8), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp)
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(80.dp))
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp, start = 16.dp, end = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("PHARMACOLOGICAL PATHWAY", color = drug.gradientEnd, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    Text(drug.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                }
-                IconButton(onClick = onClose, modifier = Modifier.background(Color(0xFF1E293B), CircleShape)) {
-                    Icon(Icons.Default.Close, "Close", tint = Color.White)
-                }
-            }
-        }
-    }
-}
-
-// ─── THE MOLECULAR BINDING ENGINE ───
-@Composable
-fun AnimatedReceptorBinding(drug: EmergencyDrug) {
-    val infiniteTransition = rememberInfiniteTransition(label = "receptor_binding")
-    val phase by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing)), label = ""
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(220.dp)
-            .padding(top = 80.dp)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width; val h = size.height
-            if (w <= 0f || h <= 0f) return@Canvas
-            val cx = w / 2f; val cy = h * 0.6f
-
-            // Cell Membrane
-            drawLine(Color(0xFF334155), Offset(0f, cy + 20f), Offset(w, cy + 20f), strokeWidth = 8f)
-            drawLine(drug.gradientEnd.copy(alpha = 0.2f), Offset(0f, cy + 20f), Offset(w, cy + 20f), strokeWidth = 24f)
-
-            // Receptor
-            val receptorPath = Path().apply {
-                moveTo(cx - 35f, cy - 25f); lineTo(cx - 35f, cy + 10f)
-                quadraticBezierTo(cx, cy + 40f, cx + 35f, cy + 10f)
-                lineTo(cx + 35f, cy - 25f)
-            }
-            drawPath(receptorPath, color = Color(0xFF475569), style = Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-
-            val drugStartY = cy - 120f; val drugEndY = cy - 5f
-            val currentDrugY = when {
-                phase < 0.3f -> drugStartY + (drugEndY - drugStartY) * (phase / 0.3f)
-                phase < 0.8f -> drugEndY
-                else -> drugStartY
-            }
-            val drugAlpha = when {
-                phase < 0.1f -> phase / 0.1f
-                phase < 0.8f -> 1f
-                else -> 1f - ((phase - 0.8f) / 0.2f)
-            }
-
-            // Spinning Drug Molecule
-            if (phase < 0.8f) {
-                withTransform({ rotate(if (phase < 0.3f) phase * 360f else 0f, Offset(cx, currentDrugY)) }) {
-                    val hexRadius = 20f
-                    val drugPath = Path().apply {
-                        for (i in 0..5) {
-                            val angle = i * 60.0 * Math.PI / 180.0
-                            val px = cx + (hexRadius * Math.cos(angle)).toFloat()
-                            val py = currentDrugY + (hexRadius * Math.sin(angle)).toFloat()
-                            if (i == 0) moveTo(px, py) else lineTo(px, py)
-                        }
-                        close()
-                    }
-                    drawPath(drugPath, color = drug.gradientStart.copy(alpha = drugAlpha))
-                    drawPath(drugPath, color = drug.gradientEnd.copy(alpha = drugAlpha), style = Stroke(4f, join = StrokeJoin.Round))
-                }
-            }
-
-            // Energy Ripple upon Binding
-            if (phase in 0.3f..0.8f) {
-                drawPath(receptorPath, color = drug.gradientEnd.copy(alpha = 0.8f), style = Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawPath(receptorPath, color = Color.White.copy(alpha = 0.5f), style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                val rippleProgress = (phase - 0.3f) / 0.5f
-                val rippleRadius = 20f + (150f * rippleProgress)
-                val rippleAlpha = 1f - rippleProgress
-                drawCircle(color = drug.gradientEnd.copy(alpha = rippleAlpha * 0.6f), radius = rippleRadius, center = Offset(cx, cy + 10f), style = Stroke(width = 8f))
-                drawCircle(color = drug.gradientStart.copy(alpha = rippleAlpha * 0.3f), radius = rippleRadius * 0.7f, center = Offset(cx, cy + 10f), style = Stroke(width = 4f))
-            }
-
-            // Intracellular Signal Cascade Particles
-            if (phase > 0.35f && phase < 0.9f) {
-                val particlePhase = ((phase - 0.35f) * 2f) % 1f
-                val pY = cy + 20f + (h - cy) * particlePhase
-                drawCircle(drug.gradientStart.copy(alpha = 1f - particlePhase), radius = 6f, center = Offset(cx - 30f, pY))
-                drawCircle(drug.gradientEnd.copy(alpha = 1f - particlePhase), radius = 8f, center = Offset(cx + 30f, pY + 15f))
-                drawCircle(Color.White.copy(alpha = 1f - particlePhase), radius = 4f, center = Offset(cx, pY + 30f))
             }
         }
     }
