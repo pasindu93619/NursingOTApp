@@ -862,6 +862,7 @@ fun EcgZoomedOverlay(rhythm: EcgRhythm, onClose: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Column(
+
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(32.dp, RoundedCornerShape(24.dp), spotColor = rhythm.color.copy(alpha = 0.6f))
