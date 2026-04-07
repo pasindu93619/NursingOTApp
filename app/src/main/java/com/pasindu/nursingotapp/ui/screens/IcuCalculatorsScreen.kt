@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -22,13 +23,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,7 +58,7 @@ fun IcuCalculatorsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ICU Clinical Protocols", fontWeight = FontWeight.Black, color = techBlue, letterSpacing = 1.sp) },
+                title = { Text("ICU Clinical Protocols", fontWeight = FontWeight.Black, fontSize = 20.sp, color = techBlue, letterSpacing = 1.sp) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = techBlue) }
                 },
@@ -94,8 +96,8 @@ fun IcuCalculatorsScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFFD32F2F)
-    val colorSecondary = Color(0xFFFF8F00)
+    val colorPrimary = Color(0xFFE53935) // Rich Red
+    val colorSecondary = Color(0xFFFFB300) // Deep Amber
     val lightGlow = Color(0xFFFFEBEE)
 
     var isReverseCalc by remember { mutableStateOf(false) }
@@ -118,7 +120,7 @@ fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
     val pulseAlpha by infiniteTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(tween(1500, easing = FastOutLinearInEasing), RepeatMode.Restart), label = "")
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
@@ -163,7 +165,7 @@ fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
                             Text(if (!isReverseCalc) "SET SYRINGE PUMP TO:" else "PATIENT IS RECEIVING:", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(if (!isReverseCalc) String.format(Locale.US, "%.1f", targetMlHr) else String.format(Locale.US, "%.2f", targetMcg), fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
                         }
-                        Text(if (!isReverseCalc) "mL/hr" else "mcg/kg/min", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(if (!isReverseCalc) "mL/hr" else "mcg/min", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                     }
                 }
 
@@ -178,8 +180,8 @@ fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun SedationEngineCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFF6A1B9A)
-    val colorSecondary = Color(0xFF00B0FF)
+    val colorPrimary = Color(0xFF8E24AA) // Deep Purple
+    val colorSecondary = Color(0xFF039BE5) // Light Blue
 
     var doseInput by remember { mutableStateOf("") }
     var weightInput by remember { mutableStateOf("70") }
@@ -195,10 +197,10 @@ fun SedationEngineCard(onDrugClick: (String) -> Unit) {
     val rate = if (concMg > 0) (dose * weight) / concMg else 0f
 
     val infiniteTransition = rememberInfiniteTransition(label = "hover")
-    val hoverY by infiniteTransition.animateFloat(initialValue = -5f, targetValue = 5f, animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
+    val hoverY by infiniteTransition.animateFloat(initialValue = -6f, targetValue = 6f, animationSpec = infiniteRepeatable(tween(2500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
@@ -231,7 +233,7 @@ fun SedationEngineCard(onDrugClick: (String) -> Unit) {
                             Text("SET SYRINGE PUMP TO:", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
                         }
-                        Text("mL/hr", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("mL/hr", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                     }
                 }
 
@@ -246,8 +248,8 @@ fun SedationEngineCard(onDrugClick: (String) -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFF00897B)
-    val colorSecondary = Color(0xFF00E676)
+    val colorPrimary = Color(0xFF00897B) // Teal
+    val colorSecondary = Color(0xFF7CB342) // Light Green
 
     var doseInput by remember { mutableStateOf("") }
     var timeInput by remember { mutableStateOf("1") }
@@ -264,7 +266,7 @@ fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
     val dropY by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 40f, animationSpec = infiniteRepeatable(tween(1000, easing = CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f)), RepeatMode.Restart), label = "")
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
@@ -273,11 +275,7 @@ fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
                     Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
                         Image(painter = painterResource(id = R.drawable.infusion_bag_green), contentDescription = "IV Bag", modifier = Modifier.size(50.dp).offset(y = (-5).dp))
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            if (size.width > 0) {
-                                val cx = size.width / 2f
-                                val startY = size.height * 0.7f
-                                drawCircle(color = Color.White, radius = 3.dp.toPx(), center = Offset(cx, startY + dropY))
-                            }
+                            if (size.width > 0) drawCircle(color = Color.White, radius = 3.dp.toPx(), center = Offset(size.width / 2f, size.height * 0.7f + dropY))
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -303,9 +301,9 @@ fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
                         Column {
                             Text("TARGET FLOW RATE:", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            if (speed > 0) Text(String.format(Locale.US, "Delivery Speed: %.1f / hr", speed), color = colorSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            if (speed > 0) Text(String.format(Locale.US, "Speed: %.1f / hr", speed), color = colorSecondary, fontSize = 14.sp, fontWeight = FontWeight.Black)
                         }
-                        Text("mL/hr", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("mL/hr", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                     }
                 }
 
@@ -316,16 +314,16 @@ fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. INSULIN GLYCEMIC CONTROL ENGINE
+// 4. INSULIN GLYCEMIC CONTROL ENGINE (Cell & Sugar Absorption Animation)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun InsulinEngineCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFF00695C)
-    val colorSecondary = Color(0xFF00BFA5)
+    val colorPrimary = Color(0xFF00ACC1) // Vivid Cyan
+    val colorSecondary = Color(0xFFF48FB1) // Soft Pink
 
-    var doseInput by remember { mutableStateOf("") }
-    var unitsInput by remember { mutableStateOf("50") }
-    var mlInput by remember { mutableStateOf("50") }
+    var doseInput by remember { mutableStateOf("") } // Units/hr
+    var unitsInput by remember { mutableStateOf("50") } // 50 Units Actrapid
+    var mlInput by remember { mutableStateOf("50") } // 50 mL NS
 
     val dose = doseInput.toFloatOrNull() ?: 0f
     val units = unitsInput.toFloatOrNull() ?: 0f
@@ -334,31 +332,39 @@ fun InsulinEngineCard(onDrugClick: (String) -> Unit) {
     val conc = if (volume > 0) units / volume else 0f
     val rate = if (conc > 0) dose / conc else 0f
 
-    val infiniteTransition = rememberInfiniteTransition(label = "hex")
-    val pulse by infiniteTransition.animateFloat(initialValue = 0.9f, targetValue = 1.1f, animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
+    // Complex Cellular Absorption Animation
+    val infiniteTransition = rememberInfiniteTransition(label = "absorb")
+    val orbitPhase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 2 * PI.toFloat(), animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "")
+    val absorbScale by infiniteTransition.animateFloat(initialValue = 1f, targetValue = 0.2f, animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "")
+    val absorbAlpha by infiniteTransition.animateFloat(initialValue = 1f, targetValue = 0f, animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "")
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
             Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            if (size.width > 0) {
-                                val radius = 25f * pulse
-                                val path = Path()
-                                for (i in 0..5) {
-                                    val angle = i * (PI / 3)
-                                    val px = (size.width/2) + radius * cos(angle).toFloat()
-                                    val py = (size.height/2) + radius * sin(angle).toFloat()
-                                    if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
-                                }
-                                path.close()
-                                drawPath(path, Color.White, style = Stroke(4f))
-                                drawCircle(Color.White.copy(alpha = 0.5f), radius * 0.3f, Offset(size.width/2, size.height/2))
-                            }
+                        // The Cell
+                        Image(painter = painterResource(id = R.drawable.cell_2), contentDescription = "Cell", modifier = Modifier.size(50.dp))
+
+                        // Three Sugar Molecules being absorbed
+                        for (i in 0..2) {
+                            val angle = orbitPhase + (i * (2 * PI / 3))
+                            val distance = 35f * absorbScale // They move closer as they shrink
+                            val offsetX = cos(angle).toFloat() * distance
+                            val offsetY = sin(angle).toFloat() * distance
+
+                            Image(
+                                painter = painterResource(id = R.drawable.sugar),
+                                contentDescription = "Sugar",
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .offset(x = offsetX.dp, y = offsetY.dp)
+                                    .scale(absorbScale)
+                                    .alpha(absorbAlpha)
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -385,23 +391,23 @@ fun InsulinEngineCard(onDrugClick: (String) -> Unit) {
                             Text("SET SYRINGE PUMP TO:", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
                         }
-                        Text("mL/hr", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("mL/hr", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                     }
                 }
 
-                ClinicalPearlPanel(colorPrimary, "Intracellular Transport", "IV Insulin binds to receptors to translocate GLUT4 transporters to the cell membrane, actively pulling glucose from the serum into the cells.")
+                ClinicalPearlPanel(colorPrimary, "Intracellular Transport", "IV Insulin binds to receptors to translocate GLUT4 transporters to the cell membrane, actively pulling glucose (sugar) from the serum into the cells.")
             }
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. FLUID RESUSCITATION (Parkland Formula)
+// 5. FLUID RESUSCITATION (Dynamic Skin Burn Evaluation)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun FluidResuscitationCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFF0277BD) // Deep Blue
-    val colorSecondary = Color(0xFF29B6F6) // Light Cyan
+    val colorPrimary = Color(0xFF1E88E5) // Ocean Blue
+    val colorSecondary = Color(0xFF00ACC1) // Aqua
 
     var weightInput by remember { mutableStateOf("") }
     var tbsaInput by remember { mutableStateOf("") }
@@ -413,28 +419,41 @@ fun FluidResuscitationCard(onDrugClick: (String) -> Unit) {
     val first8HoursRate = if (totalFluid > 0) (totalFluid / 2f) / 8f else 0f
     val next16HoursRate = if (totalFluid > 0) (totalFluid / 2f) / 16f else 0f
 
+    // Dynamic Skin Image Evaluation Based on TBSA Input
+    val burnIcon = when {
+        tbsa >= 50f -> R.drawable.skin_third_degree_burn
+        tbsa >= 20f -> R.drawable.skin_second_degree_burn
+        tbsa > 0f -> R.drawable.skin_first_degree_burn
+        else -> R.drawable.skin
+    }
+
+    // Liquid Wave Animation
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val phase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 2 * PI.toFloat(), animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
             Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(70.dp).clip(RoundedCornerShape(35.dp)).background(Color.White.copy(0.2f))) {
+                    Box(modifier = Modifier.size(70.dp).clip(CircleShape).background(Color.White.copy(0.2f)).border(2.dp, Color.White.copy(0.5f), CircleShape)) {
+                        // The Dynamic Skin Layer
+                        Image(painter = painterResource(id = burnIcon), contentDescription = "Skin Status", modifier = Modifier.fillMaxSize().padding(8.dp))
+
+                        // The Fluid Resuscitation Wave Layered ON TOP
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             if (size.width > 0) {
                                 val path = Path()
                                 path.moveTo(0f, size.height)
                                 for (x in 0..size.width.toInt() step 5) {
-                                    val y = (size.height * 0.5f) + sin((x / size.width) * 2 * PI + phase).toFloat() * 10f
+                                    val y = (size.height * 0.5f) + sin((x / size.width) * 2 * PI + phase).toFloat() * 8f
                                     if (x == 0) path.lineTo(0f, y) else path.lineTo(x.toFloat(), y)
                                 }
                                 path.lineTo(size.width, size.height)
                                 path.close()
-                                drawPath(path, Color.White.copy(0.6f))
+                                drawPath(path, Color.White.copy(0.5f))
                             }
                         }
                     }
@@ -481,11 +500,11 @@ fun FluidResuscitationCard(onDrugClick: (String) -> Unit) {
 @Composable
 fun DrugIntelligenceDialog(drugName: String, onDismiss: () -> Unit) {
     val themeColor = when {
-        listOf("Noradrenaline", "Adrenaline", "Dopamine", "Dobutamine", "Milrinone").contains(drugName) -> Color(0xFFD32F2F)
-        listOf("Propofol", "Midazolam", "Fentanyl", "Dexmedetomidine").contains(drugName) -> Color(0xFF6A1B9A)
-        listOf("Actrapid (Insulin)", "Novorapid").contains(drugName) -> Color(0xFF00695C)
-        listOf("Hartmann's (RL)", "0.9% Normal Saline", "Albumin").contains(drugName) -> Color(0xFF0277BD)
-        else -> Color(0xFF00897B)
+        listOf("Noradrenaline", "Adrenaline", "Dopamine", "Dobutamine", "Milrinone").contains(drugName) -> Color(0xFFE53935)
+        listOf("Propofol", "Midazolam", "Fentanyl", "Dexmedetomidine").contains(drugName) -> Color(0xFF8E24AA)
+        listOf("Actrapid (Insulin)", "Novorapid").contains(drugName) -> Color(0xFF00ACC1)
+        listOf("Hartmann's (RL)", "0.9% Normal Saline", "Albumin").contains(drugName) -> Color(0xFF1E88E5)
+        else -> Color(0xFF00897B) // Electrolytes
     }
 
     val (className, considerations) = getDrugIntelligence(drugName)
@@ -507,16 +526,16 @@ fun DrugIntelligenceDialog(drugName: String, onDismiss: () -> Unit) {
                     }
                 }
                 Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("NURSING CONSIDERATIONS", color = themeColor, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    Text("NURSING CONSIDERATIONS", color = themeColor, fontWeight = FontWeight.Black, fontSize = 14.sp)
                     considerations.forEach { point ->
                         Row(verticalAlignment = Alignment.Top) {
                             Text("•", color = themeColor, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.padding(end = 8.dp))
-                            Text(point, color = Color.DarkGray, fontSize = 14.sp, lineHeight = 20.sp)
+                            Text(point, color = Color(0xFF333333), fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = themeColor), shape = RoundedCornerShape(12.dp)) {
-                        Text("ACKNOWLEDGE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("ACKNOWLEDGE", fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
                     }
                 }
             }
@@ -555,9 +574,9 @@ fun getDrugIntelligence(drugName: String): Pair<String, List<String>> {
 @Composable
 fun PerfectTextField(value: String, onValueChange: (String) -> Unit, label: String, color: Color, modifier: Modifier) {
     OutlinedTextField(
-        value = value, onValueChange = onValueChange, label = { Text(label, fontSize = 12.sp) },
+        value = value, onValueChange = onValueChange, label = { Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
-        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 16.sp),
+        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 16.sp),
         colors = TextFieldDefaults.colors(focusedIndicatorColor = color, unfocusedIndicatorColor = Color.LightGray, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedLabelColor = color),
         modifier = modifier
     )
@@ -568,7 +587,7 @@ fun DrugTagRow(drugs: List<String>, onDrugClick: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         items(drugs) { drug ->
             Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.2f)).clickable { onDrugClick(drug) }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                Text(drug, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(drug, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -580,8 +599,8 @@ fun ClinicalPearlPanel(color: Color, title: String, text: String) {
         Icon(Icons.Default.AutoAwesome, contentDescription = "Pearl", tint = color, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(title, color = color, fontSize = 13.sp, fontWeight = FontWeight.Black)
-            Text(text, color = Color.DarkGray, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(title, color = color, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(text, color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
