@@ -103,7 +103,8 @@ fun AppNavigation() {
                 onNavigateToConversions = { navController.navigate("unit_conversions") },
                 onNavigateToSpecialCalcs = { navController.navigate("special_calcs") },
                 onNavigateToEmergency = { navController.navigate("emergency_calcs") },
-                onNavigateToIcu = { navController.navigate("icu_calcs") },
+                // ✅ BUG FIXED HERE: Changed "icu_calcs" to "icu_calculators" to match the route below
+                onNavigateToIcu = { navController.navigate("icu_calculators") },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -139,7 +140,6 @@ fun AppNavigation() {
             SpecialCalculationsScreen()
         }
 
-        // ✅ THE FIX IS HERE: We added the required back parameter
         composable("emergency_calcs") {
             EmergencyCalculatorsScreen(
                 onNavigateBack = { navController.popBackStack() }
@@ -147,9 +147,9 @@ fun AppNavigation() {
         }
 
         // --- ICU CALCULATORS MENU & SUB-ROUTES ---
-        composable("icu_calcs") {
+        // ✅ This is the route destination the button is now correctly looking for
+        composable("icu_calculators") {
             IcuCalculatorsScreen(
-                onNavigateToVasoactive = { navController.navigate("vasoactive_infusions") },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -1554,3 +1554,116 @@ fun AnimatedProIVPump(drug: EmergencyDrug, isActive: Boolean) {
         }
     }
 }
+// ─── MISSING MOA PATHWAY OVERLAY COMPOSABLE ───
+@Composable
+fun MoAPathwayOverlay(
+    drug: EmergencyDrug,
+    onClose: () -> Unit
+) {
+    // Map the string name from EmergencyDrug to the MoADrug enum expected by the animation engine
+    val moaDrug = when {
+        drug.name.contains("Epinephrine", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.EPINEPHRINE
+        drug.name.contains("Amiodarone", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.AMIODARONE
+        drug.name.contains("Naloxone", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.NALOXONE
+        drug.name.contains("Alteplase", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.ALTEPLASE
+        drug.name.contains("Adenosine", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.ADENOSINE
+        drug.name.contains("Atropine", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.ATROPINE
+        drug.name.contains("Dopamine", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.DOPAMINE
+        drug.name.contains("Magnesium", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.MAGNESIUM_SULFATE
+        drug.name.contains("Norepinephrine", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.NOREPINEPHRINE
+        drug.name.contains("Vasopressin", ignoreCase = true) -> com.pasindu.nursingotapp.ui.screens.emergency.MoADrug.VASOPRESSIN
+        else -> null // Some drugs (like Fluids/Bicarb) don't have an organ animation yet
+    }
+
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0F172A).copy(alpha = 0.90f))
+                .padding(16.dp)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(32.dp, RoundedCornerShape(24.dp), spotColor = drug.gradientEnd)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White)
+                    .border(1.dp, drug.gradientEnd.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                    .clickable(enabled = false) {} // Block clicks inside the card from closing the dialog
+            ) {
+                // --- HEADER ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(drug.gradientStart.copy(alpha = 0.1f))
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("MECHANISM OF ACTION", color = drug.gradientEnd, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(drug.name, color = EmergencySlateDark, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    }
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.background(Color.White, CircleShape).shadow(2.dp, CircleShape)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = EmergencySlateDark)
+                    }
+                }
+
+                // --- ORGAN ANIMATION (If available) ---
+                if (moaDrug != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .background(Color(0xFF0B1120)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        com.pasindu.nursingotapp.ui.screens.emergency.MoAOrganAnimation(
+                            drug = moaDrug,
+                            modifier = Modifier.size(280.dp, 200.dp)
+                        )
+                    }
+                }
+
+                // --- PATHWAY STEPS ---
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 350.dp),
+                    contentPadding = PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    itemsIndexed(drug.moaSteps) { index, step ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(drug.gradientEnd.copy(alpha = 0.15f), CircleShape)
+                                    .border(1.5.dp, drug.gradientEnd, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("${index + 1}", color = drug.gradientEnd, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(step.title, color = EmergencySlateDark, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(step.description, color = EmergencySlateLight, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
+                            }
+                        }
+                        if (index < drug.moaSteps.lastIndex) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider(color = EmergencySlateLight.copy(alpha = 0.1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
