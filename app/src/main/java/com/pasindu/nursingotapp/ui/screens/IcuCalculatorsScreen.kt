@@ -1,5 +1,7 @@
 package com.pasindu.nursingotapp.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -17,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material3.*
@@ -27,14 +30,22 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,8 +57,6 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
-import com.pasindu.nursingotapp.ui.theme.diagonalGradient
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,60 +67,369 @@ fun IcuCalculatorsScreen(
     val techBlue = Color(0xFF1976D2)
 
     var selectedDrug by remember { mutableStateOf<String?>(null) }
-    var openedCalculator by remember { mutableStateOf<String?>(null) }
+    var openedCalculator by remember { mutableStateOf<String?>(null) } // Controls Full Screen
+
+    // If a calculator is open, the back button closes it instead of leaving the screen
+    BackHandler(enabled = openedCalculator != null) {
+        openedCalculator = null
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ICU Clinical Protocols", fontWeight = FontWeight.Black, fontSize = 20.sp, color = techBlue, letterSpacing = 1.sp) },
+                title = {
+                    Text(
+                        text = if (openedCalculator == null) "ICU Clinical Protocols" else openedCalculator!!,
+                        fontWeight = FontWeight.Black, fontSize = 20.sp, color = techBlue, letterSpacing = 1.sp
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = techBlue) }
+                    IconButton(onClick = { if (openedCalculator != null) openedCalculator = null else onNavigateBack() }) {
+                        Icon(if (openedCalculator == null) Icons.Default.ArrowBack else Icons.Default.Close, contentDescription = "Back", tint = techBlue)
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = bgSoftWhite, scrolledContainerColor = bgSoftWhite)
             )
         },
         containerColor = bgSoftWhite
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp)
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+
+            // 1. DASHBOARD MENU VIEW
+            AnimatedVisibility(
+                visible = openedCalculator == null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
             ) {
-                VasoactiveEngineCard(onDrugClick = { selectedDrug = it })
-                SedationEngineCard(onDrugClick = { selectedDrug = it })
-                ElectrolyteEngineCard(onDrugClick = { selectedDrug = it })
-                InsulinEngineCard(onDrugClick = { selectedDrug = it })
-                FluidResuscitationCard(onDrugClick = { selectedDrug = it })
-
-                // New Creative Calculator Cards
-                RenalFunctionCard(onCardClick = { openedCalculator = "renal" })
-                HemodynamicsCard(onCardClick = { openedCalculator = "hemodynamics" })
-                VentilatorCard(onCardClick = { openedCalculator = "ventilator" })
-                NutritionCard(onCardClick = { openedCalculator = "nutrition" })
-
-                Spacer(modifier = Modifier.height(32.dp))
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp) // Adjusted spacing for full screen use
+                ) {
+                    IcuGlowingLaunchCard("Vasoactive Inotropes", "Noradrenaline, Adrenaline", Color(0xFFE53935), R.drawable.heart) { openedCalculator = "Vasoactive Inotropes" }
+                    IcuGlowingLaunchCard("Sedation & Analgesia", "Propofol, Midazolam", Color(0xFF8E24AA), R.drawable.brain_1) { openedCalculator = "Sedation & Analgesia" }
+                    IcuGlowingLaunchCard("Electrolyte Protocols", "KCl, MgSO4", Color(0xFF00897B), R.drawable.infusion_bag_green) { openedCalculator = "Electrolyte Protocols" }
+                    IcuGlowingLaunchCard("Glycemic Control", "Actrapid Drips", Color(0xFF00ACC1), R.drawable.cell_2) { openedCalculator = "Glycemic Control" }
+                    IcuGlowingLaunchCard("Fluid Resuscitation", "Parkland Burn Formula", Color(0xFF1E88E5), R.drawable.skin) { openedCalculator = "Fluid Resuscitation" }
+                    IcuGlowingLaunchCard("Renal Function", "eGFR & Clearance", Color(0xFF6A1B9A), R.drawable.infusion_bag_blue) { openedCalculator = "Renal Function" }
+                    IcuGlowingLaunchCard("Hemodynamics", "MAP & SVR", Color(0xFFD32F2F), R.drawable.heart) { openedCalculator = "Hemodynamics" }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
 
+            // 2. FULL SCREEN CALCULATOR VIEW
+            AnimatedVisibility(
+                visible = openedCalculator != null,
+                enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    when (openedCalculator) {
+                        "Vasoactive Inotropes" -> VasoactiveEngineCard(onDrugClick = { selectedDrug = it })
+                        "Sedation & Analgesia" -> SedationEngineCard(onDrugClick = { selectedDrug = it })
+                        "Electrolyte Protocols" -> ElectrolyteEngineCard(onDrugClick = { selectedDrug = it })
+                        "Glycemic Control" -> InsulinEngineCard(onDrugClick = { selectedDrug = it })
+                        "Fluid Resuscitation" -> FluidResuscitationCard(onDrugClick = { selectedDrug = it })
+                        "Renal Function" -> RenalFunctionEngineCard()
+                        "Hemodynamics" -> HemodynamicsEngineCard()
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+
+            // Pharmacology Popup (With PQRST Animator)
             selectedDrug?.let { drugName ->
                 DrugIntelligenceDialog(drugName = drugName, onDismiss = { selectedDrug = null })
-            }
-
-            when (openedCalculator) {
-                "renal" -> RenalFunctionCalculator(onDismiss = { openedCalculator = null })
-                "hemodynamics" -> HemodynamicsCalculator(onDismiss = { openedCalculator = null })
-                "ventilator" -> VentilatorCalculator(onDismiss = { openedCalculator = null })
-                "nutrition" -> NutritionCalculator(onDismiss = { openedCalculator = null })
             }
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. VASOACTIVE ENGINE (Original)
+// GLOWING DASHBOARD MENU CARD
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+fun IcuGlowingLaunchCard(title: String, subtitle: String, color: Color, iconRes: Int, onClick: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "glow")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = ""
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(115.dp)
+            .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = color.copy(alpha = glowAlpha))
+            .border(3.dp, color.copy(alpha = glowAlpha), RoundedCornerShape(24.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        val gradient = Brush.linearGradient(listOf(color, color.copy(alpha = 0.7f)), start = Offset(0f, 0f), end = Offset(1000f, 1000f))
+        Row(modifier = Modifier.fillMaxSize().background(gradient).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(65.dp).background(Color.White.copy(0.25f), CircleShape), contentAlignment = Alignment.Center) {
+                Image(painter = painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(38.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text(subtitle, color = Color.White.copy(0.85f), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FLUID RESUSCITATION ENGINE (Burn Anatomy & Dynamic Pearls)
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+fun FluidResuscitationCard(onDrugClick: (String) -> Unit) {
+    val colorPrimary = Color(0xFF1E88E5) // Ocean Blue
+    val colorSecondary = Color(0xFF00ACC1) // Aqua
+
+    var weightInput by remember { mutableStateOf("") }
+    var tbsaInput by remember { mutableStateOf("") }
+
+    val weight = weightInput.toFloatOrNull() ?: 0f
+    val tbsa = tbsaInput.toFloatOrNull() ?: 0f
+
+    val totalFluid = 4f * weight * tbsa
+    val first8HoursRate = if (totalFluid > 0) (totalFluid / 2f) / 8f else 0f
+    val next16HoursRate = if (totalFluid > 0) (totalFluid / 2f) / 16f else 0f
+
+    // Dynamic Skin Image Evaluation
+    val burnIcon = when {
+        tbsa >= 50f -> R.drawable.skin_third_degree_burn
+        tbsa >= 20f -> R.drawable.skin_second_degree_burn
+        tbsa > 0f -> R.drawable.skin_first_degree_burn
+        else -> R.drawable.skin
+    }
+
+    val burnDegreeStr = when {
+        tbsa >= 50f -> "3rd Degree (Full Thickness)"
+        tbsa >= 20f -> "2nd Degree (Partial Thickness)"
+        tbsa > 0f -> "1st Degree (Superficial)"
+        else -> "Healthy Skin"
+    }
+
+    val burnPearl = when {
+        tbsa >= 50f -> "Destroys epidermis & dermis into subcutaneous fat. Painless (nerve destruction). Requires grafting & massive IV fluid resus."
+        tbsa >= 20f -> "Affects epidermis & part of dermis. Blistered, red, extremely painful. High fluid shift risk. Start Parkland Formula."
+        tbsa > 0f -> "Epidermis only. Red, painful, blanches with pressure. IV fluids typically NOT required based on 1st degree alone."
+        else -> "Enter TBSA % to evaluate burn severity and calculate IV fluid requirements."
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
+                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(70.dp).clip(CircleShape).background(Color.White.copy(0.2f)).border(2.dp, Color.White.copy(0.5f), CircleShape)) {
+                        Image(painter = painterResource(id = burnIcon), contentDescription = "Skin Status", modifier = Modifier.fillMaxSize().padding(8.dp))
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("Fluid Resuscitation", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
+                        DrugTagRow(listOf("Hartmann's (RL)", "0.9% Normal Saline", "Albumin"), onDrugClick)
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                // LEARNING DIAGRAM: BURN ANATOMY
+                if (tbsa > 0) {
+                    Text("BURN DEPTH ANALYSIS: $burnDegreeStr", color = colorPrimary, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val w = size.width
+                            val h = size.height
+                            // Normal Layers
+                            drawRoundRect(Color(0xFFFFCCBC), Offset(0f, 0f), Size(w, h*0.3f), CornerRadius(8f)) // Epidermis
+                            drawRoundRect(Color(0xFFFFAB91), Offset(0f, h*0.35f), Size(w, h*0.35f), CornerRadius(8f)) // Dermis
+                            drawRoundRect(Color(0xFFFFF59D), Offset(0f, h*0.75f), Size(w, h*0.25f), CornerRadius(8f)) // Subcut
+
+                            // Damage Overlays based on TBSA
+                            if (tbsa > 0f) drawRoundRect(Color(0xFFD32F2F).copy(0.6f), Offset(0f, 0f), Size(w, h*0.3f), CornerRadius(8f))
+                            if (tbsa >= 20f) drawRoundRect(Color(0xFFC62828).copy(0.8f), Offset(0f, h*0.35f), Size(w, h*0.35f), CornerRadius(8f))
+                            if (tbsa >= 50f) drawRoundRect(Color.Black.copy(0.8f), Offset(0f, h*0.75f), Size(w, h*0.25f), CornerRadius(8f))
+                        }
+                        Column(modifier = Modifier.fillMaxHeight().padding(start = 8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                            Text(" Epidermis", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 8.dp))
+                            Text(" Dermis", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            Text(" Subcutaneous", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(bottom = 8.dp))
+                        }
+                    }
+                    ClinicalPearlPanel(colorPrimary, "Nursing Considerations", burnPearl)
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PerfectTextField(value = weightInput, onValueChange = { weightInput = it }, label = "Weight (kg)", color = colorPrimary, modifier = Modifier.weight(1f))
+                    PerfectTextField(value = tbsaInput, onValueChange = { tbsaInput = it }, label = "Burn TBSA (%)", color = colorPrimary, modifier = Modifier.weight(1f))
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorPrimary).padding(20.dp)) {
+                    Column {
+                        Text("PARKLAND FORMULA (TOTAL 24H: ${totalFluid.toInt()} mL)", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column {
+                                Text("First 8 Hours", color = colorSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(if (first8HoursRate > 0) String.format(Locale.US, "%.1f", first8HoursRate) else "0.0", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("Next 16 Hours", color = colorSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(if (next16HoursRate > 0) String.format(Locale.US, "%.1f", next16HoursRate) else "0.0", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHARMACOLOGY DIALOG & LIVE PQRST ECG
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+fun DrugIntelligenceDialog(drugName: String, onDismiss: () -> Unit) {
+    val themeColor = when {
+        listOf("Noradrenaline", "Adrenaline", "Dopamine", "Dobutamine", "Milrinone").contains(drugName) -> Color(0xFFE53935)
+        listOf("Propofol", "Midazolam", "Fentanyl", "Dexmedetomidine").contains(drugName) -> Color(0xFF8E24AA)
+        listOf("Actrapid (Insulin)", "Novorapid").contains(drugName) -> Color(0xFF00ACC1)
+        listOf("Hartmann's (RL)", "0.9% Normal Saline", "Albumin").contains(drugName) -> Color(0xFF1E88E5)
+        else -> Color(0xFF00897B) // Electrolytes
+    }
+
+    val (className, considerations) = getDrugIntelligence(drugName)
+    val isKcl = drugName == "KCl (Potassium)"
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(modifier = Modifier.fillMaxWidth(0.95f).clip(RoundedCornerShape(24.dp)).background(Color.White)) {
+            Column {
+                Box(modifier = Modifier.fillMaxWidth().background(themeColor).padding(20.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocalHospital, contentDescription = "Rx", tint = Color.White)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(drugName.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.sp)
+                                Text(className, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White) }
+                    }
+                }
+                Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                    // Inject Mind-Blowing PQRST ECG
+                    if (isKcl) {
+                        Text("ECG DYNAMICS: HYPERKALEMIA", color = Color(0xFFD32F2F), fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        LiveHyperkalemiaEcgWithLabels()
+                    }
+
+                    Text("NURSING CONSIDERATIONS", color = themeColor, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                    considerations.forEach { point ->
+                        Row(verticalAlignment = Alignment.Top) {
+                            Text("•", color = themeColor, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.padding(end = 8.dp))
+                            Text(point, color = Color(0xFF333333), fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = themeColor), shape = RoundedCornerShape(12.dp)) {
+                        Text("ACKNOWLEDGE", fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTextApi::class)
+@Composable
+fun LiveHyperkalemiaEcgWithLabels() {
+    var isToxic by remember { mutableStateOf(false) }
+
+    // Physics engine for wave morphing
+    val tHeight by animateFloatAsState(if (isToxic) -85f else -25f, tween(1500), label="t")
+    val pAlpha by animateFloatAsState(if (isToxic) 0f else 1f, tween(1500), label="p")
+    val qrsWidth by animateFloatAsState(if (isToxic) 0.08f else 0.04f, tween(1500), label="qrs")
+
+    val textMeasurer = rememberTextMeasurer()
+
+    Column {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { isToxic = false }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if(!isToxic) Color(0xFF00E676) else Color.LightGray)) { Text("Normal Sinus", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if(!isToxic) Color.White else Color.DarkGray) }
+            Button(onClick = { isToxic = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if(isToxic) Color(0xFFD32F2F) else Color.LightGray)) { Text("Toxic K+", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if(isToxic) Color.White else Color.DarkGray) }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().height(160.dp).background(Color(0xFF0F172A), RoundedCornerShape(16.dp))) {
+            val phase = rememberInfiniteTransition().animateFloat(0f, 1f, infiniteRepeatable(tween(2500, easing = LinearEasing))).value
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (size.width <= 0) return@Canvas
+                val path = Path()
+                val centerY = size.height / 2f
+                path.moveTo(0f, centerY)
+
+                // Track positions for Text Labels
+                var pLoc = Offset.Zero
+                var qrsLoc = Offset.Zero
+                var tLoc = Offset.Zero
+
+                for (x in 0..size.width.toInt() step 2) {
+                    val time = ((x / size.width) + phase) % 1f
+                    val y = when {
+                        // P Wave (Fades out in hyperkalemia)
+                        time in 0.1f..0.15f -> {
+                            val v = -12f * sin((time - 0.1f) * 20 * PI).toFloat() * pAlpha
+                            if (time > 0.12f && time < 0.13f) pLoc = Offset(x.toFloat() - 5f, centerY + v - 25f)
+                            v
+                        }
+                        // QRS Complex (Widens)
+                        time in 0.35f..(0.35f + qrsWidth) -> {
+                            val qrsT = (time - 0.35f) / qrsWidth
+                            val v = when {
+                                qrsT < 0.2f -> 20f * (qrsT / 0.2f) // Q
+                                qrsT < 0.5f -> 20f - 100f * ((qrsT - 0.2f) / 0.3f) // R
+                                qrsT < 0.8f -> -80f + 110f * ((qrsT - 0.5f) / 0.3f) // S
+                                else -> 30f - 30f * ((qrsT - 0.8f) / 0.2f)
+                            }
+                            if (qrsT > 0.45f && qrsT < 0.55f) qrsLoc = Offset(x.toFloat() - 15f, centerY + v - 30f)
+                            v
+                        }
+                        // T Wave (Peaks massively)
+                        time in 0.55f..0.85f -> {
+                            val v = tHeight * sin(((time - 0.55f) / 0.3f) * PI).toFloat()
+                            if (time > 0.68f && time < 0.72f) tLoc = Offset(x.toFloat() - 5f, centerY + v - 25f)
+                            v
+                        }
+                        else -> 0f
+                    }
+                    path.lineTo(x.toFloat(), centerY + y)
+                }
+
+                drawPath(path, if(isToxic) Color(0xFFFF3B30) else Color(0xFF00E676), style = Stroke(4f, join = StrokeJoin.Round))
+
+                // Draw Dynamic Labels locked to the moving wave
+                val labelStyle = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                if (pAlpha > 0.1f) drawText(textMeasurer, "P", pLoc, labelStyle.copy(color = Color.White.copy(alpha = pAlpha)))
+                drawText(textMeasurer, "QRS", qrsLoc, labelStyle)
+                drawText(textMeasurer, "T", tLoc, labelStyle)
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIOUS CALCULATORS (Unchanged Logic, Applied Fixes)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
@@ -143,7 +461,7 @@ fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -194,9 +512,6 @@ fun VasoactiveEngineCard(onDrugClick: (String) -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. SEDATION ENGINE (Original)
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun SedationEngineCard(onDrugClick: (String) -> Unit) {
     val colorPrimary = Color(0xFF8E24AA)
@@ -223,7 +538,7 @@ fun SedationEngineCard(onDrugClick: (String) -> Unit) {
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(70.dp).offset(y = hoverY.dp), contentAlignment = Alignment.Center) {
                         Image(painter = painterResource(id = R.drawable.brain_1), contentDescription = "Brain", modifier = Modifier.size(60.dp))
@@ -262,13 +577,10 @@ fun SedationEngineCard(onDrugClick: (String) -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. ELECTROLYTE ENGINE (Original)
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFF00897B)
-    val colorSecondary = Color(0xFF7CB342)
+    val colorPrimary = Color(0xFF00897B) // Teal
+    val colorSecondary = Color(0xFF7CB342) // Light Green
 
     var doseInput by remember { mutableStateOf("") }
     var timeInput by remember { mutableStateOf("1") }
@@ -289,7 +601,7 @@ fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
                         Image(painter = painterResource(id = R.drawable.infusion_bag_green), contentDescription = "IV Bag", modifier = Modifier.size(50.dp).offset(y = (-5).dp))
@@ -332,9 +644,6 @@ fun ElectrolyteEngineCard(onDrugClick: (String) -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. INSULIN ENGINE (Original)
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun InsulinEngineCard(onDrugClick: (String) -> Unit) {
     val colorPrimary = Color(0xFF00ACC1)
@@ -361,11 +670,10 @@ fun InsulinEngineCard(onDrugClick: (String) -> Unit) {
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
                         Image(painter = painterResource(id = R.drawable.cell_2), contentDescription = "Cell", modifier = Modifier.size(50.dp))
-
                         for (i in 0..2) {
                             val angle = orbitPhase + (i * (2 * PI / 3))
                             val distance = 35f * absorbScale
@@ -417,586 +725,148 @@ fun InsulinEngineCard(onDrugClick: (String) -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. FLUID RESUSCITATION (Original)
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-fun FluidResuscitationCard(onDrugClick: (String) -> Unit) {
-    val colorPrimary = Color(0xFF1E88E5)
-    val colorSecondary = Color(0xFF00ACC1)
+fun RenalFunctionEngineCard() {
+    val colorPrimary = Color(0xFF6A1B9A)
+    val colorSecondary = Color(0xFFAB47BC)
 
-    var weightInput by remember { mutableStateOf("") }
-    var tbsaInput by remember { mutableStateOf("") }
+    var ageInput by remember { mutableStateOf("") }
+    var weightInput by remember { mutableStateOf("70") }
+    var creatInput by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("Male") }
 
+    val age = ageInput.toFloatOrNull() ?: 0f
     val weight = weightInput.toFloatOrNull() ?: 0f
-    val tbsa = tbsaInput.toFloatOrNull() ?: 0f
+    val creat = creatInput.toFloatOrNull() ?: 0f
 
-    val totalFluid = 4f * weight * tbsa
-    val first8HoursRate = if (totalFluid > 0) (totalFluid / 2f) / 8f else 0f
-    val next16HoursRate = if (totalFluid > 0) (totalFluid / 2f) / 16f else 0f
+    val ccr = if (creat > 0 && weight > 0 && age > 0) {
+        val base = ((140 - age) * weight) / (72 * creat)
+        if (gender == "Male") base else base * 0.85f
+    } else 0f
 
-    val burnIcon = when {
-        tbsa >= 50f -> R.drawable.skin_third_degree_burn
-        tbsa >= 20f -> R.drawable.skin_second_degree_burn
-        tbsa > 0f -> R.drawable.skin_first_degree_burn
-        else -> R.drawable.skin
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "wave")
-    val phase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 2 * PI.toFloat(), animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)),
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(70.dp).clip(CircleShape).background(Color.White.copy(0.2f)).border(2.dp, Color.White.copy(0.5f), CircleShape)) {
-                        Image(painter = painterResource(id = burnIcon), contentDescription = "Skin Status", modifier = Modifier.fillMaxSize().padding(8.dp))
-
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            if (size.width > 0) {
-                                val path = Path()
-                                path.moveTo(0f, size.height)
-                                for (x in 0..size.width.toInt() step 5) {
-                                    val y = (size.height * 0.5f) + sin((x / size.width) * 2 * PI + phase).toFloat() * 8f
-                                    if (x == 0) path.lineTo(0f, y) else path.lineTo(x.toFloat(), y)
-                                }
-                                path.lineTo(size.width, size.height)
-                                path.close()
-                                drawPath(path, Color.White.copy(0.5f))
-                            }
-                        }
+                    Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
+                        val drip = rememberInfiniteTransition().animateFloat(0f, 60f, infiniteRepeatable(tween(1200, easing = LinearEasing))).value
+                        Image(painter = painterResource(R.drawable.infusion_bag_blue), contentDescription = null, modifier = Modifier.size(50.dp))
+                        Canvas(modifier = Modifier.fillMaxSize()) { drawCircle(Color(0xFFFFC107), radius = 4.dp.toPx(), center = Offset(size.width/2, size.height/2 + drip)) }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text("Fluid Resuscitation", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        DrugTagRow(listOf("Hartmann's (RL)", "0.9% Normal Saline", "Albumin"), onDrugClick)
+                        Text("Renal Function", fontWeight = FontWeight.Black, fontSize = 20.sp, color = Color.White)
+                        Text("Cockcroft-Gault Equation", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White.copy(alpha=0.8f))
                     }
                 }
             }
 
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PerfectTextField(value = weightInput, onValueChange = { weightInput = it }, label = "Weight (kg)", color = colorPrimary, modifier = Modifier.weight(1f))
-                    PerfectTextField(value = tbsaInput, onValueChange = { tbsaInput = it }, label = "Burn TBSA (%)", color = colorPrimary, modifier = Modifier.weight(1f))
+                    PerfectTextField(ageInput, { ageInput = it }, "Age (yrs)", colorPrimary, Modifier.weight(1f))
+                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).border(2.dp, colorPrimary, RoundedCornerShape(12.dp)).clickable { gender = if (gender == "Male") "Female" else "Male" }.padding(18.dp), contentAlignment = Alignment.Center) {
+                        Text(gender.uppercase(), fontWeight = FontWeight.Black, fontSize = 14.sp, color = colorPrimary)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PerfectTextField(weightInput, { weightInput = it }, "Weight (kg)", colorPrimary, Modifier.weight(1f))
+                    PerfectTextField(creatInput, { creatInput = it }, "Creatinine (mg/dL)", colorPrimary, Modifier.weight(1f))
                 }
 
-                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorPrimary).padding(20.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colorPrimary).padding(24.dp)) {
                     Column {
-                        Text("PARKLAND FORMULA (TOTAL 24H: ${totalFluid.toInt()} mL)", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text("First 8 Hours", color = colorSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text(if (first8HoursRate > 0) String.format(Locale.US, "%.1f", first8HoursRate) else "0.0", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("Next 16 Hours", color = colorSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text(if (next16HoursRate > 0) String.format(Locale.US, "%.1f", next16HoursRate) else "0.0", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            }
+                        Text("CREATININE CLEARANCE", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(if (ccr > 0) String.format(Locale.US, "%.1f", ccr) else "0.0", fontSize = 48.sp, fontWeight = FontWeight.Black, color = Color.White)
+                            Text(" mL/min", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colorSecondary, modifier = Modifier.padding(bottom = 8.dp, start = 8.dp))
                         }
                     }
                 }
-
-                ClinicalPearlPanel(colorPrimary, "Fluid Shifts in Trauma", "Severe burns cause massive capillary leak (Third-Spacing). The Parkland Formula uses Lactated Ringer's to aggressively replace lost intravascular volume and maintain organ perfusion.")
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. RENAL FUNCTION ENGINE (GFR & Creatinine Clearance)
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-fun RenalFunctionCard(onCardClick: () -> Unit) {
-    val colorPrimary = Color(0xFF6A1B9A)
-    val colorSecondary = Color(0xFFAB47BC)
-    val lightGlow = Color(0xFFF3E5F5)
-
-    val infiniteTransition = rememberInfiniteTransition(label = "kidney_pulse")
-    val glowScale by infiniteTransition.animateFloat(initialValue = 1f, targetValue = 1.3f, animationSpec = infiniteRepeatable(tween(2000, easing = FastOutLinearInEasing), RepeatMode.Restart), label = "")
-    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(tween(2000, easing = FastOutLinearInEasing), RepeatMode.Restart), label = "")
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onCardClick),
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colorPrimary, colorSecondary)))) {
-                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            drawCircle(color = Color.White.copy(alpha = glowAlpha), radius = (size.width / 2) * glowScale)
-                        }
-                        Image(painter = painterResource(id = R.drawable.kidney), contentDescription = "Kidney", modifier = Modifier.size(50.dp))
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Renal Function", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        Text("GFR & Clearance", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-            Box(modifier = Modifier.fillMaxWidth().background(lightGlow).padding(12.dp)) {
-                Text("Creatinine Clearance • eGFR • Dosing Adjustments", fontSize = 12.sp, color = colorPrimary, fontWeight = FontWeight.Bold)
+                ClinicalPearlPanel(colorPrimary, "Renal Dose Adjustment", "Clearance <50 mL/min requires dose adjustments for many ICU antibiotics (e.g., Vancomycin) and anticoagulants (LMWH).")
             }
         }
     }
 }
 
 @Composable
-fun RenalFunctionCalculator(onDismiss: () -> Unit) {
-    val colorPrimary = Color(0xFF6A1B9A)
-    val colorSecondary = Color(0xFFAB47BC)
-
-    var ageInput by remember { mutableStateOf("") }
-    var weightInput by remember { mutableStateOf("70") }
-    var creatinineInput by remember { mutableStateOf("") }
-    var genderInput by remember { mutableStateOf("Male") }
-
-    val age = ageInput.toFloatOrNull() ?: 0f
-    val weight = weightInput.toFloatOrNull() ?: 0f
-    val creatinine = creatinineInput.toFloatOrNull() ?: 0f
-
-    val ccr = if (creatinine > 0 && weight > 0 && age > 0) {
-        if (genderInput == "Male") ((140 - age) * weight) / (72 * creatinine)
-        else ((140 - age) * weight * 0.85f) / (72 * creatinine)
-    } else 0f
-
-    val egfr = if (creatinine > 0 && age > 0) {
-        175 * (creatinine).toDouble().pow(-1.154) * (age).toDouble().pow(-0.203) *
-                if (genderInput == "Female") 0.742 else 1.0
-    } else 0.0
-
-    val infiniteTransition = rememberInfiniteTransition(label = "filter_float")
-    val floatY by infiniteTransition.animateFloat(initialValue = -8f, targetValue = 8f, animationSpec = infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
-
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onDismiss), contentAlignment = Alignment.TopCenter) {
-            Column(modifier = Modifier.fillMaxHeight(0.95f).fillMaxWidth(0.95f).clip(RoundedCornerShape(28.dp)).background(Color.White).verticalScroll(rememberScrollState())) {
-                Box(modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colorPrimary, colorSecondary))).padding(24.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(50.dp).offset(y = floatY.dp)) {
-                                Image(painter = painterResource(id = R.drawable.kidney), contentDescription = "Kidney", modifier = Modifier.size(40.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Renal Function", color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = 1.sp)
-                        }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp)) }
-                    }
-                }
-
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = ageInput, onValueChange = { ageInput = it }, label = "Age (yrs)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).border(2.dp, colorPrimary, RoundedCornerShape(8.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-                            Row(modifier = Modifier.fillMaxWidth().clickable { genderInput = if (genderInput == "Male") "Female" else "Male" }, horizontalArrangement = Arrangement.Center) {
-                                Text(genderInput, fontWeight = FontWeight.Black, fontSize = 14.sp, color = colorPrimary)
-                            }
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = weightInput, onValueChange = { weightInput = it }, label = "Weight (kg)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        PerfectTextField(value = creatinineInput, onValueChange = { creatinineInput = it }, label = "Creat (mg/dL)", color = colorPrimary, modifier = Modifier.weight(1f))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorPrimary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("CREATININE CLEARANCE (Cockcroft-Gault)", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (ccr > 0) String.format(Locale.US, "%.1f", ccr) else "0.0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("mL/min", fontSize = 14.sp, color = colorSecondary, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorSecondary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("eGFR (MDRD Formula)", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (egfr > 0) String.format(Locale.US, "%.1f", egfr) else "0.0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("mL/min/1.73m²", fontSize = 14.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    ClinicalPearlPanel(colorPrimary, "Renal Dosing", "GFR <30 requires aggressive drug dose reductions. Many aminoglycosides and ACE-inhibitors accumulate in renal failure. Always check the BNF for nephrotoxic drugs.")
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 7. HEMODYNAMICS ENGINE (MAP, CVP, SVR)
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-fun HemodynamicsCard(onCardClick: () -> Unit) {
-    val colorPrimary = Color(0xFFD32F2F)
-    val colorSecondary = Color(0xFFFF6F00)
-    val lightGlow = Color(0xFFFFEBEE)
-
-    val infiniteTransition = rememberInfiniteTransition(label = "heartbeat")
-    val beatScale by infiniteTransition.animateFloat(initialValue = 1f, targetValue = 1.2f, animationSpec = infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "")
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onCardClick),
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column {
-            Box(modifier = Modifier.fillMaxWidth().background(
-                Brush.linearGradient(
-                    colors = listOf(colorPrimary, colorSecondary),
-                    start = Offset(0f, 0f),
-                    end = Offset(1000f, 1000f) // diagonal effect
-                )
-            )) {
-                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(70.dp).scale(beatScale), contentAlignment = Alignment.Center) {
-                        Image(painter = painterResource(id = R.drawable.heart), contentDescription = "Heart", modifier = Modifier.size(55.dp))
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Hemodynamics", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        Text("MAP • SVR • Perfusion", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-            Box(modifier = Modifier.fillMaxWidth().background(lightGlow).padding(12.dp)) {
-                Text("Mean Arterial Pressure • SVR • Cardiac Output • Afterload", fontSize = 12.sp, color = colorPrimary, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-fun HemodynamicsCalculator(onDismiss: () -> Unit) {
+fun HemodynamicsEngineCard() {
     val colorPrimary = Color(0xFFD32F2F)
     val colorSecondary = Color(0xFFFF6F00)
 
     var sbpInput by remember { mutableStateOf("120") }
     var dbpInput by remember { mutableStateOf("80") }
     var coInput by remember { mutableStateOf("5") }
-    var svriInput by remember { mutableStateOf("") }
 
     val sbp = sbpInput.toFloatOrNull() ?: 0f
     val dbp = dbpInput.toFloatOrNull() ?: 0f
     val co = coInput.toFloatOrNull() ?: 0f
 
     val map = (sbp + (2 * dbp)) / 3
-    val pp = sbp - dbp
     val svr = if (co > 0) ((map - 10) * 80) / co else 0f
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse_wave")
-    val pulseAlpha by infiniteTransition.animateFloat(initialValue = 0.3f, targetValue = 0.8f, animationSpec = infiniteRepeatable(tween(800, easing = FastOutLinearInEasing), RepeatMode.Restart), label = "")
-
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onDismiss), contentAlignment = Alignment.TopCenter) {
-            Column(modifier = Modifier.fillMaxHeight(0.95f).fillMaxWidth(0.95f).clip(RoundedCornerShape(28.dp)).background(Color.White).verticalScroll(rememberScrollState())) {
-                Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(
-                    colors = listOf(colorPrimary, colorSecondary),
-                    start = Offset(0f, 0f),
-                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                )).padding(24.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(50.dp).alpha(pulseAlpha)) {
-                                Image(painter = painterResource(id = R.drawable.heart), contentDescription = "Heart", modifier = Modifier.size(40.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Hemodynamics", color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = 1.sp)
-                        }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp)) }
-                    }
-                }
-
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = sbpInput, onValueChange = { sbpInput = it }, label = "SBP (mmHg)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        PerfectTextField(value = dbpInput, onValueChange = { dbpInput = it }, label = "DBP (mmHg)", color = colorPrimary, modifier = Modifier.weight(1f))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = coInput, onValueChange = { coInput = it }, label = "CO (L/min)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorPrimary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("MEAN ARTERIAL PRESSURE (MAP)", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (map > 0) String.format(Locale.US, "%.0f", map) else "0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("mmHg", fontSize = 14.sp, color = colorSecondary, fontWeight = FontWeight.Bold)
-                            Text("Pulse Pressure: ${String.format(Locale.US, "%.0f", pp)} mmHg", fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Medium)
-                        }
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorSecondary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("SYSTEMIC VASCULAR RESISTANCE", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (svr > 0) String.format(Locale.US, "%.0f", svr) else "0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("Wood Units", fontSize = 14.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    ClinicalPearlPanel(colorPrimary, "Tissue Perfusion", "MAP >65 mmHg is critical for organ perfusion. SVR >1200 indicates vasoconstriction (sepsis/cardiogenic shock). SVR <800 indicates excessive vasodilation (septic shock).")
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 8. VENTILATOR ENGINE (MV, PEEP, FiO2)
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-fun VentilatorCard(onCardClick: () -> Unit) {
-    val colorPrimary = Color(0xFF00695C)
-    val colorSecondary = Color(0xFF26A69A)
-    val lightGlow = Color(0xFFE0F2F1)
-
-    val infiniteTransition = rememberInfiniteTransition(label = "ventilate")
-    val expandScale by infiniteTransition.animateFloat(initialValue = 1f, targetValue = 1.15f, animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "")
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onCardClick),
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary)))) {
-                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(70.dp).scale(expandScale), contentAlignment = Alignment.Center) {
-                        Image(painter = painterResource(id = R.drawable.lungs), contentDescription = "Lungs", modifier = Modifier.size(55.dp))
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Ventilator Settings", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        Text("MV • PEEP • FiO2", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-            Box(modifier = Modifier.fillMaxWidth().background(lightGlow).padding(12.dp)) {
-                Text("Minute Ventilation • Tidal Volume • PEEP • Compliance", fontSize = 12.sp, color = colorPrimary, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-fun VentilatorCalculator(onDismiss: () -> Unit) {
-    val colorPrimary = Color(0xFF00695C)
-    val colorSecondary = Color(0xFF26A69A)
-
-    var rateInput by remember { mutableStateOf("16") }
-    var tvInput by remember { mutableStateOf("450") }
-    var peepInput by remember { mutableStateOf("5") }
-    var plateauInput by remember { mutableStateOf("") }
-
-    val rate = rateInput.toFloatOrNull() ?: 0f
-    val tv = tvInput.toFloatOrNull() ?: 0f
-    val peep = peepInput.toFloatOrNull() ?: 0f
-    val plateau = plateauInput.toFloatOrNull() ?: 0f
-
-    val mv = rate * tv / 1000
-    val compliance = if ((plateau - peep) > 0) tv / (plateau - peep) else 0f
-
-    val infiniteTransition = rememberInfiniteTransition(label = "breath_wave")
-    val breathY by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 6f, animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
-
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onDismiss), contentAlignment = Alignment.TopCenter) {
-            Column(modifier = Modifier.fillMaxHeight(0.95f).fillMaxWidth(0.95f).clip(RoundedCornerShape(28.dp)).background(Color.White).verticalScroll(rememberScrollState())) {
-                Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(colorPrimary, colorSecondary))).padding(24.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(50.dp).offset(y = breathY.dp)) {
-                                Image(painter = painterResource(id = R.drawable.lungs), contentDescription = "Lungs", modifier = Modifier.size(40.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Ventilator Settings", color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = 1.sp)
-                        }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp)) }
-                    }
-                }
-
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = rateInput, onValueChange = { rateInput = it }, label = "RR (breaths/min)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        PerfectTextField(value = tvInput, onValueChange = { tvInput = it }, label = "TV (mL)", color = colorPrimary, modifier = Modifier.weight(1f))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = peepInput, onValueChange = { peepInput = it }, label = "PEEP (cmH2O)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        PerfectTextField(value = plateauInput, onValueChange = { plateauInput = it }, label = "Pplat (cmH2O)", color = colorPrimary, modifier = Modifier.weight(1f))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorPrimary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("MINUTE VENTILATION (MV)", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (mv > 0) String.format(Locale.US, "%.1f", mv) else "0.0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("L/min", fontSize = 14.sp, color = colorSecondary, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorSecondary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("STATIC COMPLIANCE", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (compliance > 0) String.format(Locale.US, "%.1f", compliance) else "0.0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("mL/cmH2O", fontSize = 14.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    ClinicalPearlPanel(colorPrimary, "Lung Protection Strategy", "TV should be 6-8 mL/kg IBW. Plateau pressure <30 cmH2O prevents barotrauma. PEEP >5 is typically needed in ARDS. Monitor compliance for secretion obstruction.")
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 9. NUTRITION ENGINE (Calories & Macros)
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-fun NutritionCard(onCardClick: () -> Unit) {
-    val colorPrimary = Color(0xFFE65100)
-    val colorSecondary = Color(0xFFFF6E40)
-    val lightGlow = Color(0xFFFFE0B2)
-
-    val infiniteTransition = rememberInfiniteTransition(label = "nutrition_spin")
-    val rotateZ by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart), label = "")
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp), spotColor = colorPrimary.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onCardClick),
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colorPrimary, colorSecondary)))) {
+            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(colorPrimary, colorSecondary), start = Offset(0f, 0f), end = Offset(1000f, 1000f)))) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(70.dp), contentAlignment = Alignment.Center) {
-                        Image(painter = painterResource(id = R.drawable.nutrition), contentDescription = "Nutrition", modifier = Modifier.size(50.dp).graphicsLayer(rotationZ = rotateZ))
+                        Image(painter = painterResource(R.drawable.heart), contentDescription = null, modifier = Modifier.size(50.dp))
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text("Nutrition Calc", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        Text("Calories • Protein • Macros", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold)
+                        Text("Hemodynamics", fontWeight = FontWeight.Black, fontSize = 20.sp, color = Color.White)
+                        Text("MAP & SVR Analysis", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White.copy(alpha=0.8f))
                     }
                 }
             }
-            Box(modifier = Modifier.fillMaxWidth().background(lightGlow).padding(12.dp)) {
-                Text("Harris-Benedict • Energy Expenditure • Protein Requirements", fontSize = 12.sp, color = colorPrimary, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
 
-@Composable
-fun NutritionCalculator(onDismiss: () -> Unit) {
-    val colorPrimary = Color(0xFFE65100)
-    val colorSecondary = Color(0xFFFF6E40)
-
-    var ageInput by remember { mutableStateOf("") }
-    var weightInput by remember { mutableStateOf("70") }
-    var heightInput by remember { mutableStateOf("170") }
-    var genderInput by remember { mutableStateOf("Male") }
-    var acuityInput by remember { mutableStateOf("1.2") }
-
-    val age = ageInput.toFloatOrNull() ?: 0f
-    val weight = weightInput.toFloatOrNull() ?: 0f
-    val height = heightInput.toFloatOrNull() ?: 0f
-    val acuity = acuityInput.toFloatOrNull() ?: 1.0f
-
-    val bmr = if (age > 0 && weight > 0 && height > 0) {
-        if (genderInput == "Male") 88.362f + (13.397f * weight) + (4.799f * height) - (5.677f * age)
-        else 447.593f + (9.247f * weight) + (3.098f * height) - (4.330f * age)
-    } else 0f
-
-    val totalCalories = bmr * acuity
-    val protein = weight * 1.5f
-    val carbs = (totalCalories * 0.5f) / 4
-    val fat = (totalCalories * 0.3f) / 9
-
-    val infiniteTransition = rememberInfiniteTransition(label = "plate_bounce")
-    val bounceY by infiniteTransition.animateFloat(initialValue = 0f, targetValue = -8f, animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
-
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(enabled = true, onClick = onDismiss), contentAlignment = Alignment.TopCenter) {
-            Column(modifier = Modifier.fillMaxHeight(0.95f).fillMaxWidth(0.95f).clip(RoundedCornerShape(28.dp)).background(Color.White).verticalScroll(rememberScrollState())) {
-                Box(modifier = Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colorPrimary, colorSecondary))).padding(24.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(50.dp).offset(y = bounceY.dp)) {
-                                Image(painter = painterResource(id = R.drawable.nutrition), contentDescription = "Nutrition", modifier = Modifier.size(40.dp))
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // LIVE A-LINE
+                Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(Color(0xFF0F172A), RoundedCornerShape(16.dp)).border(1.dp, colorPrimary, RoundedCornerShape(16.dp))) {
+                    val phase = rememberInfiniteTransition().animateFloat(0f, 1f, infiniteRepeatable(tween(1200, easing = LinearEasing))).value
+                    Text("LIVE A-LINE TRACE", color = Color.Red.copy(0.8f), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(12.dp))
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        if (size.width <= 0) return@Canvas
+                        val path = Path(); path.moveTo(0f, size.height * 0.8f)
+                        for (x in 0..size.width.toInt() step 2) {
+                            val t = ((x / size.width) + phase) % 1f
+                            val y = when {
+                                t < 0.2f -> -100f * (t / 0.2f)
+                                t < 0.4f -> -100f + 50f * ((t - 0.2f) / 0.2f)
+                                t < 0.5f -> -50f - 15f * sin(((t - 0.4f) / 0.1f) * PI).toFloat()
+                                else -> -50f + 50f * ((t - 0.5f) / 0.5f)
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Nutrition", color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = 1.sp)
+                            path.lineTo(x.toFloat(), (size.height * 0.8f) + (y * ((map / 100f).coerceIn(0.5f, 1.5f))))
                         }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp)) }
+                        drawPath(path, Color.Red, style = Stroke(3f, join = StrokeJoin.Round))
                     }
                 }
 
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = ageInput, onValueChange = { ageInput = it }, label = "Age (yrs)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).border(2.dp, colorPrimary, RoundedCornerShape(8.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-                            Row(modifier = Modifier.fillMaxWidth().clickable { genderInput = if (genderInput == "Male") "Female" else "Male" }, horizontalArrangement = Arrangement.Center) {
-                                Text(genderInput, fontWeight = FontWeight.Black, fontSize = 14.sp, color = colorPrimary)
-                            }
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = weightInput, onValueChange = { weightInput = it }, label = "Weight (kg)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        PerfectTextField(value = heightInput, onValueChange = { heightInput = it }, label = "Height (cm)", color = colorPrimary, modifier = Modifier.weight(1f))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PerfectTextField(value = acuityInput, onValueChange = { acuityInput = it }, label = "Acuity (1.0-2.0)", color = colorPrimary, modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PerfectTextField(sbpInput, { sbpInput = it }, "Systolic BP", colorPrimary, Modifier.weight(1f))
+                    PerfectTextField(dbpInput, { dbpInput = it }, "Diastolic BP", colorPrimary, Modifier.weight(1f))
+                }
+                PerfectTextField(coInput, { coInput = it }, "Cardiac Output (L/min)", colorPrimary, Modifier.fillMaxWidth())
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colorPrimary).padding(20.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("TOTAL DAILY CALORIES", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(if (totalCalories > 0) String.format(Locale.US, "%.0f", totalCalories) else "0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Text("kcal", fontSize = 14.sp, color = colorSecondary, fontWeight = FontWeight.Bold)
+                Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colorPrimary).padding(24.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("MAP", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(if (map > 0) String.format(Locale.US, "%.0f", map) else "0", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("SVR", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(if (svr > 0) String.format(Locale.US, "%.0f", svr) else "0", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
                         }
                     }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(colorSecondary).padding(16.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Protein", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(if (protein > 0) String.format(Locale.US, "%.0f", protein) else "0", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                Text("g", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(colorSecondary).padding(16.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Carbs", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(if (carbs > 0) String.format(Locale.US, "%.0f", carbs) else "0", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                Text("g", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(colorSecondary).padding(16.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Fat", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(if (fat > 0) String.format(Locale.US, "%.0f", fat) else "0", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                Text("g", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    ClinicalPearlPanel(colorPrimary, "Early Enteral Nutrition", "Initiate EN within 24-48 hours. Protein targets 1.2-2.0 g/kg for ICU patients. Use ProMod or High-Protein formulas. Residual volume >250 mL suggests feed intolerance.")
                 }
             }
         }
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REUSABLE COMPONENTS
+// REUSABLE COMPONENTS & DICTIONARIES
 // ─────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1004,7 +874,7 @@ fun PerfectTextField(value: String, onValueChange: (String) -> Unit, label: Stri
     OutlinedTextField(
         value = value, onValueChange = onValueChange, label = { Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
-        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 16.sp),
+        textStyle = TextStyle(textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 16.sp),
         colors = TextFieldDefaults.colors(focusedIndicatorColor = color, unfocusedIndicatorColor = Color.LightGray, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedLabelColor = color),
         modifier = modifier
     )
@@ -1029,55 +899,6 @@ fun ClinicalPearlPanel(color: Color, title: String, text: String) {
         Column {
             Text(title, color = color, fontSize = 14.sp, fontWeight = FontWeight.Black)
             Text(text, color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp))
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DRUG INTELLIGENCE DIALOG (Original)
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-fun DrugIntelligenceDialog(drugName: String, onDismiss: () -> Unit) {
-    val themeColor = when {
-        listOf("Noradrenaline", "Adrenaline", "Dopamine", "Dobutamine", "Milrinone").contains(drugName) -> Color(0xFFE53935)
-        listOf("Propofol", "Midazolam", "Fentanyl", "Dexmedetomidine").contains(drugName) -> Color(0xFF8E24AA)
-        listOf("Actrapid (Insulin)", "Novorapid").contains(drugName) -> Color(0xFF00ACC1)
-        listOf("Hartmann's (RL)", "0.9% Normal Saline", "Albumin").contains(drugName) -> Color(0xFF1E88E5)
-        else -> Color(0xFF00897B)
-    }
-
-    val (className, considerations) = getDrugIntelligence(drugName)
-
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxWidth(0.9f).clip(RoundedCornerShape(24.dp)).background(Color.White)) {
-            Column {
-                Box(modifier = Modifier.fillMaxWidth().background(themeColor).padding(20.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocalHospital, contentDescription = "Rx", tint = Color.White)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(drugName.uppercase(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.sp)
-                                Text(className, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White) }
-                    }
-                }
-                Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("NURSING CONSIDERATIONS", color = themeColor, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    considerations.forEach { point ->
-                        Row(verticalAlignment = Alignment.Top) {
-                            Text("•", color = themeColor, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.padding(end = 8.dp))
-                            Text(point, color = Color(0xFF333333), fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = themeColor), shape = RoundedCornerShape(12.dp)) {
-                        Text("ACKNOWLEDGE", fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
-                    }
-                }
-            }
         }
     }
 }
