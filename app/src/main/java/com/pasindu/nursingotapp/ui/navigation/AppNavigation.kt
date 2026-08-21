@@ -5,8 +5,12 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,25 +24,9 @@ import com.pasindu.nursingotapp.data.model.Period
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.data.model.UserProfile
 import com.pasindu.nursingotapp.ui.NursingViewModel
-import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
-import com.pasindu.nursingotapp.ui.screens.AnalyticsScreen
-import com.pasindu.nursingotapp.ui.screens.ClaimPeriodScreen
-import com.pasindu.nursingotapp.ui.screens.DailyEntryScreen
-import com.pasindu.nursingotapp.ui.screens.ProfileScreen
-import com.pasindu.nursingotapp.ui.screens.DosageCalculatorScreen
-import com.pasindu.nursingotapp.ui.screens.WeightInfusionScreen
-import com.pasindu.nursingotapp.ui.screens.BsaCalculatorScreen
-import com.pasindu.nursingotapp.ui.screens.PediatricRulesScreen
-import com.pasindu.nursingotapp.ui.screens.UnitConversionsScreen
-import com.pasindu.nursingotapp.ui.screens.SpecialCalculationsScreen
-import com.pasindu.nursingotapp.ui.screens.EmergencyCalculatorsScreen
-import com.pasindu.nursingotapp.ui.screens.IcuCalculatorsScreen
-import com.pasindu.nursingotapp.ui.screens.VasoactiveInfusionsScreen
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.ui.Modifier
+import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
+import com.pasindu.nursingotapp.ui.screens.*
 import java.time.LocalDate
 
 @Composable
@@ -51,17 +39,30 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "profile",
+        startDestination = "home", // Starts at the Dashboard
         enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) + fadeIn(animationSpec = tween(animDuration)) },
         exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) },
         popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeIn(animationSpec = tween(animDuration)) },
         popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) }
     ) {
+
+        // --- HUB SCREEN (DASHBOARD) ---
+        composable("home") {
+            HomeScreen(
+                viewModel = viewModel,
+                onNavigate = { route ->
+                    navController.navigate(route)
+                }
+            )
+        }
+
+        // --- DATA GATHERING (PROFILE) ---
         composable("profile") {
             ProfileScreen(
                 viewModel = viewModel,
                 onNavigateToClaimPeriod = { _, _ ->
-                    navController.navigate("home") { popUpTo("profile") { inclusive = true } }
+                    // Routes to the calendar after saving data
+                    navController.navigate("claim_period") { popUpTo("home") { inclusive = false } }
                 }
             )
         }
@@ -82,19 +83,9 @@ fun AppNavigation() {
             )
         }
 
-        // --- HUB SCREEN ---
-        composable("home") {
-            com.pasindu.nursingotapp.ui.screens.HomeScreen(
-                viewModel = viewModel,
-                onNavigate = { route ->
-                    navController.navigate(route)
-                }
-            )
-        }
-
         // --- CLINICAL TOOLS MENU ---
         composable("clinical_tools") {
-            com.pasindu.nursingotapp.ui.screens.ClinicalToolsScreen(
+            ClinicalToolsScreen(
                 onNavigateToIvDrip = { navController.navigate("iv_drip") },
                 onNavigateToDosage = { navController.navigate("dosage_calc") },
                 onNavigateToWeightInfusion = { navController.navigate("weight_infusion") },
@@ -103,7 +94,6 @@ fun AppNavigation() {
                 onNavigateToConversions = { navController.navigate("unit_conversions") },
                 onNavigateToSpecialCalcs = { navController.navigate("special_calcs") },
                 onNavigateToEmergency = { navController.navigate("emergency_calcs") },
-                // ✅ BUG FIXED HERE: Changed "icu_calcs" to "icu_calculators" to match the route below
                 onNavigateToIcu = { navController.navigate("icu_calculators") },
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -116,48 +106,23 @@ fun AppNavigation() {
             }
         }
 
-        composable("dosage_calc") {
-            DosageCalculatorScreen()
-        }
-
-        composable("weight_infusion") {
-            WeightInfusionScreen()
-        }
-
-        composable("bsa_calc") {
-            BsaCalculatorScreen()
-        }
-
-        composable("pediatric_rules") {
-            PediatricRulesScreen()
-        }
-
-        composable("unit_conversions") {
-            UnitConversionsScreen()
-        }
-
-        composable("special_calcs") {
-            SpecialCalculationsScreen()
-        }
+        composable("dosage_calc") { DosageCalculatorScreen() }
+        composable("weight_infusion") { WeightInfusionScreen() }
+        composable("bsa_calc") { BsaCalculatorScreen() }
+        composable("pediatric_rules") { PediatricRulesScreen() }
+        composable("unit_conversions") { UnitConversionsScreen() }
+        composable("special_calcs") { SpecialCalculationsScreen() }
 
         composable("emergency_calcs") {
-            EmergencyCalculatorsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // --- ICU CALCULATORS MENU & SUB-ROUTES ---
-        // ✅ This is the route destination the button is now correctly looking for
         composable("icu_calculators") {
-            IcuCalculatorsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable("vasoactive_infusions") {
-            VasoactiveInfusionsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
@@ -210,10 +175,7 @@ fun AppNavigation() {
                     } else null
                 },
                 onSaveAndSharePdf = { file ->
-                    // 1. SAVE TO PHONE: Uses your existing FileShareUtils to save to the device's Downloads folder
                     com.pasindu.nursingotapp.ui.otforms.FileShareUtils.savePdfToDownloads(context, file)
-
-                    // 2. SHARE INTENT: Uses the newly configured FileProvider
                     val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "application/pdf"
