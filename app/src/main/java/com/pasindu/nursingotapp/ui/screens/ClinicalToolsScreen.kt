@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -60,7 +61,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -230,13 +230,16 @@ fun ClinicalToolsScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(ToolsBgWhite).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { focusManager.clearFocus() }) {
 
+            // 🧠 MIND-BLOWING NEURAL AI WAVEFORM BACKGROUND 🧠
             AnimatedNeuralWaveBackground(isVisible)
 
             Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // 🌟 GLOWING AI SEARCH BAR 🌟
                 CreativeAiSearchBar(query = searchQuery, onQueryChange = { searchQuery = it }, onSubmit = { executeSearch() }, onFocusChanged = { searchBarFocused = it })
 
+                // 🌟 DROPDOWN SEARCH HISTORY 🌟
                 AnimatedVisibility(
                     visible = searchBarFocused && searchQuery.isBlank() && historyItems.isNotEmpty(),
                     enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
@@ -263,9 +266,13 @@ fun ClinicalToolsScreen(
                     }
                 }
 
+                // 🌟 HIGH-CONFIDENCE INTENT BADGE 🌟
                 AnimatedVisibility(
                     visible = !searchBarFocused && searchQuery.isNotBlank() && bestMatchTool != null,
-                    enter = slideInVertically(initialOffsetY = { -20 }) + fadeIn(),
+                    enter = slideInVertically(
+                        initialOffsetY = { -20 },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                    ) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { -20 }) + fadeOut()
                 ) {
                     if (bestMatchTool != null) {
@@ -280,6 +287,7 @@ fun ClinicalToolsScreen(
                         modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
                     )
 
+                    // 🌟 3D HOLOGRAPHIC TOOL CARDS WITH AI EXPANSION 🌟
                     if (filteredTools.isNotEmpty()) {
                         filteredTools.forEach { tool ->
                             HolographicToolCard(
@@ -288,6 +296,7 @@ fun ClinicalToolsScreen(
                             )
                         }
                     } else {
+                        // 🌟 SMART CLINICAL WEB SUPPORT FALLBACK 🌟
                         SmartWebCalculatorResolverCard(query = searchQuery) { targetUrl ->
                             saveSearchHistory(context, searchQuery)
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
@@ -409,7 +418,10 @@ fun HolographicToolCard(
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(initialOffsetY = { 150 }, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)) + fadeIn(tween(600, delayMillis = tool.delay))
+        enter = slideInVertically(
+            initialOffsetY = { 150 },
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        ) + fadeIn(tween(600, delayMillis = tool.delay))
     ) {
         Card(
             modifier = Modifier
@@ -431,7 +443,7 @@ fun HolographicToolCard(
                             drawRoundRect(
                                 brush = Brush.linearGradient(listOf(tool.colorStart, tool.colorEnd)),
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(32f, 32f),
-                                style = Stroke(width = 4f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(20f, 15f), dashPhase))
+                                style = Stroke(width = 4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 15f), dashPhase))
                             )
                             drawContent()
                         }.background(tool.colorStart.copy(alpha = 0.1f), RoundedCornerShape(16.dp)),
