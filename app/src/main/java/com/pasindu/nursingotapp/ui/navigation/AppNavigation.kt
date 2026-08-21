@@ -210,6 +210,10 @@ fun AppNavigation() {
                     } else null
                 },
                 onSaveAndSharePdf = { file ->
+                    // 1. SAVE TO PHONE: Uses your existing FileShareUtils to save to the device's Downloads folder
+                    com.pasindu.nursingotapp.ui.otforms.FileShareUtils.savePdfToDownloads(context, file)
+
+                    // 2. SHARE INTENT: Uses the newly configured FileProvider
                     val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "application/pdf"

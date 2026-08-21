@@ -22,6 +22,14 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
+// Data class to handle consecutive leave blocks for Table 3
+data class LeaveBlock(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val type: String,
+    val totalDays: Int
+)
+
 class PdfGenerator(private val context: Context) {
 
     private val a4Width = 595
@@ -83,8 +91,14 @@ class PdfGenerator(private val context: Context) {
 
             drawForm2(document, weekGroups, profile, rawBack)
 
+            val majorityMonth = logs
+                .groupBy { it.date.month }
+                .maxByOrNull { it.value.size }
+                ?.key?.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH) ?: "Unknown"
+
             val outputDir = File(context.cacheDir, "pdf").apply { mkdirs() }
-            val outputFile = File(outputDir, "nursing_ot_claim_${System.currentTimeMillis()}.pdf")
+            val outputFile = File(outputDir, "OT_Form_$majorityMonth.pdf")
+
             FileOutputStream(outputFile).use { stream ->
                 document.writeTo(stream)
             }
@@ -121,7 +135,9 @@ class PdfGenerator(private val context: Context) {
         fun sY(y: Float): Float = y * (a4Height / originalImgH)
 
         val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val tableRowHeight = 70f
 
+        // --- Header Profile Mapping ---
         canvas.drawText(profile.serviceNo, sX(2113f), sY(80f), bodyPaint)
         canvas.drawText(profile.unit, sX(2050f), sY(156f), bodyPaint)
         canvas.drawText(profile.paySheetNo, sX(2103f), sY(346f), bodyPaint)
@@ -134,55 +150,53 @@ class PdfGenerator(private val context: Context) {
         canvas.drawText(formatDouble(profile.otRate), sX(1473f), sY(673f), bodyPaint)
         canvas.drawText(formatFloat(summary.totalOTHours), sX(520f), sY(730f), bodyPaint)
 
-        val rowGap = 60f
-        val tCol1X = 375f
-        val tCol2X = 950f
-        val tCol3X = 1510f
-        val tCol4X = 2100f
+        // --- Table 1: Working PH (රජයේ ප්‍රසිද්ධ නිවාඩු දින සේවා විස්තරය) ---
+        // Filters only PH days where normal hours were worked
+        val workingPHs = logs.filter { it.isPH && it.computedNormalHours > 0f }
+        var phY = 900f // Estimate based on 3500 scale. Adjust as needed.
 
-        var phY = 983f
-        logs.filter { it.isPH }.take(4).forEach { log ->
-            val inTime = log.normalTimeInStr.ifBlank { log.otTimeInStr }
-            val outTime = log.normalTimeOutStr.ifBlank { log.otTimeOutStr }
-            canvas.drawText(log.date.format(dateFormatter), sX(tCol1X), sY(phY), centerBodyPaint)
-            canvas.drawText(inTime, sX(tCol2X), sY(phY), centerBodyPaint)
-            canvas.drawText(outTime, sX(tCol3X), sY(phY), centerBodyPaint)
-            canvas.drawText(formatHrs(log.computedNormalHours + log.computedOtHours), sX(tCol4X), sY(phY), centerBodyPaint)
-            phY += rowGap
+        workingPHs.take(4).forEach { log ->
+            canvas.drawText(log.date.format(dateFormatter), sX(480f), sY(phY), centerBodyPaint)
+            canvas.drawText("${log.normalTimeInStr}H", sX(1120f), sY(phY), centerBodyPaint)
+            canvas.drawText("${log.normalTimeOutStr}H", sX(1740f), sY(phY), centerBodyPaint)
+            canvas.drawText(formatHrs(log.computedNormalHours), sX(2250f), sY(phY), centerBodyPaint)
+            phY += tableRowHeight
         }
 
-        var doY = 1410f
-        logs.filter { it.isDO }.take(4).forEach { log ->
-            val inTime = log.normalTimeInStr.ifBlank { log.otTimeInStr }
-            val outTime = log.normalTimeOutStr.ifBlank { log.otTimeOutStr }
-            canvas.drawText(log.date.format(dateFormatter), sX(tCol1X), sY(doY), centerBodyPaint)
-            canvas.drawText(inTime, sX(tCol2X), sY(doY), centerBodyPaint)
-            canvas.drawText(outTime, sX(tCol3X), sY(doY), centerBodyPaint)
-            canvas.drawText(formatHrs(log.computedNormalHours + log.computedOtHours), sX(tCol4X), sY(doY), centerBodyPaint)
-            doY += rowGap
+        // --- Table 2: Working DO (සති විවේක දින සේවා විස්තරය) ---
+        // Filters only DO days where normal hours were worked
+        val workingDOs = logs.filter { it.isDO && it.computedNormalHours > 0f }
+        var doY = 1300f // Estimate based on 3500 scale. Adjust as needed.
+
+        workingDOs.take(4).forEach { log ->
+            canvas.drawText(log.date.format(dateFormatter), sX(480f), sY(doY), centerBodyPaint)
+            canvas.drawText("${log.normalTimeInStr}H", sX(1120f), sY(doY), centerBodyPaint)
+            canvas.drawText("${log.normalTimeOutStr}H", sX(1740f), sY(doY), centerBodyPaint)
+            canvas.drawText(formatHrs(log.computedNormalHours), sX(2250f), sY(doY), centerBodyPaint)
+            doY += tableRowHeight
         }
 
-        var leaveY = 1836f
-        logs.filter { it.isLeave }.take(4).forEach { log ->
-            canvas.drawText(log.date.format(dateFormatter), sX(tCol1X), sY(leaveY), centerBodyPaint)
-            canvas.drawText(log.date.format(dateFormatter), sX(tCol2X), sY(leaveY), centerBodyPaint)
-            val leaveText = log.leaveType ?: "Leave"
-            canvas.drawText(leaveText, sX(tCol3X), sY(leaveY), centerBodyPaint)
-            canvas.drawText("1", sX(tCol4X), sY(leaveY), centerBodyPaint)
-            leaveY += rowGap
+        // --- Table 3: Leave Details (නිවාඩු විස්තරය) ---
+        // Captures CL and standard DO (where no hours were worked). Skips unworked PH.
+        val leaveLogs = logs.filter { (it.isLeave && it.leaveType == "CL") || (it.isDO && it.computedNormalHours == 0f) }
+        val groupedLeaves = groupConsecutiveLeaves(leaveLogs)
+        var leaveY = 1700f // Estimate based on 3500 scale. Adjust as needed.
+
+        groupedLeaves.take(4).forEach { leave ->
+            canvas.drawText(leave.startDate.format(dateFormatter), sX(460f), sY(leaveY), centerBodyPaint)
+            canvas.drawText(leave.endDate.format(dateFormatter), sX(980f), sY(leaveY), centerBodyPaint)
+            canvas.drawText(leave.type, sX(1600f), sY(leaveY), centerBodyPaint)
+            canvas.drawText(leave.totalDays.toString(), sX(2200f), sY(leaveY), centerBodyPaint)
+            leaveY += tableRowHeight
         }
 
+        // --- Totals and Payment Certification ---
         canvas.drawText(formatFloat(summary.totalOTHours), sX(990f), sY(2076f), centerBodyPaint)
         canvas.drawText(formatDouble(summary.otAmountRs), sX(2123f), sY(2076f), centerBodyPaint)
         canvas.drawText(summary.totalPHDays.toString(), sX(990f), sY(2150f), centerBodyPaint)
         canvas.drawText(formatDouble(summary.phAmountRs), sX(2123f), sY(2150f), centerBodyPaint)
         canvas.drawText(summary.totalDODays.toString(), sX(990f), sY(2226f), centerBodyPaint)
         canvas.drawText(formatDouble(summary.doAmountRs), sX(2123f), sY(2226f), centerBodyPaint)
-
-        val todayStr = LocalDate.now().format(dateFormatter)
-        canvas.drawText(todayStr, sX(540f), sY(2530f), bodyPaint)
-        canvas.drawText(todayStr, sX(460f), sY(2606f), bodyPaint)
-        canvas.drawText(period.claimStart.format(dateFormatter), sX(1003f), sY(2606f), bodyPaint)
 
         document.finishPage(page)
     }
@@ -250,7 +264,11 @@ class PdfGenerator(private val context: Context) {
 
                 if (log != null) {
                     val rawLeave = log.leaveType ?: ""
-                    val isFullLeave = log.isLeave || ((log.isDO || log.isPH) && log.computedNormalHours == 0f && log.computedOtHours == 0f)
+
+                    val isFullLeave = (log.isLeave && rawLeave != "SD") ||
+                            ((log.isDO || log.isPH) && log.computedNormalHours == 0f && log.computedOtHours == 0f) ||
+                            (rawLeave == "SD" && log.computedNormalHours == 0f && log.computedOtHours == 0f)
+
                     val isNight = log.normalTimeInStr.startsWith("19") || log.normalTimeInStr.startsWith("20") || log.otTimeInStr.startsWith("19") || log.otTimeInStr.startsWith("20")
 
                     var insideText = ""
@@ -263,7 +281,7 @@ class PdfGenerator(private val context: Context) {
                             insideText = when (rawLeave) {
                                 "Special", "Special Leave" -> "sL"
                                 "Absent", "AB" -> "AB"
-                                "CL", "VL", "DL" -> rawLeave
+                                "CL", "VL", "DL", "SD" -> rawLeave
                                 else -> rawLeave.take(4)
                             }
                         }
@@ -271,6 +289,7 @@ class PdfGenerator(private val context: Context) {
                         val baseOutside = when {
                             log.isDO -> "DO"
                             log.isPH -> "PH"
+                            rawLeave == "SD" -> "SD"
                             rawLeave == "Short Leave" -> "SL"
                             rawLeave == "Half Casual Leave" -> "CL/2"
                             else -> ""
@@ -414,11 +433,44 @@ class PdfGenerator(private val context: Context) {
         val nonZeroWeeks = weeklyOtTotalsList.filter { it > 0f }
         if (nonZeroWeeks.isNotEmpty()) {
             val equationString = nonZeroWeeks.joinToString(" + ") { formatHrs(it) } + " = " + formatHrs(nonZeroWeeks.sum())
-            // ADJUSTMENT: Moved Y slightly up from 3450f to 3425f to perfectly center it in the bottom box.
             canvas.drawText(equationString, sX(1000f), sY(3425f), bottomEquationPaint)
         }
 
         document.finishPage(page)
+    }
+
+    /**
+     * Groups consecutive days of the same leave type together.
+     * e.g., CL on Monday and Tuesday merges into a single LeaveBlock covering 2 days.
+     */
+    private fun groupConsecutiveLeaves(logs: List<DailyLog>): List<LeaveBlock> {
+        if (logs.isEmpty()) return emptyList()
+
+        val sortedLogs = logs.sortedBy { it.date }
+        val blocks = mutableListOf<LeaveBlock>()
+
+        var currentStart = sortedLogs[0].date
+        var currentEnd = sortedLogs[0].date
+        var currentType = if (sortedLogs[0].isDO) "DO" else "CL"
+        var currentCount = 1
+
+        for (i in 1 until sortedLogs.size) {
+            val log = sortedLogs[i]
+            val type = if (log.isDO) "DO" else "CL"
+
+            if (log.date == currentEnd.plusDays(1) && type == currentType) {
+                currentEnd = log.date
+                currentCount++
+            } else {
+                blocks.add(LeaveBlock(currentStart, currentEnd, currentType, currentCount))
+                currentStart = log.date
+                currentEnd = log.date
+                currentType = type
+                currentCount = 1
+            }
+        }
+        blocks.add(LeaveBlock(currentStart, currentEnd, currentType, currentCount))
+        return blocks
     }
 
     private fun filterFullWeekLogs(logs: List<DailyLog>, period: Period): List<DailyLog> {
