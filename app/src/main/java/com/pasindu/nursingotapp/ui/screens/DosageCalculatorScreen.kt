@@ -95,8 +95,6 @@ fun DosageCalculatorScreen() {
     LaunchedEffect(Unit) { delay(100); isVisible = true }
 
     // --- MATH ENGINES ---
-
-    // 1. Standard Math
     val calculatedMedVolume = remember(currentMode, orderedDose, availableDose, availableVolume, patientWeight, dosePerKg) {
         val have = availableDose.toFloatOrNull() ?: 0f
         val vol = availableVolume.toFloatOrNull() ?: 0f
@@ -109,7 +107,6 @@ fun DosageCalculatorScreen() {
         } else 0f
     }
 
-    // 2. Weight Math (Target Dose)
     val calculatedTargetDoseMg = remember(currentMode, patientWeight, dosePerKg) {
         if (currentMode == CalcMode.WEIGHT) {
             val weight = patientWeight.toFloatOrNull() ?: 0f
@@ -118,7 +115,6 @@ fun DosageCalculatorScreen() {
         } else 0f
     }
 
-    // 3. Percentage Math
     val percentMgPerMl = remember(percentValue, currentMode) {
         if (currentMode == CalcMode.PERCENTAGE) {
             val p = percentValue.toFloatOrNull() ?: 0f
@@ -134,7 +130,6 @@ fun DosageCalculatorScreen() {
         } else 0f
     }
 
-    // 4. Dilution Math
     var stockVolToDraw by remember { mutableFloatStateOf(0f) }
     var diluentVolToAdd by remember { mutableFloatStateOf(0f) }
 
@@ -150,7 +145,6 @@ fun DosageCalculatorScreen() {
         }
     }
 
-    // 5. Reconstitution Math
     var reconConcMgMl by remember { mutableFloatStateOf(0f) }
     var reconDrawMl by remember { mutableFloatStateOf(0f) }
 
@@ -169,12 +163,10 @@ fun DosageCalculatorScreen() {
         }
     }
 
-    // Haptics Trigger
     LaunchedEffect(calculatedMedVolume, stockVolToDraw, percentMgPerMl, reconDrawMl) {
         if (calculatedMedVolume > 0 || stockVolToDraw > 0 || percentMgPerMl > 0 || reconDrawMl > 0) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
 
-    // Dynamic Scale
     val dynamicMaxVolume = remember(calculatedMedVolume, stockVolToDraw, diluentVolToAdd, reconDrawMl, currentMode) {
         val totalVol = when (currentMode) {
             CalcMode.DILUTION -> (stockVolToDraw + diluentVolToAdd)
@@ -205,7 +197,7 @@ fun DosageCalculatorScreen() {
             Spacer(modifier = Modifier.height(24.dp))
 
             // HEADER
-            AnimatedVisibility(visible = isVisible, enter = slideInVertically { -50 } + fadeIn()) {
+            AnimatedVisibility(visible = isVisible, enter = slideInVertically(initialOffsetY = { -50 }) + fadeIn()) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(48.dp).background(ThemePurple, CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("🏥", fontSize = 24.sp) }
@@ -429,21 +421,24 @@ fun ResultCard(title: String, value: String, unit: String, color1: Color, color2
     }
 }
 
+// 3D Glassmorphic Animated Syringe Graphic
 @Composable
 fun AnimatedSyringeGraphic(targetVolume: Float, maxVolume: Float) {
     val textMeasurer = rememberTextMeasurer()
     val fill by animateFloatAsState(if (maxVolume > 0) (targetVolume / maxVolume).coerceIn(0f, 1f) else 0f, tween(1500, easing = FastOutSlowInEasing), label = "")
-    val waveFront by rememberInfiniteTransition("").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
-    val waveBack by rememberInfiniteTransition("").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2800, easing = LinearEasing)), label = "")
+    val waveFront by rememberInfiniteTransition(label = "").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
+    val waveBack by rememberInfiniteTransition(label = "").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2800, easing = LinearEasing)), label = "")
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width; val h = size.height; val sW = w * 0.4f; val sL = (w - sW) / 2
         val sTop = h * 0.1f; val sBot = h * 0.85f; val bH = sBot - sTop
         val fH = bH * fill; val fTop = sBot - fH
 
+        // Plunger pushing down
         drawRect(Color.LightGray, Offset((w - sW*0.2f)/2, fTop - h*0.4f), Size(sW*0.2f, h*0.4f))
         drawRoundRect(Color.DarkGray, Offset(sL + 4f, fTop - 15f), Size(sW - 8f, 15f), CornerRadius(10f, 10f))
 
+        // Multi-layered Fluid Physics
         if (fH > 0f) {
             val pathBack = Path().apply {
                 moveTo(sL, sBot); lineTo(sL + sW, sBot); lineTo(sL + sW, fTop)
@@ -460,9 +455,11 @@ fun AnimatedSyringeGraphic(targetVolume: Float, maxVolume: Float) {
             drawPath(pathFront, Brush.verticalGradient(listOf(ThemePinkLight, ThemePurple)))
         }
 
+        // Glassmorphic Outer Barrel
         drawRoundRect(Color.White.copy(0.4f), Offset(sL, sTop), Size(sW, bH), CornerRadius(8f, 8f))
         drawRoundRect(Color.Gray.copy(0.8f), Offset(sL, sTop), Size(sW, bH), CornerRadius(8f, 8f), style = Stroke(4f))
 
+        // Tick Marks
         for (i in 1..10) {
             val y = sBot - (i * (bH/10))
             val isMajor = i % 2 == 0
@@ -474,6 +471,7 @@ fun AnimatedSyringeGraphic(targetVolume: Float, maxVolume: Float) {
                 drawText(textLayoutResult = textLayout, topLeft = Offset(sL - textLayout.size.width - 8f, y - textLayout.size.height / 2f))
             }
         }
+        // Syringe Tip
         drawRect(ThemePink, Offset((w - sW*0.4f)/2, sBot), Size(sW*0.4f, 15f))
         drawLine(Color.LightGray, Offset(w/2, sBot + 15f), Offset(w/2, h), strokeWidth = 3f)
     }
@@ -485,7 +483,7 @@ fun AnimatedMultiLiquidSyringe(stockVolume: Float, diluentVolume: Float, maxVolu
     val totalVol = stockVolume + diluentVolume
     val totalFill by animateFloatAsState(if (maxVolume > 0) (totalVol / maxVolume).coerceIn(0f, 1f) else 0f, tween(1500, easing = FastOutSlowInEasing), label = "")
     val stockRatio by animateFloatAsState(if (totalVol > 0) stockVolume / totalVol else 0f, tween(1500, easing = FastOutSlowInEasing), label = "")
-    val waveFront by rememberInfiniteTransition("").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
+    val waveFront by rememberInfiniteTransition(label = "").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width; val h = size.height; val sW = w * 0.4f; val sL = (w - sW) / 2
@@ -493,11 +491,14 @@ fun AnimatedMultiLiquidSyringe(stockVolume: Float, diluentVolume: Float, maxVolu
         val fH = bH * totalFill; val fTop = sBot - fH
         val stockH = fH * stockRatio; val stockTop = sBot - stockH
 
+        // Plunger
         drawRect(Color.LightGray, Offset((w - sW*0.2f)/2, fTop - h*0.4f), Size(sW*0.2f, h*0.4f))
         drawRoundRect(Color.DarkGray, Offset(sL + 4f, fTop - 15f), Size(sW - 8f, 15f), CornerRadius(10f, 10f))
 
         if (fH > 0f) {
+            // Base Liquid (Stock)
             drawRect(ThemePurple, Offset(sL, stockTop), Size(sW, stockH))
+            // Top Liquid (Diluent)
             if (fH > stockH) {
                 val path = Path().apply {
                     moveTo(sL, stockTop); lineTo(sL + sW, stockTop); lineTo(sL + sW, fTop)
@@ -508,9 +509,11 @@ fun AnimatedMultiLiquidSyringe(stockVolume: Float, diluentVolume: Float, maxVolu
             }
         }
 
+        // Glassmorphic Outer Barrel
         drawRoundRect(Color.White.copy(0.4f), Offset(sL, sTop), Size(sW, bH), CornerRadius(8f, 8f))
         drawRoundRect(Color.Gray.copy(0.8f), Offset(sL, sTop), Size(sW, bH), CornerRadius(8f, 8f), style = Stroke(4f))
 
+        // Tick Marks
         for (i in 1..10) {
             val y = sBot - (i * (bH/10)); val isMajor = i % 2 == 0
             drawLine(Color.Gray, Offset(sL, y), Offset(sL + (if(isMajor) sW*0.3f else sW*0.15f), y), strokeWidth = 3f)
@@ -529,15 +532,17 @@ fun AnimatedMultiLiquidSyringe(stockVolume: Float, diluentVolume: Float, maxVolu
 @Composable
 fun AnimatedIVBagGraphic(mgPerMl: Float) {
     val textMeasurer = rememberTextMeasurer()
-    val wave by rememberInfiniteTransition("").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2500, easing = LinearEasing)), label = "")
+    val wave by rememberInfiniteTransition(label = "").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2500, easing = LinearEasing)), label = "")
     val fill by animateFloatAsState(if (mgPerMl > 0) 0.7f else 0.1f, tween(1500), label = "")
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width; val h = size.height; val bW = w * 0.6f; val bL = (w - bW) / 2
         val bTop = h * 0.2f; val bBot = h * 0.8f; val bH = bBot - bTop
 
+        // Hanging Loop
         drawCircle(Color.Gray, radius = 10f, center = Offset(w/2, bTop - 15f), style = Stroke(4f))
 
+        // Fluid Level
         val fH = bH * fill; val fTop = bBot - fH
         val path = Path().apply {
             moveTo(bL, bBot); lineTo(bL + bW, bBot); lineTo(bL + bW, fTop)
@@ -546,10 +551,12 @@ fun AnimatedIVBagGraphic(mgPerMl: Float) {
         }
         drawPath(path, Brush.verticalGradient(listOf(ThemeTealLight, ThemeTeal)))
 
+        // Glassmorphic Bag
         drawRoundRect(Color.White.copy(0.3f), Offset(bL, bTop), Size(bW, bH), CornerRadius(20f, 20f))
         drawRoundRect(Color.Gray.copy(0.8f), Offset(bL, bTop), Size(bW, bH), CornerRadius(20f, 20f), style = Stroke(4f))
         drawRect(Color.Gray, Offset(w/2 - 10f, bBot), Size(20f, 20f))
 
+        // Label
         if (mgPerMl > 0) {
             val textLayout = textMeasurer.measure("${mgPerMl}mg/mL", TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold))
             drawText(textLayoutResult = textLayout, topLeft = Offset((w - textLayout.size.width) / 2, bTop + bH * 0.5f))
@@ -560,13 +567,15 @@ fun AnimatedIVBagGraphic(mgPerMl: Float) {
 @Composable
 fun AnimatedVialGraphic(drawVol: Float, maxVol: Float, diluentAdded: Float) {
     val fill by animateFloatAsState(if (diluentAdded > 0) 0.6f else 0.1f, tween(1500), label = "")
-    val wave by rememberInfiniteTransition("").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
+    val wave by rememberInfiniteTransition(label = "").animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width; val h = size.height; val vW = w * 0.5f; val vL = (w - vW) / 2
         val vBot = h * 0.9f; val vTop = h * 0.3f; val vH = vBot - vTop
 
         val fH = vH * fill; val fTop = vBot - fH
+
+        // Fluid Level
         if (diluentAdded > 0) {
             val path = Path().apply {
                 moveTo(vL, vBot); lineTo(vL + vW, vBot); lineTo(vL + vW, fTop)
@@ -575,13 +584,16 @@ fun AnimatedVialGraphic(drawVol: Float, maxVol: Float, diluentAdded: Float) {
             }
             drawPath(path, Brush.verticalGradient(listOf(ThemeBlueLight, ThemeBlue)))
         } else {
+            // Powder at the bottom
             drawRect(Color.LightGray, Offset(vL, vBot - 20f), Size(vW, 20f))
             for(i in 0..50) drawCircle(Color.White, 2f, Offset(vL + Random.nextInt(vW.toInt()), vBot - Random.nextInt(20)))
         }
 
+        // Glassmorphic Vial Body
         drawRoundRect(Color.White.copy(0.4f), Offset(vL, vTop), Size(vW, vH), CornerRadius(16f, 16f))
         drawRoundRect(Color.Gray.copy(0.8f), Offset(vL, vTop), Size(vW, vH), CornerRadius(16f, 16f), style = Stroke(4f))
 
+        // Vial Neck & Cap
         drawRect(Color.Gray.copy(0.8f), Offset(w/2 - vW*0.2f, vTop - 20f), Size(vW*0.4f, 20f), style = Stroke(4f))
         drawRoundRect(Color.LightGray, Offset(w/2 - vW*0.25f, vTop - 35f), Size(vW*0.5f, 15f), CornerRadius(4f, 4f))
         drawRoundRect(ThemePurple, Offset(w/2 - vW*0.25f, vTop - 35f), Size(vW*0.5f, 15f), CornerRadius(4f, 4f), style = Stroke(2f))
