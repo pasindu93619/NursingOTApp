@@ -25,35 +25,35 @@ object EcgWaveformGenerator {
 
         when (rhythm) {
             EcgRhythm.NSR -> {
-                val cycleW = 120f
+                val cycleW = 160f // Widened for slower, clearer reading
                 while (x < width) {
-                    path.lineTo(x + 10f, midY) // Isoelectric
-                    path.quadraticBezierTo(x + 18f, midY - height * 0.15f, x + 25f, midY) // P wave
-                    path.lineTo(x + 35f, midY) // PR segment
-                    path.lineTo(x + 40f, midY + height * 0.1f) // Q wave
-                    path.lineTo(x + 45f, midY - height * 0.5f) // R wave
-                    path.lineTo(x + 50f, midY + height * 0.15f) // S wave
-                    path.lineTo(x + 55f, midY) // J point
-                    path.lineTo(x + 75f, midY) // ST segment
-                    path.quadraticBezierTo(x + 85f, midY - height * 0.2f, x + 100f, midY) // T wave
+                    path.lineTo(x + 15f, midY) // Isoelectric
+                    path.quadraticBezierTo(x + 25f, midY - height * 0.15f, x + 35f, midY) // P wave
+                    path.lineTo(x + 45f, midY) // PR segment
+                    path.lineTo(x + 52f, midY + height * 0.1f) // Q wave
+                    path.lineTo(x + 60f, midY - height * 0.5f) // R wave
+                    path.lineTo(x + 68f, midY + height * 0.15f) // S wave
+                    path.lineTo(x + 75f, midY) // J point
+                    path.lineTo(x + 95f, midY) // ST segment
+                    path.quadraticBezierTo(x + 110f, midY - height * 0.2f, x + 130f, midY) // T wave
                     x += cycleW
                 }
             }
 
             EcgRhythm.SVT -> {
-                val cycleW = 50f
+                val cycleW = 70f // Widened for clarity
                 while (x < width) {
-                    path.lineTo(x + 10f, midY)
-                    path.lineTo(x + 15f, midY - height * 0.45f) // Narrow R
-                    path.lineTo(x + 20f, midY + height * 0.15f) // Narrow S
-                    path.lineTo(x + 25f, midY)
-                    path.quadraticBezierTo(x + 35f, midY - height * 0.15f, x + 45f, midY) // T wave
+                    path.lineTo(x + 15f, midY)
+                    path.lineTo(x + 22f, midY - height * 0.45f) // Narrow R
+                    path.lineTo(x + 28f, midY + height * 0.15f) // Narrow S
+                    path.lineTo(x + 35f, midY)
+                    path.quadraticBezierTo(x + 45f, midY - height * 0.15f, x + 55f, midY) // T wave
                     x += cycleW
                 }
             }
 
             EcgRhythm.VTACH -> {
-                val cycleW = 80f
+                val cycleW = 100f // Widened
                 while (x < width) {
                     path.quadraticBezierTo(x + cycleW * 0.25f, midY - height * 0.45f, x + cycleW * 0.5f, midY)
                     path.quadraticBezierTo(x + cycleW * 0.75f, midY + height * 0.45f, x + cycleW, midY)
@@ -63,7 +63,7 @@ object EcgWaveformGenerator {
 
             EcgRhythm.VFIB -> {
                 while (x < width) {
-                    val step = Random.nextInt(15, 35).toFloat()
+                    val step = Random.nextInt(25, 45).toFloat() // Widened
                     val nextX = x + step
                     val amp = Random.nextFloat() * (height * 0.4f) + (height * 0.1f)
                     val sign = if (Random.nextBoolean()) 1 else -1
@@ -74,29 +74,29 @@ object EcgWaveformGenerator {
 
             EcgRhythm.AFIB -> {
                 while (x < width) {
-                    val cycleW = Random.nextInt(70, 150).toFloat()
+                    val cycleW = Random.nextInt(90, 180).toFloat() // Widened
                     val qrsStart = x + (cycleW * 0.6f)
 
                     var fibX = x
                     while (fibX < qrsStart) {
-                        val fStep = 10f
+                        val fStep = 15f
                         val fAmp = Random.nextFloat() * (height * 0.08f)
                         val fSign = if (Random.nextBoolean()) 1 else -1
                         path.quadraticBezierTo(fibX + fStep/2, midY + (fAmp * fSign), fibX + fStep, midY)
                         fibX += fStep
                     }
 
-                    path.lineTo(qrsStart + 5f, midY - height * 0.45f)
-                    path.lineTo(qrsStart + 10f, midY + height * 0.15f)
-                    path.lineTo(qrsStart + 15f, midY)
-                    path.quadraticBezierTo(qrsStart + 25f, midY - height * 0.1f, qrsStart + 35f, midY)
+                    path.lineTo(qrsStart + 8f, midY - height * 0.45f)
+                    path.lineTo(qrsStart + 15f, midY + height * 0.15f)
+                    path.lineTo(qrsStart + 22f, midY)
+                    path.quadraticBezierTo(qrsStart + 35f, midY - height * 0.1f, qrsStart + 50f, midY)
                     x += cycleW
                 }
             }
 
             EcgRhythm.TORSADES -> {
-                val fastFreq = 0.1f
-                val slowFreq = 0.015f
+                val fastFreq = 0.08f // Slower frequency
+                val slowFreq = 0.010f // Slower frequency
                 val step = 5f
                 while (x < width) {
                     val envelope = sin(x * slowFreq)
@@ -108,28 +108,28 @@ object EcgWaveformGenerator {
             }
 
             EcgRhythm.HEART_BLOCK -> {
-                val pInterval = 70f
-                val qrsInterval = 220f
+                val pInterval = 90f // Widened
+                val qrsInterval = 280f // Widened
                 var pX = 10f
-                var qrsX = 50f
+                var qrsX = 60f
                 val step = 2f
                 while (x < width) {
                     var yOffset = 0f
-                    if (x > pX && x < pX + 20f) {
-                        val pProgress = (x - pX) / 20f
+                    if (x > pX && x < pX + 25f) {
+                        val pProgress = (x - pX) / 25f
                         yOffset -= sin(pProgress * PI.toFloat()) * (height * 0.15f)
-                    } else if (x >= pX + 20f) {
+                    } else if (x >= pX + 25f) {
                         pX += pInterval
                     }
 
-                    if (x > qrsX && x < qrsX + 40f) {
-                        val qrsProgress = (x - qrsX) / 40f
+                    if (x > qrsX && x < qrsX + 50f) {
+                        val qrsProgress = (x - qrsX) / 50f
                         yOffset -= sin(qrsProgress * PI.toFloat() * 2f) * (height * 0.4f)
-                    } else if (x >= qrsX + 40f) {
-                        if (x > qrsX + 50f && x < qrsX + 90f) {
-                            val tProgress = (x - (qrsX + 50f)) / 40f
+                    } else if (x >= qrsX + 50f) {
+                        if (x > qrsX + 60f && x < qrsX + 110f) {
+                            val tProgress = (x - (qrsX + 60f)) / 50f
                             yOffset += sin(tProgress * PI.toFloat()) * (height * 0.2f)
-                        } else if (x >= qrsX + 90f) {
+                        } else if (x >= qrsX + 110f) {
                             qrsX += qrsInterval
                         }
                     }
@@ -140,7 +140,7 @@ object EcgWaveformGenerator {
 
             EcgRhythm.ASYSTOLE -> {
                 while (x < width) {
-                    val step = 20f
+                    val step = 25f
                     val drift = (Random.nextFloat() - 0.5f) * (height * 0.03f)
                     path.lineTo(x + step, midY + drift)
                     x += step

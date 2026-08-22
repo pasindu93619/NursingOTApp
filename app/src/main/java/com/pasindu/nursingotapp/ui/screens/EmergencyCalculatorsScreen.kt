@@ -37,7 +37,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.TextStyle // <-- Ensures Compose TextStyle is used
+import androidx.compose.ui.text.TextStyle // Explicitly imported for Compose
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -453,7 +453,7 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
             // --- DRUG RESUSCITATION CARDS LIST ---
             Text("Emergency Crash Cart Dosing", fontSize = 16.sp, fontWeight = FontWeight.Black, color = EmergencySlateDark)
 
-            drugs.forEachIndexed { _, drug ->
+            drugs.forEach { drug ->
                 EmergencyDrugCard(
                     drug = drug,
                     weightKg = weight,
@@ -486,7 +486,7 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
     val offsetX by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2000f,
-        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
         label = "offset"
     )
 
@@ -522,7 +522,19 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
 
             // Animated ECG Trace Canvas using mathematical paths
             Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                val w = size.width
+                val h = size.height
+
                 drawRect(Color(0xFF1E293B).copy(alpha = 0.5f))
+
+                // Background Grid Lines for clarity
+                val gridSize = 10.dp.toPx()
+                for (x in 0..w.toInt() step gridSize.toInt()) {
+                    drawLine(Color.DarkGray.copy(alpha = 0.2f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h))
+                }
+                for (y in 0..h.toInt() step gridSize.toInt()) {
+                    drawLine(Color.DarkGray.copy(alpha = 0.2f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()))
+                }
 
                 val pathWidth = size.width + 2000f
                 val ecgPath = EcgWaveformGenerator.generatePath(rhythm, pathWidth, size.height)
@@ -530,6 +542,12 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
                 withTransform({
                     translate(left = -offsetX)
                 }) {
+                    // Faint glow behind the line
+                    drawPath(
+                        path = ecgPath,
+                        color = rhythm.color.copy(alpha = 0.3f),
+                        style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
                     drawPath(
                         path = ecgPath,
                         color = rhythm.color,
@@ -835,7 +853,7 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                     val offsetX by infiniteTransition.animateFloat(
                         initialValue = 0f,
                         targetValue = 2000f,
-                        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart),
+                        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
                         label = "offset"
                     )
 
@@ -859,6 +877,11 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                         withTransform({
                             translate(left = -offsetX)
                         }) {
+                            drawPath(
+                                path = ecgPath,
+                                color = rhythm.color.copy(alpha = 0.3f),
+                                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                            )
                             drawPath(
                                 path = ecgPath,
                                 color = rhythm.color,
