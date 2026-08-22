@@ -1,19 +1,14 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ZoomIn
@@ -31,36 +25,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextStyle // <-- Ensures Compose TextStyle is used
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.zIndex
+import com.pasindu.nursingotapp.ui.components.EcgWaveformGenerator
 import kotlinx.coroutines.delay
 import java.util.Locale
-import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 
 // --- THEME PALETTE ---
 private val EmergencyBgWhite = Color(0xFFF4F7FB)
@@ -417,7 +405,6 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Preset Quick-Select Weight Chips
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(listOf("10", "20", "50", "60", "70", "80", "100")) { preset ->
                             val isSelected = weightInput == preset
@@ -466,7 +453,7 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
             // --- DRUG RESUSCITATION CARDS LIST ---
             Text("Emergency Crash Cart Dosing", fontSize = 16.sp, fontWeight = FontWeight.Black, color = EmergencySlateDark)
 
-            drugs.forEachIndexed { index, drug ->
+            drugs.forEachIndexed { _, drug ->
                 EmergencyDrugCard(
                     drug = drug,
                     weightKg = weight,
@@ -480,12 +467,10 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // --- FULL-SCREEN ECG ANALYSIS DIALOG ---
         if (zoomedEcg != null) {
             EcgZoomAnalysisDialog(rhythm = zoomedEcg!!, onDismiss = { zoomedEcg = null })
         }
 
-        // --- DETAILED DRUG MECHANISM OF ACTION DIALOG ---
         if (selectedDrug != null) {
             DrugMoADetailDialog(drug = selectedDrug!!, onDismiss = { selectedDrug = null })
         }
@@ -493,15 +478,15 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 🫀 INTERACTIVE ECG MINI STRIP CARD
+// 🫀 INTERACTIVE ECG MINI STRIP CARD (INTEGRATED WITH GENERATOR)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
     val infiniteTransition = rememberInfiniteTransition(label = "ecg_pulse")
-    val waveOffset by infiniteTransition.animateFloat(
+    val offsetX by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Restart),
+        targetValue = 2000f,
+        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart),
         label = "offset"
     )
 
@@ -535,39 +520,22 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Animated ECG Trace Canvas
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val w = size.width
-                val h = size.height
-                val midY = h / 2f
-
-                // Trace background grid
+            // Animated ECG Trace Canvas using mathematical paths
+            Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 drawRect(Color(0xFF1E293B).copy(alpha = 0.5f))
 
-                val path = Path()
-                path.moveTo(0f, midY)
+                val pathWidth = size.width + 2000f
+                val ecgPath = EcgWaveformGenerator.generatePath(rhythm, pathWidth, size.height)
 
-                val numPoints = 60
-                for (i in 0..numPoints) {
-                    val x = (i / numPoints.toFloat()) * w
-                    val phase = ((i / numPoints.toFloat()) + waveOffset) % 1f
-                    val y = when (rhythm) {
-                        EcgRhythm.NSR -> {
-                            if (phase in 0.45f..0.55f) {
-                                if (phase in 0.48f..0.50f) midY - (h * 0.4f)
-                                else if (phase in 0.50f..0.52f) midY + (h * 0.3f)
-                                else midY
-                            } else midY
-                        }
-                        EcgRhythm.VFIB -> midY + sin(phase * 20f * PI.toFloat()) * (h * 0.35f * (0.5f + (phase % 0.5f)))
-                        EcgRhythm.VTACH -> midY + sin(phase * 10f * PI.toFloat()) * (h * 0.4f)
-                        EcgRhythm.ASYSTOLE -> midY + (sin(phase * 2f * PI.toFloat()) * 2f)
-                        else -> midY + sin(phase * 8f * PI.toFloat()) * (h * 0.25f)
-                    }
-                    path.lineTo(x, y)
+                withTransform({
+                    translate(left = -offsetX)
+                }) {
+                    drawPath(
+                        path = ecgPath,
+                        color = rhythm.color,
+                        style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
                 }
-
-                drawPath(path, color = rhythm.color, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
         }
     }
@@ -816,7 +784,7 @@ fun DrugMoADetailDialog(drug: EmergencyDrug, onDismiss: () -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 📈 FULL-SCREEN ECG ZOOM & ACLS INTERVENTION DIALOG
+// 📈 FULL-SCREEN ECG ZOOM & ACLS INTERVENTION DIALOG (INTEGRATED GENERATOR)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
@@ -864,19 +832,18 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                         .border(1.dp, rhythm.color.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "zoom_wave")
-                    val phaseOffset by infiniteTransition.animateFloat(
+                    val offsetX by infiniteTransition.animateFloat(
                         initialValue = 0f,
-                        targetValue = 1f,
-                        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
+                        targetValue = 2000f,
+                        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart),
                         label = "offset"
                     )
 
-                    Canvas(modifier = Modifier.fillMaxSize()) {
+                    Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
                         val w = size.width
                         val h = size.height
-                        val midY = h / 2f
 
-                        // Grid Lines
+                        // Background Grid Lines
                         val gridSize = 20.dp.toPx()
                         for (x in 0..w.toInt() step gridSize.toInt()) {
                             drawLine(Color.DarkGray.copy(alpha = 0.3f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h))
@@ -885,29 +852,19 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                             drawLine(Color.DarkGray.copy(alpha = 0.3f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()))
                         }
 
-                        val path = Path()
-                        path.moveTo(0f, midY)
-                        val numPoints = 120
-                        for (i in 0..numPoints) {
-                            val x = (i / numPoints.toFloat()) * w
-                            val phase = ((i / numPoints.toFloat()) + phaseOffset) % 1f
-                            val y = when (rhythm) {
-                                EcgRhythm.NSR -> {
-                                    if (phase in 0.45f..0.55f) {
-                                        if (phase in 0.48f..0.50f) midY - (h * 0.42f)
-                                        else if (phase in 0.50f..0.52f) midY + (h * 0.32f)
-                                        else midY
-                                    } else midY
-                                }
-                                EcgRhythm.VFIB -> midY + sin(phase * 24f * PI.toFloat()) * (h * 0.38f * (0.5f + (phase % 0.5f)))
-                                EcgRhythm.VTACH -> midY + sin(phase * 12f * PI.toFloat()) * (h * 0.42f)
-                                EcgRhythm.ASYSTOLE -> midY + (sin(phase * 2f * PI.toFloat()) * 2f)
-                                else -> midY + sin(phase * 10f * PI.toFloat()) * (h * 0.3f)
-                            }
-                            path.lineTo(x, y)
-                        }
+                        // Medical Path Generation
+                        val pathWidth = size.width + 2000f
+                        val ecgPath = EcgWaveformGenerator.generatePath(rhythm, pathWidth, size.height)
 
-                        drawPath(path, color = rhythm.color, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        withTransform({
+                            translate(left = -offsetX)
+                        }) {
+                            drawPath(
+                                path = ecgPath,
+                                color = rhythm.color,
+                                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                            )
+                        }
                     }
                 }
 
