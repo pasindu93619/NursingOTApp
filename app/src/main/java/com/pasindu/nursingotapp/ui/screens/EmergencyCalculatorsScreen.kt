@@ -453,6 +453,7 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
             // --- DRUG RESUSCITATION CARDS LIST ---
             Text("Emergency Crash Cart Dosing", fontSize = 16.sp, fontWeight = FontWeight.Black, color = EmergencySlateDark)
 
+            // FIX: Using selectedDrug directly to prevent Unresolved Reference
             drugs.forEach { drug ->
                 EmergencyDrugCard(
                     drug = drug,
@@ -478,7 +479,7 @@ fun EmergencyCalculatorsScreen(onNavigateBack: () -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 🫀 INTERACTIVE ECG MINI STRIP CARD (INTEGRATED WITH GENERATOR)
+// 🫀 INTERACTIVE ECG MINI STRIP CARD (INTEGRATED WITH GENERATOR & GRID)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
@@ -486,7 +487,8 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
     val offsetX by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2000f,
-        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
+        // Increased to 25,000ms for a very slow, realistic monitor sweep
+        animationSpec = infiniteRepeatable(tween(25000, easing = LinearEasing), RepeatMode.Restart),
         label = "offset"
     )
 
@@ -498,7 +500,7 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
             .clip(RoundedCornerShape(18.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)) // Slate Black Monitor
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(
@@ -520,20 +522,32 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Animated ECG Trace Canvas using mathematical paths
+            // Animated ECG Trace Canvas with Clinical Grid
             Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 val w = size.width
                 val h = size.height
 
-                drawRect(Color(0xFF1E293B).copy(alpha = 0.5f))
+                // Draw solid background
+                drawRect(Color(0xFF0F172A))
 
-                // Background Grid Lines for clarity
-                val gridSize = 10.dp.toPx()
-                for (x in 0..w.toInt() step gridSize.toInt()) {
-                    drawLine(Color.DarkGray.copy(alpha = 0.2f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h))
+                // Medical Monitor Major/Minor Grid
+                val minorGridSize = 10.dp.toPx()
+                val majorGridSize = 50.dp.toPx()
+
+                // Minor Grid Lines (Faint)
+                for (x in 0..w.toInt() step minorGridSize.toInt()) {
+                    drawLine(Color.Gray.copy(alpha = 0.1f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h))
                 }
-                for (y in 0..h.toInt() step gridSize.toInt()) {
-                    drawLine(Color.DarkGray.copy(alpha = 0.2f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()))
+                for (y in 0..h.toInt() step minorGridSize.toInt()) {
+                    drawLine(Color.Gray.copy(alpha = 0.1f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()))
+                }
+
+                // Major Grid Lines (Darker)
+                for (x in 0..w.toInt() step majorGridSize.toInt()) {
+                    drawLine(Color.Gray.copy(alpha = 0.25f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h), strokeWidth = 2f)
+                }
+                for (y in 0..h.toInt() step majorGridSize.toInt()) {
+                    drawLine(Color.Gray.copy(alpha = 0.25f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()), strokeWidth = 2f)
                 }
 
                 val pathWidth = size.width + 2000f
@@ -542,12 +556,13 @@ fun EcgMiniStripCard(rhythm: EcgRhythm, onClick: () -> Unit) {
                 withTransform({
                     translate(left = -offsetX)
                 }) {
-                    // Faint glow behind the line
+                    // Faint glow behind the line to simulate CRT phosphors
                     drawPath(
                         path = ecgPath,
-                        color = rhythm.color.copy(alpha = 0.3f),
-                        style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                        color = rhythm.color.copy(alpha = 0.25f),
+                        style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                     )
+                    // Sharp actual trace line
                     drawPath(
                         path = ecgPath,
                         color = rhythm.color,
@@ -802,7 +817,7 @@ fun DrugMoADetailDialog(drug: EmergencyDrug, onDismiss: () -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 📈 FULL-SCREEN ECG ZOOM & ACLS INTERVENTION DIALOG (INTEGRATED GENERATOR)
+// 📈 FULL-SCREEN ECG ZOOM & ACLS INTERVENTION DIALOG (INTEGRATED GENERATOR & GRID)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
@@ -844,16 +859,17 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp)
+                        .height(180.dp)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFF020617))
+                        .background(Color(0xFF020617)) // Darkest Slate
                         .border(1.dp, rhythm.color.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "zoom_wave")
                     val offsetX by infiniteTransition.animateFloat(
                         initialValue = 0f,
                         targetValue = 2000f,
-                        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
+                        // Increased to 25,000ms for slow, realistic clinical sweep
+                        animationSpec = infiniteRepeatable(tween(25000, easing = LinearEasing), RepeatMode.Restart),
                         label = "offset"
                     )
 
@@ -861,13 +877,24 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                         val w = size.width
                         val h = size.height
 
-                        // Background Grid Lines
-                        val gridSize = 20.dp.toPx()
-                        for (x in 0..w.toInt() step gridSize.toInt()) {
-                            drawLine(Color.DarkGray.copy(alpha = 0.3f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h))
+                        // Major & Minor Medical Grid Lines
+                        val minorGridSize = 10.dp.toPx()
+                        val majorGridSize = 50.dp.toPx()
+
+                        // Minor Grid Lines (Faint)
+                        for (x in 0..w.toInt() step minorGridSize.toInt()) {
+                            drawLine(Color.DarkGray.copy(alpha = 0.15f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h))
                         }
-                        for (y in 0..h.toInt() step gridSize.toInt()) {
-                            drawLine(Color.DarkGray.copy(alpha = 0.3f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()))
+                        for (y in 0..h.toInt() step minorGridSize.toInt()) {
+                            drawLine(Color.DarkGray.copy(alpha = 0.15f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()))
+                        }
+
+                        // Major Grid Lines (Darker/Thicker)
+                        for (x in 0..w.toInt() step majorGridSize.toInt()) {
+                            drawLine(Color.DarkGray.copy(alpha = 0.4f), Offset(x.toFloat(), 0f), Offset(x.toFloat(), h), strokeWidth = 2f)
+                        }
+                        for (y in 0..h.toInt() step majorGridSize.toInt()) {
+                            drawLine(Color.DarkGray.copy(alpha = 0.4f), Offset(0f, y.toFloat()), Offset(w, y.toFloat()), strokeWidth = 2f)
                         }
 
                         // Medical Path Generation
@@ -877,11 +904,13 @@ fun EcgZoomAnalysisDialog(rhythm: EcgRhythm, onDismiss: () -> Unit) {
                         withTransform({
                             translate(left = -offsetX)
                         }) {
+                            // Faint monitor glow
                             drawPath(
                                 path = ecgPath,
-                                color = rhythm.color.copy(alpha = 0.3f),
-                                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                                color = rhythm.color.copy(alpha = 0.25f),
+                                style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                             )
+                            // Sharp actual trace line
                             drawPath(
                                 path = ecgPath,
                                 color = rhythm.color,
