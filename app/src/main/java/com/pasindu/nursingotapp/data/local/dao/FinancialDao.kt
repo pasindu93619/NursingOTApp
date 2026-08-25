@@ -15,15 +15,12 @@ interface FinancialDao {
         record: FinancialRecordEntity
     )
 
-    @Query(
-        "SELECT * FROM financial_records ORDER BY id DESC"
-    )
-    fun getAllFinancialRecords():
-            Flow<List<FinancialRecordEntity>>
+    @Query("SELECT * FROM financial_records ORDER BY id DESC")
+    fun getAllFinancialRecords(): Flow<List<FinancialRecordEntity>>
 
     @Query(
         "SELECT * FROM financial_records " +
-                "WHERE monthYear = :monthYear " +
+                "WHERE recordMonth = :monthYear " +
                 "LIMIT 1"
     )
     suspend fun getRecordByMonth(
