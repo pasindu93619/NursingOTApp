@@ -19,14 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.ui.FinancialViewModel
-import com.patrykandpatryk.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatryk.vico.compose.cartesian.axis.rememberBottomAxis
-import com.patrykandpatryk.vico.compose.cartesian.axis.rememberStartAxis
-import com.patrykandpatryk.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatryk.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatryk.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatryk.vico.core.cartesian.data.columnSeries
-import com.patrykandpatryk.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,11 +137,7 @@ fun FinancialDashboardScreen(
 
                     CartesianChartHost(
                         chart = rememberCartesianChart(
-                            rememberColumnCartesianLayer(
-                                sublayerCombiningMode = ColumnCartesianLayer.SublayerCombiningMode.Stacked
-                            ),
-                            startAxis = rememberStartAxis(),
-                            bottomAxis = rememberBottomAxis()
+                            rememberColumnCartesianLayer()
                         ),
                         modelProducer = modelProducer,
                         modifier = Modifier
