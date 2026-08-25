@@ -39,7 +39,7 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "home", // Starts at the Dashboard
+        startDestination = "home",
         enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) + fadeIn(animationSpec = tween(animDuration)) },
         exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) },
         popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeIn(animationSpec = tween(animDuration)) },
@@ -56,12 +56,11 @@ fun AppNavigation() {
             )
         }
 
-        // --- DATA GATHERING (PROFILE) ---
+        // --- DATA GATHERING (PROFILE & CLAIMS) ---
         composable("profile") {
             ProfileScreen(
                 viewModel = viewModel,
                 onNavigateToClaimPeriod = { _, _ ->
-                    // Routes to the calendar after saving data
                     navController.navigate("claim_period") { popUpTo("home") { inclusive = false } }
                 }
             )
@@ -81,6 +80,33 @@ fun AppNavigation() {
             AnalyticsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        // --- SUPER APP MODULES ---
+        composable("financial_dashboard") {
+            // Placeholder / Integrated screen route for Advanced Financial Management & Vico Charts
+            AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable("clinical_planning") {
+            // Placeholder / Integrated screen route for ISBAR Handover & Task Management[cite: 3]
+            ClinicalToolsScreen(
+                onNavigateToIvDrip = { navController.navigate("iv_drip") },
+                onNavigateToDosage = { navController.navigate("dosage_calc") },
+                onNavigateToWeightInfusion = { navController.navigate("weight_infusion") },
+                onNavigateToBsa = { navController.navigate("bsa_calc") },
+                onNavigateToPediatric = { navController.navigate("pediatric_rules") },
+                onNavigateToConversions = { navController.navigate("unit_conversions") },
+                onNavigateToSpecialCalcs = { navController.navigate("special_calcs") },
+                onNavigateToEmergency = { navController.navigate("emergency_calcs") },
+                onNavigateToIcu = { navController.navigate("icu_calculators") },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("knowledge_hub") {
+            // Placeholder route for Knowledge Hub & CPD Tracker[cite: 3]
+            AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // --- CLINICAL TOOLS MENU ---

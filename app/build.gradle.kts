@@ -41,22 +41,25 @@ android {
     buildFeatures {
         compose = true
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
-// Top-level KSP configuration for Room schema exports
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
-    // ─── Core Android & Lifecycle ───
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
-    // ─── Jetpack Compose (Managed by BOM) ───
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -64,10 +67,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
 
-    // Premium Material Icons (Version is managed automatically by the BOM)
     implementation("androidx.compose.material:material-icons-extended")
 
-    // ─── Room Database & Coroutines ───
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
@@ -75,32 +76,30 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // ─── PDF / Printing ───
     implementation(libs.androidx.print)
 
-    // ─── UI Libraries (Lottie & Vico Charts) ───
     implementation("com.airbnb.android:lottie-compose:6.4.0")
 
     val vicoVersion = "1.13.0"
     implementation("com.patrykandpatrick.vico:compose:$vicoVersion")
     implementation("com.patrykandpatrick.vico:compose-m3:$vicoVersion")
-    implementation("com.patrykandpatrick.vico:core:$vicoVersion") // Fixed from core-model
+    implementation("com.patrykandpatrick.vico:core:$vicoVersion")
 
-    // ─── CameraX for AR Split Screen Sync ───
     val cameraxVersion = "1.4.0"
     implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // ─── Unit & UI Testing ───
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    // Removed ML Kit text-recognition to prevent 16 KB native load crash on Android 15+ devices[cite: 1]
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
-    // ─── Debug Tooling ───
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

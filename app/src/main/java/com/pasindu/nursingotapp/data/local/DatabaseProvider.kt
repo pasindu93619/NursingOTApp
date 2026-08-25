@@ -16,11 +16,12 @@ object DatabaseProvider {
 
     private fun buildDatabase(context: Context): AppDatabase {
         return Room.databaseBuilder(
-            context,
+            context.applicationContext,
             AppDatabase::class.java,
             "nursing_ot_app.db"
         )
-            .fallbackToDestructiveMigration() // This fixes the crash!
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration() // Automatically clears and recreates tables on hash mismatches during development
             .build()
     }
 }

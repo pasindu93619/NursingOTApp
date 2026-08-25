@@ -17,15 +17,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,7 +53,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.isActive
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -67,7 +62,6 @@ enum class ArState { SYNCING, INSTRUCTIONS, CALIBRATING, RESULT }
 enum class InfusionMode(val title: String, val emoji: String) { GRAVITY("Gravity Drip", "💧"), PUMP("IV Pump", "📟") }
 enum class PumpCalcMode(val title: String) { BASIC("Vol / Time"), DOSE("mcg/kg/min"), TITRATION("Titrate") }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
     val haptic = LocalHapticFeedback.current
@@ -190,7 +184,7 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
         )
     }
 
-    // --- AR FULL-SCREEN SYNC MODE DIALOG (Original AR Code kept exact) ---
+    // --- AR FULL-SCREEN SYNC MODE DIALOG ---
     if (showSyncMode && dropsPerMinute > 0) {
         val context = LocalContext.current
         var hasCameraPermission by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
@@ -325,15 +319,22 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
         }
     }
 
-    // --- MAIN UI CARD (DUAL MODE) ---
-    Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp), shape = RoundedCornerShape(24.dp)) {
+    // --- MAIN UI CARD (FORCED LIGHT THEME & COOL TECH BLUE PALETTE) ---
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF8FAFC) // Crisp slate-white background mandate
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        shape = RoundedCornerShape(24.dp)
+    ) {
         Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
 
             // Mode Toggle Header
             Row(modifier = Modifier.fillMaxWidth().background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(20.dp)).padding(4.dp)) {
                 InfusionMode.values().forEach { mode ->
                     val isSelected = currentMode == mode
-                    val bgColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, label = "")
+                    val bgColor by animateColorAsState(if (isSelected) Color(0xFF0284C7) else Color.Transparent, label = "") // Cool Tech Blue primary
                     val textColor by animateColorAsState(if (isSelected) Color.White else Color.Gray, label = "")
                     Box(
                         modifier = Modifier.weight(1f).height(45.dp).background(bgColor, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentMode = mode }.padding(horizontal = 16.dp),
@@ -356,15 +357,15 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                             Spacer(modifier = Modifier.height(32.dp))
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Select IV Giving Set", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                                IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Info, contentDescription = "Learn more", tint = MaterialTheme.colorScheme.primary) }
+                                Text("Select IV Giving Set", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+                                IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Info, contentDescription = "Learn more", tint = Color(0xFF0284C7)) }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 dropFactors.forEach { factor ->
                                     val isSelected = selectedDropFactor == factor
                                     val isMicro = factor == 60
-                                    val bgColor by animateColorAsState(if (isSelected) { if (isMicro) Color(0xFF8E24AA) else MaterialTheme.colorScheme.primary } else Color(0xFFF5F5F5), label = "")
+                                    val bgColor by animateColorAsState(if (isSelected) { if (isMicro) Color(0xFF8E24AA) else Color(0xFF0284C7) } else Color(0xFFF5F5F5), label = "")
                                     val textColor by animateColorAsState(if (isSelected) Color.White else Color.DarkGray, label = "")
 
                                     Surface(modifier = Modifier.weight(1f).padding(horizontal = 4.dp).height(60.dp).clickable { selectedDropFactor = factor; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }, shape = RoundedCornerShape(12.dp), color = bgColor, shadowElevation = if (isSelected) 6.dp else 0.dp) {
@@ -380,8 +381,8 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                             AnimatedContent(targetState = selectedDropFactor, transitionSpec = { (slideInVertically { height -> height / 2 } + fadeIn(tween(300))).togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(300))).using(SizeTransform(clip = false)) }, label = "info_animation") { factor ->
                                 val (guideColor, guideTitle, guideText) = when (factor) {
                                     10 -> Triple(Color(0xFFE53935), "MACRO (10 gtt/mL)", "Used for Blood Transfusions & Rapid Trauma Resuscitation. (Thick fluids)")
-                                    15 -> Triple(MaterialTheme.colorScheme.primary, "MACRO (15 gtt/mL)", "Standard Adult Infusion. Used for normal Saline, Hydration & IV meds.")
-                                    20 -> Triple(MaterialTheme.colorScheme.primary, "MACRO (20 gtt/mL)", "Standard Adult Infusion. Used for normal Saline, Hydration & IV meds.")
+                                    15 -> Triple(Color(0xFF0284C7), "MACRO (15 gtt/mL)", "Standard Adult Infusion. Used for normal Saline, Hydration & IV meds.")
+                                    20 -> Triple(Color(0xFF0284C7), "MACRO (20 gtt/mL)", "Standard Adult Infusion. Used for normal Saline, Hydration & IV meds.")
                                     60 -> Triple(Color(0xFF8E24AA), "MICRO (60 gtt/mL)", "Used for Pediatric Sets & Critical Care. Extreme precision for exact dosing.")
                                     else -> Triple(Color.Gray, "", "")
                                 }
@@ -391,32 +392,32 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                                     Column {
                                         Text(text = guideTitle, fontSize = 12.sp, color = guideColor, fontWeight = FontWeight.ExtraBold)
                                         Spacer(modifier = Modifier.height(2.dp))
-                                        Text(text = guideText, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), fontWeight = FontWeight.SemiBold, lineHeight = 18.sp)
+                                        Text(text = guideText, fontSize = 13.sp, color = Color(0xFF0F172A).copy(alpha = 0.8f), fontWeight = FontWeight.SemiBold, lineHeight = 18.sp)
                                     }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(32.dp))
-                            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(24.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFFE0F2FE)).padding(24.dp), contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Required Infusion Rate", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+                                    Text("Required Infusion Rate", fontSize = 14.sp, color = Color(0xFF0369A1), fontWeight = FontWeight.Bold)
                                     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 8.dp)) {
-                                        Text(text = if (dropsPerMinute > 0) dropsPerMinute.toString() else "0", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                        Text(text = if (dropsPerMinute > 0) dropsPerMinute.toString() else "0", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 12.dp)) {
                                             Text("💧", fontSize = 24.sp, modifier = Modifier.graphicsLayer(scaleX = mainScreenDropScale, scaleY = mainScreenDropScale))
-                                            Text("drops/min", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                            Text("drops/min", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0369A1))
                                         }
                                     }
                                     if (dropsPerMinute > 0) {
                                         Spacer(modifier = Modifier.height(24.dp))
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showSafetyWarning = true }.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(Color(0xFF0284C7), RoundedCornerShape(8.dp)).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showSafetyWarning = true }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                                                 Text("👁️", fontSize = 14.sp); Spacer(modifier = Modifier.width(8.dp))
                                                 Text("OPEN AR SYNC MODE", fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.ExtraBold)
                                             }
                                             Spacer(modifier = Modifier.width(12.dp))
-                                            Box(modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); showScienceDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+                                            Box(modifier = Modifier.size(42.dp).background(Color(0xFFBAE6FD), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); showScienceDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
                                         }
                                     }
                                 }
@@ -479,16 +480,14 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                             }
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // UPGRADED 3D MEDICAL ROTARY PUMP DISPLAY
+                            // 3D MEDICAL ROTARY PUMP DISPLAY
                             Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF0F172A), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFF334155), RoundedCornerShape(16.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
 
-                                    // Left: NEW 3D Animated Futuristic Pump Graphic
                                     Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
                                         AnimatedVolumetricPumpGraphic(rate = pumpRateMlHr)
                                     }
 
-                                    // Right: Digital Readout
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text("PUMP RATE", color = Color(0xFF00E676), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
                                         Spacer(modifier = Modifier.height(4.dp))
@@ -507,17 +506,15 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
     }
 }
 
-// --- NEW 3D FUTURISTIC ROTARY PERISTALTIC PUMP GRAPHIC ---
+// --- 3D ROTARY PERISTALTIC PUMP GRAPHIC ---
 @Composable
 fun AnimatedVolumetricPumpGraphic(rate: Float) {
-    // Dynamic Rotation Speed based on mL/hr rate
     var rotationAngle by remember { mutableFloatStateOf(0f) }
     val animatedSpeed by animateFloatAsState(
         targetValue = if (rate > 0) (rate / 20f).coerceIn(1f, 25f) else 0f,
         label = "pump_speed"
     )
 
-    // Pulsing fluid effect
     val infiniteTransition = rememberInfiniteTransition(label = "")
     val glowPulse by infiniteTransition.animateFloat(
         initialValue = 0.6f,
@@ -546,20 +543,17 @@ fun AnimatedVolumetricPumpGraphic(rate: Float) {
         val outerRadius = w * 0.45f
         val innerRadius = w * 0.28f
 
-        // 1. Futuristic Housing
         drawCircle(
             brush = Brush.radialGradient(colors = listOf(Color(0xFF1E293B), Color(0xFF020617)), center = center, radius = outerRadius),
             radius = outerRadius,
             center = center
         )
-        // Metallic rim
         drawCircle(
             brush = Brush.sweepGradient(colors = listOf(Color.Gray, Color.LightGray, Color.DarkGray, Color.Gray), center = center),
             radius = outerRadius,
             style = Stroke(width = 6f)
         )
 
-        // Outer Glowing Flow Ring
         if (rate > 0) {
             drawArc(
                 brush = Brush.sweepGradient(colors = listOf(Color.Transparent, Color(0xFF00E676), Color.Transparent), center = center),
@@ -572,7 +566,6 @@ fun AnimatedVolumetricPumpGraphic(rate: Float) {
             )
         }
 
-        // 2. The IV Tubing
         val tubeColor = if (rate > 0) Color(0xFF00E676) else Color.DarkGray.copy(alpha = 0.5f)
 
         val tubePath = androidx.compose.ui.graphics.Path().apply {
@@ -585,19 +578,14 @@ fun AnimatedVolumetricPumpGraphic(rate: Float) {
             lineTo(center.x + innerRadius + 12f, -20f)
         }
 
-        // Outer dark tube casing
         drawPath(path = tubePath, color = Color.Black.copy(alpha = 0.8f), style = Stroke(width = 20f, cap = StrokeCap.Round))
-        // Inner glowing fluid
         drawPath(path = tubePath, color = tubeColor.copy(alpha = if (rate > 0) glowPulse else 0.5f), style = Stroke(width = 10f, cap = StrokeCap.Round))
 
-        // 3. Central Mechanical Rotor
         drawCircle(color = Color(0xFF020617), radius = innerRadius, center = center)
         drawCircle(color = Color(0xFF334155), radius = innerRadius, center = center, style = Stroke(width = 4f))
 
-        // Center spindle
         drawCircle(brush = Brush.radialGradient(listOf(Color.LightGray, Color.DarkGray)), radius = w * 0.08f, center = center)
 
-        // 4 Rotating Rollers
         for (i in 0 until 4) {
             val angleRad = Math.toRadians((rotationAngle + (i * 90f)).toDouble())
             val rollerX = center.x + (innerRadius * 0.75f) * cos(angleRad).toFloat()
@@ -609,7 +597,6 @@ fun AnimatedVolumetricPumpGraphic(rate: Float) {
             drawCircle(color = Color.Black, radius = w * 0.03f, center = Offset(rollerX, rollerY))
         }
 
-        // 4. Directional Fluid Flow Indicators
         if (rate > 0) {
             val flowOffset = (rotationAngle % 60f) / 60f
             val dropY = h * flowOffset
@@ -619,18 +606,18 @@ fun AnimatedVolumetricPumpGraphic(rate: Float) {
     }
 }
 
-// --- CONTEXT-AWARE CLINICAL GUIDE ---
+// --- CLINICAL GUIDE DIALOG ---
 @Composable
 fun InfusionGuideDialog(mode: InfusionMode, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))) {
             Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(mode.emoji, fontSize = 32.sp)
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("Clinical Guide", fontSize = 14.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text(mode.title, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(mode.title, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = Color(0xFF0284C7))
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -638,10 +625,10 @@ fun InfusionGuideDialog(mode: InfusionMode, onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 if (mode == InfusionMode.GRAVITY) {
-                    Text("What is a Drop Factor?", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                    Text("What is a Drop Factor?", fontWeight = FontWeight.ExtraBold, color = Color(0xFF0284C7))
                     Text("The number of drops required to make exactly 1 milliliter (1 cc) of fluid.", fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Physical Differences", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                    Text("Physical Differences", fontWeight = FontWeight.ExtraBold, color = Color(0xFF0284C7))
                     Text("• Macro Sets (10, 15, 20): Have a wide plastic opening. Used for standard hydration, thick fluids, or rapid trauma resuscitation.\n• Micro Sets (60): Have a tiny needle inside the chamber. Used for Pediatric Sets & Critical Care precision.", fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Crucial Check", fontWeight = FontWeight.ExtraBold, color = Color(0xFFE53935))
@@ -679,13 +666,13 @@ fun InfusionGuideDialog(mode: InfusionMode, onDismiss: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Understood", fontWeight = FontWeight.Bold) }
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))) { Text("Understood", fontWeight = FontWeight.Bold) }
             }
         }
     }
 }
 
-// CUSTOM CANVAS GRAPHIC: Dynamic Accuracy Spectrum
+// --- ACCURACY SPECTRUM GRAPHIC ---
 @Composable
 fun AccuracySpectrumGraphic(dpm: Int) {
     val pulseScale by rememberInfiniteTransition(label = "").animateFloat(initialValue = 0.8f, targetValue = 1.2f, animationSpec = infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse), label = "")
@@ -701,7 +688,7 @@ fun AccuracySpectrumGraphic(dpm: Int) {
     }
 }
 
-// AR Hologram
+// --- AR HOLOGRAM ---
 @Composable
 fun HologramDripChamberGraphic(factor: Int, progress: Float, modifier: Modifier = Modifier) {
     val isMicro = factor == 60
@@ -727,7 +714,7 @@ fun HologramDripChamberGraphic(factor: Int, progress: Float, modifier: Modifier 
     }
 }
 
-// Mini Graphic
+// --- MINI GRAPHIC ---
 @Composable
 fun AnimatedMiniDripChamberGraphic(factor: Int, accentColor: Color, progress: Float, modifier: Modifier = Modifier) {
     val isMicro = factor == 60
@@ -750,6 +737,7 @@ fun AnimatedMiniDripChamberGraphic(factor: Int, accentColor: Color, progress: Fl
     }
 }
 
+// --- LIVE CAMERA PREVIEW ---
 @Composable
 fun LiveCameraPreview(isFlashlightOn: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -777,30 +765,31 @@ fun LiveCameraPreview(isFlashlightOn: Boolean, modifier: Modifier = Modifier) {
         update = { cameraControl?.enableTorch(isFlashlightOn) },
         modifier = modifier
     )
-}// Separate Science Dialog for clean code
+}
+
+// --- SCIENCE DIALOG ---
 @Composable
 fun GravityScienceDialog(dropsPerMinute: Int, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Card(
             modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))
         ) {
-            // Force the background color here to fix the black screen bug
-            Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(24.dp).verticalScroll(rememberScrollState())) {
+            Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC)).padding(24.dp).verticalScroll(rememberScrollState())) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("🔬", fontSize = 28.sp); Spacer(modifier = Modifier.width(12.dp))
-                    Text("The Science of AR Sync", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
+                    Text("The Science of AR Sync", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = Color(0xFF0284C7))
                 }
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("1. Phase Matching (The Illusion of One)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("1. Phase Matching (The Illusion of One)", fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("The human visual cortex is highly evolved to detect rhythmic mismatches. By projecting a mathematically perfect neon wireframe over the physical IV chamber, your brain uses 'Visual Phase Matching'. When the real drop aligns perfectly with the neon drop, your brain merges them into a single visual event, instantly confirming synchronization.", fontSize = 14.sp, color = Color.Gray, lineHeight = 20.sp)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("2. Why We Don't Use AI Cameras", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("2. Why We Don't Use AI Cameras", fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Artificial Intelligence struggles with 'Clear-on-Clear' objects (clear water falling in clear plastic). Fluorescent hospital lights and glossy plastic cause intense glare that blinds AI tracking models. By relying on AR + Human Vision, we eliminate the risk of the camera misreading a reflection and recommending a dangerous overdose.", fontSize = 14.sp, color = Color.Gray, lineHeight = 20.sp)
 
@@ -808,9 +797,9 @@ fun GravityScienceDialog(dropsPerMinute: Int, onDismiss: () -> Unit) {
                 HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Dynamic Accuracy Spectrum", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                Text("Dynamic Accuracy Spectrum", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF0284C7))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Based on your calculated rate of $dropsPerMinute drops/min:", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text("Based on your calculated rate of $dropsPerMinute drops/min:", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 AccuracySpectrumGraphic(dpm = dropsPerMinute)
@@ -830,7 +819,7 @@ fun GravityScienceDialog(dropsPerMinute: Int, onDismiss: () -> Unit) {
                     Text(statusText, fontSize = 13.sp, color = statusColor, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp)) {
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))) {
                     Text("Close Guide", fontWeight = FontWeight.Bold)
                 }
             }
