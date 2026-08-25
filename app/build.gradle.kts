@@ -77,13 +77,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     implementation(libs.androidx.print)
-
     implementation("com.airbnb.android:lottie-compose:6.4.0")
 
-    val vicoVersion = "1.13.0"
-    implementation("com.patrykandpatrick.vico:compose:$vicoVersion")
-    implementation("com.patrykandpatrick.vico:compose-m3:$vicoVersion")
-    implementation("com.patrykandpatrick.vico:core:$vicoVersion")
+    // --- VICO 2.0.3 CHARTING LIBRARY (Single Source of Truth) ---
+    implementation("com.patrykandpatrick.vico:compose:2.0.3")
+    implementation("com.patrykandpatrick.vico:compose-m3:2.0.3")
+    implementation("com.patrykandpatrick.vico:core:2.0.3")
 
     val cameraxVersion = "1.4.0"
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -92,11 +91,6 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-    // Removed ML Kit text-recognition to prevent 16 KB native load crash on Android 15+ devices[cite: 1]
-
-    implementation("com.patrykandpatryk.vico:compose:1.16.0")
-    implementation("com.patrykandpatryk.vico:compose-m3:1.16.0")
-    implementation("com.patrykandpatryk.vico:core:1.16.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

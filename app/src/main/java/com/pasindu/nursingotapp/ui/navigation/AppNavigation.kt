@@ -33,6 +33,7 @@ import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import java.time.LocalDate
+import com.pasindu.nursingotapp.ui.FinancialViewModel
 
 @Composable
 fun AppNavigation() {
@@ -88,7 +89,12 @@ fun AppNavigation() {
         // 2. SUPER APP MODULES
         // ==========================================
         composable("financial_dashboard") {
-            FinancialDashboardScreen(onNavigateBack = { navController.popBackStack() })
+            val financialViewModel: FinancialViewModel = viewModel()
+            FinancialDashboardScreen(
+                viewModel = financialViewModel,
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable("clinical_planning") {
