@@ -52,13 +52,17 @@ fun AppNavigation() {
         popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) }
     ) {
 
-        // ==========================================
-        // 1. HUB & CORE SCREENS
-        // ==========================================
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
                 onNavigate = { route -> navController.navigate(route) }
+            )
+        }
+
+        composable("care_pulse") {
+            CarePulseScreen(
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -85,9 +89,6 @@ fun AppNavigation() {
             AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // ==========================================
-        // 2. SUPER APP MODULES
-        // ==========================================
         composable("financial_dashboard") {
             val financialViewModel: FinancialViewModel = viewModel()
             FinancialDashboardScreen(
@@ -105,9 +106,6 @@ fun AppNavigation() {
             KnowledgeHubScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // ==========================================
-        // 3. CLINICAL CALCULATORS SUITE
-        // ==========================================
         composable("clinical_calculators") {
             ClinicalToolsScreen(
                 onNavigateToIvDrip = { navController.navigate("iv_drip") },
@@ -133,22 +131,10 @@ fun AppNavigation() {
         composable("pediatric_rules") { PediatricRulesScreen() }
         composable("unit_conversions") { UnitConversionsScreen() }
         composable("special_calcs") { SpecialCalculationsScreen() }
+        composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("icu_calculators") { IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("vasoactive_infusions") { VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() }) }
 
-        composable("emergency_calcs") {
-            EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable("icu_calculators") {
-            IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable("vasoactive_infusions") {
-            VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        // ==========================================
-        // 4. LEGACY DAILY ENTRY & PDF PIPELINE
-        // ==========================================
         composable(
             route = "daily_entry/{claimPeriodId}/{start}/{end}/{wardType}",
             arguments = listOf(
@@ -179,7 +165,6 @@ fun AppNavigation() {
                     val dbProfile = viewModel.userProfile.value
 
                     if (dbProfile != null) {
-                        // Using positional arguments to prevent named parameter mismatches
                         val profile = UserProfile(
                             dbProfile.fullName,
                             dbProfile.serviceNo,
@@ -205,7 +190,6 @@ fun AppNavigation() {
                         val doDays = logs.count { it.isDO }
                         val dayRate = profile.basicSalary / 30.0
 
-                        // Using positional arguments to align with existing legacy model
                         val summary = PeriodSummary(
                             totalNormalHrs,
                             totalOtHrs,
@@ -232,6 +216,6 @@ fun AppNavigation() {
                     context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim Form"))
                 }
             )
-        }
+        )
     }
 }
