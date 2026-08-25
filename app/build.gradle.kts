@@ -80,9 +80,7 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:6.4.0")
 
     // --- VICO 2.0.3 CHARTING LIBRARY (Single Source of Truth) ---
-    implementation("com.patrykandpatrick.vico:compose:2.0.3")
-    implementation("com.patrykandpatrick.vico:compose-m3:2.0.3")
-    implementation("com.patrykandpatrick.vico:core:2.0.3")
+
 
     val cameraxVersion = "1.4.0"
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -90,8 +88,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-
+    implementation("com.patrykandpatrick.vico:compose:1.13.0")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.0")
+    implementation("com.patrykandpatrick.vico:core:1.13.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
