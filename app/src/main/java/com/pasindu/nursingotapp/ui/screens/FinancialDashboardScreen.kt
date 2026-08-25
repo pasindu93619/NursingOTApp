@@ -67,17 +67,13 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.ui.FinancialViewModel
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import kotlin.math.max
 
 // ============================================================
@@ -118,34 +114,11 @@ fun FinancialDashboardScreen(
 
     val scrollState = rememberScrollState()
 
-    val modelProducer = remember {
-        CartesianChartModelProducer()
-    }
-
-    // --------------------------------------------------------
-    // Existing Vico history
-    // --------------------------------------------------------
-
-    LaunchedEffect(financialState) {
-
-        modelProducer.runTransaction {
-
-            columnSeries {
-
-                series(
-                    financialState.historicalBasicSalaries
-                )
-
-                series(
-                    financialState.historicalAllowances
-                )
-
-                series(
-                    financialState.historicalOvertimeEarnings
-                )
-            }
-        }
-    }
+    // Native Compose chart data. This removes the unresolved Vico Cartesian API
+    // dependency from this screen while keeping the same financial history.
+    val historyBasic = financialState.historicalBasicSalaries
+    val historyAllowances = financialState.historicalAllowances
+    val historyOt = financialState.historicalOvertimeEarnings
 
     // ========================================================
     // INITIAL FINANCIAL INPUTS
@@ -388,7 +361,7 @@ fun FinancialDashboardScreen(
             }
 
             // ====================================================
-            // VICO CHART
+            // FINANCIAL HISTORY CHART
             // ====================================================
 
             Card(
@@ -409,11 +382,10 @@ fun FinancialDashboardScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    CartesianChartHost(
-                        chart = rememberCartesianChart(
-                            rememberColumnCartesianLayer()
-                        ),
-                        modelProducer = modelProducer,
+                    FinancialHistoryChart(
+                        basic = historyBasic,
+                        allowances = historyAllowances,
+                        overtime = historyOt,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(260.dp)
@@ -474,3 +446,94 @@ private fun FinancialSummaryCard(
         }
     }
 }
+
+// ============================================================
+// NATIVE FINANCIAL HISTORY CHART
+// ============================================================
+
+@Composable
+private fun FinancialHistoryChart(
+    basic: List<Float>,
+    allowances: List<Float>,
+    overtime: List<Float>,
+    modifier: Modifier = Modifier
+) {
+    val count = maxOf(basic.size, allowances.size, overtime.size, 1)
+    val maxValue = maxOf(
+        basic.maxOrNull() ?: 0f,
+        allowances.maxOrNull() ?: 0f,
+        overtime.maxOrNull() ?: 0f,
+        1f
+    )
+
+    Canvas(modifier = modifier) {
+        val left = 42f
+        val right = 10f
+        val top = 14f
+        val bottom = 28f
+        val chartWidth = (size.width - left - right).coerceAtLeast(1f)
+        val chartHeight = (size.height - top - bottom).coerceAtLeast(1f)
+        val groupWidth = chartWidth / count
+        val barWidth = (groupWidth * 0.18f).coerceAtLeast(4f)
+        val gap = (groupWidth * 0.04f).coerceAtLeast(2f)
+
+        val gridLines = 4
+        repeat(gridLines + 1) { index ->
+            val y = top + chartHeight - (chartHeight * index / gridLines)
+            drawLine(
+                color = Border,
+                start = Offset(left, y),
+                end = Offset(size.width - right, y),
+                strokeWidth = 1f
+            )
+        }
+
+        fun drawSeries(values: List<Float>, color: Color, offset: Float) {
+            values.take(count).forEachIndexed { index, rawValue ->
+                val value = rawValue.coerceAtLeast(0f)
+                val barHeight = chartHeight * (value / maxValue)
+                val x = left + groupWidth * index + groupWidth * 0.16f + offset
+                val y = top + chartHeight - barHeight
+
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(x, y),
+                    size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                    cornerRadius = CornerRadius(6f, 6f)
+                )
+            }
+        }
+
+        drawSeries(basic, Indigo, 0f)
+        drawSeries(allowances, Mint, barWidth + gap)
+        drawSeries(overtime, Orange, (barWidth + gap) * 2f)
+
+        // Simple month labels.
+        repeat(count) { index ->
+            val x = left + groupWidth * index + groupWidth / 2f
+            drawContext.canvas.nativeCanvas.drawText(
+                "M${index + 1}",
+                x - 7f,
+                size.height - 6f,
+                android.graphics.Paint().apply {
+                    color = android.graphics.Color.DKGRAY
+                    textSize = 10f
+                    isAntiAlias = true
+                }
+            )
+        }
+    }
+}
+
+// ============================================================
+// FORMATTING
+// ============================================================
+
+private fun formatMoney(
+    value: Double
+): String =
+    "%,.0f".format(value)
+
+private fun Double.formatOne():
+        String =
+    "%.1f".format(this)
