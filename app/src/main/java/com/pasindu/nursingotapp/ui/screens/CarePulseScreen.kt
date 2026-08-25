@@ -17,7 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,9 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bloodtype
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -44,6 +41,7 @@ import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -109,18 +107,16 @@ fun CarePulseScreen(
                     }
                 },
                 navigationIcon = {
-                    androidx.compose.material3.IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ChevronRight,
+                            imageVector = Icons.Default.ChevronLeft,
                             contentDescription = "Back",
                             tint = Indigo,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = CareBg
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CareBg)
             )
         }
     ) { padding ->
@@ -143,27 +139,9 @@ fun CarePulseScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                PulseMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "OT Hours",
-                    value = "24.0 h",
-                    icon = Icons.Default.Schedule,
-                    accent = Violet
-                )
-                PulseMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Tasks",
-                    value = "7",
-                    icon = Icons.Default.HealthAndSafety,
-                    accent = Teal
-                )
-                PulseMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Risk",
-                    value = "Low",
-                    icon = Icons.Default.WarningAmber,
-                    accent = Green
-                )
+                PulseMetricCard(Modifier.weight(1f), "OT Hours", "24.0 h", Icons.Default.Schedule, Violet)
+                PulseMetricCard(Modifier.weight(1f), "Tasks", "7", Icons.Default.HealthAndSafety, Teal)
+                PulseMetricCard(Modifier.weight(1f), "Risk", "Low", Icons.Default.WarningAmber, Green)
             }
 
             GlassActionCard(
@@ -172,9 +150,7 @@ fun CarePulseScreen(
                 icon = Icons.Default.MedicalServices,
                 accent = Indigo,
                 effect = 0
-            ) {
-                onNavigate("clinical_calculators")
-            }
+            ) { onNavigate("clinical_calculators") }
 
             GlassActionCard(
                 title = "Shift Intelligence",
@@ -182,9 +158,7 @@ fun CarePulseScreen(
                 icon = Icons.Default.Analytics,
                 accent = Cyan,
                 effect = 1
-            ) {
-                onNavigate("analytics")
-            }
+            ) { onNavigate("analytics") }
 
             GlassActionCard(
                 title = "Advanced Finance",
@@ -192,9 +166,7 @@ fun CarePulseScreen(
                 icon = Icons.Default.AccountBalance,
                 accent = Orange,
                 effect = 2
-            ) {
-                onNavigate("financial_dashboard")
-            }
+            ) { onNavigate("financial_dashboard") }
 
             SectionTitle(
                 eyebrow = "NURSE MODE",
@@ -250,20 +222,11 @@ private fun CarePulseHero() {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(30.dp))
                 .background(
-                    Brush.linearGradient(
-                        listOf(
-                            Color(0xFF101B4D),
-                            Indigo,
-                            Violet
-                        )
-                    )
+                    Brush.linearGradient(listOf(Color(0xFF101B4D), Indigo, Violet))
                 )
                 .padding(22.dp)
         ) {
-            Canvas(
-                modifier = Modifier
-                    .matchParentSize()
-            ) {
+            Canvas(modifier = Modifier.matchParentSize()) {
                 val y = size.height * 0.72f
                 val path = Path().apply {
                     moveTo(0f, y)
@@ -302,9 +265,7 @@ private fun CarePulseHero() {
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             )
                         }
-
                         Spacer(Modifier.height(12.dp))
-
                         Text(
                             text = "Stay ahead of the shift.",
                             color = Color.White,
@@ -312,9 +273,7 @@ private fun CarePulseHero() {
                             fontWeight = FontWeight.Black,
                             lineHeight = 30.sp
                         )
-
                         Spacer(Modifier.height(6.dp))
-
                         Text(
                             text = "Clinical tools, workload signals and finance — brought into one fast command center.",
                             color = Color.White.copy(alpha = 0.78f),
@@ -346,9 +305,7 @@ private fun CarePulseHero() {
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -365,40 +322,17 @@ private fun CarePulseHero() {
 @Composable
 private fun SmallHeroStat(value: String, label: String) {
     Column {
-        Text(
-            text = value,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Black
-        )
-        Text(
-            text = label,
-            color = Color.White.copy(alpha = 0.62f),
-            fontSize = 9.sp
-        )
+        Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Text(label, color = Color.White.copy(alpha = 0.62f), fontSize = 9.sp)
     }
 }
 
 @Composable
-private fun SectionTitle(
-    eyebrow: String,
-    title: String
-) {
+private fun SectionTitle(eyebrow: String, title: String) {
     Column {
-        Text(
-            text = eyebrow,
-            color = Indigo,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.2.sp
-        )
+        Text(eyebrow, color = Indigo, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
         Spacer(Modifier.height(3.dp))
-        Text(
-            text = title,
-            color = Ink,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Black
-        )
+        Text(title, color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -416,15 +350,9 @@ private fun PulseMetricCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = androidx.compose.foundation.BorderStroke(1.dp, Line)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.10f)),
+                modifier = Modifier.size(34.dp).clip(CircleShape).background(accent.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
@@ -471,25 +399,17 @@ private fun GlassActionCard(
                     .align(Alignment.TopEnd)
                     .background(
                         Brush.radialGradient(
-                            listOf(
-                                accent.copy(alpha = 0.14f + drift * 0.05f),
-                                Color.Transparent
-                            )
+                            listOf(accent.copy(alpha = 0.14f + drift * 0.05f), Color.Transparent)
                         )
                     )
             )
 
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(18.dp),
+                modifier = Modifier.fillMaxSize().padding(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(17.dp))
-                        .background(accent.copy(alpha = 0.10f)),
+                    modifier = Modifier.size(52.dp).clip(RoundedCornerShape(17.dp)).background(accent.copy(alpha = 0.10f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(icon, null, tint = accent, modifier = Modifier.size(27.dp))
@@ -498,19 +418,9 @@ private fun GlassActionCard(
                 Spacer(Modifier.width(14.dp))
 
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        title,
-                        color = Ink,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black
-                    )
+                    Text(title, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        subtitle,
-                        color = Muted,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp
-                    )
+                    Text(subtitle, color = Muted, fontSize = 11.sp, lineHeight = 15.sp)
                 }
 
                 Icon(
@@ -537,9 +447,7 @@ private fun ActionRow(
         exit = fadeOut() + scaleOut()
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
             shape = RoundedCornerShape(18.dp),
             color = if (selected) accent.copy(alpha = 0.10f) else Color.White,
             tonalElevation = 1.dp
@@ -548,12 +456,7 @@ private fun ActionRow(
                 modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(accent)
-                )
+                Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
                 Spacer(Modifier.width(10.dp))
                 Text(
                     label,
