@@ -4,187 +4,185 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pasindu.nursingotapp.ui.FinancialViewModel
+import com.patrykandpatryk.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatryk.vico.compose.cartesian.axis.rememberBottomAxis
+import com.patrykandpatryk.vico.compose.cartesian.axis.rememberStartAxis
+import com.patrykandpatryk.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatryk.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatryk.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatryk.vico.core.cartesian.data.columnSeries
+import com.patrykandpatryk.vico.core.cartesian.layer.ColumnCartesianLayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinancialDashboardScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: FinancialViewModel = viewModel()
+    viewModel: FinancialViewModel,
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit
 ) {
-    val records by viewModel.financialRecords.collectAsState()
+    val financialState by viewModel.financialState.collectAsState()
+    val scrollState = rememberScrollState()
 
-    var monthYearInput by remember { mutableStateOf("06-2026") }
-    var basicSalaryInput by remember { mutableStateOf("65000") }
-    var allowanceInput by remember { mutableStateOf("15000") }
-    var otAmountInput by remember { mutableStateOf("25000") }
-    var loanPrincipalInput by remember { mutableStateOf("300000") }
-    var loanRateInput by remember { mutableStateOf("12.0") }
-    var loanYearsInput by remember { mutableStateOf("5") }
+    // Vico Chart Model Producer for dynamic salary & OT graphing
+    val modelProducer = remember { CartesianChartModelProducer() }
+
+    LaunchedEffect(financialState) {
+        modelProducer.runTransaction {
+            columnSeries {
+                series(financialState.historicalBasicSalaries)
+                series(financialState.historicalAllowances)
+                series(financialState.historicalOvertimeEarnings)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Advanced Financial Dashboard", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFF8FAFC),
-                    titleContentColor = Color(0xFF0F172A)
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
-        containerColor = Color(0xFFF8FAFC) // Crisp slate-white background mandate
-    ) { padding ->
+        containerColor = Color(0xFFF8FAFC) // Slate-White Background Mandate
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Input Form Card for Monthly Calculations
+            // Summary Header Card
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(8.dp, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "Salary, APIT Tax & Loan Calculator",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFF0284C7), // Cool Tech Blue
-                        fontWeight = FontWeight.Bold
+                        text = "Estimated Net Monthly Earnings",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF334155)
                     )
-
-                    OutlinedTextField(
-                        value = monthYearInput,
-                        onValueChange = { monthYearInput = it },
-                        label = { Text("Month-Year (MM-YYYY)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = basicSalaryInput,
-                            onValueChange = { basicSalaryInput = it },
-                            label = { Text("Basic Salary (LKR)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = allowanceInput,
-                            onValueChange = { allowanceInput = it },
-                            label = { Text("Allowances (LKR)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = otAmountInput,
-                        onValueChange = { otAmountInput = it },
-                        label = { Text("Calculated OT Amount (LKR)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Distress / State Loan Amortization",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = "Rs. ${String.format("%,.2f", financialState.netEarnings)}",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
                         color = Color(0xFF0F172A)
                     )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = loanPrincipalInput,
-                            onValueChange = { loanPrincipalInput = it },
-                            label = { Text("Loan Principal") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = loanRateInput,
-                            onValueChange = { loanRateInput = it },
-                            label = { Text("Interest %") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = loanYearsInput,
-                            onValueChange = { loanYearsInput = it },
-                            label = { Text("Years") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Button(
-                        onClick = {
-                            viewModel.saveMonthlyRecord(
-                                monthYear = monthYearInput,
-                                basicSalary = basicSalaryInput.toDoubleOrNull() ?: 0.0,
-                                totalAllowance = allowanceInput.toDoubleOrNull() ?: 0.0,
-                                calculatedOtAmount = otAmountInput.toDoubleOrNull() ?: 0.0,
-                                loanPrincipal = loanPrincipalInput.toDoubleOrNull() ?: 0.0,
-                                loanRate = loanRateInput.toDoubleOrNull() ?: 0.0,
-                                loanYears = loanYearsInput.toIntOrNull() ?: 1,
-                                wopRate = 0.07 // 7% standard W&OP
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Calculate & Save Record", fontWeight = FontWeight.Bold, color = Color.White)
+                        FinancialMetricChip(title = "APIT Tax", value = "Rs. ${financialState.apitTax}")
+                        FinancialMetricChip(title = "W&OP Pension", value = "Rs. ${financialState.wopDeduction}")
                     }
                 }
             }
 
-            // Historical Ledger Section
             Text(
-                text = "Saved Historical Pay Records (${records.size})",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                text = "Dynamic Salary & Overtime Breakdown",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
                 color = Color(0xFF0F172A)
             )
 
-            records.forEach { record ->
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(text = "Period: ${record.monthYear}", fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
-                            Text(text = "Net: LKR ${String.format("%.2f", record.netSalary)}", fontWeight = FontWeight.Bold, color = Color(0xFF00E676))
-                        }
-                        Text(text = "Basic: LKR ${record.basicSalary} | Allowances: LKR ${record.totalAllowance}", fontSize = 13.sp, color = Color.Gray)
-                        Text(text = "Deductions -> APIT: LKR ${String.format("%.2f", record.apitTaxDeduction)} | W&OP: LKR ${String.format("%.2f", record.wopPensionDeduction)} | Loan: LKR ${String.format("%.2f", record.loanDeduction)}", fontSize = 12.sp, color = Color.DarkGray)
+            // Vico Layered Bar Chart Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(8.dp, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Color(0xFF0284C7))
+                        Text(
+                            text = "6-Month Earnings Trajectory",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    CartesianChartHost(
+                        chart = rememberCartesianChart(
+                            rememberColumnCartesianLayer(
+                                sublayerCombiningMode = ColumnCartesianLayer.SublayerCombiningMode.Stacked
+                            ),
+                            startAxis = rememberStartAxis(),
+                            bottomAxis = rememberBottomAxis()
+                        ),
+                        modelProducer = modelProducer,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                    )
                 }
             }
+
+            // Quick Tools Navigation
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = { onNavigate("loan_aggregator") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A)),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Default.Calculate, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Loan Amortization")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
+    }
+}
+
+@Composable
+fun FinancialMetricChip(title: String, value: String) {
+    Column(
+        modifier = Modifier
+            .background(Color(0xFFF1F5F9), RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        Text(text = title, fontSize = 12.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = value, fontSize = 14.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
     }
 }

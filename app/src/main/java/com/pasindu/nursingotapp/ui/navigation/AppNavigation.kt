@@ -102,7 +102,7 @@ fun AppNavigation() {
         // ==========================================
         // 3. CLINICAL CALCULATORS SUITE
         // ==========================================
-        composable("clinical_tools") {
+        composable("clinical_calculators") {
             ClinicalToolsScreen(
                 onNavigateToIvDrip = { navController.navigate("iv_drip") },
                 onNavigateToDosage = { navController.navigate("dosage_calc") },

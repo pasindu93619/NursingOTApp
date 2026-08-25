@@ -36,7 +36,7 @@ import com.pasindu.nursingotapp.ui.NursingViewModel
 import kotlin.math.cos
 import kotlin.math.sin
 
-// Added new mind-blowing effects
+// Eye-catching clinical card animation effects
 enum class CardEffect { NONE, WAVE, PARTICLES, ECG, BUBBLES, PULSE_RINGS }
 
 @Composable
@@ -46,8 +46,8 @@ fun HomeScreen(
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
 
-    // Seamless local fallback
-    val displayFullName = userProfile?.fullName?.takeIf { it.isNotBlank() } ?: "Pasindu"
+    // Seamless local fallback adhering to professional standards
+    val displayFullName = userProfile?.fullName?.takeIf { it.isNotBlank() } ?: "Nursing Officer"
     val shortName = displayFullName.split(" ").lastOrNull() ?: displayFullName
     val initial = displayFullName.firstOrNull()?.toString()?.uppercase() ?: "P"
 
@@ -56,15 +56,15 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // Forced Slate-White Background for Light Theme Mandate
+            // Functional Light Theme Mandate: Pure White to Very Light Gray Canvas
             .background(Color(0xFFF8FAFC))
             .verticalScroll(scrollState)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Dynamic Profile Greeting Card
+        // Dynamic Profile Greeting Card with Vibrant Clinical Accents
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -92,67 +92,109 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Hello, $shortName \uD83D\uDC4B",
+                        text = "Hello, $shortName 👋",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF0F172A),
+                        color = Color(0xFF0F172A), // Dark Charcoal Primary Text
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = if (userProfile == null) "Tap here to setup profile" else "Ready to manage Ward 17?",
-                        fontSize = 14.sp,
-                        color = Color.DarkGray,
+                        text = if (userProfile == null) "Tap here to setup profile & SLNC" else "Ward 17 In-Charge Dashboard",
+                        fontSize = 13.sp,
+                        color = Color(0xFF334155), // Medium Slate Gray Secondary Text
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
 
-        Text("Core Modules", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color(0xFF0F172A))
+        Text(
+            text = "Core Legacy Module",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF0F172A)
+        )
 
-        // Legacy OT Forms - Full Width, High-Contrast Azure Wave
+        // Legacy OT Forms - Full Width, High-Contrast Azure Wave Card
         AnimatedDashboardCard(
-            title = "OT & Forms", subtitle = "A4 Claim PDFs", icon = Icons.Default.Description,
-            colorStart = Color(0xFF0052D4), colorEnd = Color(0xFF4364F7), height = 140.dp,
+            title = "OT & Claim Forms",
+            subtitle = "A4 Multi-page Claims & 36h Rule Engine",
+            icon = Icons.Default.Description,
+            colorStart = Color(0xFF0052D4),
+            colorEnd = Color(0xFF4364F7),
+            height = 140.dp,
             effect = CardEffect.WAVE,
             onClick = { onNavigate("profile") }
         )
 
-        Text("Super App Tools", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF334155))
+        Text(
+            text = "Super App Enhancements",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF334155)
+        )
 
-        // Staggered Grid Dashboard for New Modules
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-
+        // Staggered Grid Dashboard with Eye-Catching Functional Category Colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             // Left Column
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Clinical Planning (Cyan / High-Alert Vibe)
                 AnimatedDashboardCard(
-                    title = "Clinical Planning", subtitle = "ISBAR & Tasks", icon = Icons.Default.Assignment,
-                    colorStart = Color(0xFF1CB5E0), colorEnd = Color(0xFF000046), height = 200.dp,
+                    title = "Clinical Planning",
+                    subtitle = "ISBAR Handover & Task Alarms",
+                    icon = Icons.Default.Assignment,
+                    colorStart = Color(0xFF0284C7),
+                    colorEnd = Color(0xFF0F172A),
+                    height = 200.dp,
                     effect = CardEffect.BUBBLES,
                     onClick = { onNavigate("clinical_planning") }
                 )
 
+                // Knowledge Hub (Deep Indigo / CPD & Circulars)
                 AnimatedDashboardCard(
-                    title = "Knowledge Hub", subtitle = "CPD & Circulars", icon = Icons.Default.MenuBook,
-                    colorStart = Color(0xFF0575E6), colorEnd = Color(0xFF021B79), height = 180.dp,
+                    title = "Knowledge Hub",
+                    subtitle = "CPD Ledger & MoH Circulars",
+                    icon = Icons.Default.MenuBook,
+                    colorStart = Color(0xFF0575E6),
+                    colorEnd = Color(0xFF021B79),
+                    height = 180.dp,
                     effect = CardEffect.PARTICLES,
                     onClick = { onNavigate("knowledge_hub") }
                 )
             }
 
             // Right Column
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Clinical Calculators (Vibrant Aqua / IV Drip & Scoring)
                 AnimatedDashboardCard(
-                    title = "Calculators", subtitle = "IV Drip & Scopes", icon = Icons.Default.MedicalServices,
-                    colorStart = Color(0xFF36D1DC), colorEnd = Color(0xFF5B86E5), height = 180.dp,
+                    title = "Clinical Calculators",
+                    subtitle = "IV Drip Metronome & GCS",
+                    icon = Icons.Default.MedicalServices,
+                    colorStart = Color(0xFF06B6D4),
+                    colorEnd = Color(0xFF0E7490),
+                    height = 180.dp,
                     effect = CardEffect.ECG,
                     onClick = { onNavigate("clinical_calculators") }
                 )
 
+                // Advanced Finance (Slate Navy / APIT & Loans)
                 AnimatedDashboardCard(
-                    title = "Finance", subtitle = "APIT & Loans", icon = Icons.Default.AccountBalance,
-                    colorStart = Color(0xFF2980B9), colorEnd = Color(0xFF6DD5FA), height = 200.dp,
+                    title = "Advanced Finance",
+                    subtitle = "Vico Charts, APIT & Loans",
+                    icon = Icons.Default.AccountBalance,
+                    colorStart = Color(0xFF1E293B),
+                    colorEnd = Color(0xFF334155),
+                    height = 200.dp,
                     effect = CardEffect.PULSE_RINGS,
                     onClick = { onNavigate("financial_dashboard") }
                 )
@@ -164,23 +206,36 @@ fun HomeScreen(
 
 @Composable
 fun AnimatedDashboardCard(
-    title: String, subtitle: String, icon: ImageVector,
-    colorStart: Color, colorEnd: Color, height: Dp,
-    textColor: Color = Color.White, isSoon: Boolean = false,
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    colorStart: Color,
+    colorEnd: Color,
+    height: Dp,
+    textColor: Color = Color.White,
+    isSoon: Boolean = false,
     effect: CardEffect = CardEffect.NONE,
     onClick: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "CardEffects")
+    val infiniteTransition = rememberInfiniteTransition(label = "CardEffectsAnimation")
 
     val scale by infiniteTransition.animateFloat(
-        initialValue = 0.98f, targetValue = 1.02f,
-        animationSpec = infiniteRepeatable(tween(2500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        initialValue = 0.98f,
+        targetValue = 1.02f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
         label = "PulseScale"
     )
 
     val timePhase by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
         label = "TimePhase"
     )
 
@@ -194,13 +249,15 @@ fun AnimatedDashboardCard(
         shape = RoundedCornerShape(24.dp)
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().background(
-                Brush.linearGradient(
-                    colors = listOf(colorStart, colorEnd),
-                    start = Offset(0f, 0f),
-                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(colorStart, colorEnd),
+                        start = Offset(0f, 0f),
+                        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                    )
                 )
-            )
         ) {
             // --- ADVANCED CANVAS ANIMATIONS ---
             Canvas(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp))) {
@@ -316,10 +373,15 @@ fun AnimatedDashboardCard(
 
             // --- FOREGROUND CONTENT ---
             Column(
-                modifier = Modifier.padding(20.dp).fillMaxSize(),
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -330,16 +392,31 @@ fun AnimatedDashboardCard(
                         Icon(icon, contentDescription = null, tint = textColor, modifier = Modifier.size(24.dp))
                     }
                     if (isSoon) {
-                        Box(modifier = Modifier.background(Color.White, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
                             Text("SOON", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                         }
                     }
                 }
 
                 Column {
-                    Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = textColor, lineHeight = 24.sp)
+                    Text(
+                        text = title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = textColor,
+                        lineHeight = 24.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(subtitle, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = textColor.copy(alpha = 0.8f))
+                    Text(
+                        text = subtitle,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = textColor.copy(alpha = 0.85f)
+                    )
                 }
             }
         }

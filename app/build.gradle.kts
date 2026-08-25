@@ -94,6 +94,10 @@ dependencies {
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     // Removed ML Kit text-recognition to prevent 16 KB native load crash on Android 15+ devices[cite: 1]
 
+    implementation("com.patrykandpatryk.vico:compose:1.16.0")
+    implementation("com.patrykandpatryk.vico:compose-m3:1.16.0")
+    implementation("com.patrykandpatryk.vico:core:1.16.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
