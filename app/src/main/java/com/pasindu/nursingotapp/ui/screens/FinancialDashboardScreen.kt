@@ -1,6 +1,3 @@
-# FinancialDashboardScreen.kt
-
-```kotlin
 package com.pasindu.nursingotapp.ui.screens
 
 import androidx.compose.animation.AnimatedContent
@@ -2741,4 +2738,4 @@ private fun formatMoney(
 private fun Double.formatOne():
         String =
     "%.1f".format(this)
-```
+
