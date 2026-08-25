@@ -20,8 +20,12 @@ object DatabaseProvider {
             AppDatabase::class.java,
             "nursing_ot_app.db"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2)
-            .fallbackToDestructiveMigration() // Automatically clears and recreates tables on hash mismatches during development
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_1_3
+            )
+            .fallbackToDestructiveMigration()
             .build()
     }
 }

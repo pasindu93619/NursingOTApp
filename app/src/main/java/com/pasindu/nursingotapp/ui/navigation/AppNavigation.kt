@@ -1,15 +1,19 @@
 package com.pasindu.nursingotapp.ui.navigation
 
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
@@ -25,6 +29,7 @@ import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.data.model.UserProfile
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
+import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import java.time.LocalDate
@@ -35,7 +40,7 @@ fun AppNavigation() {
     val viewModel: NursingViewModel = viewModel()
     val context = LocalContext.current
 
-    val animDuration = 400
+    val animDuration = 350
 
     NavHost(
         navController = navController,
@@ -46,17 +51,16 @@ fun AppNavigation() {
         popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) }
     ) {
 
-        // --- HUB SCREEN (DASHBOARD) ---
+        // ==========================================
+        // 1. HUB & CORE SCREENS
+        // ==========================================
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
-                onNavigate = { route ->
-                    navController.navigate(route)
-                }
+                onNavigate = { route -> navController.navigate(route) }
             )
         }
 
-        // --- DATA GATHERING (PROFILE & CLAIMS) ---
         composable("profile") {
             ProfileScreen(
                 viewModel = viewModel,
@@ -77,39 +81,27 @@ fun AppNavigation() {
         }
 
         composable("analytics") {
-            AnalyticsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // --- SUPER APP MODULES ---
+        // ==========================================
+        // 2. SUPER APP MODULES
+        // ==========================================
         composable("financial_dashboard") {
-            // Placeholder / Integrated screen route for Advanced Financial Management & Vico Charts
-            AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
+            FinancialDashboardScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable("clinical_planning") {
-            // Placeholder / Integrated screen route for ISBAR Handover & Task Management[cite: 3]
-            ClinicalToolsScreen(
-                onNavigateToIvDrip = { navController.navigate("iv_drip") },
-                onNavigateToDosage = { navController.navigate("dosage_calc") },
-                onNavigateToWeightInfusion = { navController.navigate("weight_infusion") },
-                onNavigateToBsa = { navController.navigate("bsa_calc") },
-                onNavigateToPediatric = { navController.navigate("pediatric_rules") },
-                onNavigateToConversions = { navController.navigate("unit_conversions") },
-                onNavigateToSpecialCalcs = { navController.navigate("special_calcs") },
-                onNavigateToEmergency = { navController.navigate("emergency_calcs") },
-                onNavigateToIcu = { navController.navigate("icu_calculators") },
-                onNavigateBack = { navController.popBackStack() }
-            )
+            ClinicalPlanningDashboardScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable("knowledge_hub") {
-            // Placeholder route for Knowledge Hub & CPD Tracker[cite: 3]
-            AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
+            KnowledgeHubScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // --- CLINICAL TOOLS MENU ---
+        // ==========================================
+        // 3. CLINICAL CALCULATORS SUITE
+        // ==========================================
         composable("clinical_tools") {
             ClinicalToolsScreen(
                 onNavigateToIvDrip = { navController.navigate("iv_drip") },
@@ -125,11 +117,8 @@ fun AppNavigation() {
             )
         }
 
-        // --- INDIVIDUAL CALCULATORS ---
         composable("iv_drip") {
-            Scaffold { padding ->
-                IvDripCalculatorCard(modifier = Modifier.fillMaxSize().padding(padding))
-            }
+            Scaffold { padding -> IvDripCalculatorCard(modifier = Modifier.fillMaxSize().padding(padding)) }
         }
 
         composable("dosage_calc") { DosageCalculatorScreen() }
@@ -151,6 +140,9 @@ fun AppNavigation() {
             VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
+        // ==========================================
+        // 4. LEGACY DAILY ENTRY & PDF PIPELINE
+        // ==========================================
         composable(
             route = "daily_entry/{claimPeriodId}/{start}/{end}/{wardType}",
             arguments = listOf(
@@ -165,7 +157,9 @@ fun AppNavigation() {
             val end = backStackEntry.arguments?.getString("end") ?: ""
             val wardType = backStackEntry.arguments?.getString("wardType") ?: "Normal"
 
-            LaunchedEffect(claimPeriodId) { viewModel.loadEntriesForClaim(claimPeriodId) }
+            LaunchedEffect(claimPeriodId) {
+                viewModel.loadEntriesForClaim(claimPeriodId)
+            }
 
             DailyEntryScreen(
                 claimPeriodId = claimPeriodId,
@@ -179,7 +173,17 @@ fun AppNavigation() {
                     val dbProfile = viewModel.userProfile.value
 
                     if (dbProfile != null) {
-                        val profile = UserProfile(dbProfile.fullName, dbProfile.serviceNo, dbProfile.unit, dbProfile.paySheetNo, dbProfile.grade, dbProfile.basicSalary, dbProfile.otRate)
+                        // Using positional arguments to prevent named parameter mismatches
+                        val profile = UserProfile(
+                            dbProfile.fullName,
+                            dbProfile.serviceNo,
+                            dbProfile.unit,
+                            dbProfile.paySheetNo,
+                            dbProfile.grade,
+                            dbProfile.basicSalary,
+                            dbProfile.otRate
+                        )
+
                         val logs = dbLogs.map { entity ->
                             DailyLog(
                                 id = entity.id, date = entity.date, isPH = entity.isPH, isDO = entity.isDO, isLeave = entity.isLeave, leaveType = entity.leaveType,
@@ -187,6 +191,7 @@ fun AppNavigation() {
                                 computedNormalHours = entity.normalHours, otTimeInStr = entity.otTimeIn, otTimeOutStr = entity.otTimeOut, computedOtHours = entity.otHours
                             )
                         }
+
                         val period = Period(LocalDate.parse(start), LocalDate.parse(end))
                         val totalNormalHrs = logs.sumOf { it.computedNormalHours.toDouble() }.toFloat()
                         val totalOtHrs = logs.sumOf { it.computedOtHours.toDouble() }.toFloat()
@@ -194,21 +199,31 @@ fun AppNavigation() {
                         val doDays = logs.count { it.isDO }
                         val dayRate = profile.basicSalary / 30.0
 
-                        val summary = PeriodSummary(totalNormalHrs, totalOtHrs, phDays, doDays, totalOtHrs * profile.otRate, phDays * dayRate, doDays * dayRate, (totalOtHrs * profile.otRate) + (phDays * dayRate) + (doDays * dayRate))
+                        // Using positional arguments to align with existing legacy model
+                        val summary = PeriodSummary(
+                            totalNormalHrs,
+                            totalOtHrs,
+                            phDays,
+                            doDays,
+                            totalOtHrs * profile.otRate,
+                            phDays * dayRate,
+                            doDays * dayRate,
+                            (totalOtHrs * profile.otRate) + (phDays * dayRate) + (doDays * dayRate)
+                        )
 
                         val generator = PdfGenerator(context)
                         generator.generateAndReturnFile(profile, logs, period, summary)
                     } else null
                 },
                 onSaveAndSharePdf = { file ->
-                    com.pasindu.nursingotapp.ui.otforms.FileShareUtils.savePdfToDownloads(context, file)
+                    FileShareUtils.savePdfToDownloads(context, file)
                     val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/pdf"
-                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share OT Claim Form"))
+                    context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim Form"))
                 }
             )
         }
