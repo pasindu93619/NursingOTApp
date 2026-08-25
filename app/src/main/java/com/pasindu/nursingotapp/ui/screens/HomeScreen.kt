@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -63,59 +64,59 @@ data class DashboardPalette(
 )
 
 private val DashboardPalettes = listOf(
-    // 1. Coral / Purple — energetic
+    // 1. Crimson Tide — navy / cyan / amber / crimson
     DashboardPalette(
-        avatar = Color(0xFFFF3D6E),
-        claimForms = Color(0xFF2563EB),
-        clinicalPlanning = Color(0xFF0D9488),
-        knowledgeHub = Color(0xFFD6336C),
-        calculators = Color(0xFF06B6D4),
-        finance = Color(0xFF4F46E5)
+        avatar = Color(0xFFF23456),
+        claimForms = Color(0xFF3B4A6B),
+        clinicalPlanning = Color(0xFF1D8FA6),
+        knowledgeHub = Color(0xFFE0B62E),
+        calculators = Color(0xFF23B2DA),
+        finance = Color(0xFF2E3A55)
     ),
-    // 2. Emerald / Amber — fresh & warm
+    // 2. Velvet Orchard — purple / sky / mint / orchid
     DashboardPalette(
-        avatar = Color(0xFF059669),
-        claimForms = Color(0xFFDB2777),
-        clinicalPlanning = Color(0xFF0891B2),
-        knowledgeHub = Color(0xFFF59E0B),
-        calculators = Color(0xFF7C3AED),
-        finance = Color(0xFF16A34A)
-    ),
-    // 3. Sunset — bold red/orange/violet
-    DashboardPalette(
-        avatar = Color(0xFFEA580C),
-        claimForms = Color(0xFFDC2626),
-        clinicalPlanning = Color(0xFF9333EA),
-        knowledgeHub = Color(0xFFEC4899),
-        calculators = Color(0xFFF97316),
-        finance = Color(0xFF7E22CE)
-    ),
-    // 4. Ocean — deep blues & teals
-    DashboardPalette(
-        avatar = Color(0xFF0284C7),
-        claimForms = Color(0xFF0D9488),
-        clinicalPlanning = Color(0xFF1D4ED8),
-        knowledgeHub = Color(0xFF0EA5E9),
-        calculators = Color(0xFF0891B2),
-        finance = Color(0xFF3730A3)
-    ),
-    // 5. Berry — magenta/plum/rose
-    DashboardPalette(
-        avatar = Color(0xFFBE185D),
-        claimForms = Color(0xFF9D174D),
-        clinicalPlanning = Color(0xFF7C2D92),
-        knowledgeHub = Color(0xFFDB2777),
-        calculators = Color(0xFFC026D3),
+        avatar = Color(0xFF7A56D0),
+        claimForms = Color(0xFF4FC0E8),
+        clinicalPlanning = Color(0xFF2FB894),
+        knowledgeHub = Color(0xFFC084FC),
+        calculators = Color(0xFF34D1B2),
         finance = Color(0xFF6D28D9)
     ),
-    // 6. Citrus — lime/teal/gold, high contrast
+    // 3. Arctic Rose — steel blue / navy / magenta pop
     DashboardPalette(
-        avatar = Color(0xFF65A30D),
-        claimForms = Color(0xFF0369A1),
-        clinicalPlanning = Color(0xFF15803D),
-        knowledgeHub = Color(0xFFCA8A04),
-        calculators = Color(0xFF0D9488),
-        finance = Color(0xFF166534)
+        avatar = Color(0xFFFF008E),
+        claimForms = Color(0xFF2D9CDB),
+        clinicalPlanning = Color(0xFF124E96),
+        knowledgeHub = Color(0xFF0C8ABC),
+        calculators = Color(0xFF5FA8D3),
+        finance = Color(0xFF0A3A73)
+    ),
+    // 4. Sunset Plum — orange / plum / apricot / magenta
+    DashboardPalette(
+        avatar = Color(0xFF824C97),
+        claimForms = Color(0xFFED743F),
+        clinicalPlanning = Color(0xFF423465),
+        knowledgeHub = Color(0xFFE0973E),
+        calculators = Color(0xFFC2578E),
+        finance = Color(0xFF5C3D7A)
+    ),
+    // 5. Tropical Teal — teal / apricot / forest teal
+    DashboardPalette(
+        avatar = Color(0xFF00A79D),
+        claimForms = Color(0xFFE8965B),
+        clinicalPlanning = Color(0xFF007064),
+        knowledgeHub = Color(0xFF0C8C82),
+        calculators = Color(0xFFD9A15C),
+        finance = Color(0xFF004D46)
+    ),
+    // 6. Lagoon Sun — steel blue / sky / mustard
+    DashboardPalette(
+        avatar = Color(0xFF4A89AC),
+        claimForms = Color(0xFFD9CB3D),
+        clinicalPlanning = Color(0xFF7EC8E3),
+        knowledgeHub = Color(0xFF2E6E88),
+        calculators = Color(0xFF34617A),
+        finance = Color(0xFF1F4C61)
     )
 )
 
@@ -203,87 +204,128 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = 14.dp,
+                    elevation = 18.dp,
                     shape = RoundedCornerShape(26.dp),
-                    spotColor = palette.avatar.copy(alpha = 0.30f)
+                    spotColor = palette.avatar.copy(alpha = 0.35f),
+                    ambientColor = palette.avatar.copy(alpha = 0.20f)
+                )
+                // Frosted glass edge — a soft light-catching border
+                .border(
+                    width = 1.2.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.9f),
+                            palette.avatar.copy(alpha = 0.25f),
+                            Color.White.copy(alpha = 0.4f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(26.dp)
                 )
                 .clickable {
                     onNavigate("profile")
                 },
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White
+                // Milky translucent glass tint over white, faintly colored by the palette
+                containerColor = Color.White.copy(alpha = 0.72f)
             )
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                // Solid color avatar (no gradient)
+            Box {
+                // Soft color-tinted glass glow in the corner, glassmorphism "light pooling" cue
                 Box(
                     modifier = Modifier
-                        .size(58.dp)
+                        .size(120.dp)
+                        .align(Alignment.TopEnd)
                         .background(
-                            palette.avatar,
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initial,
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    palette.avatar.copy(alpha = 0.16f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "Hello, $shortName 👋",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = PrimaryText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = if (userProfile == null) {
-                            "Tap here to setup profile & SLNC"
-                        } else {
-                            "Ward 17 In-Charge Dashboard"
-                        },
-                        fontSize = 13.sp,
-                        color = SecondaryText,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                // Small profile arrow
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            palette.avatar.copy(alpha = 0.10f),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Open profile",
-                        tint = palette.avatar,
-                        modifier = Modifier.size(22.dp)
-                    )
+
+                    // Glass-ringed solid color avatar
+                    Box(
+                        modifier = Modifier
+                            .size(58.dp)
+                            .background(
+                                palette.avatar,
+                                CircleShape
+                            )
+                            .border(
+                                width = 1.5.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.85f),
+                                        Color.White.copy(alpha = 0.15f)
+                                    )
+                                ),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = initial,
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "Hello, $shortName 👋",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = PrimaryText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = if (userProfile == null) {
+                                "Tap here to setup profile & SLNC"
+                            } else {
+                                "Ward 17 In-Charge Dashboard"
+                            },
+                            fontSize = 13.sp,
+                            color = SecondaryText,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // Small profile arrow
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                palette.avatar.copy(alpha = 0.10f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Open profile",
+                            tint = palette.avatar,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
@@ -472,6 +514,22 @@ fun AnimatedDashboardCard(
         label = "TimePhase"
     )
 
+    // Slow diagonal shimmer sweep — the "light catching the glass" motion
+    val shimmerPhase by infiniteTransition.animateFloat(
+        initialValue = -0.4f,
+        targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 3600,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ShimmerPhase"
+    )
+
+    val cardShape = RoundedCornerShape(28.dp)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -481,15 +539,28 @@ fun AnimatedDashboardCard(
                 else 1f
             )
             .shadow(
-                elevation = if (isSoon) 3.dp else 16.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = color.copy(alpha = 0.35f)
+                elevation = if (isSoon) 6.dp else 22.dp,
+                shape = cardShape,
+                ambientColor = color.copy(alpha = 0.35f),
+                spotColor = color.copy(alpha = 0.55f)
+            )
+            // Glass edge — a bright-to-faint border that reads as a light-catching rim
+            .border(
+                width = 1.3.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.75f),
+                        Color.White.copy(alpha = 0.10f),
+                        Color.White.copy(alpha = 0.35f)
+                    )
+                ),
+                shape = cardShape
             )
             .clickable(
                 enabled = !isSoon,
                 onClick = onClick
             ),
-        shape = RoundedCornerShape(24.dp)
+        shape = cardShape
     ) {
 
         Box(
@@ -505,9 +576,7 @@ fun AnimatedDashboardCard(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(
-                        RoundedCornerShape(24.dp)
-                    )
+                    .clip(cardShape)
             ) {
 
                 val w = size.width
@@ -912,6 +981,75 @@ fun AnimatedDashboardCard(
             }
 
             // ==================================================
+            // GLASSMORPHISM OVERLAY — frosted sheen, shimmer sweep,
+            // and depth vignette. Drawn on every card, on top of the
+            // per-module Canvas effect above.
+            // ==================================================
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(cardShape)
+            ) {
+
+                val w = size.width
+                val h = size.height
+
+                // Milky frosted tint across the whole tile
+                drawRect(
+                    color = Color.White.copy(alpha = 0.06f),
+                    size = size
+                )
+
+                // Soft light pooling in the top-left corner, like glass
+                // catching ambient light
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.Transparent
+                        ),
+                        center = Offset(w * 0.12f, h * 0.10f),
+                        radius = w * 0.55f
+                    ),
+                    radius = w * 0.55f,
+                    center = Offset(w * 0.12f, h * 0.10f)
+                )
+
+                // Slow diagonal shimmer band sweeping across the glass
+                rotate(degrees = -20f, pivot = Offset(w * shimmerPhase, h / 2f)) {
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.16f),
+                                Color.Transparent
+                            ),
+                            start = Offset(w * shimmerPhase - w * 0.18f, 0f),
+                            end = Offset(w * shimmerPhase + w * 0.18f, 0f)
+                        ),
+                        topLeft = Offset(w * shimmerPhase - w * 0.18f, -h * 0.5f),
+                        size = androidx.compose.ui.geometry.Size(w * 0.36f, h * 2f)
+                    )
+                }
+
+                // Gentle dark vignette at the base for depth, so the
+                // tile reads as a floating glass pane rather than flat paint
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.10f)
+                        ),
+                        startY = h * 0.6f,
+                        endY = h
+                    ),
+                    topLeft = Offset(0f, h * 0.6f),
+                    size = androidx.compose.ui.geometry.Size(w, h * 0.4f)
+                )
+            }
+
+            // ==================================================
             // FOREGROUND CONTENT
             // ==================================================
 
@@ -938,14 +1076,17 @@ fun AnimatedDashboardCard(
                             .size(50.dp)
                             .background(
                                 Color.White.copy(
-                                    alpha = 0.18f
+                                    alpha = 0.22f
                                 ),
                                 CircleShape
                             )
                             .border(
-                                width = 1.dp,
-                                color = Color.White.copy(
-                                    alpha = 0.35f
+                                width = 1.2.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.75f),
+                                        Color.White.copy(alpha = 0.20f)
+                                    )
                                 ),
                                 shape = CircleShape
                             ),
