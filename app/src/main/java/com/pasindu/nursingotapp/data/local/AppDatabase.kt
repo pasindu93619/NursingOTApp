@@ -21,73 +21,59 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 
 @Database(
     entities = [
-        // Legacy Core Entities
         ProfileEntity::class,
         ClaimPeriodEntity::class,
         DailyEntryEntity::class,
-        // Super App Entities
         FinancialRecordEntity::class,
         IsbarNoteEntity::class,
         ClinicalTaskEntity::class,
         CpdLogEntity::class
     ],
-    version = 3, // Incremented to 3 to resolve identity hash mismatch
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
-    // Legacy DAOs
     abstract fun profileDao(): ProfileDao
     abstract fun claimPeriodDao(): ClaimPeriodDao
     abstract fun dailyEntryDao(): DailyEntryDao
-
-    // Super App DAOs
     abstract fun financialDao(): FinancialDao
     abstract fun clinicalPlanningDao(): ClinicalPlanningDao
     abstract fun knowledgeHubDao(): KnowledgeHubDao
 
     companion object {
-        // Migration from Version 1 to Version 2
+
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 createSuperAppTables(database)
             }
         }
 
-        // Migration from Version 2 to Version 3
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 createSuperAppTables(database)
             }
         }
 
-        // Direct Migration from Version 1 to Version 3
         val MIGRATION_1_3 = object : Migration(1, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 createSuperAppTables(database)
             }
         }
 
-        private fun createSuperAppTables(database: SupportSQLiteDatabase) {
-            // 1. Financial Records Table
-            database.execSQL(
-                """
-                CREATE TABLE IF NOT EXISTS `financial_records` (
-                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    `monthYear` TEXT NOT NULL,
-                    `basicSalary` REAL NOT NULL,
-                    `totalAllowance` REAL NOT NULL,
-                    `calculatedOtAmount` REAL NOT NULL,
-                    `apitTaxDeduction` REAL NOT NULL,
-                    `wopPensionDeduction` REAL NOT NULL,
-                    `loanDeduction` REAL NOT NULL,
-                    `netSalary` REAL NOT NULL
-                )
-                """.trimIndent()
-            )
+        // Version 3 -> 4: replace the legacy financial_records schema
+        // with the current monthly financial model used by FinancialRecordEntity.
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP TABLE IF EXISTS `financial_records`")
+                createFinancialRecordsTable(database)
+            }
+        }
 
-            // 2. ISBAR Notes Table
+        private fun createSuperAppTables(database: SupportSQLiteDatabase) {
+            createFinancialRecordsTable(database)
+
             database.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `isbar_notes` (
@@ -103,7 +89,6 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent()
             )
 
-            // 3. Clinical Tasks Table
             database.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `clinical_tasks` (
@@ -118,7 +103,6 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent()
             )
 
-            // 4. CPD Logs Table
             database.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `cpd_logs` (
@@ -128,6 +112,30 @@ abstract class AppDatabase : RoomDatabase() {
                     `earnedPoints` INTEGER NOT NULL,
                     `speakerOrInstitution` TEXT NOT NULL,
                     `notes` TEXT NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+
+        private fun createFinancialRecordsTable(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `financial_records` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `recordMonth` TEXT NOT NULL,
+                    `timestamp` INTEGER NOT NULL,
+                    `basicSalary` REAL NOT NULL,
+                    `otRate` REAL NOT NULL,
+                    `otHours` REAL NOT NULL,
+                    `phDays` REAL NOT NULL,
+                    `doDays` REAL NOT NULL,
+                    `wopDeduction` REAL NOT NULL,
+                    `apitTaxAmount` REAL NOT NULL,
+                    `loanDeduction` REAL NOT NULL,
+                    `otherDeductions` REAL NOT NULL,
+                    `totalHoursWorked` REAL NOT NULL,
+                    `grossSalary` REAL NOT NULL,
+                    `netSalary` REAL NOT NULL
                 )
                 """.trimIndent()
             )
