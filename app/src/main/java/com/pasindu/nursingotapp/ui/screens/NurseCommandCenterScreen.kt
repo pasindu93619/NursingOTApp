@@ -107,7 +107,11 @@ fun NurseCommandCenterScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             NurseCommandCenterCard(state = state, onOpen = { onNavigate(state.insightRoute) })
-            NursingOsScoreCard(state = state, onOpen = { onNavigate(state.insightRoute) })
+            NursingOsScoreCard(
+                state = state,
+                onOpen = { onNavigate(state.insightRoute) },
+                onFinance = { onNavigate("advanced_finance_hub") }
+            )
             PrioritizedAgendaCard(
                 state = state,
                 onNavigate = onNavigate,
@@ -158,7 +162,8 @@ fun NurseCommandCenterScreen(
 @Composable
 private fun NursingOsScoreCard(
     state: NurseCommandCenterState,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onFinance: () -> Unit
 ) {
     val score = state.nursingOsScore
     val accent = when {
@@ -174,10 +179,7 @@ private fun NursingOsScoreCard(
         shape = RoundedCornerShape(26.dp),
         onClick = onOpen
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("NURSINGOS READINESS", color = Color(0xFF27187E), fontSize = 11.sp, fontWeight = FontWeight.Black)
@@ -193,53 +195,44 @@ private fun NursingOsScoreCard(
                 trackColor = accent.copy(alpha = 0.10f)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ScoreMiniMetric("WORK", state.wellnessScore, Modifier.weight(1f))
                 ScoreMiniMetric("CLINICAL", state.clinicalHealthScore, Modifier.weight(1f))
-                ScoreMiniMetric("FINANCE", state.financialHealthScore, Modifier.weight(1f))
+                ScoreMiniMetric("FINANCE", state.financialHealthScore, Modifier.weight(1f), onClick = onFinance)
                 ScoreMiniMetric("OT", state.otLoadScore, Modifier.weight(1f))
             }
 
-            Text(
-                state.nursingOsRecommendation,
-                color = Color(0xFF475569),
-                fontSize = 13.sp,
-                lineHeight = 19.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Text(
-                "Workload • Clinical • Finance • OT • Claims • CPD",
-                color = Color(0xFF94A3B8),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(state.nursingOsRecommendation, color = Color(0xFF475569), fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
+            Text("Workload • Clinical • Finance • OT • Claims • CPD", color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-private fun ScoreMiniMetric(label: String, value: Int, modifier: Modifier) {
-    Surface(modifier = modifier, color = Color(0xFFF8FAFC), shape = RoundedCornerShape(14.dp)) {
-        Column(
-            Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
+private fun ScoreMiniMetric(
+    label: String,
+    value: Int,
+    modifier: Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFFF8FAFC),
+        shape = RoundedCornerShape(14.dp),
+        onClick = onClick
+    ) {
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
             Text("$value", fontSize = 14.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.ExtraBold)
+            if (onClick != null) {
+                Text("VIEW", fontSize = 7.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Black)
+            }
         }
     }
 }
 
 @Composable
-private fun PrioritizedAgendaCard(
-    state: NurseCommandCenterState,
-    onNavigate: (String) -> Unit,
-    onCompleteClinicalTask: (Int, String) -> Unit
-) {
+private fun PrioritizedAgendaCard(state: NurseCommandCenterState, onNavigate: (String) -> Unit, onCompleteClinicalTask: (Int, String) -> Unit) {
     val urgent = state.urgentAction
     val todayItems = state.todayAgenda
     val laterItems = state.laterAgenda
