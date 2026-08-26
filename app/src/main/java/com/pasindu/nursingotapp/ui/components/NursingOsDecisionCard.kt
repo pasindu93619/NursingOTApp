@@ -1,5 +1,12 @@
 package com.pasindu.nursingotapp.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -41,14 +48,14 @@ fun NursingOsDecisionCard(
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "decisionPulse")
-    val pulseScale = infiniteTransition.animateFloat(
-        initialValue = 0.94f,
+    val liveScale = infiniteTransition.animateFloat(
+        initialValue = 0.96f,
         targetValue = 1.08f,
         animationSpec = infiniteRepeatable(
             animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "decisionPulseScale"
+        label = "livePulse"
     )
 
     val accent = when (decision.priority) {
@@ -113,58 +120,75 @@ fun NursingOsDecisionCard(
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = accent.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.RadioButtonChecked,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = pulseScale.value
-                                scaleY = pulseScale.value
-                                alpha = 0.88f
-                            }
+            AnimatedContent(
+                targetState = decision,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220)) +
+                        scaleIn(initialScale = 0.97f, animationSpec = tween(220)))
+                        .togetherWith(fadeOut(animationSpec = tween(140)))
+                        .using(SizeTransform(clip = false))
+                },
+                label = "decisionTransition"
+            ) { currentDecision ->
+                val currentAccent = when (currentDecision.priority) {
+                    DecisionPriority.URGENT -> Color(0xFFDC2626)
+                    DecisionPriority.TODAY -> Color(0xFFD97706)
+                    DecisionPriority.LATER -> Color(0xFF475569)
+                    DecisionPriority.CLEAR -> Color(0xFF059669)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = currentAccent.copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.RadioButtonChecked,
+                                contentDescription = null,
+                                tint = currentAccent,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = liveScale.value
+                                    scaleY = liveScale.value
+                                }
+                            )
+                            Text(
+                                currentDecision.priority.name,
+                                color = currentAccent,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                        Text(
+                            currentDecision.title,
+                            modifier = Modifier.padding(top = 3.dp),
+                            color = Color(0xFF0F172A),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
-                            decision.priority.name,
-                            color = accent,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black
+                            currentDecision.reason,
+                            modifier = Modifier.padding(top = 4.dp),
+                            color = Color(0xFF64748B),
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
                         )
                     }
-                    Text(
-                        decision.title,
-                        modifier = Modifier.padding(top = 3.dp),
-                        color = Color(0xFF0F172A),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        decision.reason,
-                        modifier = Modifier.padding(top = 4.dp),
-                        color = Color(0xFF64748B),
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = "Open action",
+                        tint = currentAccent
                     )
                 }
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = "Open action",
-                    tint = accent
-                )
             }
 
             Text(
