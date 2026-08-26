@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.School
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import com.pasindu.nursingotapp.ui.components.NurseCommandCenterCard
 
@@ -44,6 +46,7 @@ import com.pasindu.nursingotapp.ui.components.NurseCommandCenterCard
 @Composable
 fun NurseCommandCenterScreen(
     onBack: () -> Unit,
+    onNavigate: (String) -> Unit,
     viewModel: NurseCommandCenterViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -84,17 +87,22 @@ fun NurseCommandCenterScreen(
         ) {
             NurseCommandCenterCard(
                 state = state,
-                onOpen = {}
+                onOpen = { onNavigate(state.insightRoute) }
             )
 
-            InsightCard(insight = state.dailyInsight)
+            InsightCard(
+                state = state,
+                onAction = { onNavigate(state.insightRoute) }
+            )
 
             SectionCard(
                 title = "Professional pulse",
                 icon = Icons.Default.School,
                 value = "${state.cpdPoints}/${state.cpdTarget} CPD",
                 subtitle = "Keep your professional learning visible.",
-                progress = state.cpdProgress
+                progress = state.cpdProgress,
+                actionLabel = "Open Knowledge Hub",
+                onAction = { onNavigate("knowledge_hub") }
             )
 
             SectionCard(
@@ -102,7 +110,9 @@ fun NurseCommandCenterScreen(
                 icon = Icons.Default.Summarize,
                 value = "${state.claimCompletedDays}/${state.claimTotalDays} days",
                 subtitle = "Your monthly claim completion status.",
-                progress = state.claimProgress
+                progress = state.claimProgress,
+                actionLabel = "Open OT Claim",
+                onAction = { onNavigate("claim_period") }
             )
 
             SectionCard(
@@ -110,7 +120,9 @@ fun NurseCommandCenterScreen(
                 icon = Icons.Default.CheckCircle,
                 value = "${state.pendingClinicalTasks} pending",
                 subtitle = "Outstanding tasks currently recorded in Clinical Planning.",
-                progress = 1f - (state.pendingClinicalTasks / 10f).coerceIn(0f, 1f)
+                progress = 1f - (state.pendingClinicalTasks / 10f).coerceIn(0f, 1f),
+                actionLabel = "Open Clinical Planning",
+                onAction = { onNavigate("clinical_planning") }
             )
 
             SectionCard(
@@ -118,7 +130,9 @@ fun NurseCommandCenterScreen(
                 icon = Icons.Default.EmojiEvents,
                 value = "${state.wellnessScore}/100",
                 subtitle = "A transparent workload/recovery indicator for this app, not a medical score.",
-                progress = state.wellnessScore / 100f
+                progress = state.wellnessScore / 100f,
+                actionLabel = "Open CarePulse",
+                onAction = { onNavigate("care_pulse") }
             )
 
             Spacer(Modifier.padding(bottom = 24.dp))
@@ -127,16 +141,21 @@ fun NurseCommandCenterScreen(
 }
 
 @Composable
-private fun InsightCard(insight: String) {
+private fun InsightCard(
+    state: NurseCommandCenterState,
+    onAction: () -> Unit
+) {
     Card(
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFEEF2FF)),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(22.dp),
+        onClick = onAction
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(18.dp),
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
@@ -145,22 +164,35 @@ private fun InsightCard(insight: String) {
                 tint = Color(0xFF4338CA)
             )
 
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = "TODAY'S INSIGHT",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color(0xFF4338CA)
                 )
-                Spacer(Modifier.padding(top = 3.dp))
                 Text(
-                    text = insight,
+                    text = state.dailyInsight,
+                    modifier = Modifier.padding(top = 4.dp),
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
                     color = Color(0xFF1E293B),
                     fontWeight = FontWeight.Medium
                 )
+                Text(
+                    text = "Tap to act",
+                    modifier = Modifier.padding(top = 8.dp),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF6366F1)
+                )
             }
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Take action",
+                tint = Color(0xFF4338CA)
+            )
         }
     }
 }
@@ -171,17 +203,22 @@ private fun SectionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String,
     subtitle: String,
-    progress: Float
+    progress: Float,
+    actionLabel: String,
+    onAction: () -> Unit
 ) {
     Card(
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(22.dp),
+        onClick = onAction
     ) {
         Column(
             Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -192,10 +229,17 @@ private fun SectionCard(
                 )
                 Text(
                     title,
+                    modifier = Modifier.weight(1f),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = actionLabel,
+                    tint = Color(0xFF94A3B8)
+                )
             }
+
             Text(
                 value,
                 fontSize = 22.sp,
@@ -209,6 +253,12 @@ private fun SectionCard(
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                actionLabel,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
