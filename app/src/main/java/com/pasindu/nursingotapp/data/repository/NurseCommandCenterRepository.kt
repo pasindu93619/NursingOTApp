@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.data.repository
 
 import com.pasindu.nursingotapp.data.local.AppDatabase
+import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -34,6 +35,7 @@ class NurseCommandCenterRepository(
         val netSalary: Double,
         val pendingClinicalTasks: Int,
         val cpdPoints: Int,
+        val pendingClinicalTaskDetails: List<ClinicalTaskEntity>,
         val todayDutyRecorded: Boolean,
         val todayDutyHours: Double,
         val todayOtHours: Double,
@@ -68,6 +70,12 @@ class NurseCommandCenterRepository(
                 it.recordMonth == currentMonthKey
             }
             val latestFinance = currentMonthFinance ?: finance.firstOrNull()
+            val pendingTaskDetails = clinicalTasks
+                .filter { !it.isCompleted }
+                .sortedWith(
+                    compareBy<ClinicalTaskEntity> { priorityRank(it.priority) }
+                        .thenBy { it.triggerTime }
+                )
 
             Snapshot(
                 profile = currentProfile,
@@ -91,8 +99,9 @@ class NurseCommandCenterRepository(
                 netSalary = latestFinance?.netSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
-                pendingClinicalTasks = clinicalTasks.count { !it.isCompleted },
+                pendingClinicalTasks = pendingTaskDetails.size,
                 cpdPoints = cpdLogs.sumOf { it.earnedPoints },
+                pendingClinicalTaskDetails = pendingTaskDetails,
                 todayDutyRecorded = todayEntry != null && (
                     todayEntry.normalHours > 0f ||
                         todayEntry.otHours > 0f ||
@@ -110,5 +119,11 @@ class NurseCommandCenterRepository(
 
     suspend fun setClinicalTaskCompleted(taskId: Int, completed: Boolean = true) {
         clinicalPlanningDao.setTaskCompleted(taskId, completed)
+    }
+
+    private fun priorityRank(priority: String): Int = when (priority.uppercase()) {
+        "HIGH", "CRITICAL", "URGENT" -> 0
+        "MEDIUM" -> 1
+        else -> 2
     }
 }
