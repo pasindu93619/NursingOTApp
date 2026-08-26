@@ -58,6 +58,7 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
                         claimTotalDays = snapshot.claimTotalDays,
                         wellnessScore = wellnessScore,
                         todayDutyRecorded = snapshot.todayDutyRecorded,
+                        todayDutyHours = snapshot.todayDutyHours,
                         todayOtHours = snapshot.todayOtHours,
                         todayPh = snapshot.todayPh,
                         todayClaimRecorded = snapshot.todayClaimRecorded
@@ -69,6 +70,17 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
                 .collect { snapshot ->
                     _state.value = snapshot
                 }
+        }
+    }
+
+    /**
+     * Persist completion of a real clinical task.
+     * The repository update feeds back through the Room Flow, so the
+     * Command Center refreshes its pending count and agenda automatically.
+     */
+    fun completeClinicalTask(taskId: Int) {
+        viewModelScope.launch {
+            repository.setClinicalTaskCompleted(taskId, true)
         }
     }
 
@@ -90,7 +102,6 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
             .coerceIn(0, 100)
     }
 
-    /** Kept for future modules that need to push a derived profile snapshot. */
     fun updateProfile(
         name: String,
         unitName: String,
