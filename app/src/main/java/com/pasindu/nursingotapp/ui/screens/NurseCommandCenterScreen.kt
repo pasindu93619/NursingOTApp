@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pasindu.nursingotapp.domain.model.AgendaItem
 import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import com.pasindu.nursingotapp.ui.components.NurseCommandCenterCard
@@ -55,12 +56,7 @@ fun NurseCommandCenterScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Nurse Command Center",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("Nurse Command Center", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -88,9 +84,9 @@ fun NurseCommandCenterScreen(
                 onOpen = { onNavigate(state.insightRoute) }
             )
 
-            DailyAgendaCard(
+            PrioritizedAgendaCard(
                 state = state,
-                onAction = { onNavigate(state.todayActionRoute) }
+                onNavigate = onNavigate
             )
 
             InsightCard(
@@ -144,34 +140,22 @@ fun NurseCommandCenterScreen(
 }
 
 @Composable
-private fun DailyAgendaCard(
+private fun PrioritizedAgendaCard(
     state: NurseCommandCenterState,
-    onAction: () -> Unit
+    onNavigate: (String) -> Unit
 ) {
-    val accent = when (state.todayStatus) {
-        "ATTENTION" -> Color(0xFFDC2626)
-        "ACTION NEEDED" -> Color(0xFFD97706)
-        "RECOVERY" -> Color(0xFF7C3AED)
-        else -> Color(0xFF059669)
-    }
-
-    val background = when (state.todayStatus) {
-        "ATTENTION" -> Color(0xFFFFF1F2)
-        "ACTION NEEDED" -> Color(0xFFFFFBEB)
-        "RECOVERY" -> Color(0xFFF5F3FF)
-        else -> Color(0xFFECFDF5)
-    }
+    val urgent = state.urgentAction
+    val todayItems = state.todayAgenda
+    val laterItems = state.laterAgenda
+    val total = (if (urgent != null) 1 else 0) + todayItems.size + laterItems.size
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = background),
-        shape = RoundedCornerShape(24.dp),
-        onClick = onAction
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
+            modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
@@ -180,53 +164,38 @@ private fun DailyAgendaCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "TODAY'S AGENDA",
+                        "DAILY AGENDA",
+                        color = Color(0xFF27187E),
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        color = accent
+                        fontWeight = FontWeight.Black
                     )
                     Text(
-                        text = state.todayStatus,
-                        modifier = Modifier.padding(top = 3.dp),
+                        if (total == 0) "Everything is clear" else "$total action${if (total == 1) "" else "s"} to review",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF172033)
+                        color = Color(0xFF0F172A)
                     )
                 }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Open today's action",
-                    tint = accent
-                )
+                Icon(Icons.Default.Schedule, contentDescription = null, tint = Color(0xFF27187E))
             }
 
-            Text(
-                text = state.todayAction,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = Color(0xFF334155),
-                fontWeight = FontWeight.Medium
-            )
+            if (urgent != null) {
+                AgendaGroup(title = "URGENT", color = Color(0xFFDC2626), items = listOf(urgent), onNavigate = onNavigate)
+            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AgendaMetric(
-                    label = "Duty",
-                    value = if (state.todayDutyRecorded) formatHours(state.todayDutyHours) else "Open"
-                )
-                AgendaMetric(
-                    label = "OT",
-                    value = formatHours(state.todayOtHours)
-                )
-                AgendaMetric(
-                    label = "PH",
-                    value = if (state.todayPh) "Yes" else "No"
-                )
-                AgendaMetric(
-                    label = "Claim",
-                    value = if (state.todayClaimRecorded) "Done" else "Open"
+            if (todayItems.isNotEmpty()) {
+                AgendaGroup(title = "TODAY", color = Color(0xFFD97706), items = todayItems, onNavigate = onNavigate)
+            }
+
+            if (laterItems.isNotEmpty()) {
+                AgendaGroup(title = "LATER", color = Color(0xFF475569), items = laterItems, onNavigate = onNavigate)
+            }
+
+            if (total == 0) {
+                Text(
+                    "No priority actions right now. Your current records are up to date.",
+                    color = Color(0xFF64748B),
+                    fontSize = 13.sp
                 )
             }
         }
@@ -234,24 +203,60 @@ private fun DailyAgendaCard(
 }
 
 @Composable
-private fun AgendaMetric(label: String, value: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(0.24f),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.78f)),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
-            Text(value, fontSize = 11.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.ExtraBold)
+private fun AgendaGroup(
+    title: String,
+    color: Color,
+    items: List<AgendaItem>,
+    onNavigate: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = color, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        items.forEach { item ->
+            AgendaItemRow(item = item, color = color, onClick = { onNavigate(item.route) })
         }
     }
 }
 
-private fun formatHours(hours: Double): String =
-    if (hours == hours.toInt().toDouble()) "${hours.toInt()} h" else "${"%.1f".format(hours)} h"
+@Composable
+private fun AgendaItemRow(
+    item: AgendaItem,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.06f)),
+        shape = RoundedCornerShape(18.dp),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(11.dp)
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    item.priority.name.take(1),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+                    color = color,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 11.sp
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                Text(item.detail, fontSize = 12.sp, color = Color(0xFF64748B))
+                Text(item.actionLabel, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
+        }
+    }
+}
 
 @Composable
 private fun InsightCard(
@@ -272,16 +277,9 @@ private fun InsightCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF4338CA))
-            Column(Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text("TODAY'S INSIGHT", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4338CA))
-                Text(
-                    state.dailyInsight,
-                    modifier = Modifier.padding(top = 4.dp),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = Color(0xFF1E293B),
-                    fontWeight = FontWeight.Medium
-                )
+                Text(state.dailyInsight, modifier = Modifier.padding(top = 4.dp), fontSize = 14.sp, lineHeight = 20.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Medium)
                 Text("Tap to act", modifier = Modifier.padding(top = 8.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6366F1))
             }
             Icon(Icons.Default.ChevronRight, contentDescription = "Take action", tint = Color(0xFF4338CA))
