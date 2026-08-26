@@ -40,6 +40,48 @@ data class NurseCommandCenterState(
             (cpdPoints.toFloat() / cpdTarget.toFloat()).coerceIn(0f, 1f)
         } else 0f
 
+    /**
+     * Transparent NursingOS readiness index (0-100).
+     * This is not a medical or mental-health score.
+     */
+    val nursingOsScore: Int
+        get() {
+            val workloadComponent = wellnessScore.coerceIn(0, 100)
+            val clinicalComponent = (100 - pendingClinicalTasks * 8).coerceIn(0, 100)
+            val claimComponent = (claimProgress * 100f).toInt().coerceIn(0, 100)
+            val cpdComponent = (cpdProgress * 100f).toInt().coerceIn(0, 100)
+            return (
+                workloadComponent * 0.40 +
+                    clinicalComponent * 0.25 +
+                    claimComponent * 0.20 +
+                    cpdComponent * 0.15
+                ).toInt().coerceIn(0, 100)
+        }
+
+    val nursingOsScoreLabel: String
+        get() = when {
+            nursingOsScore >= 85 -> "Excellent control"
+            nursingOsScore >= 70 -> "Good control"
+            nursingOsScore >= 50 -> "Needs attention"
+            else -> "High attention"
+        }
+
+    val nursingOsRecommendation: String
+        get() = when {
+            pendingClinicalTasks >= 5 ->
+                "Clear high-priority clinical tasks first; they have the greatest effect on today's readiness."
+            wellnessScore < 55 ->
+                "Protect recovery time and avoid adding unnecessary workload where possible."
+            !todayClaimRecorded ->
+                "Record today's duty/claim entry so your operational picture stays complete."
+            claimProgress < 0.50f ->
+                "Bring the monthly claim record up to date before month-end pressure builds."
+            cpdProgress < 0.30f ->
+                "Consider adding a small CPD activity when your shift load is stable."
+            else ->
+                "Your core nursing records are in good shape. Keep them current."
+        }
+
     val todayNeedsAttention: Boolean
         get() = pendingClinicalTasks > 0 || !todayClaimRecorded
 
@@ -116,7 +158,15 @@ data class NurseCommandCenterState(
         get() = when {
             pendingClinicalTasks > 0 && pendingClinicalTaskDetails.isNotEmpty() -> {
                 val task = pendingClinicalTaskDetails.first()
-                clinicalTaskItem(task, AgendaPriority.URGENT)
+                AgendaItem(
+                    id = "clinical_task_${task.id}",
+                    priority = AgendaPriority.URGENT,
+                    title = task.taskName,
+                    detail = task.description.ifBlank { "Pending clinical task" },
+                    actionLabel = "Complete or open task",
+                    route = "clinical_planning",
+                    clinicalTaskId = task.id
+                )
             }
             !todayClaimRecorded -> AgendaItem(
                 id = "today_claim",
@@ -139,109 +189,42 @@ data class NurseCommandCenterState(
 
     val todayAgenda: List<AgendaItem>
         get() = buildList {
-            pendingClinicalTaskDetails
-                .drop(if (urgentAction?.clinicalTaskId != null) 1 else 0)
-                .take(3)
-                .forEach { task ->
-                    add(clinicalTaskItem(task, AgendaPriority.TODAY))
-                }
-
+            pendingClinicalTaskDetails.drop(1).take(3).forEach { task ->
+                add(
+                    AgendaItem(
+                        id = "clinical_task_${task.id}",
+                        priority = AgendaPriority.TODAY,
+                        title = task.taskName,
+                        detail = task.description.ifBlank { task.priority },
+                        actionLabel = "Complete or open task",
+                        route = "clinical_planning",
+                        clinicalTaskId = task.id
+                    )
+                )
+            }
             if (todayOtHours > 0.0) {
-                add(
-                    AgendaItem(
-                        id = "today_ot",
-                        priority = AgendaPriority.TODAY,
-                        title = "Review today's OT",
-                        detail = "${formatHours(todayOtHours)} recorded today.",
-                        actionLabel = "Open Finance",
-                        route = "advanced_finance_hub"
-                    )
-                )
+                add(AgendaItem("today_ot", AgendaPriority.TODAY, "Review today's OT", "${formatHours(todayOtHours)} recorded today.", "Open Finance", "advanced_finance_hub"))
             }
-
             if (todayPh) {
-                add(
-                    AgendaItem(
-                        id = "today_ph",
-                        priority = AgendaPriority.TODAY,
-                        title = "Review PH duty",
-                        detail = "Public-holiday duty is recorded today.",
-                        actionLabel = "Review Claim",
-                        route = "claim_period"
-                    )
-                )
+                add(AgendaItem("today_ph", AgendaPriority.TODAY, "Review PH duty", "Public-holiday duty is recorded today.", "Review Claim", "claim_period"))
             }
-
             if (todayDutyRecorded && todayClaimRecorded) {
-                add(
-                    AgendaItem(
-                        id = "today_recorded",
-                        priority = AgendaPriority.TODAY,
-                        title = "Today's duty is recorded",
-                        detail = "Keep the rest of the monthly record current.",
-                        actionLabel = "View Analytics",
-                        route = "analytics"
-                    )
-                )
+                add(AgendaItem("today_recorded", AgendaPriority.TODAY, "Today's duty is recorded", "Keep the rest of the monthly record current.", "View Analytics", "analytics"))
             }
         }
 
     val laterAgenda: List<AgendaItem>
         get() = buildList {
             if (cpdTarget > 0 && cpdProgress < 0.50f) {
-                add(
-                    AgendaItem(
-                        id = "cpd_progress",
-                        priority = AgendaPriority.LATER,
-                        title = "Build CPD progress",
-                        detail = "${cpdPoints}/${cpdTarget} CPD points recorded.",
-                        actionLabel = "Open Knowledge Hub",
-                        route = "knowledge_hub"
-                    )
-                )
+                add(AgendaItem("cpd_progress", AgendaPriority.LATER, "Build CPD progress", "${cpdPoints}/${cpdTarget} CPD points recorded.", "Open Knowledge Hub", "knowledge_hub"))
             }
-
             if (claimTotalDays > 0 && claimProgress < 0.85f && todayClaimRecorded) {
-                add(
-                    AgendaItem(
-                        id = "monthly_claim",
-                        priority = AgendaPriority.LATER,
-                        title = "Keep the monthly claim current",
-                        detail = "$claimCompletedDays/$claimTotalDays days recorded.",
-                        actionLabel = "Open OT Claim",
-                        route = "claim_period"
-                    )
-                )
+                add(AgendaItem("monthly_claim", AgendaPriority.LATER, "Keep the monthly claim current", "$claimCompletedDays/$claimTotalDays days recorded.", "Open OT Claim", "claim_period"))
             }
-
-            if (estimatedGrossSalary > 0.0 && estimatedNetSalary > 0.0 &&
-                estimatedNetSalary / estimatedGrossSalary < 0.80
-            ) {
-                add(
-                    AgendaItem(
-                        id = "deductions",
-                        priority = AgendaPriority.LATER,
-                        title = "Review deductions",
-                        detail = "Net pay is below 80% of gross pay.",
-                        actionLabel = "Open Finance",
-                        route = "advanced_finance_hub"
-                    )
-                )
+            if (estimatedGrossSalary > 0.0 && estimatedNetSalary > 0.0 && estimatedNetSalary / estimatedGrossSalary < 0.80) {
+                add(AgendaItem("deductions", AgendaPriority.LATER, "Review deductions", "Net pay is below 80% of gross pay.", "Open Finance", "advanced_finance_hub"))
             }
         }
-
-    private fun clinicalTaskItem(
-        task: ClinicalTaskEntity,
-        priority: AgendaPriority
-    ): AgendaItem = AgendaItem(
-        id = "clinical_task_${task.id}",
-        priority = priority,
-        title = task.taskName,
-        detail = task.description.ifBlank { task.priority },
-        actionLabel = "Complete or open task",
-        route = "clinical_planning",
-        clinicalTaskId = task.id
-    )
 
     private fun formatHours(value: Double): String =
         if (value % 1.0 == 0.0) "${value.toInt()} h" else "%.1f h".format(value)
