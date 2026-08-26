@@ -19,6 +19,7 @@ data class NurseCommandCenterState(
     val pendingClinicalTasks: Int = 0,
     val wellnessScore: Int = 100,
     val todayDutyRecorded: Boolean = false,
+    val todayDutyHours: Double = 0.0,
     val todayOtHours: Double = 0.0,
     val todayPh: Boolean = false,
     val todayClaimRecorded: Boolean = false
