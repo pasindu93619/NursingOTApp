@@ -30,22 +30,16 @@ data class NurseCommandCenterState(
     val claimProgress: Float
         get() = if (claimTotalDays > 0) {
             (claimCompletedDays.toFloat() / claimTotalDays.toFloat()).coerceIn(0f, 1f)
-        } else {
-            0f
-        }
+        } else 0f
 
     val cpdProgress: Float
         get() = if (cpdTarget > 0) {
             (cpdPoints.toFloat() / cpdTarget.toFloat()).coerceIn(0f, 1f)
-        } else {
-            0f
-        }
+        } else 0f
 
-    /** True when today's record needs user attention. */
     val todayNeedsAttention: Boolean
         get() = pendingClinicalTasks > 0 || !todayClaimRecorded
 
-    /** Route for the primary action on today's card. */
     val todayActionRoute: String
         get() = when {
             pendingClinicalTasks > 0 -> "clinical_planning"
@@ -55,7 +49,6 @@ data class NurseCommandCenterState(
             else -> "analytics"
         }
 
-    /** Destination route for the most useful overall action. */
     val insightRoute: String
         get() = when {
             pendingClinicalTasks >= 5 -> "clinical_planning"
@@ -116,10 +109,10 @@ data class NurseCommandCenterState(
             else -> "READY"
         }
 
-    /** Highest-priority action for the Daily Agenda. */
     val urgentAction: AgendaItem?
         get() = when {
             pendingClinicalTasks > 0 -> AgendaItem(
+                id = "clinical_tasks",
                 priority = AgendaPriority.URGENT,
                 title = "Clinical tasks need attention",
                 detail = "$pendingClinicalTasks pending task${if (pendingClinicalTasks == 1) "" else "s"} recorded.",
@@ -127,6 +120,7 @@ data class NurseCommandCenterState(
                 route = "clinical_planning"
             )
             !todayClaimRecorded -> AgendaItem(
+                id = "today_claim",
                 priority = AgendaPriority.URGENT,
                 title = "Record today's claim",
                 detail = "Today's duty/claim entry is not recorded yet.",
@@ -134,6 +128,7 @@ data class NurseCommandCenterState(
                 route = "claim_period"
             )
             wellnessScore < 55 -> AgendaItem(
+                id = "recovery",
                 priority = AgendaPriority.URGENT,
                 title = "Workload is high",
                 detail = "Your current workload indicator is $wellnessScore/100.",
@@ -143,12 +138,12 @@ data class NurseCommandCenterState(
             else -> null
         }
 
-    /** Useful actions for the current day that are not urgent. */
     val todayAgenda: List<AgendaItem>
         get() = buildList {
             if (todayOtHours > 0.0) {
                 add(
                     AgendaItem(
+                        id = "today_ot",
                         priority = AgendaPriority.TODAY,
                         title = "Review today's OT",
                         detail = "${formatHours(todayOtHours)} recorded today.",
@@ -157,10 +152,10 @@ data class NurseCommandCenterState(
                     )
                 )
             }
-
             if (todayPh) {
                 add(
                     AgendaItem(
+                        id = "today_ph",
                         priority = AgendaPriority.TODAY,
                         title = "Review PH duty",
                         detail = "Public-holiday duty is recorded today.",
@@ -169,10 +164,10 @@ data class NurseCommandCenterState(
                     )
                 )
             }
-
             if (todayDutyRecorded && todayClaimRecorded) {
                 add(
                     AgendaItem(
+                        id = "today_recorded",
                         priority = AgendaPriority.TODAY,
                         title = "Today's duty is recorded",
                         detail = "Keep the rest of the monthly record current.",
@@ -183,12 +178,12 @@ data class NurseCommandCenterState(
             }
         }
 
-    /** Lower-priority maintenance actions. */
     val laterAgenda: List<AgendaItem>
         get() = buildList {
             if (cpdTarget > 0 && cpdProgress < 0.50f) {
                 add(
                     AgendaItem(
+                        id = "cpd_progress",
                         priority = AgendaPriority.LATER,
                         title = "Build CPD progress",
                         detail = "${cpdPoints}/${cpdTarget} CPD points recorded.",
@@ -197,10 +192,10 @@ data class NurseCommandCenterState(
                     )
                 )
             }
-
             if (claimTotalDays > 0 && claimProgress < 0.85f && todayClaimRecorded) {
                 add(
                     AgendaItem(
+                        id = "monthly_claim",
                         priority = AgendaPriority.LATER,
                         title = "Keep the monthly claim current",
                         detail = "$claimCompletedDays/$claimTotalDays days recorded.",
@@ -209,12 +204,12 @@ data class NurseCommandCenterState(
                     )
                 )
             }
-
             if (estimatedGrossSalary > 0.0 && estimatedNetSalary > 0.0 &&
                 estimatedNetSalary / estimatedGrossSalary < 0.80
             ) {
                 add(
                     AgendaItem(
+                        id = "deductions",
                         priority = AgendaPriority.LATER,
                         title = "Review deductions",
                         detail = "Net pay is below 80% of gross pay.",
@@ -228,17 +223,3 @@ data class NurseCommandCenterState(
     private fun formatHours(value: Double): String =
         if (value % 1.0 == 0.0) "${value.toInt()} h" else "%.1f h".format(value)
 }
-
-enum class AgendaPriority {
-    URGENT,
-    TODAY,
-    LATER
-}
-
-data class AgendaItem(
-    val priority: AgendaPriority,
-    val title: String,
-    val detail: String,
-    val actionLabel: String,
-    val route: String
-)
