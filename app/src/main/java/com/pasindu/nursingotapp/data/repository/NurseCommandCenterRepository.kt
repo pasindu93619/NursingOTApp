@@ -35,6 +35,7 @@ class NurseCommandCenterRepository(
         val pendingClinicalTasks: Int,
         val cpdPoints: Int,
         val todayDutyRecorded: Boolean,
+        val todayDutyHours: Double,
         val todayOtHours: Double,
         val todayPh: Boolean,
         val todayClaimRecorded: Boolean
@@ -99,10 +100,15 @@ class NurseCommandCenterRepository(
                         todayEntry.isDO ||
                         todayEntry.isLeave
                     ),
+                todayDutyHours = todayEntry?.normalHours?.toDouble() ?: 0.0,
                 todayOtHours = todayEntry?.otHours?.toDouble() ?: 0.0,
                 todayPh = todayEntry?.isPH == true,
                 todayClaimRecorded = todayEntry != null
             )
         }
+    }
+
+    suspend fun setClinicalTaskCompleted(taskId: Int, completed: Boolean = true) {
+        clinicalPlanningDao.setTaskCompleted(taskId, completed)
     }
 }
