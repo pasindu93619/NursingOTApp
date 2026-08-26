@@ -10,8 +10,9 @@ import java.time.YearMonth
 /**
  * Single data gateway for the Nurse Command Center.
  *
- * This keeps Room details out of the Compose UI and gives the command center
- * one consistent stream that can be expanded later without changing the UI.
+ * Room details stay here instead of leaking into Compose UI. The snapshot is
+ * intentionally small and dashboard-friendly so more sources can be added
+ * without redesigning the screen.
  */
 class NurseCommandCenterRepository(
     private val database: AppDatabase
@@ -38,27 +39,27 @@ class NurseCommandCenterRepository(
     fun observeSnapshot(
         month: YearMonth = YearMonth.now()
     ): Flow<Snapshot> {
-        val monthEntries = dailyEntryDao.observeAllEntries()
-        val financialRecords = financialDao.getAllFinancialRecords()
-        val tasks = clinicalPlanningDao.getAllTasks()
-        val cpdLogs = knowledgeHubDao.getAllCpdLogs()
-        val profile = profileDao.observeProfile()
-
-        val start = month.atDay(1)
-        val end = month.atEndOfMonth()
+        val start: LocalDate = month.atDay(1)
+        val end: LocalDate = month.atEndOfMonth()
 
         return combine(
-            profile,
-            monthEntries,
-            financialRecords,
-            tasks,
-            cpdLogs
-        ) { currentProfile, entries, finance, clinicalTasks, cpd ->
+            profileDao.observeProfile(),
+            dailyEntryDao.observeAllEntries(),
+            financialDao.getAllFinancialRecords(),
+            clinicalPlanningDao.getAllTasks(),
+            knowledgeHubDao.getAllCpdLogs()
+        ) { currentProfile, entries, finance, clinicalTasks, cpdLogs ->
             val monthlyEntries = entries.filter { entry ->
                 entry.date >= start && entry.date <= end
             }
 
-            val latestFinance = finance.firstOrNull()
+            // Prefer the financial record for this month. Fall back to the
+            // newest stored record, then finally to the saved basic salary.
+            val currentMonthKey = month.toString()
+            val currentMonthFinance = finance.firstOrNull {
+                it.recordMonth == currentMonthKey
+            }
+            val latestFinance = currentMonthFinance ?: finance.firstOrNull()
 
             Snapshot(
                 profile = currentProfile,
@@ -66,15 +67,24 @@ class NurseCommandCenterRepository(
                 otHours = monthlyEntries.sumOf { it.otHours.toDouble() },
                 phHours = monthlyEntries
                     .filter { it.isPH }
-                    .sumOf { maxOf(it.normalHours.toDouble(), it.otHours.toDouble()) },
+                    .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() },
                 claimCompletedDays = monthlyEntries.count {
-                    !it.isLeave && (it.normalHours > 0f || it.otHours > 0f || it.isPH || it.isDO)
+                    !it.isLeave && (
+                        it.normalHours > 0f ||
+                            it.otHours > 0f ||
+                            it.isPH ||
+                            it.isDO
+                        )
                 },
                 claimTotalDays = end.dayOfMonth,
-                grossSalary = latestFinance?.grossSalary ?: currentProfile?.basicSalary ?: 0.0,
-                netSalary = latestFinance?.netSalary ?: currentProfile?.basicSalary ?: 0.0,
+                grossSalary = latestFinance?.grossSalary
+                    ?: currentProfile?.basicSalary
+                    ?: 0.0,
+                netSalary = latestFinance?.netSalary
+                    ?: currentProfile?.basicSalary
+                    ?: 0.0,
                 pendingClinicalTasks = clinicalTasks.count { !it.isCompleted },
-                cpdPoints = cpd.sumOf { it.earnedPoints }
+                cpdPoints = cpdLogs.sumOf { it.earnedPoints }
             )
         }
     }
