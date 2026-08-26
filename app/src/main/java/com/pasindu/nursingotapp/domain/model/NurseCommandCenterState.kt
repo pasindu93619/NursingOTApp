@@ -40,9 +40,33 @@ data class NurseCommandCenterState(
             (cpdPoints.toFloat() / cpdTarget.toFloat()).coerceIn(0f, 1f)
         } else 0f
 
+    /** Ratio of net pay retained from gross pay, expressed as 0..1. */
+    val netRetentionRatio: Float
+        get() = if (estimatedGrossSalary > 0.0 && estimatedNetSalary >= 0.0) {
+            (estimatedNetSalary / estimatedGrossSalary).toFloat().coerceIn(0f, 1f)
+        } else {
+            1f
+        }
+
+    /** Transparent financial-pressure indicator. Higher means less deduction pressure. */
+    val financialHealthScore: Int
+        get() = when {
+            estimatedGrossSalary <= 0.0 -> 100
+            netRetentionRatio >= 0.85f -> 100
+            netRetentionRatio >= 0.75f -> 85
+            netRetentionRatio >= 0.65f -> 70
+            netRetentionRatio >= 0.55f -> 55
+            else -> 40
+        }
+
+    /** Transparent OT-load component. Higher means more capacity remaining. */
+    val otLoadScore: Int
+        get() = (100 - (otHoursThisMonth / 50.0 * 100.0).toInt())
+            .coerceIn(0, 100)
+
     /**
      * Transparent NursingOS readiness index (0-100).
-     * This is not a medical or mental-health score.
+     * This is an operational dashboard signal, not a medical or mental-health score.
      */
     val nursingOsScore: Int
         get() {
@@ -50,11 +74,15 @@ data class NurseCommandCenterState(
             val clinicalComponent = (100 - pendingClinicalTasks * 8).coerceIn(0, 100)
             val claimComponent = (claimProgress * 100f).toInt().coerceIn(0, 100)
             val cpdComponent = (cpdProgress * 100f).toInt().coerceIn(0, 100)
+            val financeComponent = financialHealthScore
+
             return (
-                workloadComponent * 0.40 +
-                    clinicalComponent * 0.25 +
-                    claimComponent * 0.20 +
-                    cpdComponent * 0.15
+                workloadComponent * 0.30 +
+                    clinicalComponent * 0.20 +
+                    claimComponent * 0.15 +
+                    cpdComponent * 0.10 +
+                    financeComponent * 0.15 +
+                    otLoadScore * 0.10
                 ).toInt().coerceIn(0, 100)
         }
 
@@ -69,17 +97,21 @@ data class NurseCommandCenterState(
     val nursingOsRecommendation: String
         get() = when {
             pendingClinicalTasks >= 5 ->
-                "Clear high-priority clinical tasks first; they have the greatest effect on today's readiness."
+                "Clear high-priority clinical tasks first; they have the greatest operational impact today."
             wellnessScore < 55 ->
-                "Protect recovery time and avoid adding unnecessary workload where possible."
+                "Your workload signal is high. Protect recovery time and avoid unnecessary extra workload where possible."
+            financialHealthScore < 65 ->
+                "A large share of gross pay is being reduced. Review deductions and commitments in Finance."
+            otHoursThisMonth >= 40.0 ->
+                "Your OT load is high this month. Review the financial benefit against your overall workload."
             !todayClaimRecorded ->
-                "Record today's duty/claim entry so your operational picture stays complete."
+                "Record today's duty/claim entry so your operational and financial picture stays complete."
             claimProgress < 0.50f ->
                 "Bring the monthly claim record up to date before month-end pressure builds."
             cpdProgress < 0.30f ->
                 "Consider adding a small CPD activity when your shift load is stable."
             else ->
-                "Your core nursing records are in good shape. Keep them current."
+                "Your nursing work, finance and professional records are in good shape. Keep them current."
         }
 
     val todayNeedsAttention: Boolean
@@ -90,7 +122,7 @@ data class NurseCommandCenterState(
             pendingClinicalTasks > 0 -> "clinical_planning"
             !todayClaimRecorded -> "claim_period"
             wellnessScore < 55 -> "care_pulse"
-            todayOtHours > 0.0 || todayPh -> "advanced_finance_hub"
+            financialHealthScore < 65 || todayOtHours > 0.0 || todayPh -> "advanced_finance_hub"
             else -> "analytics"
         }
 
@@ -98,6 +130,7 @@ data class NurseCommandCenterState(
         get() = when {
             pendingClinicalTasks >= 5 -> "clinical_planning"
             wellnessScore < 55 -> "care_pulse"
+            financialHealthScore < 65 -> "advanced_finance_hub"
             otHoursThisMonth >= 40.0 -> "advanced_finance_hub"
             estimatedNetSalary > 0.0 && estimatedGrossSalary > 0.0 &&
                 estimatedNetSalary / estimatedGrossSalary < 0.70 -> "advanced_finance_hub"
@@ -112,11 +145,10 @@ data class NurseCommandCenterState(
                 "You have $pendingClinicalTasks pending clinical tasks. Review the highest-priority items first."
             wellnessScore < 55 ->
                 "Your current workload is high. Consider protecting recovery time after duty."
+            financialHealthScore < 65 ->
+                "Your deductions are taking a substantial share of gross pay. Review your Finance records."
             otHoursThisMonth >= 40.0 ->
                 "You have reached ${otHoursThisMonth.toInt()} OT hours this month. Keep an eye on workload balance."
-            estimatedNetSalary > 0.0 && estimatedGrossSalary > 0.0 &&
-                estimatedNetSalary / estimatedGrossSalary < 0.70 ->
-                "Your deductions are taking a noticeable share of gross pay. Review your monthly deductions."
             claimTotalDays > 0 && claimProgress < 0.50f ->
                 "Your claim record is below 50% complete. Keeping entries updated will make month-end easier."
             cpdTarget > 0 && cpdProgress < 0.30f ->
@@ -131,6 +163,8 @@ data class NurseCommandCenterState(
                 "Review $pendingClinicalTasks pending clinical task${if (pendingClinicalTasks == 1) "" else "s"}."
             !todayClaimRecorded ->
                 "Record today's duty/claim entry before you finish the shift."
+            financialHealthScore < 65 ->
+                "Review your deductions and current financial record."
             todayOtHours > 0.0 ->
                 "Today's OT: ${formatHours(todayOtHours)}. Keep your monthly OT record current."
             todayPh ->
@@ -148,6 +182,7 @@ data class NurseCommandCenterState(
             pendingClinicalTasks > 0 -> "ATTENTION"
             !todayClaimRecorded -> "ACTION NEEDED"
             wellnessScore < 55 -> "RECOVERY"
+            financialHealthScore < 65 -> "FINANCE REVIEW"
             todayPh -> "PH DUTY"
             todayOtHours > 0.0 -> "OT RECORDED"
             todayDutyRecorded -> "ON TRACK"
@@ -183,6 +218,14 @@ data class NurseCommandCenterState(
                 detail = "Your current workload indicator is $wellnessScore/100.",
                 actionLabel = "Open CarePulse",
                 route = "care_pulse"
+            )
+            financialHealthScore < 65 -> AgendaItem(
+                id = "finance_pressure",
+                priority = AgendaPriority.URGENT,
+                title = "Review financial pressure",
+                detail = "Net pay retention is ${(netRetentionRatio * 100).toInt()}% of gross.",
+                actionLabel = "Open Finance",
+                route = "advanced_finance_hub"
             )
             else -> null
         }
