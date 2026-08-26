@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -112,6 +112,11 @@ fun NurseCommandCenterScreen(
                 onOpen = { onNavigate(state.insightRoute) }
             )
 
+            NursingOsScoreCard(
+                state = state,
+                onOpen = { onNavigate(state.insightRoute) }
+            )
+
             PrioritizedAgendaCard(
                 state = state,
                 onNavigate = onNavigate,
@@ -171,6 +176,76 @@ fun NurseCommandCenterScreen(
 }
 
 @Composable
+private fun NursingOsScoreCard(
+    state: NurseCommandCenterState,
+    onOpen: () -> Unit
+) {
+    val score = state.nursingOsScore
+    val accent = when {
+        score >= 85 -> Color(0xFF059669)
+        score >= 70 -> Color(0xFF2563EB)
+        score >= 50 -> Color(0xFFD97706)
+        else -> Color(0xFFDC2626)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(26.dp),
+        onClick = onOpen
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("NURSINGOS READINESS", color = Color(0xFF27187E), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        state.nursingOsScoreLabel,
+                        modifier = Modifier.padding(top = 3.dp),
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+                Text(
+                    "$score/100",
+                    color = accent,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+
+            LinearProgressIndicator(
+                progress = { (score / 100f).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+                color = accent,
+                trackColor = accent.copy(alpha = 0.10f)
+            )
+
+            Text(
+                state.nursingOsRecommendation,
+                color = Color(0xFF475569),
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Text(
+                "Workload • Clinical tasks • Claims • CPD",
+                color = Color(0xFF94A3B8),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
 private fun PrioritizedAgendaCard(
     state: NurseCommandCenterState,
     onNavigate: (String) -> Unit,
@@ -206,18 +281,10 @@ private fun PrioritizedAgendaCard(
                 Icon(Icons.Default.Schedule, contentDescription = null, tint = Color(0xFF27187E))
             }
 
-            if (urgent != null) {
-                AgendaGroup("URGENT", Color(0xFFDC2626), listOf(urgent), onNavigate, onCompleteClinicalTask)
-            }
-            if (todayItems.isNotEmpty()) {
-                AgendaGroup("TODAY", Color(0xFFD97706), todayItems, onNavigate, onCompleteClinicalTask)
-            }
-            if (laterItems.isNotEmpty()) {
-                AgendaGroup("LATER", Color(0xFF475569), laterItems, onNavigate, onCompleteClinicalTask)
-            }
-            if (total == 0) {
-                Text("No priority actions right now. Your current records are up to date.", color = Color(0xFF64748B), fontSize = 13.sp)
-            }
+            if (urgent != null) AgendaGroup("URGENT", Color(0xFFDC2626), listOf(urgent), onNavigate, onCompleteClinicalTask)
+            if (todayItems.isNotEmpty()) AgendaGroup("TODAY", Color(0xFFD97706), todayItems, onNavigate, onCompleteClinicalTask)
+            if (laterItems.isNotEmpty()) AgendaGroup("LATER", Color(0xFF475569), laterItems, onNavigate, onCompleteClinicalTask)
+            if (total == 0) Text("No priority actions right now. Your current records are up to date.", color = Color(0xFF64748B), fontSize = 13.sp)
         }
     }
 }
@@ -277,9 +344,7 @@ private fun AgendaItemRow(
                     Text(item.actionLabel, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                 }
             }
-            if (item.clinicalTaskId == null) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
-            }
+            if (item.clinicalTaskId == null) Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
         }
     }
 }
