@@ -275,17 +275,21 @@ private fun AgendaItemRow(
                 Text(item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Text(item.detail, fontSize = 12.sp, color = Color(0xFF64748B))
 
-                if (item.id == "clinical_tasks") {
+                if (item.clinicalTaskId != null) {
                     Row(
-                        modifier = Modifier.padding(top = 5.dp),
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                        TextButton(
+                            onClick = onClick,
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                        ) {
                             Text(item.actionLabel, fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                         }
                         TextButton(
-                            onClick = { onCompleteClinicalTask(0) },
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp)
+                            onClick = { onCompleteClinicalTask(item.clinicalTaskId) },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
                             Text("Complete", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
                         }
@@ -301,7 +305,7 @@ private fun AgendaItemRow(
                 }
             }
 
-            if (item.id != "clinical_tasks") {
+            if (item.clinicalTaskId == null) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
             }
         }
@@ -317,7 +321,9 @@ private fun InsightCard(state: NurseCommandCenterState, onAction: () -> Unit) {
         onClick = onAction
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
