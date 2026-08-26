@@ -26,13 +26,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,8 +57,18 @@ fun NurseCommandCenterScreen(
     viewModel: NurseCommandCenterViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val completionMessage by viewModel.completionMessage.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(completionMessage) {
+        completionMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearCompletionMessage()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Nurse Command Center", fontWeight = FontWeight.Bold) },
@@ -88,7 +102,9 @@ fun NurseCommandCenterScreen(
             PrioritizedAgendaCard(
                 state = state,
                 onNavigate = onNavigate,
-                onCompleteClinicalTask = viewModel::completeClinicalTask
+                onCompleteClinicalTask = { taskId, taskName ->
+                    viewModel.completeClinicalTask(taskId, taskName)
+                }
             )
 
             InsightCard(
@@ -145,7 +161,7 @@ fun NurseCommandCenterScreen(
 private fun PrioritizedAgendaCard(
     state: NurseCommandCenterState,
     onNavigate: (String) -> Unit,
-    onCompleteClinicalTask: (Int) -> Unit
+    onCompleteClinicalTask: (Int, String) -> Unit
 ) {
     val urgent = state.urgentAction
     val todayItems = state.todayAgenda
@@ -224,7 +240,7 @@ private fun AgendaGroup(
     color: Color,
     items: List<AgendaItem>,
     onNavigate: (String) -> Unit,
-    onCompleteClinicalTask: (Int) -> Unit
+    onCompleteClinicalTask: (Int, String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, color = color, fontSize = 10.sp, fontWeight = FontWeight.Black)
@@ -244,7 +260,7 @@ private fun AgendaItemRow(
     item: AgendaItem,
     color: Color,
     onClick: () -> Unit,
-    onCompleteClinicalTask: (Int) -> Unit
+    onCompleteClinicalTask: (Int, String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -288,7 +304,9 @@ private fun AgendaItemRow(
                             Text("Open", fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                         }
                         TextButton(
-                            onClick = { onCompleteClinicalTask(requireNotNull(item.clinicalTaskId)) },
+                            onClick = {
+                                onCompleteClinicalTask(item.clinicalTaskId, item.title)
+                            },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
                             Text("Complete", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
