@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import kotlin.math.cos
@@ -165,6 +166,14 @@ fun HomeScreen(
         }
 
         // ====================================================
+        // TODAY • LIVE NURSINGOS SNAPSHOT
+        // ====================================================
+        NursingOSTodayCard(
+            state = commandState,
+            onAction = { onNavigate(commandState.todayActionRoute) }
+        )
+
+        // ====================================================
         // LIVE NURSINGOS SNAPSHOT
         // ====================================================
         NursingOSHomeSnapshotCard(
@@ -248,8 +257,93 @@ fun HomeScreen(
 }
 
 @Composable
+private fun NursingOSTodayCard(
+    state: NurseCommandCenterState,
+    onAction: () -> Unit
+) {
+    val accent = when {
+        state.todayNeedsAttention -> Color(0xFFDC2626)
+        state.wellnessScore < 60 -> Color(0xFFD97706)
+        else -> Color(0xFF059669)
+    }
+    val background = when {
+        state.todayNeedsAttention -> Color(0xFFFFF1F2)
+        state.wellnessScore < 60 -> Color(0xFFFFFBEB)
+        else -> Color(0xFFECFDF5)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(14.dp, RoundedCornerShape(26.dp), spotColor = accent.copy(alpha = 0.20f))
+            .clickable(onClick = onAction),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = background)
+    ) {
+        Column(
+            Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("TODAY", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(state.todayStatus, color = PrimaryText, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Surface(color = accent.copy(alpha = 0.10f), shape = RoundedCornerShape(14.dp)) {
+                    Text(
+                        "ACTION",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        color = accent,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+
+            Text(
+                text = state.todayAction,
+                color = Color(0xFF334155),
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TodayHomeMiniMetric("DUTY", if (state.todayDutyHours > 0.0) formatHours(state.todayDutyHours) else "Not recorded")
+                TodayHomeMiniMetric("OT", if (state.todayOtHours > 0.0) formatHours(state.todayOtHours) else "0 h")
+                TodayHomeMiniMetric("PH", if (state.todayPh) "Yes" else "No")
+                TodayHomeMiniMetric("CLAIM", if (state.todayClaimRecorded) "Done" else "Open")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayHomeMiniMetric(label: String, value: String) {
+    Surface(
+        modifier = Modifier.widthIn(min = 0.dp).weight(1f),
+        color = Color.White.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(
+            Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
+            Text(value, fontSize = 11.sp, color = PrimaryText, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
 private fun NursingOSHomeSnapshotCard(
-    state: com.pasindu.nursingotapp.domain.model.NurseCommandCenterState,
+    state: NurseCommandCenterState,
     onOpen: () -> Unit
 ) {
     val accent = Color(0xFF27187E)
@@ -351,6 +445,10 @@ private fun moneyShort(value: Double): String {
     }
 }
 
+private fun formatHours(hours: Double): String {
+    return if (hours == hours.toInt().toDouble()) "${hours.toInt()} h" else "${"%.1f".format(hours)} h"
+}
+
 @Composable
 fun AnimatedDashboardCard(
     title: String,
@@ -421,14 +519,19 @@ fun AnimatedDashboardCard(
                         val center = Offset(size.width * 0.82f, size.height * 0.46f)
                         listOf(30f, 52f, 74f).forEachIndexed { index, radius ->
                             val animatedRadius = radius + ((timePhase * 11f + index * 16f) % 20f)
-                            drawCircle(Color.White.copy(alpha = 0.15f - index * 0.035f), animatedRadius, center, style = Stroke(2f))
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.15f - index * 0.035f),
+                                radius = animatedRadius,
+                                center = center,
+                                style = Stroke(2f)
+                            )
                         }
                     }
                     CardEffect.PARTICLES -> {
                         repeat(18) { index ->
                             val fx = ((index * 71f) % size.width) + cos(timePhase + index) * 10f
                             val fy = ((index * 43f) % size.height) + sin(timePhase * 0.8f + index) * 12f
-                            drawCircle(Color.White.copy(alpha = 0.16f), 3.5f, Offset(fx, fy))
+                            drawCircle(Color.White.copy(alpha = 0.16f), radius = 3.5f, center = Offset(fx, fy))
                         }
                     }
                     CardEffect.BUBBLES -> {
@@ -476,8 +579,8 @@ fun AnimatedDashboardCard(
                             }
                         }
                     }
-                    Spacer(Modifier.height(5.dp))
-                    Text(subtitle, color = textColor.copy(alpha = 0.88f), fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(6.dp))
+                    Text(subtitle, color = textColor.copy(alpha = 0.82f), fontSize = 12.sp, lineHeight = 16.sp)
                 }
             }
         }
