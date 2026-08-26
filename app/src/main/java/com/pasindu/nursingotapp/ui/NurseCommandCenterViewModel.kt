@@ -26,6 +26,9 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
     private val _state = MutableStateFlow(NurseCommandCenterState())
     val state: StateFlow<NurseCommandCenterState> = _state.asStateFlow()
 
+    private val _completionMessage = MutableStateFlow<String?>(null)
+    val completionMessage: StateFlow<String?> = _completionMessage.asStateFlow()
+
     init {
         observeRepository()
     }
@@ -79,10 +82,15 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
      * The repository update feeds back through the Room Flow, so the
      * Command Center refreshes its pending count and agenda automatically.
      */
-    fun completeClinicalTask(taskId: Int) {
+    fun completeClinicalTask(taskId: Int, taskName: String = "Clinical task") {
         viewModelScope.launch {
             repository.setClinicalTaskCompleted(taskId, true)
+            _completionMessage.value = "$taskName completed"
         }
+    }
+
+    fun clearCompletionMessage() {
+        _completionMessage.value = null
     }
 
     /**
