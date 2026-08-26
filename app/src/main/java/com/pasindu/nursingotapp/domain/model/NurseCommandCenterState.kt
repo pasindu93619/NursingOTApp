@@ -37,6 +37,22 @@ data class NurseCommandCenterState(
         }
 
     /**
+     * Destination route for the most useful action.
+     * Kept deterministic so the UI remains simple and testable.
+     */
+    val insightRoute: String
+        get() = when {
+            pendingClinicalTasks >= 5 -> "clinical_planning"
+            wellnessScore < 55 -> "care_pulse"
+            otHoursThisMonth >= 40.0 -> "advanced_finance_hub"
+            estimatedNetSalary > 0.0 && estimatedGrossSalary > 0.0 &&
+                estimatedNetSalary / estimatedGrossSalary < 0.70 -> "advanced_finance_hub"
+            claimTotalDays > 0 && claimProgress < 0.50f -> "claim_period"
+            cpdTarget > 0 && cpdProgress < 0.30f -> "knowledge_hub"
+            else -> "analytics"
+        }
+
+    /**
      * Human-readable next action generated from the current snapshot.
      * This is intentionally a simple transparent rule engine, not a clinical assessment.
      */
