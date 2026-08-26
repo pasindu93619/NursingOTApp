@@ -10,7 +10,8 @@ data class AgendaItem(
     val title: String,
     val detail: String,
     val actionLabel: String,
-    val route: String
+    val route: String,
+    val clinicalTaskId: Int? = null
 )
 
 enum class AgendaPriority {
