@@ -68,10 +68,6 @@ data class NurseCommandCenterState(
             else -> "analytics"
         }
 
-    /**
-     * Human-readable next action generated from the current snapshot.
-     * This is intentionally a simple transparent rule engine, not a clinical assessment.
-     */
     val dailyInsight: String
         get() = when {
             pendingClinicalTasks >= 5 ->
@@ -120,6 +116,129 @@ data class NurseCommandCenterState(
             else -> "READY"
         }
 
+    /** Highest-priority action for the Daily Agenda. */
+    val urgentAction: AgendaItem?
+        get() = when {
+            pendingClinicalTasks > 0 -> AgendaItem(
+                priority = AgendaPriority.URGENT,
+                title = "Clinical tasks need attention",
+                detail = "$pendingClinicalTasks pending task${if (pendingClinicalTasks == 1) "" else "s"} recorded.",
+                actionLabel = "Open Clinical Planning",
+                route = "clinical_planning"
+            )
+            !todayClaimRecorded -> AgendaItem(
+                priority = AgendaPriority.URGENT,
+                title = "Record today's claim",
+                detail = "Today's duty/claim entry is not recorded yet.",
+                actionLabel = "Open OT Claim",
+                route = "claim_period"
+            )
+            wellnessScore < 55 -> AgendaItem(
+                priority = AgendaPriority.URGENT,
+                title = "Workload is high",
+                detail = "Your current workload indicator is $wellnessScore/100.",
+                actionLabel = "Open CarePulse",
+                route = "care_pulse"
+            )
+            else -> null
+        }
+
+    /** Useful actions for the current day that are not urgent. */
+    val todayAgenda: List<AgendaItem>
+        get() = buildList {
+            if (todayOtHours > 0.0) {
+                add(
+                    AgendaItem(
+                        priority = AgendaPriority.TODAY,
+                        title = "Review today's OT",
+                        detail = "${formatHours(todayOtHours)} recorded today.",
+                        actionLabel = "Open Finance",
+                        route = "advanced_finance_hub"
+                    )
+                )
+            }
+
+            if (todayPh) {
+                add(
+                    AgendaItem(
+                        priority = AgendaPriority.TODAY,
+                        title = "Review PH duty",
+                        detail = "Public-holiday duty is recorded today.",
+                        actionLabel = "Review Claim",
+                        route = "claim_period"
+                    )
+                )
+            }
+
+            if (todayDutyRecorded && todayClaimRecorded) {
+                add(
+                    AgendaItem(
+                        priority = AgendaPriority.TODAY,
+                        title = "Today's duty is recorded",
+                        detail = "Keep the rest of the monthly record current.",
+                        actionLabel = "View Analytics",
+                        route = "analytics"
+                    )
+                )
+            }
+        }
+
+    /** Lower-priority maintenance actions. */
+    val laterAgenda: List<AgendaItem>
+        get() = buildList {
+            if (cpdTarget > 0 && cpdProgress < 0.50f) {
+                add(
+                    AgendaItem(
+                        priority = AgendaPriority.LATER,
+                        title = "Build CPD progress",
+                        detail = "${cpdPoints}/${cpdTarget} CPD points recorded.",
+                        actionLabel = "Open Knowledge Hub",
+                        route = "knowledge_hub"
+                    )
+                )
+            }
+
+            if (claimTotalDays > 0 && claimProgress < 0.85f && todayClaimRecorded) {
+                add(
+                    AgendaItem(
+                        priority = AgendaPriority.LATER,
+                        title = "Keep the monthly claim current",
+                        detail = "$claimCompletedDays/$claimTotalDays days recorded.",
+                        actionLabel = "Open OT Claim",
+                        route = "claim_period"
+                    )
+                )
+            }
+
+            if (estimatedGrossSalary > 0.0 && estimatedNetSalary > 0.0 &&
+                estimatedNetSalary / estimatedGrossSalary < 0.80
+            ) {
+                add(
+                    AgendaItem(
+                        priority = AgendaPriority.LATER,
+                        title = "Review deductions",
+                        detail = "Net pay is below 80% of gross pay.",
+                        actionLabel = "Open Finance",
+                        route = "advanced_finance_hub"
+                    )
+                )
+            }
+        }
+
     private fun formatHours(value: Double): String =
         if (value % 1.0 == 0.0) "${value.toInt()} h" else "%.1f h".format(value)
 }
+
+enum class AgendaPriority {
+    URGENT,
+    TODAY,
+    LATER
+}
+
+data class AgendaItem(
+    val priority: AgendaPriority,
+    val title: String,
+    val detail: String,
+    val actionLabel: String,
+    val route: String
+)
