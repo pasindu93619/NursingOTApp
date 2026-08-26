@@ -110,7 +110,9 @@ fun NurseCommandCenterScreen(
             NursingOsScoreCard(
                 state = state,
                 onOpen = { onNavigate(state.insightRoute) },
-                onFinance = { onNavigate("advanced_finance_hub") }
+                onFinance = { onNavigate("advanced_finance_hub") },
+                onClinical = { onNavigate("clinical_planning") },
+                onOt = { onNavigate("advanced_finance_hub") }
             )
             PrioritizedAgendaCard(
                 state = state,
@@ -163,7 +165,9 @@ fun NurseCommandCenterScreen(
 private fun NursingOsScoreCard(
     state: NurseCommandCenterState,
     onOpen: () -> Unit,
-    onFinance: () -> Unit
+    onFinance: () -> Unit,
+    onClinical: () -> Unit,
+    onOt: () -> Unit
 ) {
     val score = state.nursingOsScore
     val accent = when {
@@ -197,9 +201,9 @@ private fun NursingOsScoreCard(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ScoreMiniMetric("WORK", state.wellnessScore, Modifier.weight(1f))
-                ScoreMiniMetric("CLINICAL", state.clinicalHealthScore, Modifier.weight(1f))
+                ScoreMiniMetric("CLINICAL", state.clinicalHealthScore, Modifier.weight(1f), onClick = onClinical)
                 ScoreMiniMetric("FINANCE", state.financialHealthScore, Modifier.weight(1f), onClick = onFinance)
-                ScoreMiniMetric("OT", state.otLoadScore, Modifier.weight(1f))
+                ScoreMiniMetric("OT", state.otLoadScore, Modifier.weight(1f), onClick = onOt)
             }
 
             Text(state.nursingOsRecommendation, color = Color(0xFF475569), fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
@@ -224,9 +228,7 @@ private fun ScoreMiniMetric(
         Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
             Text("$value", fontSize = 14.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.ExtraBold)
-            if (onClick != null) {
-                Text("VIEW", fontSize = 7.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Black)
-            }
+            if (onClick != null) Text("VIEW", fontSize = 7.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Black)
         }
     }
 }
