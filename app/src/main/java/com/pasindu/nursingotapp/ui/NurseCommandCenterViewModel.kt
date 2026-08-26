@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Live orchestration layer for the Nurse Command Center.
- * Room remains behind the repository; the screen only observes state.
+ * Room stays behind the repository; Compose only observes state.
  */
 class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -60,8 +60,7 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
                     )
                 }
                 .catch {
-                    // Keep the UI usable even if a local data stream fails.
-                    // State remains at its last successful value.
+                    // Keep the last successful state when a local stream fails.
                 }
                 .collect { snapshot ->
                     _state.value = snapshot
@@ -69,6 +68,11 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
         }
     }
 
+    /**
+     * Stage-one workload indicator.
+     * This is deliberately a transparent heuristic, not a clinical diagnosis.
+     * Later it can consume richer workload/recovery signals.
+     */
     private fun calculateWellnessScore(
         dutyHours: Double,
         otHours: Double,
@@ -77,12 +81,13 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
         val dutyPenalty = (dutyHours / 220.0 * 25.0).coerceAtMost(25.0)
         val otPenalty = (otHours / 50.0 * 35.0).coerceAtMost(35.0)
         val taskPenalty = (pendingTasks * 4.0).coerceAtMost(20.0)
+
         return (100.0 - dutyPenalty - otPenalty - taskPenalty)
             .toInt()
             .coerceIn(0, 100)
     }
 
-    /** Kept for later modules that need to push derived profile data explicitly. */
+    /** Kept for future modules that need to push a derived profile snapshot. */
     fun updateProfile(
         name: String,
         unitName: String,
