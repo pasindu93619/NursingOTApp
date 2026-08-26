@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
@@ -27,15 +25,15 @@ import com.pasindu.nursingotapp.data.model.DailyLog
 import com.pasindu.nursingotapp.data.model.Period
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.data.model.UserProfile
+import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
+import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModelFactory
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import java.time.LocalDate
-import com.pasindu.nursingotapp.ui.FinancialViewModel
-import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
-import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModelFactory
+
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -47,16 +45,45 @@ fun AppNavigation() {
     NavHost(
         navController = navController,
         startDestination = "home",
-        enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) + fadeIn(animationSpec = tween(animDuration)) },
-        exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) },
-        popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeIn(animationSpec = tween(animDuration)) },
-        popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) + fadeOut(animationSpec = tween(animDuration)) }
+        enterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(animDuration)
+            ) + fadeIn(animationSpec = tween(animDuration))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(animDuration)
+            ) + fadeOut(animationSpec = tween(animDuration))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(animDuration)
+            ) + fadeIn(animationSpec = tween(animDuration))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(animDuration)
+            ) + fadeOut(animationSpec = tween(animDuration))
+        }
     ) {
-
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
                 onNavigate = { route -> navController.navigate(route) }
+            )
+        }
+
+        // ================================================================
+        // NURSE COMMAND CENTER
+        // First-stage NursingOS foundation.
+        // ================================================================
+        composable("nurse_command_center") {
+            NurseCommandCenterScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -71,7 +98,9 @@ fun AppNavigation() {
             ProfileScreen(
                 viewModel = viewModel,
                 onNavigateToClaimPeriod = { _, _ ->
-                    navController.navigate("claim_period") { popUpTo("home") { inclusive = false } }
+                    navController.navigate("claim_period") {
+                        popUpTo("home") { inclusive = false }
+                    }
                 }
             )
         }
@@ -91,18 +120,14 @@ fun AppNavigation() {
         }
 
         composable("advanced_finance_hub") {
-            val advancedFinanceViewModel: AdvancedFinanceViewModel =
-                viewModel(
-                    factory = AdvancedFinanceViewModelFactory(context)
-                )
+            val advancedFinanceViewModel: AdvancedFinanceViewModel = viewModel(
+                factory = AdvancedFinanceViewModelFactory(context)
+            )
 
             AdvancedFinanceHubScreen(
                 viewModel = advancedFinanceViewModel,
-                onNavigate = { route ->
-                    navController.navigate(route)
-                },
-                onBack = {
-                    navController.popBackStack() }
+                onNavigate = { route -> navController.navigate(route) },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -130,7 +155,13 @@ fun AppNavigation() {
         }
 
         composable("iv_drip") {
-            Scaffold { padding -> IvDripCalculatorCard(modifier = Modifier.fillMaxSize().padding(padding)) }
+            Scaffold { padding ->
+                IvDripCalculatorCard(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                )
+            }
         }
 
         composable("dosage_calc") { DosageCalculatorScreen() }
@@ -139,9 +170,15 @@ fun AppNavigation() {
         composable("pediatric_rules") { PediatricRulesScreen() }
         composable("unit_conversions") { UnitConversionsScreen() }
         composable("special_calcs") { SpecialCalculationsScreen() }
-        composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
-        composable("icu_calculators") { IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
-        composable("vasoactive_infusions") { VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("emergency_calcs") {
+            EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable("icu_calculators") {
+            IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable("vasoactive_infusions") {
+            VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() })
+        }
 
         composable(
             route = "daily_entry/{claimPeriodId}/{start}/{end}/{wardType}",
@@ -185,9 +222,20 @@ fun AppNavigation() {
 
                         val logs = dbLogs.map { entity ->
                             DailyLog(
-                                id = entity.id, date = entity.date, isPH = entity.isPH, isDO = entity.isDO, isLeave = entity.isLeave, leaveType = entity.leaveType,
-                                reason = entity.reason, wardOverride = entity.wardOverride, normalTimeInStr = entity.normalTimeIn, normalTimeOutStr = entity.normalTimeOut,
-                                computedNormalHours = entity.normalHours, otTimeInStr = entity.otTimeIn, otTimeOutStr = entity.otTimeOut, computedOtHours = entity.otHours
+                                id = entity.id,
+                                date = entity.date,
+                                isPH = entity.isPH,
+                                isDO = entity.isDO,
+                                isLeave = entity.isLeave,
+                                leaveType = entity.leaveType,
+                                reason = entity.reason,
+                                wardOverride = entity.wardOverride,
+                                normalTimeInStr = entity.normalTimeIn,
+                                normalTimeOutStr = entity.normalTimeOut,
+                                computedNormalHours = entity.normalHours,
+                                otTimeInStr = entity.otTimeIn,
+                                otTimeOutStr = entity.otTimeOut,
+                                computedOtHours = entity.otHours
                             )
                         }
 
@@ -211,12 +259,17 @@ fun AppNavigation() {
 
                         val generator = PdfGenerator(context)
                         generator.generateAndReturnFile(profile, logs, period, summary)
-                    } else null
-                    val duty_hours_analytics = null
-                    duty_hours_analytics      },
+                    } else {
+                        null
+                    }
+                },
                 onSaveAndSharePdf = { file ->
                     FileShareUtils.savePdfToDownloads(context, file)
-                    val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    val uri: Uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/pdf"
                         putExtra(Intent.EXTRA_STREAM, uri)
@@ -225,6 +278,6 @@ fun AppNavigation() {
                     context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim Form"))
                 }
             )
-
-        }  }
+        }
+    }
 }
