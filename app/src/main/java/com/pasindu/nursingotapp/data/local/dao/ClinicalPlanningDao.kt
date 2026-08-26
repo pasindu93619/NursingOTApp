@@ -26,4 +26,7 @@ interface ClinicalPlanningDao {
 
     @Query("SELECT * FROM clinical_tasks ORDER BY triggerTime ASC")
     fun getAllTasks(): Flow<List<ClinicalTaskEntity>>
+
+    @Query("UPDATE clinical_tasks SET isCompleted = :completed WHERE id = :taskId")
+    suspend fun setTaskCompleted(taskId: Int, completed: Boolean)
 }
