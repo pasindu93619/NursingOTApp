@@ -33,11 +33,16 @@ class NurseCommandCenterRepository(
         val grossSalary: Double,
         val netSalary: Double,
         val pendingClinicalTasks: Int,
-        val cpdPoints: Int
+        val cpdPoints: Int,
+        val todayDutyRecorded: Boolean,
+        val todayOtHours: Double,
+        val todayPh: Boolean,
+        val todayClaimRecorded: Boolean
     )
 
     fun observeSnapshot(
-        month: YearMonth = YearMonth.now()
+        month: YearMonth = YearMonth.now(),
+        today: LocalDate = LocalDate.now()
     ): Flow<Snapshot> {
         val start: LocalDate = month.atDay(1)
         val end: LocalDate = month.atEndOfMonth()
@@ -53,8 +58,10 @@ class NurseCommandCenterRepository(
                 entry.date >= start && entry.date <= end
             }
 
-            // Prefer the financial record for this month. Fall back to the
-            // newest stored record, then finally to the saved basic salary.
+            val todayEntry = entries
+                .filter { it.date == today }
+                .maxByOrNull { it.id }
+
             val currentMonthKey = month.toString()
             val currentMonthFinance = finance.firstOrNull {
                 it.recordMonth == currentMonthKey
@@ -84,7 +91,17 @@ class NurseCommandCenterRepository(
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
                 pendingClinicalTasks = clinicalTasks.count { !it.isCompleted },
-                cpdPoints = cpdLogs.sumOf { it.earnedPoints }
+                cpdPoints = cpdLogs.sumOf { it.earnedPoints },
+                todayDutyRecorded = todayEntry != null && (
+                    todayEntry.normalHours > 0f ||
+                        todayEntry.otHours > 0f ||
+                        todayEntry.isPH ||
+                        todayEntry.isDO ||
+                        todayEntry.isLeave
+                    ),
+                todayOtHours = todayEntry?.otHours?.toDouble() ?: 0.0,
+                todayPh = todayEntry?.isPH == true,
+                todayClaimRecorded = todayEntry != null
             )
         }
     }
