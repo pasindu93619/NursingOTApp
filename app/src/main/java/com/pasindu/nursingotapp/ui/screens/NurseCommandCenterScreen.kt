@@ -285,10 +285,10 @@ private fun AgendaItemRow(
                             onClick = onClick,
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
-                            Text(item.actionLabel, fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
+                            Text("Open", fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                         }
                         TextButton(
-                            onClick = { onCompleteClinicalTask(item.clinicalTaskId) },
+                            onClick = { onCompleteClinicalTask(requireNotNull(item.clinicalTaskId)) },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
                             Text("Complete", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
