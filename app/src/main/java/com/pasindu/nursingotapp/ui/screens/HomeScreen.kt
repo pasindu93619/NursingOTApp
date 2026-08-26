@@ -35,7 +35,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
+import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -83,10 +85,13 @@ enum class CardEffect { NONE, WAVE, PARTICLES, ECG, BUBBLES, PULSE_RINGS }
 @Composable
 fun HomeScreen(
     viewModel: NursingViewModel,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    commandCenterViewModel: NurseCommandCenterViewModel = viewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
-    val displayFullName = userProfile?.fullName?.takeIf { it.isNotBlank() } ?: "Nursing Officer"
+    val commandState by commandCenterViewModel.state.collectAsState()
+
+    val displayFullName = userProfile?.fullName?.takeIf { it.isNotBlank() } ?: commandState.nurseName
     val shortName = displayFullName.split(" ").lastOrNull() ?: displayFullName
     val initial = displayFullName.firstOrNull()?.toString()?.uppercase() ?: "P"
     val scrollState = rememberScrollState()
@@ -116,67 +121,63 @@ fun HomeScreen(
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
         ) {
-            Box {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(120.dp)
-                        .align(Alignment.TopEnd)
-                        .background(Brush.radialGradient(listOf(palette.avatar.copy(alpha = 0.16f), Color.Transparent)))
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(58.dp)
+                        .background(palette.avatar, CircleShape)
+                        .border(1.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.15f))), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .background(palette.avatar, CircleShape)
-                            .border(1.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.15f))), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(initial, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                    }
+                    Text(initial, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                }
 
-                    Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(16.dp))
 
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "Hello, $shortName 👋",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = PrimaryText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            if (userProfile == null) "Tap here to setup profile & SLNC" else "Ward 17 In-Charge Dashboard",
-                            fontSize = 13.sp,
-                            color = SecondaryText,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Hello, $shortName 👋",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = PrimaryText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (userProfile == null) "Tap here to setup profile & SLNC" else "Ward 17 In-Charge Dashboard",
+                        fontSize = 13.sp,
+                        color = SecondaryText,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
 
-                    Box(
-                        modifier = Modifier.size(36.dp).background(palette.avatar.copy(alpha = 0.10f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.ChevronRight, "Open profile", tint = palette.avatar, modifier = Modifier.size(22.dp))
-                    }
+                Box(
+                    modifier = Modifier.size(36.dp).background(palette.avatar.copy(alpha = 0.10f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.ChevronRight, "Open profile", tint = palette.avatar, modifier = Modifier.size(22.dp))
                 }
             }
         }
 
         // ====================================================
-        // NURSINGOS COMMAND CENTER
+        // LIVE NURSINGOS SNAPSHOT
         // ====================================================
+        NursingOSHomeSnapshotCard(
+            state = commandState,
+            onOpen = { onNavigate("nurse_command_center") }
+        )
+
         AnimatedDashboardCard(
             title = "Nurse Command Center",
-            subtitle = "Work • Money • Clinical • Professional • Wellness",
+            subtitle = "Open the full NursingOS dashboard",
             icon = Icons.Default.Dashboard,
             color = Color(0xFF27187E),
-            height = 156.dp,
+            height = 142.dp,
             effect = CardEffect.PULSE_RINGS,
             onClick = { onNavigate("nurse_command_center") }
         )
@@ -243,6 +244,110 @@ fun HomeScreen(
         }
 
         Spacer(Modifier.height(40.dp))
+    }
+}
+
+@Composable
+private fun NursingOSHomeSnapshotCard(
+    state: com.pasindu.nursingotapp.domain.model.NurseCommandCenterState,
+    onOpen: () -> Unit
+) {
+    val accent = Color(0xFF27187E)
+    val score = state.wellnessScore
+    val scoreLabel = when {
+        score >= 80 -> "Balanced"
+        score >= 60 -> "Watch workload"
+        else -> "High workload"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = accent.copy(alpha = 0.22f))
+            .clickable(onClick = onOpen),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("NURSINGOS • LIVE", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text("Your nursing day at a glance", color = PrimaryText, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Surface(color = accent.copy(alpha = 0.08f), shape = RoundedCornerShape(14.dp)) {
+                    Text("$scoreLabel", modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SnapshotMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", Icons.Default.Schedule, Modifier.weight(1f))
+                SnapshotMetric("OT", "${state.otHoursThisMonth.toInt()} h", Icons.Default.MoreTime, Modifier.weight(1f))
+                SnapshotMetric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Modifier.weight(1f))
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SnapshotMetric("Tasks", state.pendingClinicalTasks.toString(), Icons.Default.TaskAlt, Modifier.weight(1f))
+                SnapshotMetric("CPD", "${state.cpdPoints}/${state.cpdTarget}", Icons.Default.School, Modifier.weight(1f))
+                SnapshotMetric("Claim", "${state.claimCompletedDays}/${state.claimTotalDays}", Icons.Default.Description, Modifier.weight(1f))
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Workload balance", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SecondaryText)
+                    Text("$score/100", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = accent)
+                }
+                LinearProgressIndicator(
+                    progress = { (score / 100f).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(10.dp)),
+                    color = accent,
+                    trackColor = accent.copy(alpha = 0.10f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SnapshotMetric(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    modifier: Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFFF8F8FC),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(
+            Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = Color(0xFF27187E), modifier = Modifier.size(18.dp))
+            Text(label, color = SecondaryText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(value, color = PrimaryText, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+private fun moneyShort(value: Double): String {
+    return when {
+        value >= 1_000_000 -> "Rs.${String.format("%.1fM", value / 1_000_000)}"
+        value >= 100_000 -> "Rs.${String.format("%.0fK", value / 1_000)}"
+        else -> "Rs.${value.toInt()}"
     }
 }
 
@@ -316,19 +421,14 @@ fun AnimatedDashboardCard(
                         val center = Offset(size.width * 0.82f, size.height * 0.46f)
                         listOf(30f, 52f, 74f).forEachIndexed { index, radius ->
                             val animatedRadius = radius + ((timePhase * 11f + index * 16f) % 20f)
-                            drawCircle(
-                                color = Color.White.copy(alpha = 0.15f - index * 0.035f),
-                                radius = animatedRadius,
-                                center = center,
-                                style = Stroke(2f)
-                            )
+                            drawCircle(Color.White.copy(alpha = 0.15f - index * 0.035f), animatedRadius, center, style = Stroke(2f))
                         }
                     }
                     CardEffect.PARTICLES -> {
                         repeat(18) { index ->
                             val fx = ((index * 71f) % size.width) + cos(timePhase + index) * 10f
                             val fy = ((index * 43f) % size.height) + sin(timePhase * 0.8f + index) * 12f
-                            drawCircle(Color.White.copy(alpha = 0.16f), radius = 3.5f, center = Offset(fx, fy))
+                            drawCircle(Color.White.copy(alpha = 0.16f), 3.5f, Offset(fx, fy))
                         }
                     }
                     CardEffect.BUBBLES -> {
@@ -372,12 +472,12 @@ fun AnimatedDashboardCard(
                         if (isSoon) {
                             Spacer(Modifier.width(8.dp))
                             Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(10.dp)) {
-                                Text("SOON", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                Text("SOON", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                     Spacer(Modifier.height(5.dp))
-                    Text(subtitle, color = textColor.copy(alpha = 0.86f), fontSize = 12.sp, lineHeight = 16.sp)
+                    Text(subtitle, color = textColor.copy(alpha = 0.88f), fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
