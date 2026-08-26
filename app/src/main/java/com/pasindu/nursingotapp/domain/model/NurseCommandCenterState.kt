@@ -1,5 +1,7 @@
 package com.pasindu.nursingotapp.domain.model
 
+import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
+
 /**
  * Shared dashboard snapshot for the NursingOS command center.
  * Keep this model UI-friendly, but independent from Compose and Room.
@@ -17,6 +19,7 @@ data class NurseCommandCenterState(
     val cpdPoints: Int = 0,
     val cpdTarget: Int = 10,
     val pendingClinicalTasks: Int = 0,
+    val pendingClinicalTaskDetails: List<ClinicalTaskEntity> = emptyList(),
     val wellnessScore: Int = 100,
     val todayDutyRecorded: Boolean = false,
     val todayDutyHours: Double = 0.0,
@@ -140,6 +143,26 @@ data class NurseCommandCenterState(
 
     val todayAgenda: List<AgendaItem>
         get() = buildList {
+            pendingClinicalTaskDetails.take(3).forEach { task ->
+                add(
+                    AgendaItem(
+                        id = "clinical_task_${task.id}",
+                        priority = AgendaPriority.TODAY,
+                        title = task.taskName,
+                        detail = buildString {
+                            if (task.description.isNotBlank()) append(task.description)
+                            if (task.priority.isNotBlank()) {
+                                if (isNotEmpty()) append(" • ")
+                                append(task.priority)
+                            }
+                        }.ifBlank { "Pending clinical task" },
+                        actionLabel = "Complete or open task",
+                        route = "clinical_planning",
+                        clinicalTaskId = task.id
+                    )
+                )
+            }
+
             if (todayOtHours > 0.0) {
                 add(
                     AgendaItem(
@@ -152,6 +175,7 @@ data class NurseCommandCenterState(
                     )
                 )
             }
+
             if (todayPh) {
                 add(
                     AgendaItem(
@@ -164,6 +188,7 @@ data class NurseCommandCenterState(
                     )
                 )
             }
+
             if (todayDutyRecorded && todayClaimRecorded) {
                 add(
                     AgendaItem(
@@ -223,3 +248,15 @@ data class NurseCommandCenterState(
     private fun formatHours(value: Double): String =
         if (value % 1.0 == 0.0) "${value.toInt()} h" else "%.1f h".format(value)
 }
+
+enum class AgendaPriority { URGENT, TODAY, LATER }
+
+data class AgendaItem(
+    val id: String,
+    val priority: AgendaPriority,
+    val title: String,
+    val detail: String,
+    val actionLabel: String,
+    val route: String,
+    val clinicalTaskId: Int? = null
+)
