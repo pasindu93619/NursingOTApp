@@ -40,6 +40,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -170,6 +172,7 @@ private fun NursingOsScoreCard(
     onClinical: () -> Unit,
     onOt: () -> Unit
 ) {
+    var showDetails by remember { mutableStateOf(false) }
     val score = state.nursingOsScore
     val accent = when {
         score >= 85 -> Color(0xFF059669)
@@ -208,8 +211,47 @@ private fun NursingOsScoreCard(
             }
 
             Text(state.nursingOsRecommendation, color = Color(0xFF475569), fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
-            Text("Workload • Clinical • Finance • OT • Claims • CPD", color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDetails = !showDetails },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    if (showDetails) "HIDE SCORING DETAILS" else "WHY THIS SCORE?",
+                    color = Color(0xFF4F46E5),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF4F46E5)
+                )
+            }
+
+            if (showDetails) {
+                ScoreExplanationRow("Workload", state.wellnessScore, "30%")
+                ScoreExplanationRow("Clinical", state.clinicalHealthScore, "20%")
+                ScoreExplanationRow("Claims", (state.claimProgress * 100f).toInt(), "15%")
+                ScoreExplanationRow("CPD", (state.cpdProgress * 100f).toInt(), "10%")
+                ScoreExplanationRow("Finance", state.financialHealthScore, "15%")
+                ScoreExplanationRow("OT load", state.otLoadScore, "10%")
+            }
+
+            Text("Operational readiness • not a medical score", color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
+    }
+}
+
+@Composable
+private fun ScoreExplanationRow(label: String, value: Int, weight: String) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, modifier = Modifier.weight(1f), fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
+        Text("$value", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 11.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+        Text(weight, fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
     }
 }
 
