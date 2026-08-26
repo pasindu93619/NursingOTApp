@@ -69,7 +69,6 @@ class NurseCommandCenterRepository(
             val currentMonthFinance = finance.firstOrNull {
                 it.recordMonth == currentMonthKey
             }
-            val latestFinance = currentMonthFinance ?: finance.firstOrNull()
             val pendingTaskDetails = clinicalTasks
                 .filter { !it.isCompleted }
                 .sortedWith(
@@ -93,10 +92,10 @@ class NurseCommandCenterRepository(
                         )
                 },
                 claimTotalDays = end.dayOfMonth,
-                grossSalary = latestFinance?.grossSalary
+                grossSalary = currentMonthFinance?.grossSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
-                netSalary = latestFinance?.netSalary
+                netSalary = currentMonthFinance?.netSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
                 pendingClinicalTasks = pendingTaskDetails.size,
