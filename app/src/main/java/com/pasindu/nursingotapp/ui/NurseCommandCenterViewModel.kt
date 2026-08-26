@@ -52,6 +52,7 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
                         estimatedGrossSalary = snapshot.grossSalary,
                         estimatedNetSalary = snapshot.netSalary,
                         pendingClinicalTasks = snapshot.pendingClinicalTasks,
+                        pendingClinicalTaskDetails = snapshot.pendingClinicalTaskDetails,
                         cpdPoints = snapshot.cpdPoints,
                         cpdTarget = cpdTarget,
                         claimCompletedDays = snapshot.claimCompletedDays,
