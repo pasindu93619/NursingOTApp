@@ -34,7 +34,8 @@ import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import java.time.LocalDate
 import com.pasindu.nursingotapp.ui.FinancialViewModel
-
+import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
+import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModelFactory
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -89,12 +90,19 @@ fun AppNavigation() {
             AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        composable("financial_dashboard") {
-            val financialViewModel: FinancialViewModel = viewModel()
-            FinancialDashboardScreen(
-                viewModel = financialViewModel,
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
+        composable("advanced_finance_hub") {
+            val advancedFinanceViewModel: AdvancedFinanceViewModel =
+                viewModel(
+                    factory = AdvancedFinanceViewModelFactory(context)
+                )
+
+            AdvancedFinanceHubScreen(
+                viewModel = advancedFinanceViewModel,
+                onNavigate = { route ->
+                    navController.navigate(route)
+                },
+                onBack = {
+                    navController.popBackStack() }
             )
         }
 
@@ -204,7 +212,8 @@ fun AppNavigation() {
                         val generator = PdfGenerator(context)
                         generator.generateAndReturnFile(profile, logs, period, summary)
                     } else null
-                },
+                    val duty_hours_analytics = null
+                    duty_hours_analytics      },
                 onSaveAndSharePdf = { file ->
                     FileShareUtils.savePdfToDownloads(context, file)
                     val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -216,6 +225,6 @@ fun AppNavigation() {
                     context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim Form"))
                 }
             )
-        )
-    }
+
+        }  }
 }

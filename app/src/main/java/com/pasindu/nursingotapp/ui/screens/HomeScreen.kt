@@ -453,7 +453,7 @@ fun HomeScreen(
                     height = 200.dp,
                     effect = CardEffect.PULSE_RINGS,
                     onClick = {
-                        onNavigate("financial_dashboard")
+                        onNavigate("advanced_finance_hub")
                     }
                 )
             }
