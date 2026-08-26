@@ -56,7 +56,11 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
                         cpdTarget = cpdTarget,
                         claimCompletedDays = snapshot.claimCompletedDays,
                         claimTotalDays = snapshot.claimTotalDays,
-                        wellnessScore = wellnessScore
+                        wellnessScore = wellnessScore,
+                        todayDutyRecorded = snapshot.todayDutyRecorded,
+                        todayOtHours = snapshot.todayOtHours,
+                        todayPh = snapshot.todayPh,
+                        todayClaimRecorded = snapshot.todayClaimRecorded
                     )
                 }
                 .catch {
@@ -71,7 +75,6 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
     /**
      * Stage-one workload indicator.
      * This is deliberately a transparent heuristic, not a clinical diagnosis.
-     * Later it can consume richer workload/recovery signals.
      */
     private fun calculateWellnessScore(
         dutyHours: Double,
