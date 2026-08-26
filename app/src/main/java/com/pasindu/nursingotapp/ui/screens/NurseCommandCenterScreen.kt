@@ -27,6 +27,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -86,7 +87,8 @@ fun NurseCommandCenterScreen(
 
             PrioritizedAgendaCard(
                 state = state,
-                onNavigate = onNavigate
+                onNavigate = onNavigate,
+                onCompleteClinicalTask = viewModel::completeClinicalTask
             )
 
             InsightCard(
@@ -142,7 +144,8 @@ fun NurseCommandCenterScreen(
 @Composable
 private fun PrioritizedAgendaCard(
     state: NurseCommandCenterState,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    onCompleteClinicalTask: (Int) -> Unit
 ) {
     val urgent = state.urgentAction
     val todayItems = state.todayAgenda
@@ -163,12 +166,7 @@ private fun PrioritizedAgendaCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "DAILY AGENDA",
-                        color = Color(0xFF27187E),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black
-                    )
+                    Text("DAILY AGENDA", color = Color(0xFF27187E), fontSize = 11.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (total == 0) "Everything is clear" else "$total action${if (total == 1) "" else "s"} to review",
                         fontSize = 18.sp,
@@ -180,15 +178,33 @@ private fun PrioritizedAgendaCard(
             }
 
             if (urgent != null) {
-                AgendaGroup(title = "URGENT", color = Color(0xFFDC2626), items = listOf(urgent), onNavigate = onNavigate)
+                AgendaGroup(
+                    title = "URGENT",
+                    color = Color(0xFFDC2626),
+                    items = listOf(urgent),
+                    onNavigate = onNavigate,
+                    onCompleteClinicalTask = onCompleteClinicalTask
+                )
             }
 
             if (todayItems.isNotEmpty()) {
-                AgendaGroup(title = "TODAY", color = Color(0xFFD97706), items = todayItems, onNavigate = onNavigate)
+                AgendaGroup(
+                    title = "TODAY",
+                    color = Color(0xFFD97706),
+                    items = todayItems,
+                    onNavigate = onNavigate,
+                    onCompleteClinicalTask = onCompleteClinicalTask
+                )
             }
 
             if (laterItems.isNotEmpty()) {
-                AgendaGroup(title = "LATER", color = Color(0xFF475569), items = laterItems, onNavigate = onNavigate)
+                AgendaGroup(
+                    title = "LATER",
+                    color = Color(0xFF475569),
+                    items = laterItems,
+                    onNavigate = onNavigate,
+                    onCompleteClinicalTask = onCompleteClinicalTask
+                )
             }
 
             if (total == 0) {
@@ -207,12 +223,18 @@ private fun AgendaGroup(
     title: String,
     color: Color,
     items: List<AgendaItem>,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    onCompleteClinicalTask: (Int) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, color = color, fontSize = 10.sp, fontWeight = FontWeight.Black)
         items.forEach { item ->
-            AgendaItemRow(item = item, color = color, onClick = { onNavigate(item.route) })
+            AgendaItemRow(
+                item = item,
+                color = color,
+                onClick = { onNavigate(item.route) },
+                onCompleteClinicalTask = onCompleteClinicalTask
+            )
         }
     }
 }
@@ -221,13 +243,13 @@ private fun AgendaGroup(
 private fun AgendaItemRow(
     item: AgendaItem,
     color: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onCompleteClinicalTask: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.06f)),
-        shape = RoundedCornerShape(18.dp),
-        onClick = onClick
+        shape = RoundedCornerShape(18.dp)
     ) {
         Row(
             modifier = Modifier
@@ -248,21 +270,46 @@ private fun AgendaItemRow(
                     fontSize = 11.sp
                 )
             }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Text(item.detail, fontSize = 12.sp, color = Color(0xFF64748B))
-                Text(item.actionLabel, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
+
+                if (item.id == "clinical_tasks") {
+                    Row(
+                        modifier = Modifier.padding(top = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                            Text(item.actionLabel, fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(
+                            onClick = { onCompleteClinicalTask(0) },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp)
+                        ) {
+                            Text("Complete", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    Text(
+                        item.actionLabel,
+                        modifier = Modifier.padding(top = 4.dp),
+                        fontSize = 10.sp,
+                        color = color,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
+
+            if (item.id != "clinical_tasks") {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
+            }
         }
     }
 }
 
 @Composable
-private fun InsightCard(
-    state: NurseCommandCenterState,
-    onAction: () -> Unit
-) {
+private fun InsightCard(state: NurseCommandCenterState, onAction: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFEEF2FF)),
@@ -270,9 +317,7 @@ private fun InsightCard(
         onClick = onAction
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
