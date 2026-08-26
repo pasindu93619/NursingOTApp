@@ -40,6 +40,10 @@ data class NurseCommandCenterState(
             (cpdPoints.toFloat() / cpdTarget.toFloat()).coerceIn(0f, 1f)
         } else 0f
 
+    /** Transparent clinical-readiness component, not a medical score. */
+    val clinicalHealthScore: Int
+        get() = (100 - pendingClinicalTasks * 8).coerceIn(0, 100)
+
     /** Ratio of net pay retained from gross pay, expressed as 0..1. */
     val netRetentionRatio: Float
         get() = if (estimatedGrossSalary > 0.0 && estimatedNetSalary >= 0.0) {
@@ -61,8 +65,7 @@ data class NurseCommandCenterState(
 
     /** Transparent OT-load component. Higher means more capacity remaining. */
     val otLoadScore: Int
-        get() = (100 - (otHoursThisMonth / 50.0 * 100.0).toInt())
-            .coerceIn(0, 100)
+        get() = (100 - (otHoursThisMonth / 50.0 * 100.0).toInt()).coerceIn(0, 100)
 
     /**
      * Transparent NursingOS readiness index (0-100).
@@ -71,17 +74,14 @@ data class NurseCommandCenterState(
     val nursingOsScore: Int
         get() {
             val workloadComponent = wellnessScore.coerceIn(0, 100)
-            val clinicalComponent = (100 - pendingClinicalTasks * 8).coerceIn(0, 100)
             val claimComponent = (claimProgress * 100f).toInt().coerceIn(0, 100)
             val cpdComponent = (cpdProgress * 100f).toInt().coerceIn(0, 100)
-            val financeComponent = financialHealthScore
-
             return (
                 workloadComponent * 0.30 +
-                    clinicalComponent * 0.20 +
+                    clinicalHealthScore * 0.20 +
                     claimComponent * 0.15 +
                     cpdComponent * 0.10 +
-                    financeComponent * 0.15 +
+                    financialHealthScore * 0.15 +
                     otLoadScore * 0.10
                 ).toInt().coerceIn(0, 100)
         }
