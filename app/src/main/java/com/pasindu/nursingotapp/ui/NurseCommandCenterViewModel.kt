@@ -29,6 +29,9 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
     private val _completionMessage = MutableStateFlow<String?>(null)
     val completionMessage: StateFlow<String?> = _completionMessage.asStateFlow()
 
+    private val _undoTask = MutableStateFlow<Pair<Int, String>?>(null)
+    val undoTask: StateFlow<Pair<Int, String>?> = _undoTask.asStateFlow()
+
     init {
         observeRepository()
     }
@@ -85,12 +88,27 @@ class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(a
     fun completeClinicalTask(taskId: Int, taskName: String = "Clinical task") {
         viewModelScope.launch {
             repository.setClinicalTaskCompleted(taskId, true)
+            _undoTask.value = taskId to taskName
             _completionMessage.value = "$taskName completed"
+        }
+    }
+
+    /** Reopen the exact task from the most recent completion action. */
+    fun undoLastCompletion() {
+        val completed = _undoTask.value ?: return
+        viewModelScope.launch {
+            repository.setClinicalTaskCompleted(completed.first, false)
+            _completionMessage.value = "${completed.second} reopened"
+            _undoTask.value = null
         }
     }
 
     fun clearCompletionMessage() {
         _completionMessage.value = null
+    }
+
+    fun clearUndoTask() {
+        _undoTask.value = null
     }
 
     /**
