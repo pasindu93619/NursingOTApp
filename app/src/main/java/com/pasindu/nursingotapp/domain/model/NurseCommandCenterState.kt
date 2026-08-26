@@ -40,6 +40,21 @@ data class NurseCommandCenterState(
             0f
         }
 
+    /** True when today's record needs user attention. */
+    val todayNeedsAttention: Boolean
+        get() = pendingClinicalTasks > 0 || !todayClaimRecorded
+
+    /** Route for the primary action on today's card. */
+    val todayActionRoute: String
+        get() = when {
+            pendingClinicalTasks > 0 -> "clinical_planning"
+            !todayClaimRecorded -> "claim_period"
+            wellnessScore < 55 -> "care_pulse"
+            todayOtHours > 0.0 || todayPh -> "advanced_finance_hub"
+            else -> "analytics"
+        }
+
+    /** Destination route for the most useful overall action. */
     val insightRoute: String
         get() = when {
             pendingClinicalTasks >= 5 -> "clinical_planning"
@@ -52,6 +67,10 @@ data class NurseCommandCenterState(
             else -> "analytics"
         }
 
+    /**
+     * Human-readable next action generated from the current snapshot.
+     * This is intentionally a simple transparent rule engine, not a clinical assessment.
+     */
     val dailyInsight: String
         get() = when {
             pendingClinicalTasks >= 5 ->
