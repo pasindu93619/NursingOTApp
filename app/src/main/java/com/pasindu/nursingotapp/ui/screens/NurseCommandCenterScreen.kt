@@ -21,13 +21,14 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -63,16 +64,18 @@ fun NurseCommandCenterScreen(
     LaunchedEffect(completionMessage) {
         val message = completionMessage ?: return@LaunchedEffect
         viewModel.clearCompletionMessage()
+
+        val isCompletion = message.endsWith(" completed")
         val result = snackbarHostState.showSnackbar(
             message = message,
-            actionLabel = if (message.endsWith(" completed")) "UNDO" else null,
-            withDismissAction = true
+            actionLabel = if (isCompletion && viewModel.undoTask.value != null) "UNDO" else null,
+            withDismissAction = true,
+            duration = androidx.compose.material3.SnackbarDuration.Short
         )
-        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed &&
-            message.endsWith(" completed")
-        ) {
+
+        if (isCompletion && result == SnackbarResult.ActionPerformed) {
             viewModel.undoLastCompletion()
-        } else if (message.endsWith(" reopened")) {
+        } else if (!isCompletion) {
             viewModel.clearUndoTask()
         }
     }
