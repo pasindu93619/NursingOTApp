@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,9 +61,19 @@ fun NurseCommandCenterScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(completionMessage) {
-        completionMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearCompletionMessage()
+        val message = completionMessage ?: return@LaunchedEffect
+        viewModel.clearCompletionMessage()
+        val result = snackbarHostState.showSnackbar(
+            message = message,
+            actionLabel = if (message.endsWith(" completed")) "UNDO" else null,
+            withDismissAction = true
+        )
+        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed &&
+            message.endsWith(" completed")
+        ) {
+            viewModel.undoLastCompletion()
+        } else if (message.endsWith(" reopened")) {
+            viewModel.clearUndoTask()
         }
     }
 
@@ -194,41 +204,16 @@ private fun PrioritizedAgendaCard(
             }
 
             if (urgent != null) {
-                AgendaGroup(
-                    title = "URGENT",
-                    color = Color(0xFFDC2626),
-                    items = listOf(urgent),
-                    onNavigate = onNavigate,
-                    onCompleteClinicalTask = onCompleteClinicalTask
-                )
+                AgendaGroup("URGENT", Color(0xFFDC2626), listOf(urgent), onNavigate, onCompleteClinicalTask)
             }
-
             if (todayItems.isNotEmpty()) {
-                AgendaGroup(
-                    title = "TODAY",
-                    color = Color(0xFFD97706),
-                    items = todayItems,
-                    onNavigate = onNavigate,
-                    onCompleteClinicalTask = onCompleteClinicalTask
-                )
+                AgendaGroup("TODAY", Color(0xFFD97706), todayItems, onNavigate, onCompleteClinicalTask)
             }
-
             if (laterItems.isNotEmpty()) {
-                AgendaGroup(
-                    title = "LATER",
-                    color = Color(0xFF475569),
-                    items = laterItems,
-                    onNavigate = onNavigate,
-                    onCompleteClinicalTask = onCompleteClinicalTask
-                )
+                AgendaGroup("LATER", Color(0xFF475569), laterItems, onNavigate, onCompleteClinicalTask)
             }
-
             if (total == 0) {
-                Text(
-                    "No priority actions right now. Your current records are up to date.",
-                    color = Color(0xFF64748B),
-                    fontSize = 13.sp
-                )
+                Text("No priority actions right now. Your current records are up to date.", color = Color(0xFF64748B), fontSize = 13.sp)
             }
         }
     }
@@ -245,12 +230,7 @@ private fun AgendaGroup(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, color = color, fontSize = 10.sp, fontWeight = FontWeight.Black)
         items.forEach { item ->
-            AgendaItemRow(
-                item = item,
-                color = color,
-                onClick = { onNavigate(item.route) },
-                onCompleteClinicalTask = onCompleteClinicalTask
-            )
+            AgendaItemRow(item, color, { onNavigate(item.route) }, onCompleteClinicalTask)
         }
     }
 }
@@ -268,61 +248,32 @@ private fun AgendaItemRow(
         shape = RoundedCornerShape(18.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(13.dp),
+            modifier = Modifier.fillMaxWidth().padding(13.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(11.dp)
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    item.priority.name.take(1),
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                    color = color,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 11.sp
-                )
+            Card(colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)), shape = RoundedCornerShape(12.dp)) {
+                Text(item.priority.name.take(1), modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp), color = color, fontWeight = FontWeight.Black, fontSize = 11.sp)
             }
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Text(item.detail, fontSize = 12.sp, color = Color(0xFF64748B))
-
                 if (item.clinicalTaskId != null) {
-                    Row(
-                        modifier = Modifier.padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(
-                            onClick = onClick,
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                        ) {
+                    Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
                             Text("Open", fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                         }
                         TextButton(
-                            onClick = {
-                                onCompleteClinicalTask(item.clinicalTaskId, item.title)
-                            },
+                            onClick = { onCompleteClinicalTask(item.clinicalTaskId, item.title) },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
                             Text("Complete", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
                         }
                     }
                 } else {
-                    Text(
-                        item.actionLabel,
-                        modifier = Modifier.padding(top = 4.dp),
-                        fontSize = 10.sp,
-                        color = color,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(item.actionLabel, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
                 }
             }
-
             if (item.clinicalTaskId == null) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
             }
@@ -338,13 +289,7 @@ private fun InsightCard(state: NurseCommandCenterState, onAction: () -> Unit) {
         shape = RoundedCornerShape(22.dp),
         onClick = onAction
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF4338CA))
             Column(modifier = Modifier.weight(1f)) {
                 Text("TODAY'S INSIGHT", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4338CA))
@@ -366,18 +311,9 @@ private fun SectionCard(
     actionLabel: String,
     onAction: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(22.dp),
-        onClick = onAction
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp), onClick = onAction) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(title, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Icon(Icons.Default.ChevronRight, contentDescription = actionLabel, tint = Color(0xFF94A3B8))
