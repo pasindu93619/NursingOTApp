@@ -4,15 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Summarize
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -25,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,7 +56,7 @@ fun NurseCommandCenterScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .background(Color(0xFFF7F8FC))
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
@@ -84,7 +88,7 @@ fun NurseCommandCenterScreen(
                 title = "Wellness pulse",
                 icon = Icons.Default.EmojiEvents,
                 value = "${state.wellnessScore}/100",
-                subtitle = "This will become a workload and recovery signal in the next phase.",
+                subtitle = "This becomes the workload and recovery signal in the next phase.",
                 progress = state.wellnessScore / 100f
             )
 
@@ -101,21 +105,27 @@ private fun SectionCard(
     subtitle: String,
     progress: Float
 ) {
-    androidx.compose.material3.Card(
-        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = Color.White),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(22.dp)
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Column(
+            Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
             androidx.compose.foundation.layout.Row(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text(title, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
-            Text(value, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
             Text(subtitle, color = Color(0xFF64748B), fontSize = 12.sp)
-            LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxSize())
+            LinearProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
