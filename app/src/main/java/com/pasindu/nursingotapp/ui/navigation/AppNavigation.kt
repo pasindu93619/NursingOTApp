@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -77,13 +76,10 @@ fun AppNavigation() {
             )
         }
 
-        // ================================================================
-        // NURSE COMMAND CENTER
-        // First-stage NursingOS foundation.
-        // ================================================================
         composable("nurse_command_center") {
             NurseCommandCenterScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigate = { route -> navController.navigate(route) }
             )
         }
 
