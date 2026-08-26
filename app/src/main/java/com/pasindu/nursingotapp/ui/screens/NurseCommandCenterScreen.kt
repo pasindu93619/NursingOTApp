@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material3.Card
@@ -62,10 +63,7 @@ fun NurseCommandCenterScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -90,7 +88,7 @@ fun NurseCommandCenterScreen(
                 onOpen = { onNavigate(state.insightRoute) }
             )
 
-            TodayCard(
+            DailyAgendaCard(
                 state = state,
                 onAction = { onNavigate(state.todayActionRoute) }
             )
@@ -146,52 +144,51 @@ fun NurseCommandCenterScreen(
 }
 
 @Composable
-private fun TodayCard(
+private fun DailyAgendaCard(
     state: NurseCommandCenterState,
     onAction: () -> Unit
 ) {
-    val actionColor = if (state.todayNeedsAttention) {
-        Color(0xFFDC2626)
-    } else {
-        Color(0xFF059669)
+    val accent = when (state.todayStatus) {
+        "ATTENTION" -> Color(0xFFDC2626)
+        "ACTION NEEDED" -> Color(0xFFD97706)
+        "RECOVERY" -> Color(0xFF7C3AED)
+        else -> Color(0xFF059669)
+    }
+
+    val background = when (state.todayStatus) {
+        "ATTENTION" -> Color(0xFFFFF1F2)
+        "ACTION NEEDED" -> Color(0xFFFFFBEB)
+        "RECOVERY" -> Color(0xFFF5F3FF)
+        else -> Color(0xFFECFDF5)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (state.todayNeedsAttention) {
-                Color(0xFFFFF1F2)
-            } else {
-                Color(0xFFECFDF5)
-            }
-        ),
-        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = background),
+        shape = RoundedCornerShape(24.dp),
         onClick = onAction
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(0.88f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "TODAY",
+                        text = "TODAY'S AGENDA",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = actionColor
+                        fontWeight = FontWeight.Black,
+                        color = accent
                     )
                     Text(
                         text = state.todayStatus,
-                        modifier = Modifier.padding(top = 4.dp),
-                        fontSize = 16.sp,
-                        lineHeight = 21.sp,
+                        modifier = Modifier.padding(top = 3.dp),
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF172033)
                     )
@@ -199,25 +196,37 @@ private fun TodayCard(
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = "Open today's action",
-                    tint = actionColor
+                    tint = accent
                 )
             }
+
+            Text(
+                text = state.todayAction,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color(0xFF334155),
+                fontWeight = FontWeight.Medium
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TodayMiniMetric(
-                    label = "DUTY",
-                    value = if (state.todayDutyHours > 0.0) formatHours(state.todayDutyHours) else "Not recorded"
+                AgendaMetric(
+                    label = "Duty",
+                    value = if (state.todayDutyRecorded) formatHours(state.todayDutyHours) else "Open"
                 )
-                TodayMiniMetric(
+                AgendaMetric(
                     label = "OT",
-                    value = if (state.todayOtHours > 0.0) formatHours(state.todayOtHours) else "0 h"
+                    value = formatHours(state.todayOtHours)
                 )
-                TodayMiniMetric(
+                AgendaMetric(
                     label = "PH",
                     value = if (state.todayPh) "Yes" else "No"
+                )
+                AgendaMetric(
+                    label = "Claim",
+                    value = if (state.todayClaimRecorded) "Done" else "Open"
                 )
             }
         }
@@ -225,42 +234,24 @@ private fun TodayCard(
 }
 
 @Composable
-private fun TodayMiniMetric(
-    label: String,
-    value: String
-) {
+private fun AgendaMetric(label: String, value: String) {
     Card(
-        modifier = Modifier.fillMaxWidth(0.32f),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+        modifier = Modifier.fillMaxWidth(0.24f),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.78f)),
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(
-            Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = Color(0xFF64748B),
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = value,
-                fontSize = 12.sp,
-                color = Color(0xFF0F172A),
-                fontWeight = FontWeight.ExtraBold
-            )
+            Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
+            Text(value, fontSize = 11.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.ExtraBold)
         }
     }
 }
 
-private fun formatHours(hours: Double): String {
-    return if (hours == hours.toInt().toDouble()) {
-        "${hours.toInt()} h"
-    } else {
-        "${"%.1f".format(hours)} h"
-    }
-}
+private fun formatHours(hours: Double): String =
+    if (hours == hours.toInt().toDouble()) "${hours.toInt()} h" else "${"%.1f".format(hours)} h"
 
 @Composable
 private fun InsightCard(
@@ -280,41 +271,20 @@ private fun InsightCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Lightbulb,
-                contentDescription = null,
-                tint = Color(0xFF4338CA)
-            )
-
+            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF4338CA))
             Column(Modifier.weight(1f)) {
+                Text("TODAY'S INSIGHT", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4338CA))
                 Text(
-                    text = "TODAY'S INSIGHT",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF4338CA)
-                )
-                Text(
-                    text = state.dailyInsight,
+                    state.dailyInsight,
                     modifier = Modifier.padding(top = 4.dp),
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
                     color = Color(0xFF1E293B),
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = "Tap to act",
-                    modifier = Modifier.padding(top = 8.dp),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF6366F1)
-                )
+                Text("Tap to act", modifier = Modifier.padding(top = 8.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6366F1))
             }
-
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Take action",
-                tint = Color(0xFF4338CA)
-            )
+            Icon(Icons.Default.ChevronRight, contentDescription = "Take action", tint = Color(0xFF4338CA))
         }
     }
 }
@@ -335,53 +305,20 @@ private fun SectionCard(
         shape = RoundedCornerShape(22.dp),
         onClick = onAction
     ) {
-        Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
-        ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    title,
-                    modifier = Modifier.weight(1f),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = actionLabel,
-                    tint = Color(0xFF94A3B8)
-                )
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text(title, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.ChevronRight, contentDescription = actionLabel, tint = Color(0xFF94A3B8))
             }
-
-            Text(
-                value,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                subtitle,
-                color = Color(0xFF64748B),
-                fontSize = 12.sp
-            )
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                actionLabel,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+            Text(subtitle, color = Color(0xFF64748B), fontSize = 12.sp)
+            LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+            Text(actionLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
