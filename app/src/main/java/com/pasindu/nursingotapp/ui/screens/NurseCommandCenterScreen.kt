@@ -13,8 +13,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Summarize
@@ -90,6 +90,11 @@ fun NurseCommandCenterScreen(
                 onOpen = { onNavigate(state.insightRoute) }
             )
 
+            TodayEngineCard(
+                state = state,
+                onAction = { onNavigate(state.insightRoute) }
+            )
+
             InsightCard(
                 state = state,
                 onAction = { onNavigate(state.insightRoute) }
@@ -141,6 +146,122 @@ fun NurseCommandCenterScreen(
 }
 
 @Composable
+private fun TodayEngineCard(
+    state: NurseCommandCenterState,
+    onAction: () -> Unit
+) {
+    val accent = when (state.todayStatus) {
+        "ATTENTION" -> Color(0xFFDC2626)
+        "ACTION NEEDED" -> Color(0xFFD97706)
+        "RECOVERY" -> Color(0xFF7C3AED)
+        "PH DUTY" -> Color(0xFF0891B2)
+        "OT RECORDED" -> Color(0xFF2563EB)
+        "ON TRACK" -> Color(0xFF059669)
+        else -> Color(0xFF475569)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(24.dp),
+        onClick = onAction
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EventNote,
+                    contentDescription = null,
+                    tint = accent
+                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "TODAY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = accent
+                    )
+                    Text(
+                        text = state.todayStatus,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+                Text(
+                    text = "Tap to act",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+            }
+
+            Text(
+                text = state.todayAction,
+                fontSize = 15.sp,
+                lineHeight = 21.sp,
+                color = Color(0xFF334155),
+                fontWeight = FontWeight.Medium
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TodayMiniMetric(
+                    label = "Duty",
+                    value = if (state.todayDutyRecorded) "Recorded" else "Missing"
+                )
+                TodayMiniMetric(
+                    label = "OT",
+                    value = if (state.todayOtHours > 0.0) formatHours(state.todayOtHours) else "0 h"
+                )
+                TodayMiniMetric(
+                    label = "PH",
+                    value = if (state.todayPh) "Yes" else "No"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayMiniMetric(
+    label: String,
+    value: String
+) {
+    Card(
+        modifier = Modifier.weight(1f),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(
+            Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = Color(0xFF64748B),
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = value,
+                fontSize = 12.sp,
+                color = Color(0xFF0F172A),
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+@Composable
 private fun InsightCard(
     state: NurseCommandCenterState,
     onAction: () -> Unit
@@ -166,7 +287,7 @@ private fun InsightCard(
 
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "TODAY'S INSIGHT",
+                    text = "MONTHLY INSIGHT",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color(0xFF4338CA)
@@ -179,20 +300,7 @@ private fun InsightCard(
                     color = Color(0xFF1E293B),
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = "Tap to act",
-                    modifier = Modifier.padding(top = 8.dp),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF6366F1)
-                )
             }
-
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Take action",
-                tint = Color(0xFF4338CA)
-            )
         }
     }
 }
@@ -233,13 +341,7 @@ private fun SectionCard(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = actionLabel,
-                    tint = Color(0xFF94A3B8)
-                )
             }
-
             Text(
                 value,
                 fontSize = 22.sp,
@@ -263,3 +365,6 @@ private fun SectionCard(
         }
     }
 }
+
+private fun formatHours(value: Double): String =
+    if (value % 1.0 == 0.0) "${value.toInt()} h" else "%.1f h".format(value)
