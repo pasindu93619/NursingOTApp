@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -219,16 +220,26 @@ private fun ScoreMiniMetric(
     modifier: Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val interactiveModifier = if (onClick != null) {
+        modifier.clickable(onClick = onClick)
+    } else {
+        modifier
+    }
+
     Surface(
-        modifier = modifier,
+        modifier = interactiveModifier,
         color = Color(0xFFF8FAFC),
-        shape = RoundedCornerShape(14.dp),
-        onClick = onClick
+        shape = RoundedCornerShape(14.dp)
     ) {
-        Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
             Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
             Text("$value", fontSize = 14.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.ExtraBold)
-            if (onClick != null) Text("VIEW", fontSize = 7.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Black)
+            if (onClick != null) {
+                Text("VIEW", fontSize = 7.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Black)
+            }
         }
     }
 }
