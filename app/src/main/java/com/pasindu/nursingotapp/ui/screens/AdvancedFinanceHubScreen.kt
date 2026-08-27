@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +27,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -148,6 +148,12 @@ fun AdvancedFinanceHubScreen(
                         doAmount = state.doAmountRs
                     )
 
+                    PayRatesCard(
+                        grade = state.profile?.grade.orEmpty(),
+                        basicSalary = state.basicSalary,
+                        otRate = state.otRate
+                    )
+
                     ToolRow(
                         leftTitle = "Loan Calculator",
                         leftSubtitle = "EMI planner",
@@ -202,9 +208,7 @@ fun AdvancedFinanceHubScreen(
 @Composable
 private fun FinanceHeader(onBack: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
@@ -231,17 +235,11 @@ private fun FinanceHeroCard(netSalary: Double, grossSalary: Double, otAmount: Do
     val glow by transition.animateFloat(
         initialValue = 0.18f,
         targetValue = 0.35f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "heroGlow"
     )
-
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)),
+        modifier = Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)),
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = Navy)
     ) {
@@ -282,18 +280,8 @@ private fun HeroMetricBox(modifier: Modifier, title: String, amount: Double, acc
 @Composable
 private fun WorkPulseCard(normalHours: Double, otHours: Double, phDays: Int, doDays: Int, progress: Float, onClick: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "workPulse")
-    val markerPulse by transition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "markerPulse"
-    )
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(1000, easing = FastOutSlowInEasing),
-        label = "workProgress"
-    )
-
+    val markerPulse by transition.animateFloat(0.85f, 1.15f, infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "markerPulse")
+    val animatedProgress by animateFloatAsState(progress.coerceIn(0f, 1f), tween(1000, easing = FastOutSlowInEasing), label = "workProgress")
     FinanceCard(onClick = onClick, accent = Cyan) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -305,7 +293,6 @@ private fun WorkPulseCard(normalHours: Double, otHours: Double, phDays: Int, doD
                 Text(text = if (normalHours >= 36.0) "TARGET REACHED" else "${normalHours.oneDecimal()}h LOGGED", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = if (normalHours >= 36.0) Orange else Mint, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
         }
-
         Spacer(modifier = Modifier.height(17.dp))
         Box(modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(22.dp)).background(SoftSurface)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -327,7 +314,6 @@ private fun WorkPulseCard(normalHours: Double, otHours: Double, phDays: Int, doD
             }
             Box(modifier = Modifier.size(9.dp * markerPulse).clip(CircleShape).background(Orange).align(Alignment.TopEnd))
         }
-
         Spacer(modifier = Modifier.height(14.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PulseMini(Modifier.weight(1f), "NORMAL", "${normalHours.oneDecimal()}h", Cyan)
@@ -379,14 +365,10 @@ private fun MoneyFlowCard(basicSalary: Double, otAmount: Double, phAmount: Doubl
     val total = items.sumOf { it.amount }
     val maxValue = max(items.maxOfOrNull { it.amount } ?: 1.0, 1.0)
     val transition = rememberInfiniteTransition(label = "moneyOrbit")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2f * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(5200, easing = FastOutSlowInEasing), RepeatMode.Restart),
-        label = "orbitPhase"
-    )
-    val reveal by animateFloatAsState(targetValue = 1f, animationSpec = tween(1100, easing = FastOutSlowInEasing), label = "orbitReveal")
-    val pulse by transition.animateFloat(0.92f, 1.08f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "totalPulse")
+    val phase by transition.animateFloat(0f, (2f * Math.PI).toFloat(), infiniteRepeatable(tween(5200, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "orbitPhase")
+    val reveal by animateFloatAsState(1f, tween(1100, easing = FastOutSlowInEasing), label = "orbitReveal")
+    val totalPulseTransition = rememberInfiniteTransition(label = "totalPulse")
+    val pulse by totalPulseTransition.animateFloat(0.92f, 1.08f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "totalPulse")
 
     FinanceCard(accent = Indigo) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -399,7 +381,6 @@ private fun MoneyFlowCard(basicSalary: Double, otAmount: Double, phAmount: Doubl
                 Text(text = "LIVE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Indigo, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
         }
-
         Spacer(modifier = Modifier.height(14.dp))
         Box(modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(24.dp)).background(SoftSurface)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -407,7 +388,6 @@ private fun MoneyFlowCard(basicSalary: Double, otAmount: Double, phAmount: Doubl
                 val orbitX = size.width * 0.30f
                 val orbitY = size.height * 0.30f
                 drawOval(color = SoftBorder.copy(alpha = 0.75f), topLeft = Offset(center.x - orbitX, center.y - orbitY), size = Size(orbitX * 2f, orbitY * 2f), style = Stroke(width = 2f))
-
                 items.forEachIndexed { index, item ->
                     val angle = phase + index * (2f * Math.PI.toFloat() / items.size)
                     val x = center.x + cos(angle) * orbitX * reveal
@@ -419,37 +399,29 @@ private fun MoneyFlowCard(basicSalary: Double, otAmount: Double, phAmount: Doubl
                     drawCircle(item.accent, nodeRadius, Offset(x, y))
                 }
             }
-
-            Surface(
-                modifier = Modifier.size(104.dp * pulse).align(Alignment.Center),
-                color = Navy,
-                shape = CircleShape,
-                shadowElevation = 10.dp
-            ) {
-                Column(modifier = Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Text(text = "TOTAL", color = Color.White.copy(alpha = 0.60f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(text = "Rs. ${total.currency()}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                    Text(text = "claim earnings", color = Color.White.copy(alpha = 0.52f), fontSize = 8.sp)
-                }
-            }
-
             Box(modifier = Modifier.fillMaxSize()) {
-                ConstellationTag(modifier = Modifier.align(Alignment.TopCenter), item = items[0])
-                ConstellationTag(modifier = Modifier.align(Alignment.CenterEnd), item = items[1])
-                ConstellationTag(modifier = Modifier.align(Alignment.BottomCenter), item = items[2])
-                ConstellationTag(modifier = Modifier.align(Alignment.CenterStart), item = items[3])
+                Surface(modifier = Modifier.size(104.dp * pulse).align(Alignment.Center), color = Navy, shape = CircleShape, shadowElevation = 10.dp) {
+                    Column(modifier = Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Text(text = "TOTAL", color = Color.White.copy(alpha = 0.60f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(text = "Rs. ${total.currency()}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                        Text(text = "claim earnings", color = Color.White.copy(alpha = 0.52f), fontSize = 8.sp)
+                    }
+                }
+                ConstellationTag(item = items[0], alignment = Alignment.TopCenter)
+                ConstellationTag(item = items[1], alignment = Alignment.CenterEnd)
+                ConstellationTag(item = items[2], alignment = Alignment.BottomCenter)
+                ConstellationTag(item = items[3], alignment = Alignment.CenterStart)
             }
         }
-
         Spacer(modifier = Modifier.height(13.dp))
         items.forEach { item -> MoneyFlowRow(item = item) }
     }
 }
 
 @Composable
-private fun ConstellationTag(modifier: Modifier = Modifier, item: MoneyFlowItem) {
-    Surface(modifier = modifier.padding(7.dp), color = Color.White.copy(alpha = 0.96f), shape = RoundedCornerShape(14.dp), shadowElevation = 4.dp) {
+private fun ConstellationTag(item: MoneyFlowItem, alignment: Alignment) {
+    Surface(modifier = Modifier.padding(7.dp), color = Color.White.copy(alpha = 0.96f), shape = RoundedCornerShape(14.dp), shadowElevation = 4.dp) {
         Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(item.accent))
             Spacer(modifier = Modifier.width(6.dp))
@@ -473,6 +445,41 @@ private fun MoneyFlowRow(item: MoneyFlowItem) {
         Text(text = item.label, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = "Rs. ${item.amount.currency()}", color = Slate, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun PayRatesCard(grade: String, basicSalary: Double, otRate: Double) {
+    val dayRate = if (basicSalary > 0.0) basicSalary / 30.0 else 0.0
+    FinanceCard(accent = Pink) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "PAY RATES USED", color = Pink, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(text = if (grade.isBlank()) "Current profile rules" else "Grade $grade", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+            Surface(color = Pink.copy(alpha = 0.08f), shape = RoundedCornerShape(50.dp)) {
+                Text(text = "CURRENT", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Pink, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Spacer(modifier = Modifier.height(13.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RateMini(modifier = Modifier.weight(1f), title = "OT", value = "Rs. ${otRate.currency()}", note = "per hour", accent = Violet)
+            RateMini(modifier = Modifier.weight(1f), title = "PH", value = "Rs. ${dayRate.currency()}", note = "basic ÷ 30", accent = Orange)
+            RateMini(modifier = Modifier.weight(1f), title = "WORKING DO", value = "Rs. ${dayRate.currency()}", note = "basic ÷ 30", accent = Mint)
+        }
+    }
+}
+
+@Composable
+private fun RateMini(modifier: Modifier, title: String, value: String, note: String, accent: Color) {
+    Surface(modifier = modifier, color = accent.copy(alpha = 0.07f), shape = RoundedCornerShape(14.dp)) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Text(text = title, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = value, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(text = note, color = Slate, fontSize = 7.sp)
+        }
     }
 }
 
@@ -504,7 +511,7 @@ private fun PaySheetBankCard(fullName: String, serviceNo: String, paySheetNo: St
     FinanceCard(onClick = onClick, accent = Pink) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(56.dp).clip(RoundedCornerShape(17.dp)).background(Pink.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = Pink, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Description, null, Pink, Modifier.size(28.dp))
             }
             Spacer(modifier = Modifier.width(13.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -550,7 +557,6 @@ private fun DeductionCard(apit: Double, wop: Double, loan: Double, other: Double
             DeductionField("WOP", wop, onWopChange)
             DeductionField("Loan / Advance", loan, onLoanChange)
             DeductionField("Other Deduction", other, onOtherChange)
-
             Surface(modifier = Modifier.fillMaxWidth(), color = SoftSurface, shape = RoundedCornerShape(18.dp)) {
                 Column(modifier = Modifier.padding(15.dp)) {
                     FinanceSummaryRow("Gross Earnings", "Rs. ${gross.currency()}", Ink)
@@ -573,16 +579,7 @@ private fun DeductionCard(apit: Double, wop: Double, loan: Double, other: Double
 
 @Composable
 private fun DeductionField(label: String, value: Double, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = if (value == 0.0) "" else value.toString(),
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        label = { Text(text = label) },
-        leadingIcon = { Icon(imageVector = Icons.Default.CreditScore, contentDescription = null, tint = Orange) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        shape = RoundedCornerShape(15.dp)
-    )
+    OutlinedTextField(value = if (value == 0.0) "" else value.toString(), onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(text = label) }, leadingIcon = { Icon(imageVector = Icons.Default.CreditScore, contentDescription = null, tint = Orange) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(15.dp))
 }
 
 @Composable
@@ -596,11 +593,7 @@ private fun FinanceSummaryRow(label: String, value: String, valueColor: Color) {
 @Composable
 private fun FinanceCard(modifier: Modifier = Modifier, accent: Color, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
     val actionModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
-    Card(
-        modifier = modifier.fillMaxWidth().then(actionModifier).shadow(8.dp, RoundedCornerShape(24.dp), spotColor = accent.copy(alpha = 0.12f)),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardWhite)
-    ) {
+    Card(modifier = modifier.fillMaxWidth().then(actionModifier).shadow(8.dp, RoundedCornerShape(24.dp), spotColor = accent.copy(alpha = 0.12f)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) {
         Column(modifier = Modifier.animateContentSize().padding(17.dp)) { content() }
     }
 }
