@@ -10,6 +10,7 @@ import com.pasindu.nursingotapp.data.local.dao.ClinicalPlanningDao
 import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.FinancialDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
+import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
@@ -17,6 +18,7 @@ import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.FinancialRecordEntity
 import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
+import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 
 @Database(
@@ -27,9 +29,10 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
         FinancialRecordEntity::class,
         IsbarNoteEntity::class,
         ClinicalTaskEntity::class,
-        CpdLogEntity::class
+        CpdLogEntity::class,
+        PayRateSettingsEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -41,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun financialDao(): FinancialDao
     abstract fun clinicalPlanningDao(): ClinicalPlanningDao
     abstract fun knowledgeHubDao(): KnowledgeHubDao
+    abstract fun payRateSettingsDao(): PayRateSettingsDao
 
     companion object {
 
@@ -62,12 +66,29 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Version 3 -> 4: replace the legacy financial_records schema
-        // with the current monthly financial model used by FinancialRecordEntity.
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("DROP TABLE IF EXISTS `financial_records`")
                 createFinancialRecordsTable(database)
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `pay_rate_settings` (
+                        `id` INTEGER NOT NULL,
+                        `otRate` REAL NOT NULL,
+                        `phRate` REAL NOT NULL,
+                        `doRate` REAL NOT NULL,
+                        `rateSource` TEXT NOT NULL,
+                        `basisSalary2027` REAL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
             }
         }
 
