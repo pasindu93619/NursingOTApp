@@ -118,8 +118,9 @@ class AdvancedFinanceViewModel(
     private fun observeClaimPeriod() {
         viewModelScope.launch {
             claimPeriodDao.observeClaimPeriods().collect { periods ->
-                val currentPeriod = periods.firstOrNull()
-                _uiState.value = _uiState.value.copy(claimPeriod = currentPeriod)
+                _uiState.value = _uiState.value.copy(
+                    claimPeriod = periods.firstOrNull()
+                )
                 recalculate()
             }
         }
@@ -164,6 +165,7 @@ class AdvancedFinanceViewModel(
     private suspend fun recalculate() {
         val profile = _uiState.value.profile
         val claimPeriod = _uiState.value.claimPeriod
+        val settings = _uiState.value.payRateSettings
 
         if (profile == null || claimPeriod == null) {
             _uiState.value = _uiState.value.copy(
@@ -181,13 +183,15 @@ class AdvancedFinanceViewModel(
                 calculateSummary(
                     profile = profile,
                     claimPeriod = claimPeriod,
-                    entries = entries
+                    entries = entries,
+                    settings = settings
                 )
             }
         } catch (exception: Exception) {
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                errorMessage = exception.message ?: "Unable to load financial information."
+                errorMessage = exception.message
+                    ?: "Unable to load financial information."
             )
         }
     }
@@ -195,14 +199,22 @@ class AdvancedFinanceViewModel(
     private fun calculateSummary(
         profile: ProfileEntity,
         claimPeriod: ClaimPeriodEntity,
-        entries: List<DailyEntryEntity>
+        entries: List<DailyEntryEntity>,
+        settings: PayRateSettingsEntity?
     ) {
         try {
             val result = CalculationEngine.processClaimData(
                 profileEntity = profile,
                 entries = entries,
                 claimStart = claimPeriod.startDate,
-                claimEnd = claimPeriod.endDate
+                claimEnd = claimPeriod.endDate,
+                payRates = settings?.let {
+                    CalculationEngine.PayRates(
+                        otRate = it.otRate,
+                        phRate = it.phRate,
+                        doRate = it.doRate
+                    )
+                }
             )
 
             _uiState.value = _uiState.value.copy(
@@ -217,7 +229,8 @@ class AdvancedFinanceViewModel(
         } catch (exception: Exception) {
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                errorMessage = exception.message ?: "Unable to calculate financial summary."
+                errorMessage = exception.message
+                    ?: "Unable to calculate financial summary."
             )
         }
     }
@@ -244,17 +257,29 @@ class AdvancedFinanceViewModel(
 
     fun updateOtRate(value: String) {
         val parsed = parseMoney(value)
-        saveRates(otRate = parsed, phRate = _uiState.value.phRate, doRate = _uiState.value.doRate)
+        saveRates(
+            otRate = parsed,
+            phRate = _uiState.value.phRate,
+            doRate = _uiState.value.doRate
+        )
     }
 
     fun updatePhRate(value: String) {
         val parsed = parseMoney(value)
-        saveRates(otRate = _uiState.value.otRate, phRate = parsed, doRate = _uiState.value.doRate)
+        saveRates(
+            otRate = _uiState.value.otRate,
+            phRate = parsed,
+            doRate = _uiState.value.doRate
+        )
     }
 
     fun updateDoRate(value: String) {
         val parsed = parseMoney(value)
-        saveRates(otRate = _uiState.value.otRate, phRate = _uiState.value.phRate, doRate = parsed)
+        saveRates(
+            otRate = _uiState.value.otRate,
+            phRate = _uiState.value.phRate,
+            doRate = parsed
+        )
     }
 
     fun clearDeductions() {
