@@ -511,7 +511,12 @@ private fun PaySheetBankCard(fullName: String, serviceNo: String, paySheetNo: St
     FinanceCard(onClick = onClick, accent = Pink) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(56.dp).clip(RoundedCornerShape(17.dp)).background(Pink.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Description, null, Pink, Modifier.size(28.dp))
+                Icon(
+                    imageVector = Icons.Default.Description,
+                    contentDescription = null,
+                    tint = Pink,
+                    modifier = Modifier.size(28.dp)
+                )
             }
             Spacer(modifier = Modifier.width(13.dp))
             Column(modifier = Modifier.weight(1f)) {
