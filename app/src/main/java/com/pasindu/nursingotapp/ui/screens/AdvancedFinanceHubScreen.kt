@@ -20,27 +20,32 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CreditScore
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -99,6 +104,7 @@ fun AdvancedFinanceHubScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(FinanceBackground)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         FinanceHeader(onBack = onBack)
 
@@ -106,7 +112,8 @@ fun AdvancedFinanceHubScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars),
             verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             AnimatedVisibility(
@@ -207,18 +214,17 @@ private fun FinanceHeader(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
                 tint = Navy,
                 modifier = Modifier.size(25.dp)
             )
         }
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Advanced Finance",
@@ -233,7 +239,6 @@ private fun FinanceHeader(onBack: () -> Unit) {
                 fontWeight = FontWeight.Medium
             )
         }
-
         Surface(
             color = Mint.copy(alpha = 0.11f),
             shape = RoundedCornerShape(50)
@@ -290,7 +295,7 @@ private fun FinanceHeroCard(
                     center = Offset(size.width * 0.04f, size.height * 0.95f)
                 )
                 drawCircle(
-                    color = Mint.copy(alpha = glow * 0.40f),
+                    color = Mint.copy(alpha = glow * 0.4f),
                     radius = 35f,
                     center = Offset(size.width * 0.72f, size.height * 0.72f)
                 )
@@ -319,11 +324,7 @@ private fun FinanceHeroCard(
                     fontSize = 12.sp
                 )
 
-                AnimatedMoney(
-                    amount = netSalary,
-                    color = Color.White,
-                    large = true
-                )
+                AnimatedMoney(amount = netSalary, color = Color.White, large = true)
 
                 Spacer(modifier = Modifier.height(15.dp))
 
@@ -334,12 +335,14 @@ private fun FinanceHeroCard(
                     HeroMetricBox(
                         modifier = Modifier.weight(1f),
                         title = "GROSS",
-                        amount = grossSalary
+                        amount = grossSalary,
+                        accent = Cyan
                     )
                     HeroMetricBox(
                         modifier = Modifier.weight(1f),
                         title = "OT",
-                        amount = otAmount
+                        amount = otAmount,
+                        accent = Orange
                     )
                 }
             }
@@ -351,7 +354,8 @@ private fun FinanceHeroCard(
 private fun HeroMetricBox(
     modifier: Modifier,
     title: String,
-    amount: Double
+    amount: Double,
+    accent: Color
 ) {
     Surface(
         modifier = modifier,
@@ -361,16 +365,12 @@ private fun HeroMetricBox(
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 text = title,
-                color = Color.White.copy(alpha = 0.55f),
+                color = accent.copy(alpha = 0.85f),
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Black
             )
             Spacer(modifier = Modifier.height(4.dp))
-            AnimatedMoney(
-                amount = amount,
-                color = Color.White,
-                large = false
-            )
+            AnimatedMoney(amount = amount, color = Color.White, large = false)
         }
     }
 }
@@ -394,17 +394,13 @@ private fun WorkPulseCard(
         ),
         label = "markerPulse"
     )
-
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
         animationSpec = tween(1000, easing = FastOutSlowInEasing),
         label = "workProgress"
     )
 
-    FinanceCard(
-        onClick = onClick,
-        accent = Cyan
-    ) {
+    FinanceCard(onClick = onClick, accent = Cyan) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -481,10 +477,7 @@ private fun WorkPulseCard(
                 drawLine(
                     color = Cyan,
                     start = Offset(left, laneY1),
-                    end = Offset(
-                        left + (right - left) * animatedProgress,
-                        laneY1
-                    ),
+                    end = Offset(left + (right - left) * animatedProgress, laneY1),
                     strokeWidth = 8f,
                     cap = StrokeCap.Round
                 )
@@ -493,10 +486,7 @@ private fun WorkPulseCard(
                 drawLine(
                     color = Violet,
                     start = Offset(left, laneY2),
-                    end = Offset(
-                        left + (right - left) * otVisual,
-                        laneY2
-                    ),
+                    end = Offset(left + (right - left) * otVisual, laneY2),
                     strokeWidth = 8f,
                     cap = StrokeCap.Round
                 )
@@ -534,6 +524,7 @@ private fun WorkPulseCard(
                     .clip(CircleShape)
                     .background(Orange)
                     .align(Alignment.TopEnd)
+                    .padding(top = 2.dp, end = 2.dp)
             )
         }
 
@@ -659,38 +650,14 @@ private fun MoneyFlowCard(
 ) {
     val items = remember(basicSalary, otAmount, phAmount, doAmount) {
         listOf(
-            MoneyFlowItem(
-                label = "BASIC",
-                amount = basicSalary,
-                accent = Indigo,
-                icon = Icons.Default.AccountBalance
-            ),
-            MoneyFlowItem(
-                label = "OT",
-                amount = otAmount,
-                accent = Violet,
-                icon = Icons.Default.TrendingUp
-            ),
-            MoneyFlowItem(
-                label = "PH",
-                amount = phAmount,
-                accent = Orange,
-                icon = Icons.Default.Schedule
-            ),
-            MoneyFlowItem(
-                label = "DO",
-                amount = doAmount,
-                accent = Mint,
-                icon = Icons.Default.Assessment
-            )
+            MoneyFlowItem("BASIC", basicSalary, Indigo, Icons.Default.AccountBalance),
+            MoneyFlowItem("OT", otAmount, Violet, Icons.AutoMirrored.Filled.TrendingUp),
+            MoneyFlowItem("PH", phAmount, Orange, Icons.Default.Schedule),
+            MoneyFlowItem("DO", doAmount, Mint, Icons.Default.Assessment)
         )
     }
 
-    val maxValue = max(
-        items.maxOfOrNull { it.amount } ?: 1.0,
-        1.0
-    )
-
+    val maxValue = max(items.maxOfOrNull { it.amount } ?: 1.0, 1.0)
     val transition = rememberInfiniteTransition(label = "moneyFlowAnimation")
     val wave by transition.animateFloat(
         initialValue = 0f,
@@ -724,7 +691,6 @@ private fun MoneyFlowCard(
                     fontWeight = FontWeight.Black
                 )
             }
-
             Surface(
                 color = Indigo.copy(alpha = 0.08f),
                 shape = RoundedCornerShape(50.dp)
@@ -767,9 +733,9 @@ private fun MoneyFlowCard(
                 )
 
                 items.forEachIndexed { index, item ->
-                    val normalized = (
-                        item.amount / maxValue
-                    ).coerceIn(0.0, 1.0).toFloat()
+                    val normalized = (item.amount / maxValue)
+                        .coerceIn(0.0, 1.0)
+                        .toFloat()
                     val animatedHeight = usableHeight * normalized * (0.88f + wave * 0.08f)
                     val left = positions[index] - barWidth / 2f
                     val top = baseline - animatedHeight
@@ -780,14 +746,10 @@ private fun MoneyFlowCard(
                         size = Size(barWidth, usableHeight),
                         cornerRadius = CornerRadius(18f, 18f)
                     )
-
                     drawRoundRect(
                         color = item.accent,
                         topLeft = Offset(left, top),
-                        size = Size(
-                            width = barWidth,
-                            height = animatedHeight.coerceAtLeast(4f)
-                        ),
+                        size = Size(barWidth, animatedHeight.coerceAtLeast(4f)),
                         cornerRadius = CornerRadius(18f, 18f)
                     )
                 }
@@ -903,12 +865,12 @@ private fun ToolRow(
 
 @Composable
 private fun ToolTile(
-    modifier: Modifier,
     title: String,
     subtitle: String,
     icon: ImageVector,
     accent: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
@@ -956,10 +918,7 @@ private fun PaySheetBankCard(
     unit: String,
     onClick: () -> Unit
 ) {
-    FinanceCard(
-        onClick = onClick,
-        accent = Pink
-    ) {
+    FinanceCard(onClick = onClick, accent = Pink) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -993,9 +952,7 @@ private fun PaySheetBankCard(
                     color = Slate,
                     fontSize = 11.sp
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     SmallInfo(label = "PAY SHEET", value = paySheetNo)
                     SmallInfo(label = "SERVICE", value = serviceNo)
@@ -1006,14 +963,8 @@ private fun PaySheetBankCard(
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TinyTag(
-                text = grade.ifBlank { "Grade" },
-                color = Violet
-            )
-            TinyTag(
-                text = unit.ifBlank { "Unit" },
-                color = Pink
-            )
+            TinyTag(text = grade.ifBlank { "Grade" }, color = Violet)
+            TinyTag(text = unit.ifBlank { "Unit" }, color = Pink)
         }
     }
 }
@@ -1095,15 +1046,12 @@ private fun DeductionCard(
                         value = "Rs. ${gross.currency()}",
                         valueColor = Ink
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     FinanceSummaryRow(
                         label = "Total Deductions",
                         value = "Rs. ${(apit + wop + loan + other).currency()}",
                         valueColor = Orange
                     )
-
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Surface(
@@ -1112,9 +1060,7 @@ private fun DeductionCard(
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(13.dp),
+                            modifier = Modifier.padding(13.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -1124,7 +1070,6 @@ private fun DeductionCard(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black
                             )
-
                             AnimatedContent(
                                 targetState = net,
                                 label = "netAmount"
@@ -1178,11 +1123,7 @@ private fun FinanceSummaryRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = label,
-            color = Slate,
-            fontSize = 11.sp
-        )
+        Text(text = label, color = Slate, fontSize = 11.sp)
         Text(
             text = value,
             color = valueColor,
@@ -1314,10 +1255,7 @@ private fun Double.oneDecimal(): String =
     String.format(Locale.US, "%.1f", this)
 
 private fun Double.currency(): String =
-    NumberFormat
-        .getNumberInstance(Locale.US)
-        .apply {
-            maximumFractionDigits = 2
-            minimumFractionDigits = 0
-        }
-        .format(this)
+    NumberFormat.getNumberInstance(Locale.US).apply {
+        maximumFractionDigits = 2
+        minimumFractionDigits = 0
+    }.format(this)
