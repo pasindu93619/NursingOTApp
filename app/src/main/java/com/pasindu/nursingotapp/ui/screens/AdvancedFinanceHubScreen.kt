@@ -109,8 +109,8 @@ fun AdvancedFinanceHubScreen(viewModel: AdvancedFinanceViewModel, onNavigate: (S
                     PayRatesCard(state.profile?.grade.orEmpty(), state.currentBasicSalary, state.otRate, state.phRate, state.doRate, state.payRateSettings?.rateSource.orEmpty())
                     ToolRow()
                     PaySheetBankCard(state.profile?.fullName.orEmpty(), state.profile?.serviceNo.orEmpty(), state.profile?.paySheetNo.orEmpty(), state.profile?.grade.orEmpty(), state.profile?.unit.orEmpty()) { onNavigate("pay_sheet_bank") }
-                    SectionLabel("03 • TAKE-HOME ESTIMATE", "Monthly Deductions")
-                    DeductionCard(state.apit, state.wop, state.loanDeduction, state.otherDeduction, state.grossEarnings, state.estimatedNetSalary, viewModel::updateApit, viewModel::updateWop, viewModel::updateLoanDeduction, viewModel::updateOtherDeduction)
+                    SectionLabel("03 • TAKE-HOME ESTIMATE", "Additional Financial Commitments")
+                    ExternalCommitmentCard(state.loanDeduction, state.otherDeduction, state.estimatedNetSalary, viewModel::updateLoanDeduction, viewModel::updateOtherDeduction)
                 }
             }
             if (state.isLoading) LoadingFinanceState()
@@ -229,7 +229,31 @@ private data class MoneyFlowItem(val label: String, val amount: Double, val acce
 @Composable private fun SmallInfo(label: String, value: String) { Column { Text(text = label, color = SoftSlate, fontSize = 8.sp, fontWeight = FontWeight.Black); Text(text = value.ifBlank { "—" }, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold) } }
 @Composable private fun TinyTag(text: String, color: Color) { Surface(color = color.copy(alpha = 0.09f), shape = RoundedCornerShape(50.dp)) { Text(text = text, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold) } }
 
-@Composable private fun DeductionCard(apit: Double, wop: Double, loan: Double, other: Double, gross: Double, net: Double, onApitChange: (String) -> Unit, onWopChange: (String) -> Unit, onLoanChange: (String) -> Unit, onOtherChange: (String) -> Unit) { FinanceCard(accent = Orange) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { Text(text = "Your salary is already loaded.", color = Slate, fontSize = 11.sp); Text(text = "Only enter the deductions that change each month.", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold); DeductionField("APIT", apit, onApitChange); DeductionField("WOP", wop, onWopChange); DeductionField("Loan / Advance", loan, onLoanChange); DeductionField("Other Deduction", other, onOtherChange); Surface(modifier = Modifier.fillMaxWidth(), color = SoftSurface, shape = RoundedCornerShape(18.dp)) { Column(modifier = Modifier.padding(15.dp)) { FinanceSummaryRow("Gross Earnings", "Rs. ${gross.currency()}", Ink); Spacer(modifier = Modifier.height(8.dp)); FinanceSummaryRow("Total Deductions", "Rs. ${(apit + wop + loan + other).currency()}", Orange); Spacer(modifier = Modifier.height(10.dp)); Surface(modifier = Modifier.fillMaxWidth(), color = Mint.copy(alpha = 0.09f), shape = RoundedCornerShape(14.dp)) { Row(modifier = Modifier.padding(13.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(text = "ESTIMATED NET", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.Black); AnimatedContent(targetState = net, label = "netAmount") { amount -> Text(text = "Rs. ${amount.currency()}", color = Mint, fontSize = 19.sp, fontWeight = FontWeight.Black) } } } } } } } }
+@Composable private fun ExternalCommitmentCard(loan: Double, other: Double, netPayFromPaysheet: Double, onLoanChange: (String) -> Unit, onOtherChange: (String) -> Unit) {
+    FinanceCard(accent = Orange) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(text = "PAYROLL DEDUCTIONS", color = Slate, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+            Text(text = "Already included in your paysheet total.", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Surface(modifier = Modifier.fillMaxWidth(), color = SoftSurface, shape = RoundedCornerShape(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = "Net pay from paysheet", color = Slate, fontSize = 11.sp)
+                    Text(text = "Rs. ${netPayFromPaysheet.currency()}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Text(text = "EXTERNAL COMMITMENTS", color = Orange, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+            Text(text = "These amounts are not included in the paysheet deduction total.", color = Slate, fontSize = 10.sp)
+            DeductionField("Loan / Advance", loan, onLoanChange)
+            DeductionField("Other Deduction", other, onOtherChange)
+            val available = (netPayFromPaysheet - loan - other).coerceAtLeast(0.0)
+            Surface(modifier = Modifier.fillMaxWidth(), color = Mint.copy(alpha = 0.09f), shape = RoundedCornerShape(14.dp)) {
+                Row(modifier = Modifier.padding(13.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "AVAILABLE AFTER COMMITMENTS", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    AnimatedContent(targetState = available, label = "availableAmount") { amount -> Text(text = "Rs. ${amount.currency()}", color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Black) }
+                }
+            }
+        }
+    }
+}
 
 @Composable private fun DeductionField(label: String, value: Double, onValueChange: (String) -> Unit) { OutlinedTextField(value = if (value == 0.0) "" else value.toString(), onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(label) }, leadingIcon = { Icon(imageVector = Icons.Default.CreditScore, contentDescription = null, tint = Orange) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(15.dp)) }
 @Composable private fun FinanceSummaryRow(label: String, value: String, valueColor: Color) { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(text = label, color = Slate, fontSize = 11.sp); Text(text = value, color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.Bold) } }
