@@ -111,13 +111,13 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
 
     val cameraPicker = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         val monthKey = pendingMonth ?: return@rememberLauncherForActivityResult
-        val outputUri = cameraOutputUri
+        val capturedUri = cameraOutputUri
         pendingMonth = null
         cameraOutputUri = null
-        if (!success || outputUri == null) return@rememberLauncherForActivityResult
+        if (!success || capturedUri == null) return@rememberLauncherForActivityResult
         saveVaultImageFromUri(
             context = context,
-            uri = outputUri,
+            uri = capturedUri,
             monthKey = monthKey,
             dao = dao,
             vault = vault,
@@ -134,13 +134,14 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
 
     fun startCamera(monthKey: String) {
         val outputFile = createCameraFile(context, monthKey)
-        pendingMonth = monthKey
-        cameraOutputUri = FileProvider.getUriForFile(
+        val outputUri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             outputFile
         )
-        cameraPicker.launch(cameraOutputUri)
+        pendingMonth = monthKey
+        cameraOutputUri = outputUri
+        cameraPicker.launch(outputUri)
     }
 
     val usedBytes = remember(documents) { documents.sumOf { it.fileSizeBytes } }
@@ -226,7 +227,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             document = document,
             onDismiss = { selected = null },
             onShare = { shareFile(context, document) },
-            onDownload = { downloadCopy(context, document); message = "Paysheet downloaded to Downloads/NursingOS Pay Sheets." }
+            onDownload = { downloadCopy(context, document) }
         )
     }
 
@@ -249,12 +250,53 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     }
 
     message?.let { text ->
-        AlertDialog(
-            onDismissRequest = { message = null },
-            title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) },
-            text = { Text(text) },
-            confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }
-        )
+        AlertDialog(onDismissRequest = { message = null }, title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) }, text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } })
+    }
+}
+
+private var cameraOutputUri: Uri? = null
+
+private fun createCameraFile(context: Context, monthKey: String): File {
+    val dir = File(context.cacheDir, "paysheet_camera").also { it.mkdirs() }
+    return File(dir, "capture_$monthKey.jpg")
+}
+
+private fun saveVaultImageFromUri(
+    context: Context,
+    uri: Uri,
+    monthKey: String,
+    dao: com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao,
+    vault: PaySheetVaultManager,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    scope.launch {
+        try {
+            withContext(Dispatchers.IO) {
+                val existing = dao.findByMonth(monthKey)
+                val target = vault.prepareInput(uri, monthKey)
+                val now = System.currentTimeMillis()
+                dao.upsert(
+                    PaySheetDocumentEntity(
+                        id = existing?.id ?: 0L,
+                        monthKey = monthKey,
+                        displayMonth = displayMonth(monthKey),
+                        filePath = target.absolutePath,
+                        fileSizeBytes = target.length(),
+                        sha256 = vault.sha256(target.absolutePath),
+                        createdAt = existing?.createdAt ?: now,
+                        updatedAt = now
+                    )
+                )
+                if (existing != null && existing.filePath != target.absolutePath) {
+                    vault.deleteFile(existing.filePath)
+                }
+            }
+            onSuccess()
+        } catch (e: Exception) {
+            onError(e.message ?: "Unable to save paysheet.")
+        }
     }
 }
 
@@ -265,7 +307,7 @@ private fun AddSourceDialog(monthKey: String, onDismiss: () -> Unit, onCamera: (
         title = { Text("Add paysheet", fontWeight = FontWeight.Black) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Add the ${displayMonth(monthKey)} paysheet.", color = Color(0xFF64748B), fontSize = 12.sp)
+                Text("Choose how you want to add the $monthKey paysheet.", color = Color(0xFF64748B), fontSize = 12.sp)
                 Button(onClick = { onCamera(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
                     Icon(Icons.Default.CameraAlt, null)
                     Spacer(Modifier.width(7.dp))
@@ -389,65 +431,19 @@ private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
     }
 }
 
-private fun saveVaultImageFromUri(
-    context: Context,
-    uri: Uri,
-    monthKey: String,
-    dao: com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao,
-    vault: PaySheetVaultManager,
-    scope: kotlinx.coroutines.CoroutineScope,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    scope.launch {
-        try {
-            withContext(Dispatchers.IO) {
-                val existing = dao.findByMonth(monthKey)
-                val target = vault.prepareInput(uri, monthKey)
-                val now = System.currentTimeMillis()
-                dao.upsert(
-                    PaySheetDocumentEntity(
-                        id = existing?.id ?: 0L,
-                        monthKey = monthKey,
-                        displayMonth = displayMonth(monthKey),
-                        filePath = target.absolutePath,
-                        fileSizeBytes = target.length(),
-                        sha256 = vault.sha256(target.absolutePath),
-                        createdAt = existing?.createdAt ?: now,
-                        updatedAt = now
-                    )
-                )
-                if (existing != null && existing.filePath != target.absolutePath) {
-                    vault.deleteFile(existing.filePath)
-                }
-            }
-            onSuccess()
-        } catch (e: Exception) {
-            onError(e.message ?: "Unable to save paysheet.")
-        }
-    }
-}
-
-private fun createCameraFile(context: Context, monthKey: String): File {
-    val dir = File(context.cacheDir, "paysheet_camera").also { it.mkdirs() }
-    return File(dir, "capture_$monthKey.jpg")
-}
-
 private fun downloadCopy(context: Context, document: PaySheetDocumentEntity) {
     val source = File(document.filePath)
     if (!source.exists()) return
-    val resolver = context.contentResolver
     val values = ContentValues().apply {
         put(MediaStore.Downloads.DISPLAY_NAME, "Paysheet_${document.monthKey}.jpg")
         put(MediaStore.Downloads.MIME_TYPE, "image/jpeg")
         put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/NursingOS Pay Sheets")
         put(MediaStore.Downloads.IS_PENDING, 1)
     }
+    val resolver = context.contentResolver
     val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
     try {
-        resolver.openOutputStream(uri)?.use { output ->
-            source.inputStream().use { input -> input.copyTo(output) }
-        }
+        resolver.openOutputStream(uri)?.use { output -> source.inputStream().use { input -> input.copyTo(output) } }
         values.clear()
         values.put(MediaStore.Downloads.IS_PENDING, 0)
         resolver.update(uri, values, null, null)
