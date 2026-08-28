@@ -25,7 +25,6 @@ import com.pasindu.nursingotapp.data.model.Period
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.data.model.UserProfile
 import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
-import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModelFactory
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
@@ -117,7 +116,7 @@ fun AppNavigation() {
 
         composable("advanced_finance_hub") {
             val advancedFinanceViewModel: AdvancedFinanceViewModel = viewModel(
-                factory = AdvancedFinanceViewModelFactory(context)
+                factory = AdvancedFinanceViewModel.Factory(context)
             )
 
             AdvancedFinanceHubScreen(
