@@ -19,10 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -100,8 +98,8 @@ fun ProfileScreen(
     val deductions = parsedMoney(totalDeductions)
     val parsedOtRate = parsedMoney(otRate)
     val additionalTotal = if (hasAdditionalAllowances) parsedAdditional else 0.0
-    val regularGross = parsedBasic + parsedRisk + parsedCla + additionalTotal
-    val netPay = regularGross - deductions
+    val grossPay = parsedBasic + parsedRisk + parsedCla + additionalTotal
+    val netPay = grossPay - deductions
 
     val matched2027Basic = matchedSalary2027?.basicSalary2027
     val matched2027DayRate = matched2027Basic?.div(30.0)
@@ -211,7 +209,7 @@ fun ProfileScreen(
                     matched2027DayRate?.let { rate ->
                         Surface(Modifier.fillMaxWidth(), color = Color(0xFFECFDF5), shape = RoundedCornerShape(14.dp)) {
                             Column(Modifier.padding(12.dp)) {
-                                Text("PH / DO RATE BASIS", color = Green, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                Text("PH / DO RATE", color = Green, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                 Text("2027 paid/basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = ${formatMoney(rate)} / day", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -256,6 +254,10 @@ fun ProfileScreen(
                     }
                 }
             }
+
+            Spacer(Modifier.height(6.dp))
+            ProfileTextField("Total Paysheet Deductions", totalDeductions, { totalDeductions = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
+            Text("Enter only the total deduction printed on the paysheet. Individual payroll deductions vary between nurses.", color = Slate, fontSize = 10.sp)
         }
 
         Card(Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(28.dp)), RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Navy)) {
@@ -275,23 +277,13 @@ fun ProfileScreen(
                 PreviewRow("Risk / Responsibility", parsedRisk, Orange)
                 PreviewRow("CLA", parsedCla, Green)
                 if (additionalTotal > 0.0) PreviewRow("Additional Allowances", additionalTotal, Purple)
-                PreviewRow("TOTAL DEDUCTIONS", deductions, Orange)
+                PreviewRow("GROSS PAY", grossPay, Color.White)
+                PreviewRow("TOTAL PAYROLL DEDUCTIONS", deductions, Orange)
                 Surface(color = Green.copy(alpha = 0.18f), shape = RoundedCornerShape(14.dp)) {
                     Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("NET PAY", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         Text(formatMoney(netPay), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     }
-                }
-            }
-        }
-
-        ProfileSectionCard(Icons.Default.List, Orange, "Monthly Deductions", "Use the total deduction shown on your paysheet") {
-            ProfileTextField("Total Deductions", totalDeductions, { totalDeductions = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
-            Surface(Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Savings, null, tint = Orange, modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(9.dp))
-                    Text("Example: the July 2026 paysheet you provided shows total deductions of Rs. 23,923.40.", color = Slate, fontSize = 10.sp)
                 }
             }
         }
