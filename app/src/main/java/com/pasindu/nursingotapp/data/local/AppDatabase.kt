@@ -43,7 +43,6 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-
     abstract fun profileDao(): ProfileDao
     abstract fun claimPeriodDao(): ClaimPeriodDao
     abstract fun dailyEntryDao(): DailyEntryDao
@@ -55,32 +54,21 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun salaryStep2027Dao(): SalaryStep2027Dao
 
     companion object {
-
         val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                createSuperAppTables(database)
-            }
+            override fun migrate(database: SupportSQLiteDatabase) = createSuperAppTables(database)
         }
-
         val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                createSuperAppTables(database)
-            }
+            override fun migrate(database: SupportSQLiteDatabase) = createSuperAppTables(database)
         }
-
         val MIGRATION_1_3 = object : Migration(1, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                createSuperAppTables(database)
-            }
+            override fun migrate(database: SupportSQLiteDatabase) = createSuperAppTables(database)
         }
-
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("DROP TABLE IF EXISTS `financial_records`")
                 createFinancialRecordsTable(database)
             }
         }
-
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -99,7 +87,6 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
-
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -117,7 +104,6 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
-
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -126,6 +112,7 @@ abstract class AppDatabase : RoomDatabase() {
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `grade` TEXT NOT NULL,
                         `salaryStep` INTEGER NOT NULL,
+                        `currentBasicSalary2026` REAL NOT NULL,
                         `basicSalary2027` REAL NOT NULL,
                         `effectiveFrom` TEXT NOT NULL,
                         `sourceLabel` TEXT NOT NULL
@@ -134,13 +121,11 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
-
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE `profile` ADD COLUMN `salaryStep` INTEGER")
             }
         }
-
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
@@ -151,9 +136,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         private fun createSuperAppTables(database: SupportSQLiteDatabase) {
             createFinancialRecordsTable(database)
-
-            database.execSQL(
-                """
+            database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `isbar_notes` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     `patientIdentifier` TEXT NOT NULL,
@@ -164,11 +147,8 @@ abstract class AppDatabase : RoomDatabase() {
                     `recommendation` TEXT NOT NULL,
                     `timestamp` INTEGER NOT NULL
                 )
-                """.trimIndent()
-            )
-
-            database.execSQL(
-                """
+            """.trimIndent())
+            database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `clinical_tasks` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     `taskName` TEXT NOT NULL,
@@ -178,11 +158,8 @@ abstract class AppDatabase : RoomDatabase() {
                     `isCompleted` INTEGER NOT NULL,
                     `bypassDnd` INTEGER NOT NULL
                 )
-                """.trimIndent()
-            )
-
-            database.execSQL(
-                """
+            """.trimIndent())
+            database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `cpd_logs` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     `seminarTitle` TEXT NOT NULL,
@@ -191,13 +168,11 @@ abstract class AppDatabase : RoomDatabase() {
                     `speakerOrInstitution` TEXT NOT NULL,
                     `notes` TEXT NOT NULL
                 )
-                """.trimIndent()
-            )
+            """.trimIndent())
         }
 
         private fun createFinancialRecordsTable(database: SupportSQLiteDatabase) {
-            database.execSQL(
-                """
+            database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `financial_records` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     `recordMonth` TEXT NOT NULL,
@@ -215,8 +190,7 @@ abstract class AppDatabase : RoomDatabase() {
                     `grossSalary` REAL NOT NULL,
                     `netSalary` REAL NOT NULL
                 )
-                """.trimIndent()
-            )
+            """.trimIndent())
         }
     }
 }
