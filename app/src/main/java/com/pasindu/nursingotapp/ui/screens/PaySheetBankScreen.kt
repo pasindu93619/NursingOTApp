@@ -1,6 +1,5 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -25,17 +24,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
@@ -71,6 +69,7 @@ import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -147,7 +146,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
 
     fun startCamera(monthKey: String) {
         val outputFile = File(
-            File(context.cacheDir, "paysheet_camera").also { it.mkdirs() },
+            File(context.filesDir, "paysheet_camera").also { it.mkdirs() },
             "capture_$monthKey.jpg"
         )
         val uri = FileProvider.getUriForFile(
@@ -187,13 +186,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item {
-                VaultHero(
-                    count = documents.size,
-                    bytes = usedBytes,
-                    onAdd = { showAddChooser = true }
-                )
-            }
+            item { VaultHero(count = documents.size, bytes = usedBytes, onAdd = { showAddChooser = true }) }
             item {
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -221,11 +214,8 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                 item {
                     Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(22.dp)) {
                         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF8FAFC)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF94A3B8))
+                            Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF8FAFC)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.AutoMirrored.Filled.ReceiptLong, null, tint = Color(0xFF94A3B8))
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
@@ -257,7 +247,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             document = document,
             onDismiss = { selected = null },
             onShare = { shareFile(context, document) },
-            onDownload = { downloadCopy(context, document) }
+            onDownload = { message = downloadCopy(context, document) }
         )
     }
 
@@ -405,7 +395,12 @@ private fun VaultAction(icon: androidx.compose.ui.graphics.vector.ImageVector, l
 }
 
 @Composable
-private fun VaultViewer(document: PaySheetDocumentEntity, onDismiss: () -> Unit, onShare: () -> Unit, onDownload: () -> Unit) {
+private fun VaultViewer(
+    document: PaySheetDocumentEntity,
+    onDismiss: () -> Unit,
+    onShare: () -> Unit,
+    onDownload: () -> Unit
+) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp)) {
@@ -440,24 +435,56 @@ private fun VaultViewer(document: PaySheetDocumentEntity, onDismiss: () -> Unit,
     }
 }
 
-private fun downloadCopy(context: Context, document: PaySheetDocumentEntity) {
+private fun downloadCopy(context: Context, document: PaySheetDocumentEntity): String {
     val source = File(document.filePath)
-    if (!source.exists()) return
-    val resolver = context.contentResolver
-    val values = ContentValues().apply {
-        put(MediaStore.Downloads.DISPLAY_NAME, "Paysheet_${document.monthKey}.jpg")
-        put(MediaStore.Downloads.MIME_TYPE, "image/jpeg")
-        put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/NursingOS Pay Sheets")
-        put(MediaStore.Downloads.IS_PENDING, 1)
-    }
-    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
-    try {
-        resolver.openOutputStream(uri)?.use { output ->
-            source.inputStream().use { input -> input.copyTo(output) }
+    if (!source.exists()) return "Paysheet file is no longer available."
+    return try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            downloadWithMediaStore(context, source, document)
+        } else {
+            downloadLegacy(context, source, document)
         }
-        resolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        "Download failed: ${e.message ?: "unknown error"}"
+    }
+}
+
+private fun downloadWithMediaStore(context: Context, source: File, document: PaySheetDocumentEntity): String {
+    val resolver = context.contentResolver
+    val downloadsUri = Uri.parse("content://media/external/downloads")
+    val displayName = "Paysheet_${document.monthKey}.jpg"
+    val values = ContentValuesCompat.newValues(displayName)
+    val uri = resolver.insert(downloadsUri, values) ?: return "Unable to create the download."
+    return try {
+        resolver.openOutputStream(uri)?.use { output -> source.inputStream().use { input -> input.copyTo(output) } }
+            ?: throw IllegalStateException("Unable to open download stream.")
+        val complete = ContentValuesCompat.completeValues()
+        resolver.update(uri, complete, null, null)
+        "Paysheet downloaded to Downloads/NursingOS Pay Sheets."
+    } catch (e: Exception) {
         resolver.delete(uri, null, null)
+        "Download failed: ${e.message ?: "unknown error"}"
+    }
+}
+
+private fun downloadLegacy(context: Context, source: File, document: PaySheetDocumentEntity): String {
+    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    val targetDir = File(downloadsDir, "NursingOS Pay Sheets").apply { mkdirs() }
+    val target = File(targetDir, "Paysheet_${document.monthKey}.jpg")
+    source.inputStream().use { input -> target.outputStream().use { output -> input.copyTo(output) } }
+    return "Paysheet downloaded to Downloads/NursingOS Pay Sheets."
+}
+
+private object ContentValuesCompat {
+    fun newValues(displayName: String): android.content.ContentValues = android.content.ContentValues().apply {
+        put("_display_name", displayName)
+        put("mime_type", "image/jpeg")
+        put("relative_path", Environment.DIRECTORY_DOWNLOADS + "/NursingOS Pay Sheets")
+        put("is_pending", 1)
+    }
+
+    fun completeValues(): android.content.ContentValues = android.content.ContentValues().apply {
+        put("is_pending", 0)
     }
 }
 
