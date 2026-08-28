@@ -14,15 +14,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,8 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.ui.NursingViewModel
-import java.text.NumberFormat
-import java.util.Locale
 
 private val Background = Color(0xFFF4F7FC)
 private val Navy = Color(0xFF102A56)
@@ -48,12 +45,6 @@ private val Green = Color(0xFF10B981)
 private val Orange = Color(0xFFF97316)
 private val Ink = Color(0xFF0F172A)
 private val Slate = Color(0xFF64748B)
-
-private data class AllowanceRow(
-    val id: Int,
-    val name: String,
-    val amount: String
-)
 
 @Composable
 fun ProfileScreen(
@@ -109,8 +100,8 @@ fun ProfileScreen(
     val deductions = parsedMoney(totalDeductions)
     val parsedOtRate = parsedMoney(otRate)
     val additionalTotal = if (hasAdditionalAllowances) parsedAdditional else 0.0
-    val serviceSubtotal = parsedBasic + parsedRisk + parsedCla + additionalTotal
-    val netPay = serviceSubtotal - deductions
+    val regularGross = parsedBasic + parsedRisk + parsedCla + additionalTotal
+    val netPay = regularGross - deductions
 
     val matched2027Basic = matchedSalary2027?.basicSalary2027
     val matched2027DayRate = matched2027Basic?.div(30.0)
@@ -175,12 +166,7 @@ fun ProfileScreen(
             }
         }
 
-        ProfileSectionCard(
-            icon = Icons.Default.Person,
-            iconColor = Blue,
-            title = "Identity & Placement",
-            subtitle = "Professional credentials"
-        ) {
+        ProfileSectionCard(Icons.Default.Person, Blue, "Identity & Placement", "Professional credentials") {
             ProfileTextField("Full Name", fullName, { fullName = it })
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProfileTextField("Service No", serviceNo, { serviceNo = it }, Modifier.weight(1f), KeyboardType.Number)
@@ -192,41 +178,24 @@ fun ProfileScreen(
             }
         }
 
-        ProfileSectionCard(
-            icon = Icons.Default.AccountBalanceWallet,
-            iconColor = Purple,
-            title = "Compensation Engine",
-            subtitle = "Current salary, allowances & service rates"
-        ) {
+        ProfileSectionCard(Icons.Default.AccountBalanceWallet, Purple, "Compensation Engine", "Current salary, allowances & service rates") {
             AnimatedVisibility(visible = parsedBasic > 0.0, enter = fadeIn(tween(450)) + slideInVertically(tween(450)) { it / 3 }) {
                 CurrentBasicCard(parsedBasic)
             }
 
-            ProfileTextField(
-                label = "Current Basic Salary (2026)",
-                value = basicSalary,
-                onValueChange = { basicSalary = it },
-                keyboardType = KeyboardType.Number,
-                leadingText = "Rs."
-            )
+            ProfileTextField("Current Basic Salary (2026)", basicSalary, { basicSalary = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
 
             AnimatedVisibility(visible = matchedSalary2027 != null, enter = fadeIn(tween(400)) + slideInVertically(tween(400))) {
                 matchedSalary2027?.let { row ->
-                    SalaryMatchCard(
-                        grade = row.grade,
-                        step = row.salaryStep,
-                        currentBasic = parsedBasic,
-                        basic2027 = row.basicSalary2027,
-                        dayRate = row.basicSalary2027 / 30.0
-                    )
+                    SalaryMatchCard(row.grade, row.salaryStep, parsedBasic, row.basicSalary2027, row.basicSalary2027 / 30.0)
                 }
             }
 
             AnimatedVisibility(visible = parsedBasic > 0.0 && grade.isNotBlank() && matchedSalary2027 == null) {
-                Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
+                Surface(Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
                     Text(
-                        "No exact salary-table match was found for Grade $grade and Rs. ${formatCompact(parsedBasic)}. Check the current basic from your paysheet.",
-                        modifier = Modifier.padding(14.dp),
+                        "No exact salary-table match was found for Grade $grade and Rs. ${formatCompact(parsedBasic)}.",
+                        Modifier.padding(14.dp),
                         color = Orange,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
@@ -235,31 +204,15 @@ fun ProfileScreen(
             }
 
             Text("Service payment rates", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
-
-            Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFFF5F3FF), shape = RoundedCornerShape(18.dp)) {
-                Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "OT rate is entered manually because the Health-sector rate depends on grade, not salary.",
-                        color = Slate,
-                        fontSize = 10.sp
-                    )
-                    ProfileTextField(
-                        label = "Health-sector OT Rate",
-                        value = otRate,
-                        onValueChange = { otRate = it },
-                        keyboardType = KeyboardType.Number,
-                        leadingText = "Rs."
-                    )
-                    if (matched2027DayRate != null) {
-                        Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFFECFDF5), shape = RoundedCornerShape(14.dp)) {
-                            Column(modifier = Modifier.padding(12.dp)) {
+            Surface(Modifier.fillMaxWidth(), color = Color(0xFFF5F3FF), shape = RoundedCornerShape(18.dp)) {
+                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("OT rate is entered manually because the Health-sector rate depends on grade, not salary.", color = Slate, fontSize = 10.sp)
+                    ProfileTextField("Health-sector OT Rate", otRate, { otRate = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
+                    matched2027DayRate?.let { rate ->
+                        Surface(Modifier.fillMaxWidth(), color = Color(0xFFECFDF5), shape = RoundedCornerShape(14.dp)) {
+                            Column(Modifier.padding(12.dp)) {
                                 Text("PH / DO RATE BASIS", color = Green, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                                Text(
-                                    "2027 paid/basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = ${formatMoney(matched2027DayRate)} / day",
-                                    color = Ink,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text("2027 paid/basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = ${formatMoney(rate)} / day", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -270,21 +223,15 @@ fun ProfileScreen(
             AllowanceField("Risk / Responsibility Allowance", riskAllowance, { riskAllowance = it }, Orange)
             AllowanceField("CLA", claAllowance, { claAllowance = it }, Green)
 
-            Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
-                Row(modifier = Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
+                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.AddCircleOutline, null, tint = Orange, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
                         Text("Additional allowances?", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         Text("Add other paysheet allowances one by one.", color = Slate, fontSize = 10.sp)
                     }
-                    Switch(
-                        checked = hasAdditionalAllowances,
-                        onCheckedChange = {
-                            hasAdditionalAllowances = it
-                            if (!it) additionalAllowances = emptyList()
-                        }
-                    )
+                    Switch(checked = hasAdditionalAllowances, onCheckedChange = { hasAdditionalAllowances = it; if (!it) additionalAllowances = emptyList() })
                 }
             }
 
@@ -293,39 +240,32 @@ fun ProfileScreen(
                     additionalAllowances.forEach { row ->
                         AllowanceEditorRow(
                             row = row,
-                            onNameChange = { name -> additionalAllowances = additionalAllowances.map { if (it.id == row.id) it.copy(name = name) else it } },
-                            onAmountChange = { amount -> additionalAllowances = additionalAllowances.map { if (it.id == row.id) it.copy(amount = amount) else it } },
-                            onDelete = { additionalAllowances = additionalAllowances.filterNot { it.id == row.id } }
+                            onNameChange = { name -> additionalAllowances = additionalAllowances.map { item -> if (item.id == row.id) item.copy(name = name) else item } },
+                            onAmountChange = { amount -> additionalAllowances = additionalAllowances.map { item -> if (item.id == row.id) item.copy(amount = amount) else item } },
+                            onDelete = { additionalAllowances = additionalAllowances.filterNot { item -> item.id == row.id } }
                         )
                     }
                     OutlinedButton(
-                        onClick = {
-                            val nextId = (additionalAllowances.maxOfOrNull { it.id } ?: 0) + 1
-                            additionalAllowances = additionalAllowances + AllowanceRow(nextId, "", "")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { val nextId = (additionalAllowances.maxOfOrNull { it.id } ?: 0) + 1; additionalAllowances = additionalAllowances + AllowanceRow(nextId, "", "") },
+                        Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(Icons.Default.AddCircleOutline, null)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("ADD ANOTHER ALLOWANCE", fontWeight = FontWeight.Black)
                     }
                 }
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(28.dp)),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Navy)
-        ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(28.dp)), RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Navy)) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(46.dp).background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(46.dp).background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Payments, null, tint = Color.White)
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
                         Text("PAY PREVIEW", color = Color.White.copy(alpha = 0.65f), fontSize = 10.sp, fontWeight = FontWeight.Black)
                         Text("Your monthly salary picture", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
                     }
@@ -337,7 +277,7 @@ fun ProfileScreen(
                 if (additionalTotal > 0.0) PreviewRow("Additional Allowances", additionalTotal, Purple)
                 PreviewRow("TOTAL DEDUCTIONS", deductions, Orange)
                 Surface(color = Green.copy(alpha = 0.18f), shape = RoundedCornerShape(14.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("NET PAY", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         Text(formatMoney(netPay), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     }
@@ -345,12 +285,12 @@ fun ProfileScreen(
             }
         }
 
-        ProfileSectionCard(icon = Icons.Default.List, iconColor = Orange, title = "Monthly Deductions", subtitle = "Use the total deduction shown on your paysheet") {
+        ProfileSectionCard(Icons.Default.List, Orange, "Monthly Deductions", "Use the total deduction shown on your paysheet") {
             ProfileTextField("Total Deductions", totalDeductions, { totalDeductions = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
-            Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
-                Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Savings, null, tint = Orange, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(9.dp))
+                    Spacer(Modifier.width(9.dp))
                     Text("Example: the July 2026 paysheet you provided shows total deductions of Rs. 23,923.40.", color = Slate, fontSize = 10.sp)
                 }
             }
@@ -359,48 +299,26 @@ fun ProfileScreen(
         Button(
             onClick = {
                 val basic = parsedMoney(basicSalary)
-                viewModel.saveProfile(
-                    ProfileEntity(
-                        id = 1,
-                        fullName = fullName,
-                        serviceNo = serviceNo,
-                        unit = unit,
-                        paySheetNo = paySheetNo,
-                        grade = grade,
-                        basicSalary = basic,
-                        otRate = 0.0,
-                        updatedAt = System.currentTimeMillis(),
-                        salaryStep = detectedStep
-                    )
-                )
-                viewModel.saveProfileCompensation(
-                    riskAllowance = parsedRisk,
-                    claAllowance = parsedCla,
-                    additionalAllowancesTotal = additionalTotal,
-                    totalDeductions = deductions
-                )
-                if (parsedOtRate > 0.0) {
-                    viewModel.saveOtRate(parsedOtRate)
-                    matched2027DayRate?.let { row ->
-                        viewModel.applyMatched2027DayRate()
-                    }
-                }
+                viewModel.saveProfile(ProfileEntity(1, fullName, serviceNo, unit, paySheetNo, grade, basic, 0.0, System.currentTimeMillis(), detectedStep))
+                viewModel.saveProfileCompensation(parsedRisk, parsedCla, additionalTotal, deductions)
+                if (parsedOtRate > 0.0) viewModel.saveOtRate(parsedOtRate)
+                if (matched2027DayRate != null) viewModel.applyMatched2027DayRate()
                 onNavigateToClaimPeriod(true, "")
             },
-            modifier = Modifier.fillMaxWidth().height(60.dp),
+            Modifier.fillMaxWidth().height(60.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Blue),
             shape = RoundedCornerShape(18.dp)
         ) {
             Text("SAVE PROFILE & CONTINUE", fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(Modifier.width(10.dp))
             Icon(Icons.Default.ArrowForward, null)
         }
 
-        Spacer(modifier = Modifier.height(34.dp))
+        Spacer(Modifier.height(34.dp))
     }
 }
 
 private fun parsedMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
 private fun cleanNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
-private fun formatMoney(value: Double): String = NumberFormat.getNumberInstance(Locale.US).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }.format(value)
-private fun formatCompact(value: Double): String = NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 2 }.format(value)
+private fun formatMoney(value: Double): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }.format(value)
+private fun formatCompact(value: Double): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply { maximumFractionDigits = 2 }.format(value)
