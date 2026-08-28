@@ -6,10 +6,12 @@ import androidx.room.PrimaryKey
 /**
  * Master nurse profile.
  *
- * The current basic salary is stored here because it is part of the user's
- * current paysheet/profile information. Service-payment rates are kept in
- * PayRateSettingsEntity so Health-sector OT and future 2027 PH/DO policy
- * changes do not alter the legacy profile model.
+ * The current basic salary is stored here because it belongs to the current
+ * paysheet/profile. Salary-step and 2027 policy data are kept separately so
+ * future policy calculations never overwrite the current salary.
+ *
+ * legacyOtRate is retained for backwards compatibility with older data paths.
+ * Health-sector OT calculations use PayRateSettingsEntity.otRate.
  */
 @Entity(tableName = "profile")
 data class ProfileEntity(
@@ -21,5 +23,6 @@ data class ProfileEntity(
     val grade: String,
     val basicSalary: Double,
     val otRate: Double,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val salaryStep: Int? = null
 )
