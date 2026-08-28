@@ -38,7 +38,7 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
         ProfileCompensationEntity::class,
         SalaryStep2027Entity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -122,8 +122,6 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Some earlier branch revisions created the table without this column.
-                // Keep this migration idempotent by checking the existing columns first.
                 val cursor = database.query("PRAGMA table_info(`salary_steps_2027`)")
                 var exists = false
                 cursor.use {
@@ -136,16 +134,12 @@ abstract class AppDatabase : RoomDatabase() {
                     }
                 }
                 if (!exists) {
-                    database.execSQL(
-                        "ALTER TABLE `salary_steps_2027` ADD COLUMN `currentBasicSalary2026` REAL NOT NULL DEFAULT 0.0"
-                    )
+                    database.execSQL("ALTER TABLE `salary_steps_2027` ADD COLUMN `currentBasicSalary2026` REAL NOT NULL DEFAULT 0.0")
                 }
             }
         }
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Refresh the salary lookup table structure for exact 2026 -> 2027 matching.
-                // Preserve the user's legacy profile/claim data; only the master lookup table is replaced.
                 database.execSQL("DROP TABLE IF EXISTS `salary_steps_2027`")
                 database.execSQL("""
                     CREATE TABLE `salary_steps_2027` (
@@ -158,6 +152,15 @@ abstract class AppDatabase : RoomDatabase() {
                         `sourceLabel` TEXT NOT NULL
                     )
                 """.trimIndent())
+            }
+        }
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Force a deterministic refresh marker for the authoritative supplied
+                // 2026-paid -> 2027-paid salary lookup dataset.
+                database.execSQL("CREATE TABLE IF NOT EXISTS `salary_table_meta` (`id` INTEGER NOT NULL PRIMARY KEY, `datasetVersion` TEXT NOT NULL)")
+                database.execSQL("DELETE FROM `salary_table_meta`")
+                database.execSQL("INSERT INTO `salary_table_meta` (`id`, `datasetVersion`) VALUES (1, '2026-2027-supplied-paid-amounts-v1')")
             }
         }
 
