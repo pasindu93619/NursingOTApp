@@ -1,6 +1,8 @@
 package com.pasindu.nursingotapp.data.local
 
 import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 
 object DatabaseProvider {
@@ -26,7 +28,8 @@ object DatabaseProvider {
                 AppDatabase.MIGRATION_1_3,
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
-                AppDatabase.MIGRATION_5_6
+                AppDatabase.MIGRATION_5_6,
+                AppDatabase.MIGRATION_6_7
             )
             .fallbackToDestructiveMigration()
             .build()
