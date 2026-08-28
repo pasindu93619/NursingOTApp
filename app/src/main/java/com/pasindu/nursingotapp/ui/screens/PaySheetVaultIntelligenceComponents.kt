@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -118,11 +117,7 @@ fun PaySheetVaultSearchPanel(
             Spacer(Modifier.height(10.dp))
 
             if (filtered.isEmpty()) {
-                Text(
-                    "No paysheet found.",
-                    color = Color(0xFF64748B),
-                    fontSize = 11.sp
-                )
+                Text("No paysheet found.", color = Color(0xFF64748B), fontSize = 11.sp)
             } else {
                 filtered.take(6).forEach { document ->
                     Surface(
@@ -206,54 +201,20 @@ fun PaySheetVaultStorageCard(documents: List<PaySheetDocumentEntity>) {
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatBox(
-                    Modifier.weight(1f),
-                    documents.size.toString(),
-                    "PAY SHEETS",
-                    Color(0xFF4338CA)
-                )
-                StatBox(
-                    Modifier.weight(1f),
-                    formatVaultBytes(bytes),
-                    "STORAGE USED",
-                    Color(0xFF0891B2)
-                )
-                StatBox(
-                    Modifier.weight(1f),
-                    years.toString(),
-                    "YEARS",
-                    Color(0xFF10B981)
-                )
+                StatBox(Modifier.weight(1f), documents.size.toString(), "PAY SHEETS", Color(0xFF4338CA))
+                StatBox(Modifier.weight(1f), formatVaultBytes(bytes), "STORAGE USED", Color(0xFF0891B2))
+                StatBox(Modifier.weight(1f), years.toString(), "YEARS", Color(0xFF10B981))
             }
         }
     }
 }
 
 @Composable
-private fun StatBox(
-    modifier: Modifier,
-    value: String,
-    label: String,
-    accent: Color
-) {
-    Surface(
-        modifier,
-        color = accent.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(16.dp)
-    ) {
+private fun StatBox(modifier: Modifier, value: String, label: String, accent: Color) {
+    Surface(modifier, color = accent.copy(alpha = 0.08f), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(12.dp)) {
-            Text(
-                value,
-                color = accent,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                label,
-                color = Color(0xFF64748B),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(value, color = accent, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Text(label, color = Color(0xFF64748B), fontSize = 7.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
