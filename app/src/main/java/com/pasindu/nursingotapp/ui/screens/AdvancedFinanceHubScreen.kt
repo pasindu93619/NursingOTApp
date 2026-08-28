@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,10 +27,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -43,6 +46,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,6 +64,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
@@ -82,25 +87,57 @@ private val SoftSurface = Color(0xFFF8FAFC)
 private val SoftBorder = Color(0xFFE2E8F0)
 
 @Composable
-fun AdvancedFinanceHubScreen(viewModel: AdvancedFinanceViewModel, onNavigate: (String) -> Unit, onBack: () -> Unit) {
+fun AdvancedFinanceHubScreen(
+    viewModel: AdvancedFinanceViewModel,
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit
+) {
     val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     var salaryMakerExpanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(FinanceBackground).windowInsetsPadding(WindowInsets.statusBars)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FinanceBackground)
+            .windowInsetsPadding(WindowInsets.statusBars)
+    ) {
         FinanceHeader(onBack)
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 16.dp, vertical = 8.dp).windowInsetsPadding(WindowInsets.navigationBars), verticalArrangement = Arrangement.spacedBy(15.dp)) {
-            AnimatedVisibility(visible = !state.isLoading, enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 5 }) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars),
+            verticalArrangement = Arrangement.spacedBy(15.dp)
+        ) {
+            AnimatedVisibility(
+                visible = !state.isLoading,
+                enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 5 }
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
                     FinanceHeroCard(state.estimatedNetSalary, state.grossEarnings, state.otAmountRs)
                     SectionLabel("01 • WORK PULSE", "Your Duty Performance")
-                    WorkPulseCard(state.totalNormalHours, state.totalOTHours, state.totalPHDays, state.totalDODays, state.dutyProgress36Hours) { onNavigate("duty_hours_analytics") }
+                    WorkPulseCard(
+                        state.totalNormalHours,
+                        state.totalOTHours,
+                        state.totalPHDays,
+                        state.totalDODays,
+                        state.dutyProgress36Hours
+                    ) { onNavigate("duty_hours_analytics") }
                     SectionLabel("02 • MONEY FLOW", "Where Your Earnings Come From")
                     MoneyFlowCard(state.currentBasicSalary, state.otAmountRs, state.phAmountRs, state.doAmountRs)
-                    PayRatesCard(state.profile?.grade.orEmpty(), state.currentBasicSalary, state.otRate, state.phRate, state.doRate, state.payRateSettings?.rateSource.orEmpty())
+                    PayRatesCard(
+                        state.profile?.grade.orEmpty(),
+                        state.currentBasicSalary,
+                        state.otRate,
+                        state.phRate,
+                        state.doRate,
+                        state.payRateSettings?.rateSource.orEmpty()
+                    )
                     SectionLabel("03 • EARNINGS HISTORY", "Your Recent Salary Trajectory")
                     EarningsHistoryCard(
-                        basic = state.currentBasicSalary.let { listOf(it.toFloat()) },
+                        basic = listOf(state.currentBasicSalary.toFloat()),
                         allowances = listOf(state.additionalAllowancesTotal.toFloat()),
                         overtime = listOf(state.otAmountRs.toFloat())
                     )
@@ -146,7 +183,10 @@ fun AdvancedFinanceHubScreen(viewModel: AdvancedFinanceViewModel, onNavigate: (S
 
 @Composable
 private fun FinanceHeader(onBack: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Navy, modifier = Modifier.size(25.dp))
         }
@@ -164,7 +204,11 @@ private fun FinanceHeader(onBack: () -> Unit) {
 private fun FinanceHeroCard(netSalary: Double, grossSalary: Double, otAmount: Double) {
     val transition = rememberInfiniteTransition(label = "heroAnimation")
     val glow by transition.animateFloat(0.18f, 0.35f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "heroGlow")
-    Card(modifier = Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Navy)) {
+    Card(
+        modifier = Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)),
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = Navy)
+    ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Canvas(modifier = Modifier.matchParentSize()) {
                 drawCircle(Violet.copy(alpha = glow), 170f, Offset(size.width * 0.88f, size.height * 0.02f))
@@ -356,7 +400,20 @@ private fun EarningsHistoryCard(basic: List<Float>, allowances: List<Float>, ove
 }
 
 @Composable
-private fun SalaryPlannerCard(expanded: Boolean, onExpandedChange: (Boolean) -> Unit, basicSalary: Double, otRate: Double, phRate: Double, doRate: Double, allowances: Double, paysheetDeductions: Double, otHours: Double, phDays: Int, doDays: Int, onOpenRates: () -> Unit) {
+private fun SalaryPlannerCard(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    basicSalary: Double,
+    otRate: Double,
+    phRate: Double,
+    doRate: Double,
+    allowances: Double,
+    paysheetDeductions: Double,
+    otHours: Double,
+    phDays: Int,
+    doDays: Int,
+    onOpenRates: () -> Unit
+) {
     val ot = otHours * otRate
     val ph = phDays * phRate
     val doPay = doDays * doRate
@@ -417,8 +474,17 @@ private fun SalaryPlannerLine(label: String, amount: Double) {
     }
 }
 
-private fun FinanceCard(onClick: (() -> Unit)? = null, accent: Color = Indigo, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) {
+@Composable
+private fun FinanceCard(
+    onClick: (() -> Unit)? = null,
+    accent: Color = Indigo,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
+    ) {
         Column(modifier = Modifier.padding(18.dp), content = content)
     }
 }
@@ -459,56 +525,58 @@ private fun ToolRow(onNavigate: (String) -> Unit) {
 
 @Composable
 private fun ToolTile(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, onClick: () -> Unit) {
-    Card(modifier = Modifier.weight(1f).clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(23.dp))
+    Card(modifier = Modifier.weight(1f).clickable(onClick = onClick), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) {
+        Column(modifier = Modifier.padding(15.dp)) {
+            Box(modifier = Modifier.size(43.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(subtitle, color = Slate, fontSize = 10.sp)
+            Spacer(modifier = Modifier.height(9.dp))
+            Text(title, color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(subtitle, color = Slate, fontSize = 9.sp)
         }
     }
 }
 
 @Composable
-private fun ExternalCommitmentCard(loanDeduction: Double, otherDeduction: Double, netSalary: Double, onLoanChange: (String) -> Unit, onOtherChange: (String) -> Unit) {
+private fun ExternalCommitmentCard(loanDeduction: Double, otherDeduction: Double, estimatedNet: Double, onLoanChange: (String) -> Unit, onOtherChange: (String) -> Unit) {
     FinanceCard(accent = Orange) {
-        Text("MONTHLY COMMITMENTS", color = Orange, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+        Text("TAKE-HOME IMPACT", color = Orange, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        OutlinedTextField(value = loanDeduction.toInput(), onValueChange = onLoanChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Loan / advance") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = if (loanDeduction == 0.0) "" else loanDeduction.toString(), onValueChange = onLoanChange, modifier = Modifier.fillMaxWidth(), label = { Text("Loan / Advance") }, singleLine = true)
-        Spacer(modifier = Modifier.height(9.dp))
-        OutlinedTextField(value = if (otherDeduction == 0.0) "" else otherDeduction.toString(), onValueChange = onOtherChange, modifier = Modifier.fillMaxWidth(), label = { Text("Other deduction") }, singleLine = true)
-        Spacer(modifier = Modifier.height(10.dp))
-        Surface(color = SoftSurface, shape = RoundedCornerShape(15.dp), modifier = Modifier.fillMaxWidth()) {
-            Text("Estimated take-home: Rs. ${netSalary.currency()}", modifier = Modifier.padding(12.dp), color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        OutlinedTextField(value = otherDeduction.toInput(), onValueChange = onOtherChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Other deduction") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Estimated net", color = Slate, fontSize = 10.sp)
+            Text("Rs. ${estimatedNet.currency()}", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 private fun LoadingFinanceState() {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("Loading Finance…", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text("Reading saved profile, claim and pay-rate data.", color = Slate, fontSize = 10.sp)
-        }
+    Surface(color = CardWhite, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+        Text("Loading financial data…", modifier = Modifier.padding(20.dp), color = Slate, fontSize = 12.sp)
     }
 }
 
 @Composable
 private fun ErrorFinanceCard(message: String) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7ED))) {
-        Text("Finance data error: $message", modifier = Modifier.padding(15.dp), color = Orange, fontSize = 10.sp)
+    Surface(color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        Text("Finance error: $message", modifier = Modifier.padding(15.dp), color = Color(0xFF9A3412), fontSize = 10.sp)
     }
 }
 
 @Composable
-private fun AnimatedMoney(amount: Double, color: Color, large: Boolean) {
-    Text("Rs. ${amount.currency()}", color = color, fontSize = if (large) 29.sp else 13.sp, fontWeight = FontWeight.Black)
+private fun AnimatedMoney(value: Double, color: Color, large: Boolean) {
+    Text("Rs. ${value.currency()}", color = color, fontSize = if (large) 31.sp else 12.sp, fontWeight = FontWeight.Black)
 }
 
-private fun Double.currency(): String = NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 2; minimumFractionDigits = 0 }.format(this)
+private fun Double.currency(): String = NumberFormat.getNumberInstance(Locale.US).apply {
+    maximumFractionDigits = 2
+    minimumFractionDigits = 0
+}.format(this)
+
 private fun Double.oneDecimal(): String = String.format(Locale.US, "%.1f", this)
+
+private fun Double.toInput(): String = if (this == 0.0) "" else toString()
