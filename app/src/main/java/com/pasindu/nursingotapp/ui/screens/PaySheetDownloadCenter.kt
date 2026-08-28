@@ -2,10 +2,8 @@ package com.pasindu.nursingotapp.ui.screens
 
 import android.content.Context
 import android.os.Environment
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,23 +11,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,29 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import java.io.File
 import java.io.FileOutputStream
-import java.util.Locale
-
-@Composable
-fun PaySheetDownloadCenter(
-    documents: List<PaySheetDocumentEntity>,
-    initialYear: Int,
-    onDismiss: () -> Unit,
-    onMessage: (String) -> Unit,
-    context: Context
-) {
-    varYear(initialYear)
-}
-
-@Composable
-private fun varYear(initialYear: Int) {
-    // Kept as a small wrapper so the public entry point stays simple.
-    DownloadCenterDialogContent(initialYear)
-}
-
-@Composable
-private fun DownloadCenterDialogContent(year: Int) {
-    // Intentionally no-op placeholder; replaced by PaySheetDownloadCenterDialog below.
-}
 
 @Composable
 fun PaySheetDownloadCenterDialog(
@@ -71,7 +45,7 @@ fun PaySheetDownloadCenterDialog(
     onDismiss: () -> Unit,
     onMessage: (String) -> Unit
 ) {
-    var selectedYear = initialYear
+    var selectedYear by remember { mutableIntStateOf(initialYear) }
 
     val months = remember {
         listOf(
@@ -82,7 +56,7 @@ fun PaySheetDownloadCenterDialog(
         )
     }
 
-    val available = remember(documents, selectedYear) {
+    val documentsByMonth = remember(documents, selectedYear) {
         documents
             .filter { it.monthKey.startsWith("$selectedYear-") }
             .associateBy { it.monthKey }
@@ -93,7 +67,11 @@ fun PaySheetDownloadCenterDialog(
         title = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Download, null, tint = Color(0xFF4338CA))
+                    Icon(
+                        Icons.Default.Download,
+                        contentDescription = null,
+                        tint = Color(0xFF4338CA)
+                    )
                     Spacer(Modifier.padding(horizontal = 4.dp))
                     Text("Find & Download", fontWeight = FontWeight.Black)
                 }
@@ -112,20 +90,31 @@ fun PaySheetDownloadCenterDialog(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        IconButton(onClick = { selectedYear - 1 }) {
-                            Icon(Icons.Default.ArrowBackIosNew, "Previous year")
+                        IconButton(onClick = { selectedYear-- }) {
+                            Icon(
+                                Icons.Default.ArrowBackIosNew,
+                                contentDescription = "Previous year",
+                                tint = Color(0xFF4338CA)
+                            )
                         }
                         Text(
                             selectedYear.toString(),
+                            color = Color(0xFF0F172A),
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black
                         )
-                        IconButton(onClick = { selectedYear + 1 }) {
-                            Icon(Icons.Default.ArrowForwardIos, "Next year")
+                        IconButton(onClick = { selectedYear++ }) {
+                            Icon(
+                                Icons.Default.ArrowForwardIos,
+                                contentDescription = "Next year",
+                                tint = Color(0xFF4338CA)
+                            )
                         }
                     }
                 }
@@ -134,12 +123,12 @@ fun PaySheetDownloadCenterDialog(
 
                 months.chunked(3).forEach { monthRow ->
                     Row(
-                        Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         monthRow.forEach { (label, number) ->
                             val key = "$selectedYear-$number"
-                            val document = available[key]
+                            val document = documentsByMonth[key]
                             val saved = document != null
 
                             Surface(
@@ -147,23 +136,25 @@ fun PaySheetDownloadCenterDialog(
                                     .weight(1f)
                                     .height(68.dp)
                                     .clickable(enabled = saved) {
-                                        if (document != null) {
-                                            onMessage(downloadPaysheet(context, document))
+                                        document?.let {
+                                            onMessage(downloadPaysheet(context, it))
                                         }
                                     },
                                 color = if (saved) Color(0xFFEEF2FF) else Color(0xFFF8FAFC),
                                 shape = RoundedCornerShape(14.dp)
                             ) {
                                 Column(
-                                    Modifier.fillMaxSize().padding(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Text(
                                         label,
                                         color = if (saved) Color(0xFF4338CA) else Color(0xFF94A3B8),
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 12.sp
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Black
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
@@ -194,12 +185,18 @@ private fun downloadPaysheet(
     if (!source.exists()) return "Paysheet file is no longer available."
 
     return try {
-        val downloadsDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+        val downloadsDirectory = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS
+            ),
             "NursingOS Pay Sheets"
         ).apply { mkdirs() }
 
-        val target = File(downloadsDir, "Paysheet_${document.monthKey}.jpg")
+        val target = File(
+            downloadsDirectory,
+            "Paysheet_${document.monthKey}.jpg"
+        )
+
         source.inputStream().use { input ->
             FileOutputStream(target).use { output ->
                 input.copyTo(output)
