@@ -247,22 +247,18 @@ fun AppNavigation() {
                         }
 
                         val period = Period(LocalDate.parse(start), LocalDate.parse(end))
-                        val totalNormalHrs = logs.sumOf { it.computedNormalHours.toDouble() }.toFloat()
-                        val totalOtHrs = logs.sumOf { it.computedOtHours.toDouble() }.toFloat()
-                        val phDays = logs.count { it.isPH }
-                        val doDays = logs.count { it.isDO }
-                        val dayRate = profile.basicSalary / 30.0
+                        val financeDatabase = com.pasindu.nursingotapp.data.local.DatabaseProvider.getDatabase(context)
+                        val payRates = financeDatabase.payRateSettingsDao().observe()
+                        val defaultDayRate = profile.basicSalary / 30.0
+                        val settings = financeDatabase.payRateSettingsDao().observe()
 
-                        val summary = PeriodSummary(
-                            totalNormalHrs,
-                            totalOtHrs,
-                            phDays,
-                            doDays,
-                            totalOtHrs * profile.otRate,
-                            phDays * dayRate,
-                            doDays * dayRate,
-                            (totalOtHrs * profile.otRate) + (phDays * dayRate) + (doDays * dayRate)
-                        )
+                        val summary = com.pasindu.nursingotapp.logic.CalculationEngine.processClaimData(
+                            profileEntity = dbProfile,
+                            entries = dbLogs,
+                            claimStart = period.startDate,
+                            claimEnd = period.endDate,
+                            payRates = null
+                        ).second
 
                         val generator = PdfGenerator(context)
                         generator.generateAndReturnFile(profile, logs, period, summary)
