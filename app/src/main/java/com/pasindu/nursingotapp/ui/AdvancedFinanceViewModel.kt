@@ -288,7 +288,7 @@ class AdvancedFinanceViewModel(
             apit = 0.0,
             wop = 0.0,
             loanDeduction = 0.0,
-            otherDeductions = 0.0
+            otherDeduction = 0.0
         )
     }
 
