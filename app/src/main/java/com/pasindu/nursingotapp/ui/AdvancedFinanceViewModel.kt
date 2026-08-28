@@ -8,10 +8,12 @@ import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
 import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.logic.CalculationEngine
@@ -28,6 +30,7 @@ data class AdvancedFinanceUiState(
     val claimPeriod: ClaimPeriodEntity? = null,
     val periodSummary: PeriodSummary? = null,
     val payRateSettings: PayRateSettingsEntity? = null,
+    val compensation: ProfileCompensationEntity? = null,
     val claimStart: LocalDate? = null,
     val claimEnd: LocalDate? = null,
     val apit: Double = 0.0,
@@ -36,137 +39,72 @@ data class AdvancedFinanceUiState(
     val otherDeduction: Double = 0.0,
     val errorMessage: String? = null
 ) {
-    val currentBasicSalary: Double
-        get() = profile?.basicSalary ?: 0.0
-
-    /**
-     * Health-sector OT rate. This MUST come from the user's configured rate;
-     * it is not derived from current basic salary.
-     */
-    val otRate: Double
-        get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
-
-    /**
-     * PH rate. For now this is entered by the user.
-     * Future policy support can populate it from the 2027 salary-step basic.
-     */
-    val phRate: Double
-        get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
-
-    /**
-     * DO rate. For now this is entered by the user.
-     * Future policy support can populate it from the 2027 salary-step basic.
-     */
-    val doRate: Double
-        get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
-
-    val basisSalary2027: Double?
-        get() = payRateSettings?.basisSalary2027
-
-    val totalNormalHours: Double
-        get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
-
-    val totalOTHours: Double
-        get() = periodSummary?.totalOTHours?.toDouble() ?: 0.0
-
-    val totalPHDays: Int
-        get() = periodSummary?.totalPHDays ?: 0
-
-    val totalDODays: Int
-        get() = periodSummary?.totalDODays ?: 0
-
-    val otAmountRs: Double
-        get() = totalOTHours * otRate
-
-    val phAmountRs: Double
-        get() = totalPHDays * phRate
-
-    val doAmountRs: Double
-        get() = totalDODays * doRate
-
-    val grossEarnings: Double
-        get() = currentBasicSalary + otAmountRs + phAmountRs + doAmountRs
-
-    val totalDeductions: Double
-        get() = apit + wop + loanDeduction + otherDeduction
-
-    val estimatedNetSalary: Double
-        get() = grossEarnings - totalDeductions
-
-    val dutyProgress36Hours: Float
-        get() = if (totalNormalHours <= 0.0) {
-            0f
-        } else {
-            (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
-        }
+    val currentBasicSalary: Double get() = profile?.basicSalary ?: 0.0
+    val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
+    val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
+    val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
+    val paysheetDeductions: Double get() = compensation?.totalDeductions ?: 0.0
+    val otRate: Double get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
+    val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
+    val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
+    val basisSalary2027: Double? get() = payRateSettings?.basisSalary2027
+    val totalNormalHours: Double get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
+    val totalOTHours: Double get() = periodSummary?.totalOTHours?.toDouble() ?: 0.0
+    val totalPHDays: Int get() = periodSummary?.totalPHDays ?: 0
+    val totalDODays: Int get() = periodSummary?.totalDODays ?: 0
+    val otAmountRs: Double get() = totalOTHours * otRate
+    val phAmountRs: Double get() = totalPHDays * phRate
+    val doAmountRs: Double get() = totalDODays * doRate
+    val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
+    val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
+    val dutyProgress36Hours: Float get() = if (totalNormalHours <= 0.0) 0f else (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
 }
 
 class AdvancedFinanceViewModel(
     private val profileDao: ProfileDao,
     private val claimPeriodDao: ClaimPeriodDao,
     private val dailyEntryDao: DailyEntryDao,
-    private val payRateSettingsDao: PayRateSettingsDao
+    private val payRateSettingsDao: PayRateSettingsDao,
+    private val profileCompensationDao: ProfileCompensationDao
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(AdvancedFinanceUiState())
     val uiState: StateFlow<AdvancedFinanceUiState> = _uiState.asStateFlow()
 
     init {
-        observeProfile()
-        observeClaimPeriod()
-        observePayRateSettings()
+        observeProfile(); observeClaimPeriod(); observePayRateSettings(); observeCompensation()
     }
 
-    private fun observeProfile() {
-        viewModelScope.launch {
-            profileDao.observeProfile().collect { profile ->
-                _uiState.value = _uiState.value.copy(profile = profile)
-                ensureManualRateRecordExists()
-                recalculate()
-            }
+    private fun observeProfile() = viewModelScope.launch {
+        profileDao.observeProfile().collect { profile ->
+            _uiState.value = _uiState.value.copy(profile = profile)
+            ensureManualRateRecordExists()
+            recalculate()
         }
     }
 
-    private fun observeClaimPeriod() {
-        viewModelScope.launch {
-            claimPeriodDao.observeClaimPeriods().collect { periods ->
-                _uiState.value = _uiState.value.copy(
-                    claimPeriod = periods.firstOrNull()
-                )
-                recalculate()
-            }
+    private fun observeClaimPeriod() = viewModelScope.launch {
+        claimPeriodDao.observeClaimPeriods().collect { periods ->
+            _uiState.value = _uiState.value.copy(claimPeriod = periods.firstOrNull())
+            recalculate()
         }
     }
 
-    private fun observePayRateSettings() {
-        viewModelScope.launch {
-            payRateSettingsDao.observe().collect { settings ->
-                _uiState.value = _uiState.value.copy(payRateSettings = settings)
-                recalculate()
-            }
+    private fun observePayRateSettings() = viewModelScope.launch {
+        payRateSettingsDao.observe().collect { settings ->
+            _uiState.value = _uiState.value.copy(payRateSettings = settings)
+            recalculate()
         }
     }
 
-    /**
-     * Creates an empty manual rate record once, without inventing any OT/PH/DO
-     * rate from the current basic salary.
-     */
-    private fun ensureManualRateRecordExists() {
-        viewModelScope.launch {
-            val current = payRateSettingsDao.observe().first()
-            if (current == null) {
-                payRateSettingsDao.upsert(
-                    PayRateSettingsEntity(
-                        id = 1,
-                        otRate = 0.0,
-                        phRate = 0.0,
-                        doRate = 0.0,
-                        rateSource = "MANUAL",
-                        basisSalary2027 = null,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                )
-            }
+    private fun observeCompensation() = viewModelScope.launch {
+        profileCompensationDao.observe().collect { compensation ->
+            _uiState.value = _uiState.value.copy(compensation = compensation)
+        }
+    }
+
+    private fun ensureManualRateRecordExists() = viewModelScope.launch {
+        if (payRateSettingsDao.observe().first() == null) {
+            payRateSettingsDao.upsert(PayRateSettingsEntity(id = 1, rateSource = "MANUAL"))
         }
     }
 
@@ -174,221 +112,74 @@ class AdvancedFinanceViewModel(
         val profile = _uiState.value.profile
         val claimPeriod = _uiState.value.claimPeriod
         val settings = _uiState.value.payRateSettings
-
         if (profile == null || claimPeriod == null) {
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                periodSummary = null,
-                claimStart = null,
-                claimEnd = null,
-                errorMessage = null
-            )
+            _uiState.value = _uiState.value.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
             return
         }
-
         viewModelScope.launch {
             try {
                 dailyEntryDao.observeEntriesForPeriod(claimPeriod.id).collect { entries ->
-                    calculateSummary(
-                        profile = profile,
-                        claimPeriod = claimPeriod,
-                        entries = entries,
-                        settings = settings
-                    )
+                    try {
+                        val result = CalculationEngine.processClaimData(
+                            profileEntity = profile,
+                            entries = entries,
+                            claimStart = claimPeriod.startDate,
+                            claimEnd = claimPeriod.endDate,
+                            payRates = settings?.let { CalculationEngine.PayRates(it.otRate, it.phRate, it.doRate) }
+                        )
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            periodSummary = result.second,
+                            claimStart = claimPeriod.startDate,
+                            claimEnd = claimPeriod.endDate,
+                            errorMessage = null
+                        )
+                    } catch (e: Exception) {
+                        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message ?: "Unable to calculate financial summary.")
+                    }
                 }
-            } catch (exception: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = exception.message
-                        ?: "Unable to load financial information."
-                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message ?: "Unable to load financial information.")
             }
         }
     }
 
-    private fun calculateSummary(
-        profile: ProfileEntity,
-        claimPeriod: ClaimPeriodEntity,
-        entries: List<DailyEntryEntity>,
-        settings: PayRateSettingsEntity?
-    ) {
-        try {
-            val result = CalculationEngine.processClaimData(
-                profileEntity = profile,
-                entries = entries,
-                claimStart = claimPeriod.startDate,
-                claimEnd = claimPeriod.endDate,
-                payRates = settings?.let {
-                    CalculationEngine.PayRates(
-                        otRate = it.otRate,
-                        phRate = it.phRate,
-                        doRate = it.doRate
-                    )
-                }
-            )
+    fun refresh() = recalculate()
+    fun updateApit(value: String) { _uiState.value = _uiState.value.copy(apit = parseMoney(value)) }
+    fun updateWop(value: String) { _uiState.value = _uiState.value.copy(wop = parseMoney(value)) }
+    fun updateLoanDeduction(value: String) { _uiState.value = _uiState.value.copy(loanDeduction = parseMoney(value)) }
+    fun updateOtherDeduction(value: String) { _uiState.value = _uiState.value.copy(otherDeduction = parseMoney(value)) }
 
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                profile = profile,
-                claimPeriod = claimPeriod,
-                periodSummary = result.second,
-                claimStart = claimPeriod.startDate,
-                claimEnd = claimPeriod.endDate,
-                errorMessage = null
-            )
-        } catch (exception: Exception) {
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                errorMessage = exception.message
-                    ?: "Unable to calculate financial summary."
-            )
-        }
-    }
+    fun updateOtRate(value: String) = saveRates(parseMoney(value), _uiState.value.phRate, _uiState.value.doRate, _uiState.value.basisSalary2027)
+    fun updatePhRate(value: String) = saveRates(_uiState.value.otRate, parseMoney(value), _uiState.value.doRate, _uiState.value.basisSalary2027)
+    fun updateDoRate(value: String) = saveRates(_uiState.value.otRate, _uiState.value.phRate, parseMoney(value), _uiState.value.basisSalary2027)
 
-    fun refresh() {
-        recalculate()
-    }
+    fun updateBasisSalary2027(value: String) = saveRates(_uiState.value.otRate, _uiState.value.phRate, _uiState.value.doRate, value.trim().replace(",", "").toDoubleOrNull()?.takeIf { it > 0.0 })
 
-    fun updateApit(value: String) {
-        _uiState.value = _uiState.value.copy(apit = parseMoney(value))
-    }
-
-    fun updateWop(value: String) {
-        _uiState.value = _uiState.value.copy(wop = parseMoney(value))
-    }
-
-    fun updateLoanDeduction(value: String) {
-        _uiState.value = _uiState.value.copy(loanDeduction = parseMoney(value))
-    }
-
-    fun updateOtherDeduction(value: String) {
-        _uiState.value = _uiState.value.copy(otherDeduction = parseMoney(value))
-    }
-
-    /** Store Health-sector OT rate exactly as entered by the user. */
-    fun updateOtRate(value: String) {
-        val parsed = parseMoney(value)
-        saveRates(
-            otRate = parsed,
-            phRate = _uiState.value.phRate,
-            doRate = _uiState.value.doRate,
-            basisSalary2027 = _uiState.value.basisSalary2027
-        )
-    }
-
-    /** Store current PH rate exactly as entered by the user. */
-    fun updatePhRate(value: String) {
-        val parsed = parseMoney(value)
-        saveRates(
-            otRate = _uiState.value.otRate,
-            phRate = parsed,
-            doRate = _uiState.value.doRate,
-            basisSalary2027 = _uiState.value.basisSalary2027
-        )
-    }
-
-    /** Store current DO rate exactly as entered by the user. */
-    fun updateDoRate(value: String) {
-        val parsed = parseMoney(value)
-        saveRates(
-            otRate = _uiState.value.otRate,
-            phRate = _uiState.value.phRate,
-            doRate = parsed,
-            basisSalary2027 = _uiState.value.basisSalary2027
-        )
-    }
-
-    /**
-     * Stores the 2027 salary-step basic salary for future policy calculation.
-     * This value is NOT used to change the current basic salary.
-     */
-    fun updateBasisSalary2027(value: String) {
-        val parsed = value.trim()
-            .replace(",", "")
-            .toDoubleOrNull()
-            ?.takeIf { it > 0.0 }
-
-        saveRates(
-            otRate = _uiState.value.otRate,
-            phRate = _uiState.value.phRate,
-            doRate = _uiState.value.doRate,
-            basisSalary2027 = parsed
-        )
-    }
-
-    /**
-     * Optional future helper. When the 2027 policy becomes active, the UI can
-     * call this with the user's 2027 salary-step basic salary to derive PH/DO.
-     * OT remains independently user-configured.
-     */
     fun apply2027DayRateFromSalary(basisSalary2027: Double) {
         if (basisSalary2027 <= 0.0) return
-
         val dayRate = basisSalary2027 / 30.0
-
-        saveRates(
-            otRate = _uiState.value.otRate,
-            phRate = dayRate,
-            doRate = dayRate,
-            basisSalary2027 = basisSalary2027
-        )
+        saveRates(_uiState.value.otRate, dayRate, dayRate, basisSalary2027, "2027_BASIC_SALARY_DIV_30")
     }
 
-    fun clearDeductions() {
-        _uiState.value = _uiState.value.copy(
-            apit = 0.0,
-            wop = 0.0,
-            loanDeduction = 0.0,
-            otherDeduction = 0.0
-        )
+    fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) = viewModelScope.launch {
+        profileCompensationDao.upsert(ProfileCompensationEntity(1, riskAllowance.coerceAtLeast(0.0), claAllowance.coerceAtLeast(0.0), additionalAllowancesTotal.coerceAtLeast(0.0), totalDeductions.coerceAtLeast(0.0), System.currentTimeMillis()))
     }
 
-    private fun saveRates(
-        otRate: Double,
-        phRate: Double,
-        doRate: Double,
-        basisSalary2027: Double?
-    ) {
-        viewModelScope.launch {
-            payRateSettingsDao.upsert(
-                PayRateSettingsEntity(
-                    id = 1,
-                    otRate = otRate.coerceAtLeast(0.0),
-                    phRate = phRate.coerceAtLeast(0.0),
-                    doRate = doRate.coerceAtLeast(0.0),
-                    rateSource = "MANUAL",
-                    basisSalary2027 = basisSalary2027,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
+    private fun saveRates(otRate: Double, phRate: Double, doRate: Double, basisSalary2027: Double?, source: String = "MANUAL") = viewModelScope.launch {
+        payRateSettingsDao.upsert(PayRateSettingsEntity(1, otRate.coerceAtLeast(0.0), phRate.coerceAtLeast(0.0), doRate.coerceAtLeast(0.0), source, basisSalary2027, System.currentTimeMillis()))
+    }
+
+    private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+
+    class Factory(private val context: Context) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(AdvancedFinanceViewModel::class.java)) {
+                val database = DatabaseProvider.getDatabase(context)
+                return AdvancedFinanceViewModel(database.profileDao(), database.claimPeriodDao(), database.dailyEntryDao(), database.payRateSettingsDao(), database.profileCompensationDao()) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-    }
-
-    private fun parseMoney(value: String): Double {
-        return value.trim()
-            .replace(",", "")
-            .toDoubleOrNull()
-            ?.coerceAtLeast(0.0)
-            ?: 0.0
-    }
-}
-
-class AdvancedFinanceViewModelFactory(
-    private val context: Context
-) : ViewModelProvider.Factory {
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(AdvancedFinanceViewModel::class.java)) {
-            val database = DatabaseProvider.getDatabase(context)
-            return AdvancedFinanceViewModel(
-                profileDao = database.profileDao(),
-                claimPeriodDao = database.claimPeriodDao(),
-                dailyEntryDao = database.dailyEntryDao(),
-                payRateSettingsDao = database.payRateSettingsDao()
-            ) as T
-        }
-
-        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
