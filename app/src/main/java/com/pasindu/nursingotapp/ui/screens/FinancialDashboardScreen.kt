@@ -74,10 +74,6 @@ import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.ui.FinancialViewModel
 import kotlin.math.max
 
-// ============================================================
-// PREMIUM FINANCIAL PALETTE
-// ============================================================
-
 private val Navy = Color(0xFF172554)
 private val Indigo = Color(0xFF4338CA)
 private val Violet = Color(0xFF7C3AED)
@@ -92,10 +88,6 @@ private val Slate400 = Color(0xFF94A3B8)
 private val SurfaceSoft = Color(0xFFF7F8FC)
 private val Border = Color(0xFFE2E8F0)
 
-// ============================================================
-// MAIN SCREEN
-// ============================================================
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinancialDashboardScreen(
@@ -106,8 +98,6 @@ fun FinancialDashboardScreen(
     val financialState by viewModel.financialState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Room-backed persistent values. The remaining fields are temporary
-    // monthly inputs until the daily-entry/claim aggregation is connected.
     var basicSalary by remember(financialState.basicSalary) {
         mutableStateOf(financialState.basicSalary.takeIf { it > 0.0 }?.toInputString() ?: "")
     }
@@ -130,8 +120,6 @@ fun FinancialDashboardScreen(
     val days = workingDays.toDoubleOrNull() ?: 0.0
     val other = otherDeduction.toDoubleOrNull() ?: 0.0
 
-    // Prefer the user-configured PH rate already stored in Room. Fall back to
-    // the current dashboard's legacy estimate only when no PH rate exists yet.
     val phRate = financialState.phRate.takeIf { it > 0.0 } ?: (rate * 1.5)
     val otEarnings = ot * rate
     val phEarnings = ph * phRate
@@ -156,18 +144,10 @@ fun FinancialDashboardScreen(
             TopAppBar(
                 title = {
                     Column {
+                        Text("Financial Dashboard", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = Slate900)
                         Text(
-                            text = "Financial Dashboard",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 20.sp,
-                            color = Slate900
-                        )
-                        Text(
-                            text = if (financialState.profileName.isBlank()) {
-                                "OT • Duty • Salary"
-                            } else {
-                                "${financialState.profileName} • ${financialState.profileGrade}"
-                            },
+                            if (financialState.profileName.isBlank()) "OT • Duty • Salary"
+                            else "${financialState.profileName} • ${financialState.profileGrade}",
                             fontSize = 11.sp,
                             color = Slate600,
                             fontWeight = FontWeight.Medium
@@ -192,12 +172,7 @@ fun FinancialDashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            HeroEarningsCard(
-                net = estimatedNet,
-                gross = grossBeforeDeductions,
-                otEarnings = otEarnings,
-                otTrend = otTrend
-            )
+            HeroEarningsCard(net = estimatedNet, gross = grossBeforeDeductions, otEarnings = otEarnings, otTrend = otTrend)
 
             SectionHeader(
                 eyebrow = "01  •  VISUAL INTERPRETATION",
@@ -215,9 +190,7 @@ fun FinancialDashboardScreen(
             )
 
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(24.dp)),
+                modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
@@ -231,35 +204,20 @@ fun FinancialDashboardScreen(
                             Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Indigo)
                             Spacer(Modifier.width(10.dp))
                             Column {
-                                Text(
-                                    "6-Month Earnings Trajectory",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Slate900
-                                )
-                                Text(
-                                    "Salary + allowances + OT",
-                                    fontSize = 12.sp,
-                                    color = Slate600
-                                )
+                                Text("6-Month Earnings Trajectory", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                                Text("Salary + allowances + OT", fontSize = 12.sp, color = Slate600)
                             }
                         }
                         Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFEEF2FF)) {
-                            Text(
-                                "TREND",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Indigo
-                            )
+                            Text("TREND", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Indigo)
                         }
                     }
 
                     Spacer(Modifier.height(14.dp))
                     FinancialHistoryChart(
-                        basic = financialState.historicalBasicSalaries,
-                        allowances = financialState.historicalAllowances,
-                        overtime = financialState.historicalOvertimeEarnings,
+                        basic = financialState.historicalBasicSalaries.map { it.toDouble() },
+                        allowances = financialState.historicalAllowances.map { it.toDouble() },
+                        overtime = financialState.historicalOvertimeEarnings.map { it.toDouble() },
                         modifier = Modifier.fillMaxWidth().height(220.dp)
                     )
                 }
@@ -271,9 +229,6 @@ fun FinancialDashboardScreen(
                 subtitle = "Basic salary and payment rates are loaded from your saved profile."
             )
 
-            // Keep the rest of the existing dashboard implementation below
-            // this point. Its UI components can continue using the calculated
-            // values above without changing their public API.
             SalaryMakerCard(
                 expanded = expandedSalaryMaker,
                 onExpandedChange = { expandedSalaryMaker = it },
