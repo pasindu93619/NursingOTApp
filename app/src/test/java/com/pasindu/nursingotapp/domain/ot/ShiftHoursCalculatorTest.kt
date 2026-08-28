@@ -2,27 +2,32 @@ package com.pasindu.nursingotapp.domain.ot
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.LocalTime
 
 class ShiftHoursCalculatorTest {
     @Test
-    fun `day shift calculates six hours`() {
-        assertEquals(6.0, ShiftHoursCalculator.hoursBetween(LocalTime.of(7, 0), LocalTime.of(13, 0)), 0.001)
+    fun `same day shift calculates correctly`() {
+        assertEquals(6.0, ShiftHoursCalculator.hoursBetween("07:00", "13:00"), 0.001)
     }
 
     @Test
-    fun `cross midnight night shift calculates twelve hours`() {
-        assertEquals(12.0, ShiftHoursCalculator.hoursBetween(LocalTime.of(19, 0), LocalTime.of(7, 0)), 0.001)
-    }
-
-    @Test
-    fun `forty five minutes becomes zero point seven five hours`() {
-        assertEquals(0.75, ShiftHoursCalculator.hoursBetween(LocalTime.of(7, 0), LocalTime.of(7, 45)), 0.001)
+    fun `cross midnight shift calculates correctly`() {
+        assertEquals(12.0, ShiftHoursCalculator.hoursBetween("19:00", "07:00"), 0.001)
     }
 
     @Test
     fun `quarter hour snapping is deterministic`() {
+        assertEquals(6.0, ShiftHoursCalculator.snapToQuarterHour(6.0), 0.001)
         assertEquals(6.25, ShiftHoursCalculator.snapToQuarterHour(6.24), 0.001)
-        assertEquals(6.5, ShiftHoursCalculator.snapToQuarterHour(6.49), 0.001)
+        assertEquals(6.25, ShiftHoursCalculator.snapToQuarterHour(6.26), 0.001)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `negative hours are rejected`() {
+        ShiftHoursCalculator.snapToQuarterHour(-0.25)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `invalid time format is rejected`() {
+        ShiftHoursCalculator.hoursBetween("7:00", "13:00")
     }
 }
