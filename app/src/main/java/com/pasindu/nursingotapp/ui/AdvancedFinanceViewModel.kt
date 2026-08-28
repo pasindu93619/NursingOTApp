@@ -18,6 +18,7 @@ import com.pasindu.nursingotapp.logic.CalculationEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -35,21 +36,32 @@ data class AdvancedFinanceUiState(
     val otherDeduction: Double = 0.0,
     val errorMessage: String? = null
 ) {
-    val basicSalary: Double
+    val currentBasicSalary: Double
         get() = profile?.basicSalary ?: 0.0
 
+    /**
+     * Health-sector OT rate. This MUST come from the user's configured rate;
+     * it is not derived from current basic salary.
+     */
     val otRate: Double
-        get() = payRateSettings?.otRate?.takeIf { it > 0.0 }
-            ?: profile?.otRate
-            ?: 0.0
+        get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
 
+    /**
+     * PH rate. For now this is entered by the user.
+     * Future policy support can populate it from the 2027 salary-step basic.
+     */
     val phRate: Double
-        get() = payRateSettings?.phRate?.takeIf { it > 0.0 }
-            ?: if (basicSalary > 0.0) basicSalary / 30.0 else 0.0
+        get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
 
+    /**
+     * DO rate. For now this is entered by the user.
+     * Future policy support can populate it from the 2027 salary-step basic.
+     */
     val doRate: Double
-        get() = payRateSettings?.doRate?.takeIf { it > 0.0 }
-            ?: if (basicSalary > 0.0) basicSalary / 30.0 else 0.0
+        get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
+
+    val basisSalary2027: Double?
+        get() = payRateSettings?.basisSalary2027
 
     val totalNormalHours: Double
         get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
@@ -73,7 +85,7 @@ data class AdvancedFinanceUiState(
         get() = totalDODays * doRate
 
     val grossEarnings: Double
-        get() = basicSalary + otAmountRs + phAmountRs + doAmountRs
+        get() = currentBasicSalary + otAmountRs + phAmountRs + doAmountRs
 
     val totalDeductions: Double
         get() = apit + wop + loanDeduction + otherDeduction
@@ -109,7 +121,7 @@ class AdvancedFinanceViewModel(
         viewModelScope.launch {
             profileDao.observeProfile().collect { profile ->
                 _uiState.value = _uiState.value.copy(profile = profile)
-                syncDefaultPayRates(profile)
+                ensureManualRateRecordExists()
                 recalculate()
             }
         }
@@ -135,25 +147,21 @@ class AdvancedFinanceViewModel(
         }
     }
 
-    private fun syncDefaultPayRates(profile: ProfileEntity?) {
-        if (profile == null) return
-
+    /**
+     * Creates an empty manual rate record once, without inventing any OT/PH/DO
+     * rate from the current basic salary.
+     */
+    private fun ensureManualRateRecordExists() {
         viewModelScope.launch {
-            val current = _uiState.value.payRateSettings
+            val current = payRateSettingsDao.observe().first()
             if (current == null) {
-                val dayRate = if (profile.basicSalary > 0.0) {
-                    profile.basicSalary / 30.0
-                } else {
-                    0.0
-                }
-
                 payRateSettingsDao.upsert(
                     PayRateSettingsEntity(
                         id = 1,
-                        otRate = profile.otRate,
-                        phRate = dayRate,
-                        doRate = dayRate,
-                        rateSource = "BASIC_SALARY_DIV_30",
+                        otRate = 0.0,
+                        phRate = 0.0,
+                        doRate = 0.0,
+                        rateSource = "MANUAL",
                         basisSalary2027 = null,
                         updatedAt = System.currentTimeMillis()
                     )
@@ -162,7 +170,7 @@ class AdvancedFinanceViewModel(
         }
     }
 
-    private suspend fun recalculate() {
+    private fun recalculate() {
         val profile = _uiState.value.profile
         val claimPeriod = _uiState.value.claimPeriod
         val settings = _uiState.value.payRateSettings
@@ -178,21 +186,23 @@ class AdvancedFinanceViewModel(
             return
         }
 
-        try {
-            dailyEntryDao.observeEntriesForPeriod(claimPeriod.id).collect { entries ->
-                calculateSummary(
-                    profile = profile,
-                    claimPeriod = claimPeriod,
-                    entries = entries,
-                    settings = settings
+        viewModelScope.launch {
+            try {
+                dailyEntryDao.observeEntriesForPeriod(claimPeriod.id).collect { entries ->
+                    calculateSummary(
+                        profile = profile,
+                        claimPeriod = claimPeriod,
+                        entries = entries,
+                        settings = settings
+                    )
+                }
+            } catch (exception: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = exception.message
+                        ?: "Unable to load financial information."
                 )
             }
-        } catch (exception: Exception) {
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                errorMessage = exception.message
-                    ?: "Unable to load financial information."
-            )
         }
     }
 
@@ -236,7 +246,7 @@ class AdvancedFinanceViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch { recalculate() }
+        recalculate()
     }
 
     fun updateApit(value: String) {
@@ -255,30 +265,72 @@ class AdvancedFinanceViewModel(
         _uiState.value = _uiState.value.copy(otherDeduction = parseMoney(value))
     }
 
+    /** Store Health-sector OT rate exactly as entered by the user. */
     fun updateOtRate(value: String) {
         val parsed = parseMoney(value)
         saveRates(
             otRate = parsed,
             phRate = _uiState.value.phRate,
-            doRate = _uiState.value.doRate
+            doRate = _uiState.value.doRate,
+            basisSalary2027 = _uiState.value.basisSalary2027
         )
     }
 
+    /** Store current PH rate exactly as entered by the user. */
     fun updatePhRate(value: String) {
         val parsed = parseMoney(value)
         saveRates(
             otRate = _uiState.value.otRate,
             phRate = parsed,
-            doRate = _uiState.value.doRate
+            doRate = _uiState.value.doRate,
+            basisSalary2027 = _uiState.value.basisSalary2027
         )
     }
 
+    /** Store current DO rate exactly as entered by the user. */
     fun updateDoRate(value: String) {
         val parsed = parseMoney(value)
         saveRates(
             otRate = _uiState.value.otRate,
             phRate = _uiState.value.phRate,
-            doRate = parsed
+            doRate = parsed,
+            basisSalary2027 = _uiState.value.basisSalary2027
+        )
+    }
+
+    /**
+     * Stores the 2027 salary-step basic salary for future policy calculation.
+     * This value is NOT used to change the current basic salary.
+     */
+    fun updateBasisSalary2027(value: String) {
+        val parsed = value.trim()
+            .replace(",", "")
+            .toDoubleOrNull()
+            ?.takeIf { it > 0.0 }
+
+        saveRates(
+            otRate = _uiState.value.otRate,
+            phRate = _uiState.value.phRate,
+            doRate = _uiState.value.doRate,
+            basisSalary2027 = parsed
+        )
+    }
+
+    /**
+     * Optional future helper. When the 2027 policy becomes active, the UI can
+     * call this with the user's 2027 salary-step basic salary to derive PH/DO.
+     * OT remains independently user-configured.
+     */
+    fun apply2027DayRateFromSalary(basisSalary2027: Double) {
+        if (basisSalary2027 <= 0.0) return
+
+        val dayRate = basisSalary2027 / 30.0
+
+        saveRates(
+            otRate = _uiState.value.otRate,
+            phRate = dayRate,
+            doRate = dayRate,
+            basisSalary2027 = basisSalary2027
         )
     }
 
@@ -291,16 +343,21 @@ class AdvancedFinanceViewModel(
         )
     }
 
-    private fun saveRates(otRate: Double, phRate: Double, doRate: Double) {
+    private fun saveRates(
+        otRate: Double,
+        phRate: Double,
+        doRate: Double,
+        basisSalary2027: Double?
+    ) {
         viewModelScope.launch {
             payRateSettingsDao.upsert(
                 PayRateSettingsEntity(
                     id = 1,
-                    otRate = otRate,
-                    phRate = phRate,
-                    doRate = doRate,
+                    otRate = otRate.coerceAtLeast(0.0),
+                    phRate = phRate.coerceAtLeast(0.0),
+                    doRate = doRate.coerceAtLeast(0.0),
                     rateSource = "MANUAL",
-                    basisSalary2027 = null,
+                    basisSalary2027 = basisSalary2027,
                     updatedAt = System.currentTimeMillis()
                 )
             )
