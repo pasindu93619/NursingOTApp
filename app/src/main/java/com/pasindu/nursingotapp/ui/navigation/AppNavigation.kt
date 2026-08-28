@@ -127,6 +127,17 @@ fun AppNavigation() {
             )
         }
 
+        composable("pay_rate_settings") {
+            val advancedFinanceViewModel: AdvancedFinanceViewModel = viewModel(
+                factory = AdvancedFinanceViewModelFactory(context)
+            )
+
+            PayRateSettingsScreen(
+                viewModel = advancedFinanceViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable("clinical_planning") {
             ClinicalPlanningDashboardScreen(onNavigateBack = { navController.popBackStack() })
         }
