@@ -24,13 +24,12 @@ class PaySheetVaultRepository(
 
         val temp = File.createTempFile("paysheet_import_", ".jpg", vaultTempDir())
         try {
-            val resolver = vault.contextResolver
-            resolver.openInputStream(sourceUri)?.use { input ->
+            vault.contentResolver.openInputStream(sourceUri)?.use { input ->
                 temp.outputStream().use { output -> input.copyTo(output) }
             } ?: error("Unable to read the selected paysheet.")
 
             val target = vault.prepareInput(temp, safeMonth)
-            val hash = vault.sha256(target)
+            val hash = vault.sha256(target.absolutePath)
 
             if (existing != null && existing.filePath != target.absolutePath) {
                 vault.deleteFile(existing.filePath)
