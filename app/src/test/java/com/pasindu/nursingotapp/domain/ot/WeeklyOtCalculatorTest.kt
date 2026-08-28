@@ -52,9 +52,15 @@ class WeeklyOtCalculatorTest {
             dayRate = 1000.0
         )
 
-        assertEquals(60.0, result.totalNormalHours, 0.001)
-        assertEquals(0.0, result.totalOtHours, 0.001)
+        // Week 1 has 48 hours: 36 normal + 12 OT.
+        // The following Sunday starts a new week, so its 12 hours are normal.
+        assertEquals(48.0, result.totalNormalHours, 0.001)
+        assertEquals(12.0, result.totalOtHours, 0.001)
         assertEquals(2, result.weeklySummaries.size)
+        assertEquals(36.0, result.weeklySummaries[0].normalHours, 0.001)
+        assertEquals(12.0, result.weeklySummaries[0].otHours, 0.001)
+        assertEquals(12.0, result.weeklySummaries[1].normalHours, 0.001)
+        assertEquals(0.0, result.weeklySummaries[1].otHours, 0.001)
         assertTrue(result.weeklySummaries.all { it.normalHours <= 36.0 })
     }
 
@@ -150,7 +156,8 @@ class WeeklyOtCalculatorTest {
 
         assertEquals(36.0, result.totalNormalHours, 0.001)
         assertEquals(0.0, result.totalOtHours, 0.001)
-        assertEquals(1, result.allocations.size + 0)
+        assertEquals(3, result.allocations.size)
+        assertTrue(result.allocations.all { !it.date.isBefore(start) && !it.date.isAfter(end) })
     }
 
     private fun log(
