@@ -5,7 +5,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** Seeds the exact supplied salary table once when the lookup table is empty. */
+/**
+ * Ensures the exact supplied salary lookup table is available.
+ * Only the salary lookup table is touched; profile and legacy claim data are untouched.
+ */
 object SalaryTableSeeder {
     fun seedIfEmpty(dao: SalaryStep2027Dao) {
         CoroutineScope(Dispatchers.IO).launch {
