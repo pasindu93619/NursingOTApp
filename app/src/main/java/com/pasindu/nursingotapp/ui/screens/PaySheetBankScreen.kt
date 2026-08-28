@@ -96,7 +96,6 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     var showMonthPicker by remember { mutableStateOf(false) }
     var showDownloadCenter by remember { mutableStateOf(false) }
     var pickerYear by remember { mutableStateOf(currentYear()) }
-    var downloadYear by remember { mutableStateOf(currentYear()) }
 
     fun saveImage(uri: Uri, monthKey: String, successMessage: String) {
         scope.launch {
@@ -189,9 +188,6 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
 
     val usedBytes = remember(documents) { documents.sumOf { it.fileSizeBytes } }
     val sortedDocuments = remember(documents) { documents.sortedByDescending { it.monthKey } }
-    val availableByYear = remember(documents, downloadYear) {
-        documents.filter { it.monthKey.startsWith("$downloadYear-") }.associateBy { it.monthKey }
-    }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC))) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -214,6 +210,15 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item { VaultHero(count = documents.size, bytes = usedBytes, onAdd = { showMonthPicker = true; pickerYear = currentYear() }) }
             item {
+                PaySheetVaultStorageCard(documents)
+            }
+            item {
+                PaySheetVaultSearchPanel(
+                    documents = documents,
+                    onDocumentSelected = { selected = it }
+                )
+            }
+            item {
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF7C3AED).copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Folder, null, tint = Color(0xFF7C3AED))
@@ -223,7 +228,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                         Text("Paysheet Archive", color = Color(0xFF0F172A), fontSize = 19.sp, fontWeight = FontWeight.Black)
                         Text("Choose any month and year when adding", color = Color(0xFF64748B), fontSize = 10.sp)
                     }
-                    IconButton(onClick = { showDownloadCenter = true; downloadYear = currentYear() }) {
+                    IconButton(onClick = { showDownloadCenter = true }) {
                         Icon(Icons.Default.Download, "Find and download", tint = Color(0xFF4338CA))
                     }
                 }
@@ -284,7 +289,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     if (showDownloadCenter) {
         PaySheetDownloadCenterDialog(
             documents = documents,
-            initialYear = downloadYear,
+            initialYear = currentYear(),
             context = context,
             onDismiss = { showDownloadCenter = false },
             onMessage = { message = it }
