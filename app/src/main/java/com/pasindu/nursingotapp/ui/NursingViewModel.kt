@@ -78,7 +78,6 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // FIXED: Changed getEntriesForClaim to observeEntriesForPeriod to match the Database!
     fun loadEntriesForClaim(claimPeriodId: Long) {
         viewModelScope.launch {
             dailyEntryDao.observeEntriesForPeriod(claimPeriodId).collect { logs ->
