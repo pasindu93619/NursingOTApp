@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +69,7 @@ import java.util.Locale
 private val FinanceBackground = Color(0xFFF5F7FC)
 private val Ink = Color(0xFF0F172A)
 private val Slate = Color(0xFF64748B)
+private val SoftSlate = Color(0xFF94A3B8)
 private val Navy = Color(0xFF172554)
 private val Indigo = Color(0xFF4338CA)
 private val Violet = Color(0xFF7C3AED)
@@ -142,7 +145,7 @@ fun AdvancedFinanceHubScreen(
                         allowances = state.compensation?.additionalAllowancesTotal?.let { value ->
                             List(state.historicalBasicSalaries.size.coerceAtLeast(1)) { value.toFloat() }
                         } ?: emptyList(),
-                        overtime = List(state.historicalBasicSalaries.size) { index ->
+                        overtime = List(state.historicalBasicSalaries.size) {
                             state.totalOTHours.toFloat() * state.otRate.toFloat()
                         }
                     )
@@ -184,7 +187,7 @@ fun AdvancedFinanceHubScreen(
                 }
             }
             if (state.isLoading) LoadingFinanceState()
-            state.errorMessage?.let { ErrorFinanceCard(it) }
+            state.errorMessage?.let { error -> ErrorFinanceCard(error) }
             Spacer(modifier = Modifier.height(28.dp))
         }
     }
@@ -193,7 +196,9 @@ fun AdvancedFinanceHubScreen(
 @Composable
 private fun FinanceHeader(onBack: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
@@ -233,7 +238,9 @@ private fun FinanceHeroCard(netSalary: Double, grossSalary: Double, otAmount: Do
         label = "heroGlow"
     )
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)),
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = Navy)
     ) {
@@ -366,9 +373,20 @@ private fun FlowTile(modifier: Modifier, title: String, amount: Double, accent: 
 }
 
 @Composable
-private fun PayRatesCard(grade: String, basic: Double, otRate: Double, phRate: Double, doRate: Double, source: String) {
+private fun PayRatesCard(
+    grade: String,
+    basic: Double,
+    otRate: Double,
+    phRate: Double,
+    doRate: Double,
+    source: String
+) {
     FinanceCard(accent = Pink) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("PAY RATES USED", color = Pink, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
                 Text("Grade ${grade.ifBlank { "—" }}", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
@@ -415,15 +433,25 @@ private fun RateSummary(modifier: Modifier, title: String, value: Double, unit: 
 }
 
 @Composable
-private fun EarningsHistoryCard(basic: List<Float>, allowances: List<Float>, overtime: List<Float>) {
+private fun EarningsHistoryCard(
+    basic: List<Float>,
+    allowances: List<Float>,
+    overtime: List<Float>
+) {
     val count = maxOf(basic.size, allowances.size, overtime.size)
     val totals = (0 until count).map { index ->
-        (basic.getOrNull(index) ?: 0f) + (allowances.getOrNull(index) ?: 0f) + (overtime.getOrNull(index) ?: 0f)
+        (basic.getOrNull(index) ?: 0f) +
+            (allowances.getOrNull(index) ?: 0f) +
+            (overtime.getOrNull(index) ?: 0f)
     }
     val maxTotal = maxOf(1f, totals.maxOrNull() ?: 1f)
 
     FinanceCard(accent = Indigo) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("6-MONTH EARNINGS TRAJECTORY", color = Indigo, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
                 Spacer(modifier = Modifier.height(3.dp))
@@ -434,7 +462,11 @@ private fun EarningsHistoryCard(basic: List<Float>, allowances: List<Float>, ove
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
-        Surface(color = SoftSurface, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth().height(180.dp)) {
+        Surface(
+            color = SoftSurface,
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.fillMaxWidth().height(180.dp)
+        ) {
             Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     if (count > 0) {
@@ -453,19 +485,32 @@ private fun EarningsHistoryCard(basic: List<Float>, allowances: List<Float>, ove
                             val colors = listOf(Indigo, Cyan, Orange)
                             values.forEachIndexed { part, value ->
                                 val height = (value / maxTotal).coerceIn(0f, 1f) * chartHeight
-                                androidx.compose.foundation.Canvas@run {
-                                    drawRoundRect(
-                                        color = colors[part],
-                                        topLeft = Offset(x + part * (barWidth + 2f), baseline - height),
-                                        size = androidx.compose.ui.geometry.Size(barWidth, height),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(5f, 5f)
-                                    )
-                                }
+                                drawRoundRect(
+                                    color = colors[part],
+                                    topLeft = Offset(
+                                        x + part * (barWidth + 2f),
+                                        baseline - height
+                                    ),
+                                    size = Size(barWidth, height),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(5f, 5f)
+                                )
                             }
                         }
-                        drawLine(SoftBorder, Offset(0f, baseline), Offset(size.width, baseline), 2f, cap = StrokeCap.Round)
+                        drawLine(
+                            color = SoftBorder,
+                            start = Offset(0f, baseline),
+                            end = Offset(size.width, baseline),
+                            strokeWidth = 2f,
+                            cap = StrokeCap.Round
+                        )
                     } else {
-                        drawLine(SoftBorder, Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), 2f, cap = StrokeCap.Round)
+                        drawLine(
+                            color = SoftBorder,
+                            start = Offset(0f, size.height / 2f),
+                            end = Offset(size.width, size.height / 2f),
+                            strokeWidth = 2f,
+                            cap = StrokeCap.Round
+                        )
                     }
                 }
             }
@@ -494,21 +539,36 @@ private fun SalaryPlannerCard(
     val gross = basicSalary + allowances + ot + ph + doPay
     val net = gross - paysheetDeductions
 
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
+    ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Violet.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = Icons.Default.Payments, contentDescription = null, tint = Violet, modifier = Modifier.size(23.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Violet.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Payments,
+                        contentDescription = null,
+                        tint = Violet,
+                        modifier = Modifier.size(23.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(11.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Salary Maker", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Black)
                     Text("Preview pay from your saved rates", color = Slate, fontSize = 10.sp)
                 }
-                Surface(
-                    modifier = Modifier.clip(RoundedCornerShape(50.dp)),
-                    color = Violet.copy(alpha = 0.07f)
-                ) {
+                Surface(color = Violet.copy(alpha = 0.07f), shape = RoundedCornerShape(50.dp)) {
                     Text(
                         text = if (expanded) "HIDE" else "OPEN",
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -518,17 +578,16 @@ private fun SalaryPlannerCard(
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(10.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)),
-                color = SoftSurface
-            ) {
+            Surface(color = SoftSurface, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     SalaryPlannerLine("Gross", gross)
                     SalaryPlannerLine("Paysheet deductions", paysheetDeductions)
                     SalaryPlannerLine("Estimated take-home", net)
                 }
             }
+
             if (expanded) {
                 Spacer(modifier = Modifier.height(10.dp))
                 SalaryPlannerLine("Basic salary", basicSalary)
@@ -537,10 +596,7 @@ private fun SalaryPlannerCard(
                 SalaryPlannerLine("PH", ph)
                 SalaryPlannerLine("Working DO", doPay)
                 Spacer(modifier = Modifier.height(10.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)),
-                    color = Violet.copy(alpha = 0.07f)
-                ) {
+                Surface(color = Violet.copy(alpha = 0.07f), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("Rates are managed separately", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Black)
                         Spacer(modifier = Modifier.height(4.dp))
@@ -548,7 +604,10 @@ private fun SalaryPlannerCard(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "EDIT OT / PH / WORKING DO RATES →",
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onOpenRates).padding(8.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = onOpenRates)
+                                .padding(8.dp),
                             color = Violet,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black
@@ -556,10 +615,14 @@ private fun SalaryPlannerCard(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = if (expanded) "Tap to collapse" else "Tap to preview the salary maker",
-                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { onExpandedChange(!expanded) }.padding(vertical = 5.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { onExpandedChange(!expanded) }
+                    .padding(vertical = 5.dp),
                 color = Slate,
                 fontSize = 9.sp
             )
@@ -569,7 +632,10 @@ private fun SalaryPlannerCard(
 
 @Composable
 private fun SalaryPlannerLine(label: String, amount: Double) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(label, color = Slate, fontSize = 10.sp)
         Text("Rs. ${amount.currency()}", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
