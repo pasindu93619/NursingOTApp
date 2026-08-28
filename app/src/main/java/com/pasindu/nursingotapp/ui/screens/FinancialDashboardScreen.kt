@@ -144,9 +144,14 @@ fun FinancialDashboardScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Financial Dashboard", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = Slate900)
                         Text(
-                            if (financialState.profileName.isBlank()) "OT • Duty • Salary"
+                            text = "Financial Dashboard",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 20.sp,
+                            color = Slate900
+                        )
+                        Text(
+                            text = if (financialState.profileName.isBlank()) "OT • Duty • Salary"
                             else "${financialState.profileName} • ${financialState.profileGrade}",
                             fontSize = 11.sp,
                             color = Slate600,
@@ -172,7 +177,12 @@ fun FinancialDashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            HeroEarningsCard(net = estimatedNet, gross = grossBeforeDeductions, otEarnings = otEarnings, otTrend = otTrend)
+            HeroEarningsCard(
+                net = estimatedNet,
+                gross = grossBeforeDeductions,
+                otEarnings = otEarnings,
+                otTrend = otTrend
+            )
 
             SectionHeader(
                 eyebrow = "01  •  VISUAL INTERPRETATION",
@@ -190,7 +200,9 @@ fun FinancialDashboardScreen(
             )
 
             Card(
-                modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(8.dp, RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
@@ -212,12 +224,11 @@ fun FinancialDashboardScreen(
                             Text("TREND", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Indigo)
                         }
                     }
-
                     Spacer(Modifier.height(14.dp))
                     FinancialHistoryChart(
-                        basic = financialState.historicalBasicSalaries.map { it.toDouble() },
-                        allowances = financialState.historicalAllowances.map { it.toDouble() },
-                        overtime = financialState.historicalOvertimeEarnings.map { it.toDouble() },
+                        basic = financialState.historicalBasicSalaries,
+                        allowances = financialState.historicalAllowances,
+                        overtime = financialState.historicalOvertimeEarnings,
                         modifier = Modifier.fillMaxWidth().height(220.dp)
                     )
                 }
