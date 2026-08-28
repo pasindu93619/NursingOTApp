@@ -135,10 +135,17 @@ private fun SnapshotMetric(modifier: Modifier, label: String, value: String, acc
 }
 
 @Composable
-fun FinancialHistoryChart(basic: List<Double>, allowances: List<Double>, overtime: List<Double>, modifier: Modifier = Modifier) {
+fun FinancialHistoryChart(
+    basic: List<Float>,
+    allowances: List<Float>,
+    overtime: List<Float>,
+    modifier: Modifier = Modifier
+) {
     val count = max(max(basic.size, allowances.size), overtime.size)
     val maxTotal = max(1.0, (0 until count).maxOfOrNull { i ->
-        (basic.getOrNull(i) ?: 0.0) + (allowances.getOrNull(i) ?: 0.0) + (overtime.getOrNull(i) ?: 0.0)
+        (basic.getOrNull(i) ?: 0f).toDouble() +
+            (allowances.getOrNull(i) ?: 0f).toDouble() +
+            (overtime.getOrNull(i) ?: 0f).toDouble()
     } ?: 1.0)
 
     Surface(modifier = modifier, color = SurfaceSoft, shape = RoundedCornerShape(18.dp)) {
@@ -153,22 +160,31 @@ fun FinancialHistoryChart(basic: List<Double>, allowances: List<Double>, overtim
                     repeat(count) { index ->
                         val x = index * (groupWidth + gap)
                         val values = floatArrayOf(
-                            (basic.getOrNull(index) ?: 0.0).toFloat(),
-                            (allowances.getOrNull(index) ?: 0.0).toFloat(),
-                            (overtime.getOrNull(index) ?: 0.0).toFloat()
+                            basic.getOrNull(index) ?: 0f,
+                            allowances.getOrNull(index) ?: 0f,
+                            overtime.getOrNull(index) ?: 0f
                         )
                         val colors = listOf(Indigo, Cyan, Orange)
                         values.forEachIndexed { part, value ->
-                            val h = (value / maxTotal).coerceIn(0.0, 1.0).toFloat() * chartHeight
+                            val h = (value.toDouble() / maxTotal).coerceIn(0.0, 1.0).toFloat() * chartHeight
                             drawRoundRect(
                                 color = colors[part],
-                                topLeft = androidx.compose.ui.geometry.Offset(x + part * (barWidth + 2f), baseline - h),
+                                topLeft = androidx.compose.ui.geometry.Offset(
+                                    x + part * (barWidth + 2f),
+                                    baseline - h
+                                ),
                                 size = androidx.compose.ui.geometry.Size(barWidth, h),
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(5f, 5f)
                             )
                         }
                     }
-                    drawLine(Border, androidx.compose.ui.geometry.Offset(0f, baseline), androidx.compose.ui.geometry.Offset(size.width, baseline), 2f, cap = StrokeCap.Round)
+                    drawLine(
+                        Border,
+                        androidx.compose.ui.geometry.Offset(0f, baseline),
+                        androidx.compose.ui.geometry.Offset(size.width, baseline),
+                        2f,
+                        cap = StrokeCap.Round
+                    )
                 }
             }
         }
@@ -222,12 +238,12 @@ fun SalaryMakerCard(
                 Spacer(modifier = Modifier.height(9.dp))
                 RateField("OT Rate / hour", otRate, onOtRateChange)
                 Spacer(modifier = Modifier.height(9.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     RateField(Modifier.weight(1f), "OT Hours", otHours, onOtHoursChange)
                     RateField(Modifier.weight(1f), "PH Hours", phHours, onPhHoursChange)
                 }
                 Spacer(modifier = Modifier.height(9.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     RateField(Modifier.weight(1f), "Duty Hours", dutyHours, onDutyHoursChange)
                     RateField(Modifier.weight(1f), "Working Days", workingDays, onWorkingDaysChange)
                 }
@@ -270,15 +286,19 @@ private fun RateField(modifier: Modifier, label: String, value: String, onValueC
 
 @Composable
 private fun SummaryLine(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(label, color = Slate600, fontSize = 10.sp)
         Text(value, color = Slate900, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
-private fun Double.currency(): String = NumberFormat.getNumberInstance(Locale.US).apply {
-    maximumFractionDigits = 2
-    minimumFractionDigits = 0
-}.format(this)
+private fun Double.currency(): String =
+    NumberFormat.getNumberInstance(Locale.US).apply {
+        maximumFractionDigits = 2
+        minimumFractionDigits = 0
+    }.format(this)
 
 private fun Double.oneDecimal(): String = String.format(Locale.US, "%.1f", this)
