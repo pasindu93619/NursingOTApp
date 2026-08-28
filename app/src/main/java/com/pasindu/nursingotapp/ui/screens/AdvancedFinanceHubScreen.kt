@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -104,8 +105,8 @@ fun AdvancedFinanceHubScreen(viewModel: AdvancedFinanceViewModel, onNavigate: (S
                     SectionLabel("01 • WORK PULSE", "Your Duty Performance")
                     WorkPulseCard(state.totalNormalHours, state.totalOTHours, state.totalPHDays, state.totalDODays, state.dutyProgress36Hours) { onNavigate("duty_hours_analytics") }
                     SectionLabel("02 • MONEY FLOW", "Where Your Earnings Come From")
-                    MoneyFlowCard(state.basicSalary, state.otAmountRs, state.phAmountRs, state.doAmountRs)
-                    PayRatesCard(state.profile?.grade.orEmpty(), state.basicSalary, state.otRate, state.phRate, state.doRate, state.payRateSettings?.rateSource.orEmpty())
+                    MoneyFlowCard(state.currentBasicSalary, state.otAmountRs, state.phAmountRs, state.doAmountRs)
+                    PayRatesCard(state.profile?.grade.orEmpty(), state.currentBasicSalary, state.otRate, state.phRate, state.doRate, state.payRateSettings?.rateSource.orEmpty())
                     ToolRow()
                     PaySheetBankCard(state.profile?.fullName.orEmpty(), state.profile?.serviceNo.orEmpty(), state.profile?.paySheetNo.orEmpty(), state.profile?.grade.orEmpty(), state.profile?.unit.orEmpty()) { onNavigate("pay_sheet_bank") }
                     SectionLabel("03 • TAKE-HOME ESTIMATE", "Monthly Deductions")
@@ -219,9 +220,9 @@ private data class MoneyFlowItem(val label: String, val amount: Double, val acce
 
 @Composable private fun RateMini(modifier: Modifier, title: String, value: String, note: String, accent: Color) { Surface(modifier = modifier, color = accent.copy(alpha = 0.07f), shape = RoundedCornerShape(14.dp)) { Column(modifier = Modifier.padding(10.dp)) { Text(text = title, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.height(4.dp)); Text(text = value, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Black); Text(text = note, color = Slate, fontSize = 7.sp) } } }
 
-@Composable private fun ToolRow() { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { ToolTile("Loan Calculator", "EMI planner", Icons.Default.Calculate, Orange) { }; ToolTile("My Salary", "Full breakdown", Icons.Default.Payments, Mint) { } } }
+@Composable private fun ToolRow() { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { ToolTile(Modifier.weight(1f), "Loan Calculator", "EMI planner", Icons.Default.Calculate, Orange) { }; ToolTile(Modifier.weight(1f), "My Salary", "Full breakdown", Icons.Default.Payments, Mint) { } } }
 
-@Composable private fun ToolTile(title: String, subtitle: String, icon: ImageVector, accent: Color, onClick: () -> Unit) { Card(modifier = Modifier.weight(1f).clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) { Column(modifier = Modifier.padding(16.dp)) { Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) { Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(23.dp)) }; Spacer(modifier = Modifier.height(10.dp)); Text(text = title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.height(3.dp)); Text(text = subtitle, color = Slate, fontSize = 10.sp) } } }
+@Composable private fun ToolTile(modifier: Modifier, title: String, subtitle: String, icon: ImageVector, accent: Color, onClick: () -> Unit) { Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) { Column(modifier = Modifier.padding(16.dp)) { Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) { Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(23.dp)) }; Spacer(modifier = Modifier.height(10.dp)); Text(text = title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.height(3.dp)); Text(text = subtitle, color = Slate, fontSize = 10.sp) } } }
 
 @Composable private fun PaySheetBankCard(fullName: String, serviceNo: String, paySheetNo: String, grade: String, unit: String, onClick: () -> Unit) { FinanceCard(onClick = onClick, accent = Pink) { Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(56.dp).clip(RoundedCornerShape(17.dp)).background(Pink.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) { Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = Pink, modifier = Modifier.size(28.dp)) }; Spacer(modifier = Modifier.width(13.dp)); Column(modifier = Modifier.weight(1f)) { Text(text = "Pay Sheet & Bank", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Black); Text(text = fullName.ifBlank { "Nursing Officer" }, color = Slate, fontSize = 11.sp); Spacer(modifier = Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) { SmallInfo("PAY SHEET", paySheetNo); SmallInfo("SERVICE", serviceNo) } } }; Spacer(modifier = Modifier.height(12.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { TinyTag(grade.ifBlank { "Grade" }, Violet); TinyTag(unit.ifBlank { "Unit" }, Pink) } } }
 
