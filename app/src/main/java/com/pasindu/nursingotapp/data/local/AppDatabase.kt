@@ -13,6 +13,7 @@ import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
+import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
@@ -22,6 +23,7 @@ import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
+import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 
 @Database(
     entities = [
@@ -33,9 +35,10 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
         ClinicalTaskEntity::class,
         CpdLogEntity::class,
         PayRateSettingsEntity::class,
-        ProfileCompensationEntity::class
+        ProfileCompensationEntity::class,
+        SalaryStep2027Entity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -49,6 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun knowledgeHubDao(): KnowledgeHubDao
     abstract fun payRateSettingsDao(): PayRateSettingsDao
     abstract fun profileCompensationDao(): ProfileCompensationDao
+    abstract fun salaryStep2027Dao(): SalaryStep2027Dao
 
     companion object {
 
@@ -110,6 +114,26 @@ abstract class AppDatabase : RoomDatabase() {
                         PRIMARY KEY(`id`)
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `salary_steps_2027` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `grade` TEXT NOT NULL,
+                        `salaryStep` INTEGER NOT NULL,
+                        `basicSalary2027` REAL NOT NULL,
+                        `effectiveFrom` TEXT NOT NULL,
+                        `sourceLabel` TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_salary_steps_2027_grade_salaryStep` ON `salary_steps_2027` (`grade`, `salaryStep`)"
                 )
             }
         }
