@@ -10,9 +10,11 @@ import kotlinx.coroutines.launch
  * Only the salary lookup table is touched; profile and legacy claim data are untouched.
  */
 object SalaryTableSeeder {
-    fun seedIfEmpty(dao: SalaryStep2027Dao) {
+    fun seedIfNeeded(dao: SalaryStep2027Dao) {
         CoroutineScope(Dispatchers.IO).launch {
-            if (dao.count() == 0) {
+            val count = dao.count()
+            if (count != SalaryTable2026_2027Seed.rows.size) {
+                dao.clearAll()
                 dao.insertAll(SalaryTable2026_2027Seed.rows)
             }
         }
