@@ -13,6 +13,7 @@ import com.pasindu.nursingotapp.R
 import com.pasindu.nursingotapp.data.model.DailyLog
 import com.pasindu.nursingotapp.data.model.Period
 import com.pasindu.nursingotapp.data.model.PeriodSummary
+import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import com.pasindu.nursingotapp.data.model.UserProfile
 import java.io.File
 import java.io.FileOutputStream
@@ -252,8 +253,21 @@ class PdfGenerator(private val context: Context) {
         for ((weekStart, weekLogs) in weekGroups) {
             val daysOfWeek = (0..6).map { weekStart.plusDays(it.toLong()) }
 
-            var totalNormalHours = 0f
-            var totalOtHours = 0f
+            // The PDF must consume the same authoritative weekly calculation as
+            // the rest of the legacy OT workflow. Financial rates are intentionally
+            // zero here because this page only needs the hour allocation; payment
+            // amounts remain supplied by PeriodSummary/pay-rate logic.
+            val authoritativeWeek = WeeklyOtCalculator.calculate(
+                logs = weekLogs,
+                claimStart = weekStart,
+                claimEnd = weekStart.plusDays(6),
+                otRate = 0.0,
+                dayRate = 0.0,
+                doRate = 0.0
+            )
+            val authoritativeAllocations = authoritativeWeek.allocations.associateBy { it.date }
+            val totalNormalHours = authoritativeWeek.totalNormalHours.toFloat()
+            val totalOtHours = authoritativeWeek.totalOtHours.toFloat()
             val weekBaseY = weekIndex * weekYOffset
 
             for ((dayIndex, day) in daysOfWeek.withIndex()) {
@@ -328,8 +342,6 @@ class PdfGenerator(private val context: Context) {
                         }
                     }
 
-                    val dayNormalHoursToAdd = dayNormalHoursToPrint
-
                     if (dayNormalHoursToPrint > 0f) {
                         if (dayIndex < 6) {
                             canvas.drawText(formatHrs(dayNormalHoursToPrint), sX(colNormHrsX), sY(964f + currentYOffset), centerBodyPaint)
@@ -337,18 +349,16 @@ class PdfGenerator(private val context: Context) {
                             canvas.drawText(formatHrs(dayNormalHoursToPrint), sX(1282f), sY(1363f + weekBaseY), centerBodyPaint)
                         }
                     }
-                    totalNormalHours += dayNormalHoursToAdd
-
-                    if (log.computedOtHours > 0f) {
+                    val authoritativeOtHours = authoritativeAllocations[day]?.otHours?.toFloat() ?: 0f
+                    if (authoritativeOtHours > 0f) {
                         canvas.drawText(log.otTimeInStr, sX(colOtInX), sY(964f + currentYOffset), centerBodyPaint)
                         canvas.drawText(log.otTimeOutStr, sX(colOtOutX), sY(964f + currentYOffset), centerBodyPaint)
 
                         if (dayIndex < 6) {
-                            canvas.drawText(formatHrs(log.computedOtHours), sX(colOtHrsX), sY(964f + currentYOffset), centerBodyPaint)
+                            canvas.drawText(formatHrs(authoritativeOtHours), sX(colOtHrsX), sY(964f + currentYOffset), centerBodyPaint)
                         } else {
-                            canvas.drawText(formatHrs(log.computedOtHours), sX(1735f), sY(1366f + weekBaseY), centerBodyPaint)
+                            canvas.drawText(formatHrs(authoritativeOtHours), sX(1735f), sY(1366f + weekBaseY), centerBodyPaint)
                         }
-                        totalOtHours += log.computedOtHours
                     }
 
                     val customReason = when {
@@ -377,9 +387,8 @@ class PdfGenerator(private val context: Context) {
                 textAlign = Paint.Align.CENTER
             }
 
-            if (totalNormalHours > 36f) {
-                val extraFromNorm = totalNormalHours - 36f
-                val grandTotal = extraFromNorm + totalOtHours
+            if (totalOtHours > 0f) {
+                val grandTotal = totalOtHours
                 weeklyOtSum = grandTotal
 
                 val mathPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
