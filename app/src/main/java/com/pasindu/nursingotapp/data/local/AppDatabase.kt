@@ -11,6 +11,7 @@ import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.FinancialDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
@@ -19,6 +20,7 @@ import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.FinancialRecordEntity
 import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 
 @Database(
@@ -30,9 +32,10 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
         IsbarNoteEntity::class,
         ClinicalTaskEntity::class,
         CpdLogEntity::class,
-        PayRateSettingsEntity::class
+        PayRateSettingsEntity::class,
+        ProfileCompensationEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -45,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun clinicalPlanningDao(): ClinicalPlanningDao
     abstract fun knowledgeHubDao(): KnowledgeHubDao
     abstract fun payRateSettingsDao(): PayRateSettingsDao
+    abstract fun profileCompensationDao(): ProfileCompensationDao
 
     companion object {
 
@@ -84,6 +88,24 @@ abstract class AppDatabase : RoomDatabase() {
                         `doRate` REAL NOT NULL,
                         `rateSource` TEXT NOT NULL,
                         `basisSalary2027` REAL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `profile_compensation` (
+                        `id` INTEGER NOT NULL,
+                        `riskAllowance` REAL NOT NULL,
+                        `claAllowance` REAL NOT NULL,
+                        `additionalAllowancesTotal` REAL NOT NULL,
+                        `totalDeductions` REAL NOT NULL,
                         `updatedAt` INTEGER NOT NULL,
                         PRIMARY KEY(`id`)
                     )
