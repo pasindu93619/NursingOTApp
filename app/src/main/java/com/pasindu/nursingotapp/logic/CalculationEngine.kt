@@ -12,12 +12,14 @@ import java.time.temporal.TemporalAdjusters
 object CalculationEngine {
 
     /**
-     * Calculates claim data using the legacy PH/DO rule by default:
-     * basic salary / 30.
+     * Calculates claim data using explicitly configured service payment rates.
      *
-     * Optional pay rates allow Finance to provide a separately configured
-     * OT/PH/Working-DO policy without changing DailyEntryEntity or
-     * ClaimPeriodEntity.
+     * Health-sector OT rate is user-configured and is never derived from
+     * basic salary.
+     *
+     * PH/DO rates are also user-configured for the current policy period.
+     * The future 2027 salary-step rule is handled by the Finance/pay-rate
+     * layer and should populate these values when that policy is activated.
      */
     fun processClaimData(
         profileEntity: ProfileEntity,
@@ -27,22 +29,16 @@ object CalculationEngine {
         payRates: PayRates? = null
     ): Pair<List<DailyLog>, PeriodSummary> {
 
-        val defaultDayRate = if (profileEntity.basicSalary > 0) {
-            profileEntity.basicSalary / 30.0
-        } else {
-            0.0
-        }
-
         val effectiveOtRate = payRates?.otRate?.takeIf { it > 0.0 }
-            ?: profileEntity.otRate
+            ?: profileEntity.otRate.coerceAtLeast(0.0)
 
         val effectivePhRate = payRates?.phRate?.takeIf { it > 0.0 }
-            ?: defaultDayRate
+            ?: 0.0
 
         val effectiveDoRate = payRates?.doRate?.takeIf { it > 0.0 }
-            ?: defaultDayRate
+            ?: 0.0
 
-        // Step 1: Map Database Entities to DailyLogs
+        // Step 1: Map Database Entities to DailyLogs.
         val dailyLogs = entries.map { entity ->
             DailyLog(
                 id = entity.id,
@@ -57,7 +53,6 @@ object CalculationEngine {
                 normalTimeOutStr = entity.normalTimeOut,
                 otTimeInStr = entity.otTimeIn,
                 otTimeOutStr = entity.otTimeOut,
-                // Payable leave hours continue to count toward the 36-hour rule.
                 computedNormalHours = entity.normalHours,
                 computedOtHours = entity.otHours
             )
@@ -108,7 +103,7 @@ object CalculationEngine {
                 (it.computedNormalHours > 0f || it.computedOtHours > 0f)
         }
 
-        // Step 4: Money calculation using the effective policy rates.
+        // Step 4: Money calculation using only configured policy rates.
         val otAmount = grandTotalOTHours * effectiveOtRate
         val phAmount = totalWorkingPH * effectivePhRate
         val doAmount = totalWorkingDO * effectiveDoRate
