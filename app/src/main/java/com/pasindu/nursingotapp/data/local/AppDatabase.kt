@@ -38,7 +38,7 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
         ProfileCompensationEntity::class,
         SalaryStep2027Entity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -71,8 +71,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    """
+                database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `pay_rate_settings` (
                         `id` INTEGER NOT NULL,
                         `otRate` REAL NOT NULL,
@@ -83,14 +82,12 @@ abstract class AppDatabase : RoomDatabase() {
                         `updatedAt` INTEGER NOT NULL,
                         PRIMARY KEY(`id`)
                     )
-                    """.trimIndent()
-                )
+                """.trimIndent())
             }
         }
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    """
+                database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `profile_compensation` (
                         `id` INTEGER NOT NULL,
                         `riskAllowance` REAL NOT NULL,
@@ -100,14 +97,12 @@ abstract class AppDatabase : RoomDatabase() {
                         `updatedAt` INTEGER NOT NULL,
                         PRIMARY KEY(`id`)
                     )
-                    """.trimIndent()
-                )
+                """.trimIndent())
             }
         }
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    """
+                database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `salary_steps_2027` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `grade` TEXT NOT NULL,
@@ -117,8 +112,7 @@ abstract class AppDatabase : RoomDatabase() {
                         `effectiveFrom` TEXT NOT NULL,
                         `sourceLabel` TEXT NOT NULL
                     )
-                    """.trimIndent()
-                )
+                """.trimIndent())
             }
         }
         val MIGRATION_7_8 = object : Migration(7, 8) {
@@ -128,9 +122,42 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE `salary_steps_2027` ADD COLUMN `currentBasicSalary2026` REAL NOT NULL DEFAULT 0.0"
-                )
+                // Some earlier branch revisions created the table without this column.
+                // Keep this migration idempotent by checking the existing columns first.
+                val cursor = database.query("PRAGMA table_info(`salary_steps_2027`)")
+                var exists = false
+                cursor.use {
+                    val nameIndex = it.getColumnIndex("name")
+                    while (it.moveToNext()) {
+                        if (nameIndex >= 0 && it.getString(nameIndex) == "currentBasicSalary2026") {
+                            exists = true
+                            break
+                        }
+                    }
+                }
+                if (!exists) {
+                    database.execSQL(
+                        "ALTER TABLE `salary_steps_2027` ADD COLUMN `currentBasicSalary2026` REAL NOT NULL DEFAULT 0.0"
+                    )
+                }
+            }
+        }
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Refresh the salary lookup table structure for exact 2026 -> 2027 matching.
+                // Preserve the user's legacy profile/claim data; only the master lookup table is replaced.
+                database.execSQL("DROP TABLE IF EXISTS `salary_steps_2027`")
+                database.execSQL("""
+                    CREATE TABLE `salary_steps_2027` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `grade` TEXT NOT NULL,
+                        `salaryStep` INTEGER NOT NULL,
+                        `currentBasicSalary2026` REAL NOT NULL,
+                        `basicSalary2027` REAL NOT NULL,
+                        `effectiveFrom` TEXT NOT NULL,
+                        `sourceLabel` TEXT NOT NULL
+                    )
+                """.trimIndent())
             }
         }
 
