@@ -15,9 +15,7 @@ object DatabaseProvider {
     }
 
     private fun buildDatabase(context: Context): AppDatabase {
-        lateinit var database: AppDatabase
-
-        database = Room.databaseBuilder(
+        val database = Room.databaseBuilder(
             context.applicationContext,
             AppDatabase::class.java,
             "nursing_ot_app.db"
@@ -32,15 +30,13 @@ object DatabaseProvider {
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
                 AppDatabase.MIGRATION_8_9,
-                AppDatabase.MIGRATION_9_10
+                AppDatabase.MIGRATION_9_10,
+                AppDatabase.MIGRATION_10_11
             )
             .fallbackToDestructiveMigration()
             .build()
 
-        // Keep the master salary lookup synchronized with the exact supplied
-        // 2026 -> 2027 paid-amount table. This only touches salary lookup data.
         SalaryTableSeeder.seedIfNeeded(database.salaryStep2027Dao())
-
         return database
     }
 }
