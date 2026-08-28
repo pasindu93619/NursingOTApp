@@ -11,7 +11,7 @@ import java.time.LocalDate
  * are considered. For each Sunday-based week, the first 36 worked hours are
  * normal and all subsequent worked hours are OT.
  *
- * PH/DO payment-day counts remain separate from the 36-hour split.
+ * PH/DO payment-day counts remain independent from the weekly hour split.
  */
 object WeeklyOtCalculator {
     const val WEEKLY_NORMAL_LIMIT_HOURS = 36.0
@@ -44,19 +44,27 @@ object WeeklyOtCalculator {
 
     /**
      * Recalculates all logs from scratch. This makes edits safe: changing a
-     * Monday entry automatically changes later OT spillover in that Sunday
-     * based week.
+     * Monday entry automatically changes later OT spillover in that
+     * Sunday-based week.
+     *
+     * otRate remains an independently configured Health-sector OT rate.
+     * PH and DO may use separate configured rates; when doRate is omitted,
+     * the historical single dayRate is used for both.
      */
     fun calculate(
         logs: List<DailyLog>,
         claimStart: LocalDate,
         claimEnd: LocalDate,
         otRate: Double,
-        dayRate: Double
+        dayRate: Double,
+        doRate: Double = dayRate
     ): ClaimSummary {
-        require(!claimEnd.isBefore(claimStart)) { "Claim end date cannot be before claim start date." }
+        require(!claimEnd.isBefore(claimStart)) {
+            "Claim end date cannot be before claim start date."
+        }
         require(otRate >= 0.0) { "OT rate cannot be negative." }
-        require(dayRate >= 0.0) { "Day rate cannot be negative." }
+        require(dayRate >= 0.0) { "PH rate cannot be negative." }
+        require(doRate >= 0.0) { "DO rate cannot be negative." }
 
         val filtered = logs
             .filter { !it.date.isBefore(claimStart) && !it.date.isAfter(claimEnd) }
@@ -73,7 +81,9 @@ object WeeklyOtCalculator {
 
             for (log in weekLogs.sortedBy { it.date }) {
                 val workedHours = ShiftHoursCalculator.snapToQuarterHour(
-                    (log.computedNormalHours + log.computedOtHours).toDouble().coerceAtLeast(0.0)
+                    (log.computedNormalHours + log.computedOtHours)
+                        .toDouble()
+                        .coerceAtLeast(0.0)
                 )
 
                 val normal = minOf(workedHours, normalRemaining)
@@ -99,11 +109,23 @@ object WeeklyOtCalculator {
 
         val totalNormal = allocations.sumOf { it.normalHours }
         val totalOt = allocations.sumOf { it.otHours }
-        val phDays = filtered.count { it.isPH }
-        val doDays = filtered.count { it.isDO }
+
+        // Preserve legacy payment semantics: PH/DO count only when the
+        // corresponding day was actually worked, not merely flagged.
+        val phDays = filtered.count {
+            it.isPH &&
+                !it.isLeave &&
+                (it.computedNormalHours > 0f || it.computedOtHours > 0f)
+        }
+        val doDays = filtered.count {
+            it.isDO &&
+                !it.isLeave &&
+                (it.computedNormalHours > 0f || it.computedOtHours > 0f)
+        }
+
         val otAmount = totalOt * otRate
         val phAmount = phDays * dayRate
-        val doAmount = doDays * dayRate
+        val doAmount = doDays * doRate
 
         return ClaimSummary(
             allocations = allocations,
