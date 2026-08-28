@@ -132,9 +132,6 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
-                database.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_salary_steps_2027_grade_salaryStep` ON `salary_steps_2027` (`grade`, `salaryStep`)"
-                )
             }
         }
 
