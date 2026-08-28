@@ -15,6 +15,7 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.math.abs
@@ -37,7 +38,7 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
     private val _matchedSalary2027 = MutableStateFlow<SalaryStep2027Entity?>(null)
     val matchedSalary2027: StateFlow<SalaryStep2027Entity?> = _matchedSalary2027.asStateFlow()
 
-    private val _configuredOtRate = MutableStateFlow<Double>(0.0)
+    private val _configuredOtRate = MutableStateFlow(0.0)
     val configuredOtRate: StateFlow<Double> = _configuredOtRate.asStateFlow()
 
     private val _dailyLogs = MutableStateFlow<List<DailyEntryEntity>>(emptyList())
@@ -53,11 +54,6 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             profileDao.observeProfile().collect { profile ->
                 _userProfile.value = profile
-                if (profile != null && profile.basicSalary > 0.0 && profile.grade.isNotBlank()) {
-                    matchSalaryStep(profile.grade, profile.basicSalary)
-                } else {
-                    _matchedSalary2027.value = null
-                }
             }
         }
     }
@@ -104,13 +100,10 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Saves the user's actual Health-sector OT rate.
-     * OT is intentionally independent of salary step/basic salary.
-     */
+    /** Saves the nurse's Health-sector OT rate; it is independent of salary step. */
     fun saveOtRate(value: Double) {
         viewModelScope.launch {
-            val current = payRateSettingsDao.observe().valueOrNull()
+            val current = payRateSettingsDao.observe().first()
             payRateSettingsDao.upsert(
                 PayRateSettingsEntity(
                     id = 1,
@@ -125,54 +118,15 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun saveManualDayRates(phRate: Double, doRate: Double) {
-        viewModelScope.launch {
-            val current = payRateSettingsDao.observe().valueOrNull()
-            payRateSettingsDao.upsert(
-                PayRateSettingsEntity(
-                    id = 1,
-                    otRate = current?.otRate ?: 0.0,
-                    phRate = phRate.coerceAtLeast(0.0),
-                    doRate = doRate.coerceAtLeast(0.0),
-                    rateSource = "MANUAL",
-                    basisSalary2027 = _matchedSalary2027.value?.basicSalary2027,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-        }
-    }
-
     /**
-     * Match the user's current basic to the supplied salary table for the
-     * selected grade. The user never enters a salary-step number.
+     * The current PH/DO policy basis comes from the 2027 salary-table basic.
+     * The user does not enter a salary step and does not manually enter PH/DO.
      */
-    fun matchSalaryStep(grade: String, currentBasicSalary: Double) {
-        viewModelScope.launch {
-            if (grade.isBlank() || currentBasicSalary <= 0.0) {
-                _matchedSalary2027.value = null
-                return@launch
-            }
-
-            val exact = salaryStep2027Dao.findByCurrentBasic(grade.trim(), currentBasicSalary)
-            if (exact != null) {
-                _matchedSalary2027.value = exact
-                return@launch
-            }
-
-            // Graceful matching for tables where the entered paysheet amount
-            // differs by a tiny rounding amount. Never invent a different row.
-            val rows = salaryStep2027Dao.observeForGrade(grade.trim()).valueOrNull() ?: emptyList()
-            _matchedSalary2027.value = rows
-                .minByOrNull { abs(it.basicSalary2027 - currentBasicSalary) }
-                ?.takeIf { abs(it.basicSalary2027 - currentBasicSalary) < 0.01 }
-        }
-    }
-
     fun applyMatched2027DayRate() {
         viewModelScope.launch {
             val matched = _matchedSalary2027.value ?: return@launch
             val dayRate = matched.basicSalary2027 / 30.0
-            val current = payRateSettingsDao.observe().valueOrNull()
+            val current = payRateSettingsDao.observe().first()
             payRateSettingsDao.upsert(
                 PayRateSettingsEntity(
                     id = 1,
@@ -184,6 +138,28 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
                     updatedAt = System.currentTimeMillis()
                 )
             )
+        }
+    }
+
+    /**
+     * Match the current basic salary to the 2026/current salary-step table.
+     * The corresponding row carries the 2027 paid/basic amount.
+     */
+    fun matchSalaryStep(grade: String, currentBasicSalary: Double) {
+        viewModelScope.launch {
+            if (grade.isBlank() || currentBasicSalary <= 0.0) {
+                _matchedSalary2027.value = null
+                return@launch
+            }
+
+            val rows = salaryStep2027Dao.observeForGrade(grade.trim()).first()
+            _matchedSalary2027.value = rows
+                .minByOrNull { row ->
+                    abs(row.currentBasicSalary2026 - currentBasicSalary)
+                }
+                ?.takeIf { row ->
+                    abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01
+                }
         }
     }
 
@@ -234,6 +210,3 @@ class NursingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 }
-
-/** Small helper to read the current value of a StateFlow without collecting. */
-private fun <T> kotlinx.coroutines.flow.StateFlow<T?>.valueOrNull(): T? = value
