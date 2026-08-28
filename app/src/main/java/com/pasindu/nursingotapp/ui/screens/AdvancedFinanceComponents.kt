@@ -1,6 +1,5 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,12 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.CreditScore
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.Card
@@ -35,10 +31,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.ColumnScope
 import java.text.NumberFormat
 import java.util.Locale
 
-private val AFinanceNavy = Color(0xFF172554)
 private val AFinanceIndigo = Color(0xFF4338CA)
 private val AFinanceViolet = Color(0xFF7C3AED)
 private val AFinanceCyan = Color(0xFF06B6D4)
@@ -147,9 +143,6 @@ fun ExternalCommitmentCard(
     FinanceCard(accent = AFinanceOrange) {
         Text("TAKE-HOME IMPACT", color = AFinanceOrange, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
         Spacer(modifier = Modifier.height(6.dp))
-        SummaryRow("Loan / advance", loanDeduction)
-        SummaryRow("Other deduction", otherDeduction)
-        Spacer(modifier = Modifier.height(8.dp))
         Surface(color = AFinanceSoft, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
                 OutlinedTextField(value = loanDeduction.toInput(), onValueChange = onLoanChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Loan / advance") })
@@ -190,5 +183,3 @@ private fun Double.currency(): String = NumberFormat.getNumberInstance(Locale.US
 }.format(this)
 
 private fun Double.toInput(): String = if (this == 0.0) "" else toString()
-
-private typealias ColumnScope = androidx.compose.foundation.layout.ColumnScope
