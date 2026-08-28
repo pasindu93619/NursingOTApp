@@ -100,27 +100,37 @@ fun DailyEntryScreen(
     var customOut by remember { mutableStateOf("17.00") }
     var customHrs by remember { mutableStateOf("10.0") }
 
-    // --- UPGRADED: 36h Weekly Cap Calculation ---
-    val totalCalculated = remember(allSavedEntries) {
-        var norm = 0f
-        var ot = 0f
-
-        val weekGroups = allSavedEntries.groupBy { it.date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)) }
-
-        for ((_, logs) in weekGroups) {
-            var weekNormal = logs.sumOf { it.normalHours.toDouble() }.toFloat()
-            var weekOt = logs.sumOf { it.otHours.toDouble() }.toFloat()
-
-            if (weekNormal > 36f) {
-                val excess = weekNormal - 36f
-                weekNormal = 36f
-                weekOt += excess
-            }
-
-            norm += weekNormal
-            ot += weekOt
+    // Weekly hours are calculated by the authoritative OT engine.
+    // Rates are intentionally zero here because this screen displays hours only;
+    // financial amounts remain owned by AdvancedFinanceViewModel/pay-rate flow.
+    val totalCalculated = remember(allSavedEntries, startDate, endDate) {
+        val logs = allSavedEntries.map { entry ->
+            com.pasindu.nursingotapp.data.model.DailyLog(
+                id = entry.id,
+                date = entry.date,
+                isPH = entry.isPH,
+                isDO = entry.isDO,
+                isLeave = entry.isLeave,
+                leaveType = entry.leaveType,
+                reason = entry.reason,
+                wardOverride = entry.wardOverride,
+                normalTimeInStr = entry.normalTimeIn,
+                normalTimeOutStr = entry.normalTimeOut,
+                otTimeInStr = entry.otTimeIn,
+                otTimeOutStr = entry.otTimeOut,
+                computedNormalHours = entry.normalHours,
+                computedOtHours = entry.otHours
+            )
         }
-        Pair(norm, ot)
+        val result = com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator.calculate(
+            logs = logs,
+            claimStart = startDate,
+            claimEnd = endDate,
+            otRate = 0.0,
+            dayRate = 0.0,
+            doRate = 0.0
+        )
+        Pair(result.totalNormalHours.toFloat(), result.totalOtHours.toFloat())
     }
 
     val totalNormalHrs = totalCalculated.first
