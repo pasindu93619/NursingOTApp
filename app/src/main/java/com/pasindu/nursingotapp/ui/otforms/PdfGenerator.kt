@@ -388,38 +388,10 @@ class PdfGenerator(private val context: Context) {
             }
 
             if (totalOtHours > 0f) {
-                val grandTotal = totalOtHours
-                weeklyOtSum = grandTotal
-
-                val mathPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.BLACK
-                    textSize = 10f
-                    typeface = Typeface.create(sinhalaTypeface ?: Typeface.DEFAULT, Typeface.NORMAL)
-                    textAlign = Paint.Align.RIGHT
-                }
-
-                val numX = 2150f
-                val opX = 2175f
-                var currentY = 1010f + weekBaseY
-                val stepY = 48f
-
-                canvas.drawText(formatFloat(totalNormalHours), sX(numX), sY(currentY), mathPaint)
-                canvas.drawText("-", sX(opX), sY(currentY), mathPaint)
-                currentY += stepY; canvas.drawText("36", sX(numX), sY(currentY), mathPaint)
-                currentY += 15f; canvas.drawText("-------", sX(opX), sY(currentY), mathPaint)
-                currentY += 35f; canvas.drawText(formatHrs(extraFromNorm), sX(numX), sY(currentY), mathPaint)
-                currentY += stepY + 5f; canvas.drawText(formatFloat(extraFromNorm), sX(numX), sY(currentY), mathPaint)
-                canvas.drawText("+", sX(opX), sY(currentY), mathPaint)
-                currentY += stepY; canvas.drawText(formatFloat(totalOtHours), sX(numX), sY(currentY), mathPaint)
-                currentY += 15f; canvas.drawText("-------", sX(opX), sY(currentY), mathPaint)
-
-                canvas.drawText(formatHrs(grandTotal), sX(finalTotalX), sY(finalTotalY), finalTotalPaint)
-
-            } else {
-                if (totalOtHours > 0f) {
-                    weeklyOtSum = totalOtHours
-                    canvas.drawText(formatHrs(totalOtHours), sX(finalTotalX), sY(finalTotalY), finalTotalPaint)
-                }
+                // totalOtHours is already the authoritative Sunday-Saturday OT
+                // allocation. Do not recalculate it from displayed/payable hours.
+                weeklyOtSum = totalOtHours
+                canvas.drawText(formatHrs(totalOtHours), sX(finalTotalX), sY(finalTotalY), finalTotalPaint)
             }
 
             weeklyOtTotalsList.add(weeklyOtSum)
