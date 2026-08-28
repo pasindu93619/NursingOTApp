@@ -14,6 +14,7 @@ import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
+import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
@@ -24,6 +25,7 @@ import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
+import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 
 @Database(
     entities = [
@@ -36,9 +38,10 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
         CpdLogEntity::class,
         PayRateSettingsEntity::class,
         ProfileCompensationEntity::class,
-        SalaryStep2027Entity::class
+        SalaryStep2027Entity::class,
+        PaySheetDocumentEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -52,6 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun payRateSettingsDao(): PayRateSettingsDao
     abstract fun profileCompensationDao(): ProfileCompensationDao
     abstract fun salaryStep2027Dao(): SalaryStep2027Dao
+    abstract fun paySheetDocumentDao(): PaySheetDocumentDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -156,11 +160,26 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Force a deterministic refresh marker for the authoritative supplied
-                // 2026-paid -> 2027-paid salary lookup dataset.
                 database.execSQL("CREATE TABLE IF NOT EXISTS `salary_table_meta` (`id` INTEGER NOT NULL PRIMARY KEY, `datasetVersion` TEXT NOT NULL)")
                 database.execSQL("DELETE FROM `salary_table_meta`")
                 database.execSQL("INSERT INTO `salary_table_meta` (`id`, `datasetVersion`) VALUES (1, '2026-2027-supplied-paid-amounts-v1')")
+            }
+        }
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `pay_sheet_documents` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `monthKey` TEXT NOT NULL,
+                        `displayMonth` TEXT NOT NULL,
+                        `filePath` TEXT NOT NULL,
+                        `fileSizeBytes` INTEGER NOT NULL,
+                        `sha256` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_pay_sheet_documents_monthKey` ON `pay_sheet_documents` (`monthKey`)")
             }
         }
 
