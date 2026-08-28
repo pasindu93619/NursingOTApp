@@ -38,7 +38,7 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
         ProfileCompensationEntity::class,
         SalaryStep2027Entity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -132,6 +132,12 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `profile` ADD COLUMN `salaryStep` INTEGER")
             }
         }
 
