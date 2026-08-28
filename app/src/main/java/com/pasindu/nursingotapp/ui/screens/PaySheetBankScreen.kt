@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.pasindu.nursingotapp.data.local.DatabaseProvider
+import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
 import kotlinx.coroutines.Dispatchers
@@ -88,43 +89,55 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
 
     var selected by remember { mutableStateOf<PaySheetDocumentEntity?>(null) }
     var pendingMonth by remember { mutableStateOf<String?>(null) }
+    var cameraOutputUri by remember { mutableStateOf<Uri?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<PaySheetDocumentEntity?>(null) }
     var showAddChooser by remember { mutableStateOf(false) }
-    var cameraOutputUri by remember { mutableStateOf<Uri?>(null) }
+
+    fun saveImage(uri: Uri, monthKey: String, successMessage: String) {
+        scope.launch {
+            message = try {
+                withContext(Dispatchers.IO) {
+                    val existing = dao.findByMonth(monthKey)
+                    val target = vault.prepareInput(uri, monthKey)
+                    val now = System.currentTimeMillis()
+                    dao.upsert(
+                        PaySheetDocumentEntity(
+                            id = existing?.id ?: 0L,
+                            monthKey = monthKey,
+                            displayMonth = displayMonth(monthKey),
+                            filePath = target.absolutePath,
+                            fileSizeBytes = target.length(),
+                            sha256 = vault.sha256(target.absolutePath),
+                            createdAt = existing?.createdAt ?: now,
+                            updatedAt = now
+                        )
+                    )
+                    if (existing != null && existing.filePath != target.absolutePath) {
+                        vault.deleteFile(existing.filePath)
+                    }
+                }
+                successMessage
+            } catch (e: Exception) {
+                e.message ?: "Unable to save paysheet."
+            }
+        }
+    }
 
     val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         val monthKey = pendingMonth ?: return@rememberLauncherForActivityResult
         pendingMonth = null
-        if (uri == null) return@rememberLauncherForActivityResult
-        saveVaultImageFromUri(
-            context = context,
-            uri = uri,
-            monthKey = monthKey,
-            dao = dao,
-            vault = vault,
-            scope = scope,
-            onSuccess = { message = "Paysheet saved securely in your private vault." },
-            onError = { message = it }
-        )
+        if (uri != null) saveImage(uri, monthKey, "Paysheet saved securely in your private vault.")
     }
 
     val cameraPicker = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        val monthKey = pendingMonth ?: return@rememberLauncherForActivityResult
+        val monthKey = pendingMonth
         val capturedUri = cameraOutputUri
         pendingMonth = null
         cameraOutputUri = null
-        if (!success || capturedUri == null) return@rememberLauncherForActivityResult
-        saveVaultImageFromUri(
-            context = context,
-            uri = capturedUri,
-            monthKey = monthKey,
-            dao = dao,
-            vault = vault,
-            scope = scope,
-            onSuccess = { message = "Camera photo saved securely in your private vault." },
-            onError = { message = it }
-        )
+        if (success && monthKey != null && capturedUri != null) {
+            saveImage(capturedUri, monthKey, "Camera photo saved securely in your private vault.")
+        }
     }
 
     fun startGallery(monthKey: String) {
@@ -133,22 +146,30 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     }
 
     fun startCamera(monthKey: String) {
-        val outputFile = createCameraFile(context, monthKey)
-        val outputUri = FileProvider.getUriForFile(
+        val outputFile = File(
+            File(context.cacheDir, "paysheet_camera").also { it.mkdirs() },
+            "capture_$monthKey.jpg"
+        )
+        val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             outputFile
         )
         pendingMonth = monthKey
-        cameraOutputUri = outputUri
-        cameraPicker.launch(outputUri)
+        cameraOutputUri = uri
+        cameraPicker.launch(uri)
     }
 
     val usedBytes = remember(documents) { documents.sumOf { it.fileSizeBytes } }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC))) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF172554)) }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF172554))
+            }
             Column(Modifier.weight(1f)) {
                 Text("Pay Sheet Bank", color = Color(0xFF0F172A), fontSize = 22.sp, fontWeight = FontWeight.Black)
                 Text("Your private monthly paysheet vault", color = Color(0xFF64748B), fontSize = 11.sp)
@@ -162,7 +183,10 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             }
         }
 
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             item {
                 VaultHero(
                     count = documents.size,
@@ -172,7 +196,10 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             }
             item {
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF7C3AED).copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF7C3AED).copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(Icons.Default.Folder, null, tint = Color(0xFF7C3AED))
                     }
                     Spacer(Modifier.width(10.dp))
@@ -194,8 +221,11 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                 item {
                     Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(22.dp)) {
                         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF8FAFC)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF94A3B8), modifier = Modifier.size(25.dp))
+                            Box(
+                                Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF8FAFC)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.ReceiptLong, null, tint = Color(0xFF94A3B8))
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
@@ -243,77 +273,48 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                         vault.deleteFile(document.filePath)
                         dao.delete(document)
                     }
-                }) { Text("DELETE", color = Color(0xFFDC2626), fontWeight = FontWeight.Black) }
+                }) {
+                    Text("DELETE", color = Color(0xFFDC2626), fontWeight = FontWeight.Black)
+                }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("CANCEL") } }
         )
     }
 
     message?.let { text ->
-        AlertDialog(onDismissRequest = { message = null }, title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) }, text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } })
-    }
-}
-
-private var cameraOutputUri: Uri? = null
-
-private fun createCameraFile(context: Context, monthKey: String): File {
-    val dir = File(context.cacheDir, "paysheet_camera").also { it.mkdirs() }
-    return File(dir, "capture_$monthKey.jpg")
-}
-
-private fun saveVaultImageFromUri(
-    context: Context,
-    uri: Uri,
-    monthKey: String,
-    dao: com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao,
-    vault: PaySheetVaultManager,
-    scope: kotlinx.coroutines.CoroutineScope,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    scope.launch {
-        try {
-            withContext(Dispatchers.IO) {
-                val existing = dao.findByMonth(monthKey)
-                val target = vault.prepareInput(uri, monthKey)
-                val now = System.currentTimeMillis()
-                dao.upsert(
-                    PaySheetDocumentEntity(
-                        id = existing?.id ?: 0L,
-                        monthKey = monthKey,
-                        displayMonth = displayMonth(monthKey),
-                        filePath = target.absolutePath,
-                        fileSizeBytes = target.length(),
-                        sha256 = vault.sha256(target.absolutePath),
-                        createdAt = existing?.createdAt ?: now,
-                        updatedAt = now
-                    )
-                )
-                if (existing != null && existing.filePath != target.absolutePath) {
-                    vault.deleteFile(existing.filePath)
-                }
-            }
-            onSuccess()
-        } catch (e: Exception) {
-            onError(e.message ?: "Unable to save paysheet.")
-        }
+        AlertDialog(
+            onDismissRequest = { message = null },
+            title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) },
+            text = { Text(text) },
+            confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }
+        )
     }
 }
 
 @Composable
-private fun AddSourceDialog(monthKey: String, onDismiss: () -> Unit, onCamera: (String) -> Unit, onGallery: (String) -> Unit) {
+private fun AddSourceDialog(
+    monthKey: String,
+    onDismiss: () -> Unit,
+    onCamera: (String) -> Unit,
+    onGallery: (String) -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add paysheet", fontWeight = FontWeight.Black) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Choose how you want to add the $monthKey paysheet.", color = Color(0xFF64748B), fontSize = 12.sp)
+                Text("Choose how to add the $monthKey paysheet.", color = Color(0xFF64748B), fontSize = 12.sp)
                 Button(onClick = { onCamera(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
                     Icon(Icons.Default.CameraAlt, null)
                     Spacer(Modifier.width(7.dp))
                     Text("TAKE PHOTO", fontWeight = FontWeight.Black)
                 }
-                Button(onClick = { onGallery(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF2FF), contentColor = Color(0xFF4338CA))) {
+                Button(
+                    onClick = { onGallery(monthKey) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF2FF), contentColor = Color(0xFF4338CA))
+                ) {
                     Icon(Icons.Default.PhotoCamera, null)
                     Spacer(Modifier.width(7.dp))
                     Text("CHOOSE FROM GALLERY", fontWeight = FontWeight.Black)
@@ -326,7 +327,11 @@ private fun AddSourceDialog(monthKey: String, onDismiss: () -> Unit, onCamera: (
 
 @Composable
 private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
-    Card(Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF172554))) {
+    Card(
+        Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp)),
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF172554))
+    ) {
         Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF172554), Color(0xFF312E81))))) {
             Column(Modifier.padding(22.dp)) {
                 Surface(color = Color.White.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
@@ -352,7 +357,8 @@ private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
     }
 }
 
-@Composable private fun HeroMetric(modifier: Modifier, value: String, label: String, accent: Color) {
+@Composable
+private fun HeroMetric(modifier: Modifier, value: String, label: String, accent: Color) {
     Surface(modifier, color = Color.White.copy(alpha = 0.08f), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(12.dp)) {
             Text(value, color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
@@ -361,7 +367,8 @@ private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
     }
 }
 
-@Composable private fun VaultMonthCard(document: PaySheetDocumentEntity, onOpen: () -> Unit, onReplace: () -> Unit, onDelete: () -> Unit) {
+@Composable
+private fun VaultMonthCard(document: PaySheetDocumentEntity, onOpen: () -> Unit, onReplace: () -> Unit, onDelete: () -> Unit) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onOpen), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             AndroidView(
@@ -386,7 +393,8 @@ private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
     }
 }
 
-@Composable private fun VaultAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit, color: Color) {
+@Composable
+private fun VaultAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit, color: Color) {
     Surface(Modifier.clickable(onClick = onClick), color = color.copy(alpha = 0.08f), shape = RoundedCornerShape(10.dp)) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = color, modifier = Modifier.size(13.dp))
@@ -396,7 +404,8 @@ private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
     }
 }
 
-@Composable private fun VaultViewer(document: PaySheetDocumentEntity, onDismiss: () -> Unit, onShare: () -> Unit, onDownload: () -> Unit) {
+@Composable
+private fun VaultViewer(document: PaySheetDocumentEntity, onDismiss: () -> Unit, onShare: () -> Unit, onDownload: () -> Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp)) {
@@ -434,19 +443,19 @@ private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
 private fun downloadCopy(context: Context, document: PaySheetDocumentEntity) {
     val source = File(document.filePath)
     if (!source.exists()) return
+    val resolver = context.contentResolver
     val values = ContentValues().apply {
         put(MediaStore.Downloads.DISPLAY_NAME, "Paysheet_${document.monthKey}.jpg")
         put(MediaStore.Downloads.MIME_TYPE, "image/jpeg")
         put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/NursingOS Pay Sheets")
         put(MediaStore.Downloads.IS_PENDING, 1)
     }
-    val resolver = context.contentResolver
     val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
     try {
-        resolver.openOutputStream(uri)?.use { output -> source.inputStream().use { input -> input.copyTo(output) } }
-        values.clear()
-        values.put(MediaStore.Downloads.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
+        resolver.openOutputStream(uri)?.use { output ->
+            source.inputStream().use { input -> input.copyTo(output) }
+        }
+        resolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
     } catch (_: Exception) {
         resolver.delete(uri, null, null)
     }
