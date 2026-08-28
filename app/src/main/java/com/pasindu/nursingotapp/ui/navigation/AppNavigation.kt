@@ -126,6 +126,10 @@ fun AppNavigation() {
             )
         }
 
+        composable("pay_sheet_bank") {
+            PaySheetBankScreen(onBack = { navController.popBackStack() })
+        }
+
         composable("clinical_planning") {
             ClinicalPlanningDashboardScreen(onNavigateBack = { navController.popBackStack() })
         }
