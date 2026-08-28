@@ -18,6 +18,7 @@ import com.pasindu.nursingotapp.logic.CalculationEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -139,7 +140,7 @@ class AdvancedFinanceViewModel(
         if (profile == null) return
 
         viewModelScope.launch {
-            val current = _uiState.value.payRateSettings
+            val current = payRateSettingsDao.observe().first()
             if (current == null) {
                 val dayRate = if (profile.basicSalary > 0.0) {
                     profile.basicSalary / 30.0
@@ -287,7 +288,7 @@ class AdvancedFinanceViewModel(
             apit = 0.0,
             wop = 0.0,
             loanDeduction = 0.0,
-            otherDeduction = 0.0
+            otherDeductions = 0.0
         )
     }
 
