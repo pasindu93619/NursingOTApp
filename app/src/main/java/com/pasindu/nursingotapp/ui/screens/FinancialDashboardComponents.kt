@@ -27,10 +27,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -134,6 +134,11 @@ private fun SnapshotMetric(modifier: Modifier, label: String, value: String, acc
     }
 }
 
+/**
+ * Historical finance chart.
+ * The FinancialViewModel currently exposes history as Float values,
+ * so this composable intentionally uses List<Float> to match that API.
+ */
 @Composable
 fun FinancialHistoryChart(
     basic: List<Float>,
@@ -142,11 +147,14 @@ fun FinancialHistoryChart(
     modifier: Modifier = Modifier
 ) {
     val count = max(max(basic.size, allowances.size), overtime.size)
-    val maxTotal = max(1.0, (0 until count).maxOfOrNull { i ->
-        (basic.getOrNull(i) ?: 0f).toDouble() +
-            (allowances.getOrNull(i) ?: 0f).toDouble() +
-            (overtime.getOrNull(i) ?: 0f).toDouble()
-    } ?: 1.0)
+    val maxTotal = max(
+        1.0,
+        (0 until count).maxOfOrNull { i ->
+            (basic.getOrNull(i) ?: 0f).toDouble() +
+                (allowances.getOrNull(i) ?: 0f).toDouble() +
+                (overtime.getOrNull(i) ?: 0f).toDouble()
+        } ?: 1.0
+    )
 
     Surface(modifier = modifier, color = SurfaceSoft, shape = RoundedCornerShape(18.dp)) {
         Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
@@ -157,6 +165,7 @@ fun FinancialHistoryChart(
                     val barWidth = ((groupWidth - 6f) / 3f).coerceAtLeast(3f)
                     val baseline = size.height - 10f
                     val chartHeight = (size.height - 20f).coerceAtLeast(1f)
+
                     repeat(count) { index ->
                         val x = index * (groupWidth + gap)
                         val values = floatArrayOf(
@@ -165,8 +174,12 @@ fun FinancialHistoryChart(
                             overtime.getOrNull(index) ?: 0f
                         )
                         val colors = listOf(Indigo, Cyan, Orange)
+
                         values.forEachIndexed { part, value ->
-                            val h = (value.toDouble() / maxTotal).coerceIn(0.0, 1.0).toFloat() * chartHeight
+                            val h = (value.toDouble() / maxTotal)
+                                .coerceIn(0.0, 1.0)
+                                .toFloat() * chartHeight
+
                             drawRoundRect(
                                 color = colors[part],
                                 topLeft = androidx.compose.ui.geometry.Offset(
@@ -178,6 +191,7 @@ fun FinancialHistoryChart(
                             )
                         }
                     }
+
                     drawLine(
                         Border,
                         androidx.compose.ui.geometry.Offset(0f, baseline),
