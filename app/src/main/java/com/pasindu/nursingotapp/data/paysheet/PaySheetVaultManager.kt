@@ -1,33 +1,47 @@
 package com.pasindu.nursingotapp.data.paysheet
 
 import android.content.Context
+import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
 
 /**
- * Private, app-scoped storage for monthly paysheet images.
- * Images are never stored inside Room and are not written to public media storage.
+ * Private app-scoped storage for monthly paysheet images.
+ * Room stores metadata only; image bytes remain outside the database.
  */
 class PaySheetVaultManager(private val context: Context) {
 
-    private val rootDir: File
+    val rootDirectory: File
         get() = File(context.filesDir, "paysheet_vault")
+
+    val contentResolver: ContentResolver
+        get() = context.contentResolver
 
     fun vaultFile(monthKey: String): File {
         val safeKey = monthKey.replace("[^0-9-]".toRegex(), "_")
         val year = safeKey.take(4).ifBlank { "unknown" }
         val month = safeKey.drop(5).take(2).ifBlank { "00" }
-        return File(File(File(rootDir, year), month), "paysheet_$safeKey.jpg")
+        return File(File(File(rootDirectory, year), month), "paysheet_$safeKey.jpg")
     }
 
     fun prepareInput(source: File, monthKey: String, maxDimension: Int = 2400, quality: Int = 88): File {
         require(source.exists()) { "Paysheet image does not exist." }
-        val bitmap = BitmapFactory.decodeFile(source.absolutePath)
-            ?: error("Unable to read paysheet image.")
+        return compressBitmap(BitmapFactory.decodeFile(source.absolutePath)
+            ?: error("Unable to read paysheet image."), monthKey, maxDimension, quality)
+    }
 
+    fun prepareInput(sourceUri: Uri, monthKey: String, maxDimension: Int = 2400, quality: Int = 88): File {
+        val bitmap = contentResolver.openInputStream(sourceUri).use { input ->
+            BitmapFactory.decodeStream(input)
+        } ?: error("Unable to read selected paysheet image.")
+        return compressBitmap(bitmap, monthKey, maxDimension, quality)
+    }
+
+    private fun compressBitmap(bitmap: Bitmap, monthKey: String, maxDimension: Int, quality: Int): File {
         val scaled = scaleDown(bitmap, maxDimension)
         val target = vaultFile(monthKey)
         target.parentFile?.mkdirs()
@@ -36,7 +50,6 @@ class PaySheetVaultManager(private val context: Context) {
                 "Unable to store paysheet image."
             }
         }
-
         if (scaled !== bitmap) scaled.recycle()
         bitmap.recycle()
         return target
@@ -60,7 +73,7 @@ class PaySheetVaultManager(private val context: Context) {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    fun totalBytes(): Long = rootDir.walkTopDown()
+    fun totalBytes(): Long = if (!rootDirectory.exists()) 0L else rootDirectory.walkTopDown()
         .filter { it.isFile }
         .sumOf { it.length() }
 
