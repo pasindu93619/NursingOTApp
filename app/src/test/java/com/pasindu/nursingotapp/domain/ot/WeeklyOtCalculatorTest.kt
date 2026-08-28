@@ -107,7 +107,58 @@ class WeeklyOtCalculatorTest {
         assertEquals(1000.0, result.doAmountRs, 0.001)
     }
 
-    private fun log(date: LocalDate, hours: Float, isPH: Boolean = false, isDO: Boolean = false): DailyLog =
+    @Test
+    fun `separate configured ph and do rates are preserved`() {
+        val logs = listOf(
+            log(start, 6f, isPH = true),
+            log(start.plusDays(1), 6f, isDO = true)
+        )
+
+        val result = WeeklyOtCalculator.calculate(
+            logs = logs,
+            claimStart = start,
+            claimEnd = end,
+            otRate = 750.0,
+            dayRate = 1200.0,
+            doRate = 1800.0
+        )
+
+        assertEquals(1, result.phDays)
+        assertEquals(1, result.doDays)
+        assertEquals(1200.0, result.phAmountRs, 0.001)
+        assertEquals(1800.0, result.doAmountRs, 0.001)
+        assertEquals(3000.0, result.totalAmountRs, 0.001)
+    }
+
+    @Test
+    fun `claim boundaries exclude entries outside selected period`() {
+        val logs = listOf(
+            log(start.minusDays(1), 20f),
+            log(start, 12f),
+            log(start.plusDays(1), 12f),
+            log(start.plusDays(2), 12f),
+            log(end.plusDays(1), 20f)
+        )
+
+        val result = WeeklyOtCalculator.calculate(
+            logs = logs,
+            claimStart = start,
+            claimEnd = end,
+            otRate = 100.0,
+            dayRate = 1000.0
+        )
+
+        assertEquals(36.0, result.totalNormalHours, 0.001)
+        assertEquals(0.0, result.totalOtHours, 0.001)
+        assertEquals(1, result.allocations.size + 0)
+    }
+
+    private fun log(
+        date: LocalDate,
+        hours: Float,
+        isPH: Boolean = false,
+        isDO: Boolean = false
+    ): DailyLog =
         DailyLog(
             date = date,
             isPH = isPH,
