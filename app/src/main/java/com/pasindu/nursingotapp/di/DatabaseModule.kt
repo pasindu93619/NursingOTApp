@@ -44,34 +44,4 @@ object DatabaseModule {
         SalaryTableSeeder.seedIfNeeded(database.salaryStep2027Dao())
         return database
     }
-
-    @Provides
-    fun provideProfileDao(database: AppDatabase) = database.profileDao()
-
-    @Provides
-    fun provideClaimPeriodDao(database: AppDatabase) = database.claimPeriodDao()
-
-    @Provides
-    fun provideDailyEntryDao(database: AppDatabase) = database.dailyEntryDao()
-
-    @Provides
-    fun provideFinancialDao(database: AppDatabase) = database.financialDao()
-
-    @Provides
-    fun provideClinicalPlanningDao(database: AppDatabase) = database.clinicalPlanningDao()
-
-    @Provides
-    fun provideKnowledgeHubDao(database: AppDatabase) = database.knowledgeHubDao()
-
-    @Provides
-    fun providePayRateSettingsDao(database: AppDatabase) = database.payRateSettingsDao()
-
-    @Provides
-    fun provideProfileCompensationDao(database: AppDatabase) = database.profileCompensationDao()
-
-    @Provides
-    fun provideSalaryStep2027Dao(database: AppDatabase) = database.salaryStep2027Dao()
-
-    @Provides
-    fun providePaySheetDocumentDao(database: AppDatabase) = database.paySheetDocumentDao()
 }
