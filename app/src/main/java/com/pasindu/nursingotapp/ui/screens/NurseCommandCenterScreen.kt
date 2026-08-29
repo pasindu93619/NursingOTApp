@@ -48,7 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.domain.model.AgendaItem
 import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
@@ -59,7 +59,7 @@ import com.pasindu.nursingotapp.ui.components.NurseCommandCenterCard
 fun NurseCommandCenterScreen(
     onBack: () -> Unit,
     onNavigate: (String) -> Unit,
-    viewModel: NurseCommandCenterViewModel = viewModel()
+    viewModel: NurseCommandCenterViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val completionMessage by viewModel.completionMessage.collectAsState()
@@ -182,193 +182,90 @@ private fun NursingOsScoreCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(26.dp),
-        onClick = onOpen
+        modifier = Modifier.fillMaxWidth().clickable(onClick = if (showDetails) ({ showDetails = false }) else ({ showDetails = true })),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("NURSINGOS READINESS", color = Color(0xFF27187E), fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text(state.nursingOsScoreLabel, modifier = Modifier.padding(top = 3.dp), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text("NursingOS Score", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Work + finance + clinical + learning", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
-                Text("$score/100", color = accent, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                Text("$score", fontSize = 28.sp, fontWeight = FontWeight.Black, color = accent)
             }
-
-            LinearProgressIndicator(
-                progress = { (score / 100f).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth(),
-                color = accent,
-                trackColor = accent.copy(alpha = 0.10f)
-            )
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ScoreMiniMetric("WORK", state.wellnessScore, Modifier.weight(1f))
-                ScoreMiniMetric("CLINICAL", state.clinicalHealthScore, Modifier.weight(1f), onClick = onClinical)
-                ScoreMiniMetric("FINANCE", state.financialHealthScore, Modifier.weight(1f), onClick = onFinance)
-                ScoreMiniMetric("OT", state.otLoadScore, Modifier.weight(1f), onClick = onOt)
-            }
-
-            Text(state.nursingOsRecommendation, color = Color(0xFF475569), fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDetails = !showDetails },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    if (showDetails) "HIDE SCORING DETAILS" else "WHY THIS SCORE?",
-                    color = Color(0xFF4F46E5),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = Color(0xFF4F46E5)
-                )
-            }
-
+            LinearProgressIndicator(progress = { (score / 100f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = accent)
             if (showDetails) {
-                ScoreExplanationRow("Workload", state.wellnessScore, "30%")
-                ScoreExplanationRow("Clinical", state.clinicalHealthScore, "20%")
-                ScoreExplanationRow("Claims", (state.claimProgress * 100f).toInt(), "15%")
-                ScoreExplanationRow("CPD", (state.cpdProgress * 100f).toInt(), "10%")
-                ScoreExplanationRow("Finance", state.financialHealthScore, "15%")
-                ScoreExplanationRow("OT load", state.otLoadScore, "10%")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onFinance) { Text("Finance") }
+                    TextButton(onClick = onClinical) { Text("Clinical") }
+                    TextButton(onClick = onOt) { Text("OT") }
+                }
             }
-
-            Text("Operational readiness • not a medical score", color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-private fun ScoreExplanationRow(label: String, value: Int, weight: String) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(1f), fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Medium)
-        Text("$value", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 11.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
-        Text(weight, fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun ScoreMiniMetric(
-    label: String,
-    value: Int,
-    modifier: Modifier,
-    onClick: (() -> Unit)? = null
+private fun PrioritizedAgendaCard(
+    state: NurseCommandCenterState,
+    onNavigate: (String) -> Unit,
+    onCompleteClinicalTask: (Int, String) -> Unit
 ) {
-    val interactiveModifier = if (onClick != null) {
-        modifier.clickable(onClick = onClick)
-    } else {
-        modifier
-    }
-
-    Surface(
-        modifier = interactiveModifier,
-        color = Color(0xFFF8FAFC),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column(
-            Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
-            Text("$value", fontSize = 14.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.ExtraBold)
-            if (onClick != null) {
-                Text("VIEW", fontSize = 7.sp, color = Color(0xFF4F46E5), fontWeight = FontWeight.Black)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PrioritizedAgendaCard(state: NurseCommandCenterState, onNavigate: (String) -> Unit, onCompleteClinicalTask: (Int, String) -> Unit) {
-    val urgent = state.urgentAction
-    val todayItems = state.todayAgenda
-    val laterItems = state.laterAgenda
-    val total = (if (urgent != null) 1 else 0) + todayItems.size + laterItems.size
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(24.dp)) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("DAILY AGENDA", color = Color(0xFF27187E), fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text(if (total == 0) "Everything is clear" else "$total action${if (total == 1) "" else "s"} to review", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
-                }
-                Icon(Icons.Default.Schedule, contentDescription = null, tint = Color(0xFF27187E))
-            }
-            if (urgent != null) AgendaGroup("URGENT", Color(0xFFDC2626), listOf(urgent), onNavigate, onCompleteClinicalTask)
-            if (todayItems.isNotEmpty()) AgendaGroup("TODAY", Color(0xFFD97706), todayItems, onNavigate, onCompleteClinicalTask)
-            if (laterItems.isNotEmpty()) AgendaGroup("LATER", Color(0xFF475569), laterItems, onNavigate, onCompleteClinicalTask)
-            if (total == 0) Text("No priority actions right now. Your current records are up to date.", color = Color(0xFF64748B), fontSize = 13.sp)
-        }
-    }
-}
-
-@Composable
-private fun AgendaGroup(title: String, color: Color, items: List<AgendaItem>, onNavigate: (String) -> Unit, onCompleteClinicalTask: (Int, String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = color, fontSize = 10.sp, fontWeight = FontWeight.Black)
-        items.forEach { item -> AgendaItemRow(item, color, { onNavigate(item.route) }, onCompleteClinicalTask) }
-    }
-}
-
-@Composable
-private fun AgendaItemRow(item: AgendaItem, color: Color, onClick: () -> Unit, onCompleteClinicalTask: (Int, String) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.06f)), shape = RoundedCornerShape(18.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-            Card(colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)), shape = RoundedCornerShape(12.dp)) {
-                Text(item.priority.name.take(1), modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp), color = color, fontWeight = FontWeight.Black, fontSize = 11.sp)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Text(item.detail, fontSize = 12.sp, color = Color(0xFF64748B))
-                if (item.clinicalTaskId != null) {
-                    Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text("Open", fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold) }
-                        TextButton(onClick = { onCompleteClinicalTask(item.clinicalTaskId, item.title) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text("Complete", fontSize = 10.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold) }
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Prioritized agenda", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+            state.agendaItems.forEach { item: AgendaItem ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { onNavigate(item.route) }.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(item.title, fontWeight = FontWeight.Bold)
+                        Text(item.subtitle, fontSize = 11.sp, color = Color(0xFF64748B))
                     }
-                } else {
-                    Text(item.actionLabel, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "Open")
                 }
             }
-            if (item.clinicalTaskId == null) Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = color)
         }
     }
 }
 
 @Composable
 private fun InsightCard(state: NurseCommandCenterState, onAction: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFEEF2FF)), shape = RoundedCornerShape(22.dp), onClick = onAction) {
-        Row(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF4338CA))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("TODAY'S INSIGHT", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4338CA))
-                Text(state.dailyInsight, modifier = Modifier.padding(top = 4.dp), fontSize = 14.sp, lineHeight = 20.sp, color = Color(0xFF1E293B), fontWeight = FontWeight.Medium)
-                Text("Tap to act", modifier = Modifier.padding(top = 8.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6366F1))
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onAction), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5FF))) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF2563EB))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Today's insight", fontWeight = FontWeight.ExtraBold)
+                Text(state.insightText, fontSize = 12.sp, color = Color(0xFF475569))
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = "Take action", tint = Color(0xFF4338CA))
         }
     }
 }
 
 @Composable
-private fun SectionCard(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, subtitle: String, progress: Float, actionLabel: String, onAction: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp), onClick = onAction) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text(title, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Icon(Icons.Default.ChevronRight, contentDescription = actionLabel, tint = Color(0xFF94A3B8))
+private fun SectionCard(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    subtitle: String,
+    progress: Float,
+    actionLabel: String,
+    onAction: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = Color(0xFF27187E))
+                Spacer(Modifier.width(10.dp))
+                Text(title, fontWeight = FontWeight.ExtraBold)
             }
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-            Text(subtitle, color = Color(0xFF64748B), fontSize = 12.sp)
+            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(subtitle, fontSize = 12.sp, color = Color(0xFF64748B))
             LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-            Text(actionLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onAction) { Text(actionLabel) }
         }
     }
 }
