@@ -4,8 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -14,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -47,25 +46,25 @@ fun AppNavigation() {
             slideIntoContainer(
                 AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(animDuration)
-            ) + fadeIn(animationSpec = tween(animDuration))
+            ) + androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
         },
         exitTransition = {
             slideOutOfContainer(
                 AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(animDuration)
-            ) + fadeOut(animationSpec = tween(animDuration))
+            ) + androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
         },
         popEnterTransition = {
             slideIntoContainer(
                 AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(animDuration)
-            ) + fadeIn(animationSpec = tween(animDuration))
+            ) + androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
         },
         popExitTransition = {
             slideOutOfContainer(
                 AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(animDuration)
-            ) + fadeOut(animationSpec = tween(animDuration))
+            ) + androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
         }
     ) {
         composable("home") {
@@ -115,9 +114,7 @@ fun AppNavigation() {
         }
 
         composable("advanced_finance_hub") {
-            val advancedFinanceViewModel: AdvancedFinanceViewModel = viewModel(
-                factory = AdvancedFinanceViewModel.Factory(context)
-            )
+            val advancedFinanceViewModel: AdvancedFinanceViewModel = hiltViewModel()
 
             AdvancedFinanceHubScreen(
                 viewModel = advancedFinanceViewModel,
