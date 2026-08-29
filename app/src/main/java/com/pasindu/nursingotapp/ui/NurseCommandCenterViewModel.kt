@@ -1,11 +1,11 @@
 package com.pasindu.nursingotapp.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.repository.NurseCommandCenterRepository
 import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,11 +17,10 @@ import kotlinx.coroutines.launch
  * Live orchestration layer for the Nurse Command Center.
  * Room stays behind the repository; Compose only observes state.
  */
-class NurseCommandCenterViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = NurseCommandCenterRepository(
-        DatabaseProvider.getDatabase(application)
-    )
+@HiltViewModel
+class NurseCommandCenterViewModel @Inject constructor(
+    private val repository: NurseCommandCenterRepository
+) : ViewModel() {
 
     private val _state = MutableStateFlow(NurseCommandCenterState())
     val state: StateFlow<NurseCommandCenterState> = _state.asStateFlow()
