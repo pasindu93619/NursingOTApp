@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material3.Card
@@ -30,7 +30,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -182,19 +181,27 @@ private fun NursingOsScoreCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = if (showDetails) ({ showDetails = false }) else ({ showDetails = true })),
+        modifier = Modifier.fillMaxWidth().clickable { showDetails = !showDetails },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column {
                     Text("NursingOS Score", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
                     Text("Work + finance + clinical + learning", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
                 Text("$score", fontSize = 28.sp, fontWeight = FontWeight.Black, color = accent)
             }
-            LinearProgressIndicator(progress = { (score / 100f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = accent)
+            LinearProgressIndicator(
+                progress = { (score / 100f).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+                color = accent
+            )
             if (showDetails) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = onFinance) { Text("Finance") }
@@ -212,20 +219,46 @@ private fun PrioritizedAgendaCard(
     onNavigate: (String) -> Unit,
     onCompleteClinicalTask: (Int, String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    val agendaItems: List<AgendaItem> = buildList {
+        state.urgentAction?.let(::add)
+        addAll(state.todayAgenda)
+        addAll(state.laterAgenda)
+    }.distinctBy { it.id }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Prioritized agenda", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            state.agendaItems.forEach { item: AgendaItem ->
+            agendaItems.forEach { item: AgendaItem ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { onNavigate(item.route) }.padding(vertical = 8.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (item.clinicalTaskId != null) {
+                                onCompleteClinicalTask(item.clinicalTaskId, item.title)
+                            } else {
+                                onNavigate(item.route)
+                            }
+                        }
+                        .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(item.title, fontWeight = FontWeight.Bold)
-                        Text(item.subtitle, fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text(item.detail, fontSize = 11.sp, color = Color(0xFF64748B))
                     }
                     Icon(Icons.Default.ChevronRight, contentDescription = "Open")
                 }
+            }
+            if (agendaItems.isEmpty()) {
+                Text(
+                    "No prioritized actions right now.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF64748B)
+                )
             }
         }
     }
@@ -233,13 +266,17 @@ private fun PrioritizedAgendaCard(
 
 @Composable
 private fun InsightCard(state: NurseCommandCenterState, onAction: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onAction), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5FF))) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onAction),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5FF))
+    ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFF2563EB))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("Today's insight", fontWeight = FontWeight.ExtraBold)
-                Text(state.insightText, fontSize = 12.sp, color = Color(0xFF475569))
+                Text(state.dailyInsight, fontSize = 12.sp, color = Color(0xFF475569))
             }
         }
     }
@@ -255,7 +292,11 @@ private fun SectionCard(
     actionLabel: String,
     onAction: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = Color(0xFF27187E))
@@ -264,7 +305,10 @@ private fun SectionCard(
             }
             Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Text(subtitle, fontSize = 12.sp, color = Color(0xFF64748B))
-            LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth()
+            )
             TextButton(onClick = onAction) { Text(actionLabel) }
         }
     }
