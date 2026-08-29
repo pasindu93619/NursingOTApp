@@ -1,10 +1,7 @@
 package com.pasindu.nursingotapp.ui
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
 import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
@@ -18,6 +15,8 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.logic.CalculationEngine
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,7 +61,8 @@ data class AdvancedFinanceUiState(
     val dutyProgress36Hours: Float get() = if (totalNormalHours <= 0.0) 0f else (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
 }
 
-class AdvancedFinanceViewModel(
+@HiltViewModel
+class AdvancedFinanceViewModel @Inject constructor(
     private val profileDao: ProfileDao,
     private val claimPeriodDao: ClaimPeriodDao,
     private val dailyEntryDao: DailyEntryDao,
@@ -221,24 +221,6 @@ class AdvancedFinanceViewModel(
             cleaned == "2" || cleaned == "II" -> "II"
             cleaned == "3" || cleaned == "III" -> "III"
             else -> value.trim().uppercase()
-        }
-    }
-
-    class Factory(private val context: Context) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(AdvancedFinanceViewModel::class.java)) {
-                val database = DatabaseProvider.getDatabase(context)
-                return AdvancedFinanceViewModel(
-                    database.profileDao(),
-                    database.claimPeriodDao(),
-                    database.dailyEntryDao(),
-                    database.payRateSettingsDao(),
-                    database.profileCompensationDao(),
-                    database.salaryStep2027Dao()
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }
 }
