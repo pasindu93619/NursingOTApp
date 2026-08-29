@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
@@ -86,7 +87,7 @@ enum class CardEffect { NONE, WAVE, PARTICLES, ECG, BUBBLES, PULSE_RINGS }
 fun HomeScreen(
     viewModel: NursingViewModel,
     onNavigate: (String) -> Unit,
-    commandCenterViewModel: NurseCommandCenterViewModel = viewModel()
+    commandCenterViewModel: NurseCommandCenterViewModel = hiltViewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     val commandState by commandCenterViewModel.state.collectAsState()
@@ -385,118 +386,101 @@ fun AnimatedDashboardCard(
     )
     val timePhase by infiniteTransition.animateFloat(
         0f, (2 * Math.PI).toFloat(),
-        infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart),
+        infiniteRepeatable(tween(3200, easing = LinearEasing), RepeatMode.Restart),
         label = "TimePhase"
     )
-    val shimmerPhase by infiniteTransition.animateFloat(
-        -0.4f, 1.4f,
-        infiniteRepeatable(tween(3600, easing = LinearEasing), RepeatMode.Restart),
-        label = "ShimmerPhase"
-    )
-
-    val cardShape = RoundedCornerShape(28.dp)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
-            .scale(if (effect != CardEffect.NONE) scale else 1f)
-            .clickable(onClick = onClick)
-            .shadow(16.dp, cardShape, spotColor = color.copy(alpha = 0.25f)),
-        shape = cardShape,
+            .scale(scale)
+            .clickable(enabled = !isSoon, onClick = onClick),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = color)
     ) {
         Box(Modifier.fillMaxSize()) {
-            Canvas(Modifier.fillMaxSize()) {
-                when (effect) {
-                    CardEffect.WAVE -> {
-                        val path = Path()
-                        val baseY = size.height * 0.65f
-                        for (x in 0..size.width.toInt() step 8) {
-                            val px = x.toFloat()
-                            val py = baseY + sin(px / 70f + timePhase) * 12f
-                            if (x == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            if (effect != CardEffect.NONE) {
+                Canvas(Modifier.fillMaxSize()) {
+                    when (effect) {
+                        CardEffect.PULSE_RINGS -> {
+                            repeat(3) { index ->
+                                val radius = size.minDimension * (0.30f + index * 0.12f) + (sin(timePhase + index) * 6f)
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.06f - index * 0.012f),
+                                    radius = radius,
+                                    center = Offset(size.width * 0.82f, size.height * 0.22f),
+                                    style = Stroke(width = 2f)
+                                )
+                            }
                         }
-                        drawPath(path, Color.White.copy(alpha = 0.18f), style = Stroke(3f, cap = StrokeCap.Round))
-                    }
-                    CardEffect.ECG -> {
-                        val path = Path()
-                        val baseY = size.height * 0.62f
-                        for (x in 0..size.width.toInt() step 10) {
-                            val px = x.toFloat()
-                            val phase = (px / size.width * 6.0 + timePhase * 0.3).toFloat()
-                            val pulse = if (sin(phase) > 0.94f) sin(phase * 11f) * 36f else 0f
-                            val py = baseY - pulse
-                            if (x == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                        CardEffect.WAVE -> {
+                            val path = Path()
+                            val baseY = size.height * 0.72f
+                            path.moveTo(0f, baseY)
+                            for (x in 0..size.width.toInt() step 20) {
+                                val xf = x.toFloat()
+                                val y = baseY + sin((xf / 90f) + timePhase) * 8f
+                                path.lineTo(xf, y)
+                            }
+                            drawPath(path, color = Color.White.copy(alpha = 0.10f), style = Stroke(width = 3f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                         }
-                        drawPath(path, Color.White.copy(alpha = 0.22f), style = Stroke(3f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    }
-                    CardEffect.PULSE_RINGS -> {
-                        val center = Offset(size.width * 0.82f, size.height * 0.46f)
-                        listOf(30f, 52f, 74f).forEachIndexed { index, radius ->
-                            val animatedRadius = radius + ((timePhase * 11f + index * 16f) % 20f)
-                            drawCircle(
-                                color = Color.White.copy(alpha = 0.15f - index * 0.035f),
-                                radius = animatedRadius,
-                                center = center,
-                                style = Stroke(2f)
-                            )
+                        CardEffect.PARTICLES -> {
+                            repeat(20) { index ->
+                                val px = ((index * 57) % 100) / 100f * size.width
+                                val py = (((index * 83) % 100) / 100f) * size.height
+                                val drift = sin(timePhase + index) * 5f
+                                drawCircle(Color.White.copy(alpha = 0.10f), 3f, Offset(px + drift, py))
+                            }
                         }
-                    }
-                    CardEffect.PARTICLES -> {
-                        repeat(18) { index ->
-                            val fx = ((index * 71f) % size.width) + cos(timePhase + index) * 10f
-                            val fy = ((index * 43f) % size.height) + sin(timePhase * 0.8f + index) * 12f
-                            drawCircle(Color.White.copy(alpha = 0.16f), radius = 3.5f, center = Offset(fx, fy))
+                        CardEffect.BUBBLES -> {
+                            repeat(6) { index ->
+                                val bx = size.width * (0.18f + index * 0.14f)
+                                val by = size.height * (0.15f + ((sin(timePhase + index) + 1f) / 2f) * 0.70f)
+                                drawCircle(Color.White.copy(alpha = 0.08f), 8f + index, Offset(bx, by))
+                            }
                         }
-                    }
-                    CardEffect.BUBBLES -> {
-                        repeat(6) { index ->
-                            val fx = size.width * (0.18f + index * 0.14f)
-                            val fy = size.height * (0.75f - ((timePhase * 0.07f + index * 0.11f) % 0.55f))
-                            drawCircle(Color.White.copy(alpha = 0.10f), 10f + index * 3f, Offset(fx, fy))
+                        CardEffect.ECG -> {
+                            val path = Path()
+                            val baseline = size.height * 0.62f
+                            path.moveTo(0f, baseline)
+                            for (x in 0..size.width.toInt() step 14) {
+                                val xf = x.toFloat()
+                                val wave = sin((xf / 30f) + timePhase) * 4f
+                                path.lineTo(xf, baseline + wave)
+                            }
+                            drawPath(path, color = Color.White.copy(alpha = 0.12f), style = Stroke(width = 2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                         }
+                        CardEffect.NONE -> Unit
                     }
-                    CardEffect.NONE -> Unit
-                }
-
-                val shimmerX = size.width * shimmerPhase
-                rotate(-18f, pivot = Offset(shimmerX, size.height / 2f)) {
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),
-                            start = Offset(-80f, 0f),
-                            end = Offset(80f, 0f)
-                        ),
-                        topLeft = Offset(shimmerX - 80f, -size.height),
-                        size = androidx.compose.ui.geometry.Size(160f, size.height * 3f)
-                    )
                 }
             }
 
             Column(
-                modifier = Modifier.fillMaxSize().padding(20.dp),
+                modifier = Modifier.fillMaxSize().padding(18.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Box(
-                    modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color.White.copy(alpha = 0.12f), CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = textColor, modifier = Modifier.size(28.dp))
+                    Icon(icon, contentDescription = null, tint = textColor, modifier = Modifier.size(24.dp))
                 }
 
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(title, color = textColor, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
                         if (isSoon) {
                             Spacer(Modifier.width(8.dp))
                             Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(10.dp)) {
-                                Text("SOON", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("SOON", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp))
                             }
                         }
                     }
-                    Spacer(Modifier.height(6.dp))
-                    Text(subtitle, color = textColor.copy(alpha = 0.84f), fontSize = 12.sp, lineHeight = 17.sp)
+                    Text(subtitle, color = textColor.copy(alpha = 0.82f), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
