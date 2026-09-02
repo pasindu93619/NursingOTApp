@@ -43,35 +43,24 @@ fun AppNavigation() {
         navController = navController,
         startDestination = "home",
         enterTransition = {
-            slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(animDuration)
-            ) + androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) +
+                androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
         },
         exitTransition = {
-            slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(animDuration)
-            ) + androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(animDuration)) +
+                androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
         },
         popEnterTransition = {
-            slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(animDuration)
-            ) + androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) +
+                androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
         },
         popExitTransition = {
-            slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(animDuration)
-            ) + androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(animDuration)) +
+                androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
         }
     ) {
         composable("home") {
-            HomeScreen(
-                viewModel = viewModel,
-                onNavigate = { route -> navController.navigate(route) }
-            )
+            HomeScreen(viewModel = viewModel, onNavigate = { route -> navController.navigate(route) })
         }
 
         composable("nurse_command_center") {
@@ -82,19 +71,14 @@ fun AppNavigation() {
         }
 
         composable("care_pulse") {
-            CarePulseScreen(
-                onNavigate = { route -> navController.navigate(route) },
-                onBack = { navController.popBackStack() }
-            )
+            CarePulseScreen(onNavigate = { route -> navController.navigate(route) }, onBack = { navController.popBackStack() })
         }
 
         composable("profile") {
             ProfileScreen(
                 viewModel = viewModel,
                 onNavigateToClaimPeriod = { _, _ ->
-                    navController.navigate("claim_period") {
-                        popUpTo("home") { inclusive = false }
-                    }
+                    navController.navigate("claim_period") { popUpTo("home") { inclusive = false } }
                 }
             )
         }
@@ -115,7 +99,6 @@ fun AppNavigation() {
 
         composable("advanced_finance_hub") {
             val advancedFinanceViewModel: AdvancedFinanceViewModel = hiltViewModel()
-
             AdvancedFinanceHubScreen(
                 viewModel = advancedFinanceViewModel,
                 onNavigate = { route -> navController.navigate(route) },
@@ -152,11 +135,7 @@ fun AppNavigation() {
 
         composable("iv_drip") {
             Scaffold { padding ->
-                IvDripCalculatorCard(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                )
+                IvDripCalculatorCard(modifier = Modifier.fillMaxSize().padding(padding))
             }
         }
 
@@ -166,15 +145,9 @@ fun AppNavigation() {
         composable("pediatric_rules") { PediatricRulesScreen() }
         composable("unit_conversions") { UnitConversionsScreen() }
         composable("special_calcs") { SpecialCalculationsScreen() }
-        composable("emergency_calcs") {
-            EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-        composable("icu_calculators") {
-            IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() })
-        }
-        composable("vasoactive_infusions") {
-            VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() })
-        }
+        composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("icu_calculators") { IcuCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("vasoactive_infusions") { VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() }) }
 
         composable(
             route = "daily_entry/{claimPeriodId}/{start}/{end}/{wardType}",
@@ -190,9 +163,7 @@ fun AppNavigation() {
             val end = backStackEntry.arguments?.getString("end") ?: ""
             val wardType = backStackEntry.arguments?.getString("wardType") ?: "Normal"
 
-            LaunchedEffect(claimPeriodId) {
-                viewModel.loadEntriesForClaim(claimPeriodId)
-            }
+            LaunchedEffect(claimPeriodId) { viewModel.loadEntriesForClaim(claimPeriodId) }
 
             DailyEntryScreen(
                 claimPeriodId = claimPeriodId,
@@ -204,18 +175,8 @@ fun AppNavigation() {
                 onGeneratePdfRequest = {
                     val dbLogs = viewModel.dailyLogs.value
                     val dbProfile = viewModel.userProfile.value
-
                     if (dbProfile != null) {
-                        val profile = UserProfile(
-                            dbProfile.fullName,
-                            dbProfile.serviceNo,
-                            dbProfile.unit,
-                            dbProfile.paySheetNo,
-                            dbProfile.grade,
-                            dbProfile.basicSalary,
-                            dbProfile.otRate
-                        )
-
+                        val profile = UserProfile(dbProfile.fullName, dbProfile.serviceNo, dbProfile.unit, dbProfile.paySheetNo, dbProfile.grade, dbProfile.basicSalary, dbProfile.otRate)
                         val logs = dbLogs.map { entity ->
                             DailyLog(
                                 id = entity.id,
@@ -234,14 +195,12 @@ fun AppNavigation() {
                                 computedOtHours = entity.otHours
                             )
                         }
-
                         val period = Period(LocalDate.parse(start), LocalDate.parse(end))
                         val totalNormalHrs = logs.sumOf { it.computedNormalHours.toDouble() }.toFloat()
                         val totalOtHrs = logs.sumOf { it.computedOtHours.toDouble() }.toFloat()
                         val phDays = logs.count { it.isPH }
                         val doDays = logs.count { it.isDO }
                         val dayRate = profile.basicSalary / 30.0
-
                         val summary = PeriodSummary(
                             totalNormalHrs,
                             totalOtHrs,
@@ -252,20 +211,12 @@ fun AppNavigation() {
                             doDays * dayRate,
                             (totalOtHrs * profile.otRate) + (phDays * dayRate) + (doDays * dayRate)
                         )
-
-                        val generator = PdfGenerator(context)
-                        generator.generateAndReturnFile(profile, logs, period, summary)
-                    } else {
-                        null
-                    }
+                        PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
+                    } else null
                 },
                 onSaveAndSharePdf = { file ->
                     FileShareUtils.savePdfToDownloads(context, file)
-                    val uri: Uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        file
-                    )
+                    val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/pdf"
                         putExtra(Intent.EXTRA_STREAM, uri)
