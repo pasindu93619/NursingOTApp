@@ -54,7 +54,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,72 +71,59 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pasindu.nursingotapp.ui.FinancialState
+import com.pasindu.nursingotapp.ui.AdvancedFinanceUiState
 import kotlin.math.max
-
-// ============================================================
-// PREMIUM FINANCIAL PALETTE
-// ============================================================
 
 private val Navy = Color(0xFF172554)
 private val Indigo = Color(0xFF4338CA)
 private val Violet = Color(0xFF7C3AED)
-
 private val Cyan = Color(0xFF06B6D4)
 private val Teal = Color(0xFF0F766E)
 private val Mint = Color(0xFF10B981)
-
 private val Orange = Color(0xFFF97316)
 private val Pink = Color(0xFFEC4899)
-
 private val Slate900 = Color(0xFF0F172A)
 private val Slate600 = Color(0xFF475569)
 private val Slate400 = Color(0xFF94A3B8)
-
 private val SurfaceSoft = Color(0xFFF7F8FC)
 private val Border = Color(0xFFE2E8F0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinancialDashboardScreen(
-    financialState: FinancialState,
+    financialState: AdvancedFinanceUiState,
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-
-    var basicSalary by remember { mutableStateOf("65000") }
-    var otRate by remember { mutableStateOf("650") }
-    var otHours by remember { mutableStateOf("24") }
-    var phHours by remember { mutableStateOf("8") }
-    var dutyHours by remember { mutableStateOf("176") }
+    var basicSalary by remember(financialState.currentBasicSalary) { mutableStateOf(financialState.currentBasicSalary.toString()) }
+    var otRate by remember(financialState.otRate) { mutableStateOf(financialState.otRate.toString()) }
+    var otHours by remember(financialState.totalOTHours) { mutableStateOf(financialState.totalOTHours.toString()) }
+    var phHours by remember(financialState.totalPHDays) { mutableStateOf((financialState.totalPHDays * 8.0).toString()) }
+    var dutyHours by remember(financialState.totalNormalHours) { mutableStateOf(financialState.totalNormalHours.toString()) }
     var workingDays by remember { mutableStateOf("22") }
-    var otherDeduction by remember { mutableStateOf("0") }
+    var otherDeduction by remember(financialState.otherDeduction) { mutableStateOf(financialState.otherDeduction.toString()) }
     var expandedSalaryMaker by remember { mutableStateOf(true) }
     var showHistory by remember { mutableStateOf(false) }
 
-    val basic = basicSalary.toDoubleOrNull() ?: 0.0
-    val rate = otRate.toDoubleOrNull() ?: 0.0
-    val ot = otHours.toDoubleOrNull() ?: 0.0
-    val ph = phHours.toDoubleOrNull() ?: 0.0
-    val duty = dutyHours.toDoubleOrNull() ?: 0.0
+    val basic = basicSalary.toDoubleOrNull() ?: financialState.currentBasicSalary
+    val rate = otRate.toDoubleOrNull() ?: financialState.otRate
+    val ot = otHours.toDoubleOrNull() ?: financialState.totalOTHours
+    val ph = phHours.toDoubleOrNull() ?: (financialState.totalPHDays * 8.0)
+    val duty = dutyHours.toDoubleOrNull() ?: financialState.totalNormalHours
     val days = workingDays.toDoubleOrNull() ?: 0.0
     val other = otherDeduction.toDoubleOrNull() ?: 0.0
 
-    val phRate = rate * 1.5
-    val otEarnings = ot * rate
+    val phRate = financialState.phRate
+    val otEarnings = financialState.otAmountRs
     val phEarnings = ph * phRate
-    val grossBeforeDeductions = basic + otEarnings + phEarnings
-    val fixedTax = financialState.apitTax
-    val fixedWop = financialState.wopDeduction
-    val totalDeductions = fixedTax + fixedWop + other
-    val estimatedNet = grossBeforeDeductions - totalDeductions
+    val grossBeforeDeductions = financialState.grossEarnings
+    val fixedTax = financialState.apit
+    val fixedWop = financialState.wop
+    val totalDeductions = fixedTax + fixedWop + financialState.loanDeduction + other
+    val estimatedNet = grossBeforeDeductions - financialState.loanDeduction - other
     val totalWorkedHours = duty + ot + ph
-
-    val history = financialState.historicalOvertimeEarnings.map { it.toDouble() }
-    val previousOt = history.dropLast(1).lastOrNull() ?: 0.0
-    val currentOt = history.lastOrNull() ?: otEarnings
-    val otTrend = if (previousOt == 0.0) 0.0 else ((currentOt - previousOt) / previousOt) * 100.0
+    val otTrend = 0.0
 
     Scaffold(
         topBar = {
@@ -157,69 +143,41 @@ fun FinancialDashboardScreen(
         containerColor = SurfaceSoft
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scrollState).padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HeroEarningsCard(net = estimatedNet, gross = grossBeforeDeductions, otEarnings = otEarnings, otTrend = otTrend)
-
-            SectionHeader(
-                eyebrow = "01  •  VISUAL INTERPRETATION",
-                title = "Past Month at a Glance",
-                subtitle = "See your OT, duty, PH and earnings in one place."
-            )
-
-            WorkSnapshotCard(
-                otHours = ot,
-                dutyHours = duty,
-                phHours = ph,
-                totalWorkedHours = totalWorkedHours,
-                otEarnings = otEarnings,
-                salary = basic
-            )
-
+            SectionHeader("01  •  VISUAL INTERPRETATION", "Past Month at a Glance", "See your OT, duty, PH and earnings in one place.")
+            WorkSnapshotCard(otHours = ot, dutyHours = duty, phHours = ph, totalWorkedHours = totalWorkedHours, otEarnings = otEarnings, salary = basic)
             Card(
                 modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Indigo)
                             Spacer(Modifier.width(10.dp))
                             Column {
-                                Text("6-Month Earnings Trajectory", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
-                                Text("Salary + allowances + OT", fontSize = 12.sp, color = Slate600)
+                                Text("Current Earnings Trajectory", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                                Text("Basic + allowances + OT", fontSize = 12.sp, color = Slate600)
                             }
                         }
                         Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFEEF2FF)) {
-                            Text("TREND", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Indigo)
+                            Text("LIVE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Indigo)
                         }
                     }
                     Spacer(Modifier.height(14.dp))
                     FinancialHistoryChart(
-                        basic = financialState.historicalBasicSalaries,
-                        allowances = financialState.historicalAllowances,
-                        overtime = financialState.historicalOvertimeEarnings,
+                        basic = listOf(basic.toFloat()),
+                        allowances = listOf((financialState.riskAllowance + financialState.claAllowance + financialState.additionalAllowancesTotal).toFloat()),
+                        overtime = listOf(otEarnings.toFloat()),
                         modifier = Modifier.fillMaxWidth().height(220.dp)
                     )
                 }
             }
-
-            SectionHeader(
-                eyebrow = "02  •  TOTAL SALARY MAKER",
-                title = "Build Your Monthly Salary",
-                subtitle = "Basic salary is your starting point; monthly items can change."
-            )
-
+            SectionHeader("02  •  TOTAL SALARY MAKER", "Build Your Monthly Salary", "Basic salary is your starting point; monthly items can change.")
             SalaryMakerCard(
                 expanded = expandedSalaryMaker,
                 onExpand = { expandedSalaryMaker = !expandedSalaryMaker },
@@ -246,35 +204,11 @@ fun FinancialDashboardScreen(
                 otherDeductionAmount = other,
                 net = estimatedNet
             )
-
-            VariableDeductionCard(
-                value = otherDeduction,
-                onValueChange = { otherDeduction = it },
-                tax = fixedTax,
-                wop = fixedWop,
-                total = totalDeductions
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                CompactToolCard(
-                    title = "Loan Amortization",
-                    subtitle = "Plan repayments",
-                    icon = Icons.Default.Calculate,
-                    accent = Violet,
-                    onClick = { onNavigate("loan_aggregator") }
-                )
-                CompactToolCard(
-                    title = "Monthly Record",
-                    subtitle = "Review this month",
-                    icon = Icons.Default.CalendarMonth,
-                    accent = Cyan,
-                    onClick = { showHistory = !showHistory }
-                )
+            VariableDeductionCard(value = otherDeduction, onValueChange = { otherDeduction = it }, tax = fixedTax, wop = fixedWop, total = totalDeductions)
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CompactToolCard("Loan Amortization", "Plan repayments", Icons.Default.Calculate, Violet) { onNavigate("loan_aggregator") }
+                CompactToolCard("Monthly Record", "Review this month", Icons.Default.CalendarMonth, Cyan) { showHistory = !showHistory }
             }
-
             AnimatedVisibility(
                 visible = showHistory,
                 enter = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
@@ -291,32 +225,8 @@ fun FinancialDashboardScreen(
                     workingDays = days
                 )
             }
-
-            Text(
-                text = "Tip: deductions should stay editable because they can vary from month to month.",
-                fontSize = 12.sp,
-                color = Slate600,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-
+            Text("Tip: deductions should stay editable because they can vary from month to month.", fontSize = 12.sp, color = Slate600, modifier = Modifier.padding(horizontal = 4.dp))
             Spacer(Modifier.height(24.dp))
         }
     }
 }
-
-@Composable
-private fun HeroEarningsCard(net: Double, gross: Double, otEarnings: Double, otTrend: Double) { /* existing implementation */ }
-@Composable
-private fun SectionHeader(eyebrow: String, title: String, subtitle: String) { /* existing implementation */ }
-@Composable
-private fun WorkSnapshotCard(otHours: Double, dutyHours: Double, phHours: Double, totalWorkedHours: Double, otEarnings: Double, salary: Double) { /* existing implementation */ }
-@Composable
-private fun SalaryMakerCard(expanded: Boolean, onExpand: () -> Unit, basicSalary: String, onBasicSalaryChange: (String) -> Unit, otRate: String, onOtRateChange: (String) -> Unit, otHours: String, onOtHoursChange: (String) -> Unit, phHours: String, onPhHoursChange: (String) -> Unit, dutyHours: String, onDutyHoursChange: (String) -> Unit, workingDays: String, onWorkingDaysChange: (String) -> Unit, otherDeduction: String, onOtherDeductionChange: (String) -> Unit, phRate: Double, otEarnings: Double, phEarnings: Double, gross: Double, tax: Double, wop: Double, otherDeductionAmount: Double, net: Double) { /* existing implementation */ }
-@Composable
-private fun VariableDeductionCard(value: String, onValueChange: (String) -> Unit, tax: Double, wop: Double, total: Double) { /* existing implementation */ }
-@Composable
-private fun CompactToolCard(title: String, subtitle: String, icon: ImageVector, accent: Color, onClick: () -> Unit) { /* existing implementation */ }
-@Composable
-private fun MonthlyRecordPreview(basicSalary: Double, otHours: Double, dutyHours: Double, phHours: Double, gross: Double, net: Double, deductions: Double, workingDays: Double) { /* existing implementation */ }
-@Composable
-private fun FinancialHistoryChart(basic: List<Float>, allowances: List<Float>, overtime: List<Float>, modifier: Modifier) { /* existing implementation */ }
