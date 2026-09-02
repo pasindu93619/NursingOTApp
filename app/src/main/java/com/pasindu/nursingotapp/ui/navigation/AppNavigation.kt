@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,7 +33,7 @@ import java.time.LocalDate
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val viewModel: NursingViewModel = viewModel()
+    val viewModel: NursingViewModel = hiltViewModel()
     val context = LocalContext.current
 
     val animDuration = 350
