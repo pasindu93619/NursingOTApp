@@ -3,7 +3,6 @@ package com.pasindu.nursingotapp.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,8 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.ui.ClinicalPlanningViewModel
 import com.pasindu.nursingotapp.ui.components.BurnoutMeterCard
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +47,8 @@ fun ClinicalPlanningDashboardScreen(
     var taskPriority by remember { mutableStateOf("HIGH") }
     var bypassDnd by remember { mutableStateOf(true) }
 
+    val today = LocalDate.now()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -72,10 +72,20 @@ fun ClinicalPlanningDashboardScreen(
         containerColor = Color(0xFFF8FAFC)
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            BurnoutMeterCard()
+            BurnoutMeterCard(
+                startDate = today.minusDays(6),
+                endDate = today,
+                avgWeeklyHours = 0f,
+                consecutiveNightShifts = 0,
+                suggestionText = "Add duty information to see workload and recovery guidance."
+            )
 
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -136,7 +146,12 @@ fun ClinicalPlanningDashboardScreen(
                 TextButton(onClick = {
                     viewModel.addIsbarNote(patientId, identification, situation, background, assessment, recommendation)
                     showAddNoteDialog = false
-                    patientId = ""; identification = ""; situation = ""; background = ""; assessment = ""; recommendation = ""
+                    patientId = ""
+                    identification = ""
+                    situation = ""
+                    background = ""
+                    assessment = ""
+                    recommendation = ""
                 }) { Text("Save") }
             },
             dismissButton = { TextButton(onClick = { showAddNoteDialog = false }) { Text("Cancel") } }
@@ -162,7 +177,10 @@ fun ClinicalPlanningDashboardScreen(
                 TextButton(onClick = {
                     viewModel.addTask(taskName, taskDesc, taskPriority, System.currentTimeMillis(), bypassDnd)
                     showAddTaskDialog = false
-                    taskName = ""; taskDesc = ""; taskPriority = "HIGH"; bypassDnd = true
+                    taskName = ""
+                    taskDesc = ""
+                    taskPriority = "HIGH"
+                    bypassDnd = true
                 }) { Text("Save") }
             },
             dismissButton = { TextButton(onClick = { showAddTaskDialog = false }) { Text("Cancel") } }
