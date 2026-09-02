@@ -1,12 +1,11 @@
-
 package com.pasindu.nursingotapp.ui.screens
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -72,7 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pasindu.nursingotapp.ui.FinancialViewModel
+import com.pasindu.nursingotapp.ui.FinancialState
 import kotlin.math.max
 
 // ============================================================
@@ -104,12 +103,10 @@ private val Border = Color(0xFFE2E8F0)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinancialDashboardScreen(
-    viewModel: FinancialViewModel,
+    financialState: FinancialState,
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
-
-    val financialState by viewModel.financialState.collectAsState()
 
     val scrollState = rememberScrollState()
 // ========================================================
@@ -157,114 +154,53 @@ fun FinancialDashboardScreen(
     // LIVE INPUT PARSING
     // ========================================================
 
-    val basic =
-        basicSalary.toDoubleOrNull() ?: 0.0
-
-    val rate =
-        otRate.toDoubleOrNull() ?: 0.0
-
-    val ot =
-        otHours.toDoubleOrNull() ?: 0.0
-
-    val ph =
-        phHours.toDoubleOrNull() ?: 0.0
-
-    val duty =
-        dutyHours.toDoubleOrNull() ?: 0.0
-
-    val days =
-        workingDays.toDoubleOrNull() ?: 0.0
-
-    val other =
-        otherDeduction.toDoubleOrNull() ?: 0.0
+    val basic = basicSalary.toDoubleOrNull() ?: 0.0
+    val rate = otRate.toDoubleOrNull() ?: 0.0
+    val ot = otHours.toDoubleOrNull() ?: 0.0
+    val ph = phHours.toDoubleOrNull() ?: 0.0
+    val duty = dutyHours.toDoubleOrNull() ?: 0.0
+    val days = workingDays.toDoubleOrNull() ?: 0.0
+    val other = otherDeduction.toDoubleOrNull() ?: 0.0
 
     // ========================================================
     // UI-SIDE ESTIMATE
     // Connect to official payroll rules later
     // ========================================================
 
-    val phRate =
-        rate * 1.5
-
-    val otEarnings =
-        ot * rate
-
-    val phEarnings =
-        ph * phRate
-
-    val grossBeforeDeductions =
-        basic +
-                otEarnings +
-                phEarnings
-
-    val fixedTax =
-        financialState.apitTax
-
-    val fixedWop =
-        financialState.wopDeduction
-
-    val totalDeductions =
-        fixedTax +
-                fixedWop +
-                other
-
-    val estimatedNet =
-        grossBeforeDeductions -
-                totalDeductions
-
-    val totalWorkedHours =
-        duty +
-                ot +
-                ph
+    val phRate = rate * 1.5
+    val otEarnings = ot * rate
+    val phEarnings = ph * phRate
+    val grossBeforeDeductions = basic + otEarnings + phEarnings
+    val fixedTax = financialState.apitTax
+    val fixedWop = financialState.wopDeduction
+    val totalDeductions = fixedTax + fixedWop + other
+    val estimatedNet = grossBeforeDeductions - totalDeductions
+    val totalWorkedHours = duty + ot + ph
 
     // ========================================================
     // OT TREND
     // ========================================================
 
-    val history =
-        financialState
-            .historicalOvertimeEarnings
-            .map { it.toDouble() }
-
-    val previousOt =
-        history
-            .dropLast(1)
-            .lastOrNull() ?: 0.0
-
-    val currentOt =
-        history
-            .lastOrNull()
-            ?: otEarnings
-
-    val otTrend =
-        if (previousOt == 0.0) {
-            0.0
-        } else {
-            ((currentOt - previousOt) /
-                    previousOt) * 100.0
-        }
+    val history = financialState.historicalOvertimeEarnings.map { it.toDouble() }
+    val previousOt = history.dropLast(1).lastOrNull() ?: 0.0
+    val currentOt = history.lastOrNull() ?: otEarnings
+    val otTrend = if (previousOt == 0.0) 0.0 else ((currentOt - previousOt) / previousOt) * 100.0
 
     // ========================================================
     // SCREEN
     // ========================================================
 
     Scaffold(
-
         topBar = {
-
             TopAppBar(
-
                 title = {
-
                     Column {
-
                         Text(
                             text = "Financial Dashboard",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 20.sp,
                             color = Slate900
                         )
-
                         Text(
                             text = "OT • Duty • Salary",
                             fontSize = 11.sp,
@@ -273,51 +209,24 @@ fun FinancialDashboardScreen(
                         )
                     }
                 },
-
                 navigationIcon = {
-
-                    IconButton(
-                        onClick = onBack
-                    ) {
-
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-
-                colors =
-                    TopAppBarDefaults
-                        .topAppBarColors(
-                            containerColor = Color.White
-                        )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
-
         containerColor = SurfaceSoft
-
     ) { innerPadding ->
-
         Column(
-
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
-                .padding(
-                    horizontal = 16.dp,
-                    vertical = 14.dp
-                ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // =================================================
-            // HERO CARD
-            // =================================================
-
             HeroEarningsCard(
                 net = estimatedNet,
                 gross = grossBeforeDeductions,
@@ -325,111 +234,44 @@ fun FinancialDashboardScreen(
                 otTrend = otTrend
             )
 
-            // =================================================
-            // SECTION 01
-            // =================================================
-
             SectionHeader(
-
-                eyebrow =
-                    "01  •  VISUAL INTERPRETATION",
-
-                title =
-                    "Past Month at a Glance",
-
-                subtitle =
-                    "See your OT, duty, PH and earnings in one place."
+                eyebrow = "01  •  VISUAL INTERPRETATION",
+                title = "Past Month at a Glance",
+                subtitle = "See your OT, duty, PH and earnings in one place."
             )
-
-            // =================================================
-            // WORK SNAPSHOT
-            // =================================================
 
             WorkSnapshotCard(
-
-                otHours =
-                    ot,
-
-                dutyHours =
-                    duty,
-
-                phHours =
-                    ph,
-
-                totalWorkedHours =
-                    totalWorkedHours,
-
-                otEarnings =
-                    otEarnings,
-
-                salary =
-                    basic
+                otHours = ot,
+                dutyHours = duty,
+                phHours = ph,
+                totalWorkedHours = totalWorkedHours,
+                otEarnings = otEarnings,
+                salary = basic
             )
 
-            // =================================================
-            // SIX MONTH VICO CHART
-            // =================================================
-
             Card(
-
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(
-                        8.dp,
-                        RoundedCornerShape(24.dp)
-                    ),
-
-                shape =
-                    RoundedCornerShape(24.dp),
-
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = Color.White
-                    )
+                    .shadow(8.dp, RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-
-                Column(
-                    modifier =
-                        Modifier.padding(18.dp)
-                ) {
-
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        verticalAlignment =
-                            Alignment.CenterVertically,
-
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween
-
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-
-                        Row(
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-
-                            Icon(
-                                Icons.Default.AccountBalance,
-                                contentDescription = null,
-                                tint = Indigo
-                            )
-
-                            Spacer(
-                                Modifier.width(10.dp)
-                            )
-
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Indigo)
+                            Spacer(Modifier.width(10.dp))
                             Column {
-
                                 Text(
                                     "6-Month Earnings Trajectory",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Slate900
                                 )
-
                                 Text(
                                     "Salary + allowances + OT",
                                     fontSize = 12.sp,
@@ -437,313 +279,112 @@ fun FinancialDashboardScreen(
                                 )
                             }
                         }
-
-                        Surface(
-
-                            shape =
-                                RoundedCornerShape(12.dp),
-
-                            color =
-                                Color(0xFFEEF2FF)
-                        ) {
-
+                        Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFEEF2FF)) {
                             Text(
                                 "TREND",
-
-                                modifier =
-                                    Modifier.padding(
-                                        horizontal = 10.dp,
-                                        vertical = 6.dp
-                                    ),
-
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 fontSize = 10.sp,
-                                fontWeight =
-                                    FontWeight.ExtraBold,
-
-                                color =
-                                    Indigo
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Indigo
                             )
                         }
                     }
-
-                    Spacer(
-                        Modifier.height(14.dp)
-                    )
+                    Spacer(Modifier.height(14.dp))
                     FinancialHistoryChart(
                         basic = financialState.historicalBasicSalaries,
                         allowances = financialState.historicalAllowances,
                         overtime = financialState.historicalOvertimeEarnings,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
+                        modifier = Modifier.fillMaxWidth().height(220.dp)
                     )
                 }
             }
 
-            // =================================================
-            // SECTION 02
-            // =================================================
-
             SectionHeader(
-
-                eyebrow =
-                    "02  •  TOTAL SALARY MAKER",
-
-                title =
-                    "Build Your Monthly Salary",
-
-                subtitle =
-                    "Basic salary is your starting point; monthly items can change."
+                eyebrow = "02  •  TOTAL SALARY MAKER",
+                title = "Build Your Monthly Salary",
+                subtitle = "Basic salary is your starting point; monthly items can change."
             )
-
-            // =================================================
-            // SALARY MAKER
-            // =================================================
 
             SalaryMakerCard(
-
-                expanded =
-                    expandedSalaryMaker,
-
-                onExpand = {
-                    expandedSalaryMaker =
-                        !expandedSalaryMaker
-                },
-
-                basicSalary =
-                    basicSalary,
-
-                onBasicSalaryChange = {
-                    basicSalary = it
-                },
-
-                otRate =
-                    otRate,
-
-                onOtRateChange = {
-                    otRate = it
-                },
-
-                otHours =
-                    otHours,
-
-                onOtHoursChange = {
-                    otHours = it
-                },
-
-                phHours =
-                    phHours,
-
-                onPhHoursChange = {
-                    phHours = it
-                },
-
-                dutyHours =
-                    dutyHours,
-
-                onDutyHoursChange = {
-                    dutyHours = it
-                },
-
-                workingDays =
-                    workingDays,
-
-                onWorkingDaysChange = {
-                    workingDays = it
-                },
-
-                otherDeduction =
-                    otherDeduction,
-
-                onOtherDeductionChange = {
-                    otherDeduction = it
-                },
-
-                phRate =
-                    phRate,
-
-                otEarnings =
-                    otEarnings,
-
-                phEarnings =
-                    phEarnings,
-
-                gross =
-                    grossBeforeDeductions,
-
-                tax =
-                    fixedTax,
-
-                wop =
-                    fixedWop,
-
-                otherDeductionAmount =
-                    other,
-
-                net =
-                    estimatedNet
+                expanded = expandedSalaryMaker,
+                onExpand = { expandedSalaryMaker = !expandedSalaryMaker },
+                basicSalary = basicSalary,
+                onBasicSalaryChange = { basicSalary = it },
+                otRate = otRate,
+                onOtRateChange = { otRate = it },
+                otHours = otHours,
+                onOtHoursChange = { otHours = it },
+                phHours = phHours,
+                onPhHoursChange = { phHours = it },
+                dutyHours = dutyHours,
+                onDutyHoursChange = { dutyHours = it },
+                workingDays = workingDays,
+                onWorkingDaysChange = { workingDays = it },
+                otherDeduction = otherDeduction,
+                onOtherDeductionChange = { otherDeduction = it },
+                phRate = phRate,
+                otEarnings = otEarnings,
+                phEarnings = phEarnings,
+                gross = grossBeforeDeductions,
+                tax = fixedTax,
+                wop = fixedWop,
+                otherDeductionAmount = other,
+                net = estimatedNet
             )
-
-            // =================================================
-            // VARIABLE DEDUCTIONS
-            // =================================================
 
             VariableDeductionCard(
-
-                value =
-                    otherDeduction,
-
-                onValueChange = {
-                    otherDeduction = it
-                },
-
-                tax =
-                    fixedTax,
-
-                wop =
-                    fixedWop,
-
-                total =
-                    totalDeductions
+                value = otherDeduction,
+                onValueChange = { otherDeduction = it },
+                tax = fixedTax,
+                wop = fixedWop,
+                total = totalDeductions
             )
 
-            // =================================================
-            // TOOL CARDS
-            // =================================================
-
             Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(
-                            rememberScrollState()
-                        ),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
                 CompactToolCard(
-
-                    title =
-                        "Loan Amortization",
-
-                    subtitle =
-                        "Plan repayments",
-
-                    icon =
-                        Icons.Default.Calculate,
-
-                    accent =
-                        Violet,
-
-                    onClick = {
-                        onNavigate(
-                            "loan_aggregator"
-                        )
-                    }
+                    title = "Loan Amortization",
+                    subtitle = "Plan repayments",
+                    icon = Icons.Default.Calculate,
+                    accent = Violet,
+                    onClick = { onNavigate("loan_aggregator") }
                 )
-
                 CompactToolCard(
-
-                    title =
-                        "Monthly Record",
-
-                    subtitle =
-                        "Review this month",
-
-                    icon =
-                        Icons.Default.CalendarMonth,
-
-                    accent =
-                        Cyan,
-
-                    onClick = {
-                        showHistory =
-                            !showHistory
-                    }
+                    title = "Monthly Record",
+                    subtitle = "Review this month",
+                    icon = Icons.Default.CalendarMonth,
+                    accent = Cyan,
+                    onClick = { showHistory = !showHistory }
                 )
             }
 
-            // =================================================
-            // MONTHLY RECORD
-            // =================================================
-
             AnimatedVisibility(
-
-                visible =
-                    showHistory,
-
-                enter =
-                    fadeIn(
-                        tween(250)
-                    ) +
-                            slideInVertically(
-                                tween(300)
-                            ) {
-                                it / 2
-                            },
-
-                exit =
-                    fadeOut(
-                        tween(200)
-                    ) +
-                            slideOutVertically(
-                                tween(200)
-                            ) {
-                                it / 2
-                            }
-
+                visible = showHistory,
+                enter = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
+                exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 }
             ) {
-
                 MonthlyRecordPreview(
-
-                    basicSalary =
-                        basic,
-
-                    otHours =
-                        ot,
-
-                    dutyHours =
-                        duty,
-
-                    phHours =
-                        ph,
-
-                    gross =
-                        grossBeforeDeductions,
-
-                    net =
-                        estimatedNet,
-
-                    deductions =
-                        totalDeductions,
-
-                    workingDays =
-                        days
+                    basicSalary = basic,
+                    otHours = ot,
+                    dutyHours = duty,
+                    phHours = ph,
+                    gross = grossBeforeDeductions,
+                    net = estimatedNet,
+                    deductions = totalDeductions,
+                    workingDays = days
                 )
             }
 
             Text(
-                text =
-                    "Tip: deductions should stay editable because they can vary from month to month.",
-
-                fontSize =
-                    12.sp,
-
-                color =
-                    Slate600,
-
-                modifier =
-                    Modifier.padding(
-                        horizontal = 4.dp
-                    )
+                text = "Tip: deductions should stay editable because they can vary from month to month.",
+                fontSize = 12.sp,
+                color = Slate600,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
 
-            Spacer(
-                Modifier.height(24.dp)
-            )
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -753,1940 +394,283 @@ fun FinancialDashboardScreen(
 // ============================================================
 
 @Composable
-private fun HeroEarningsCard(
-
-    net: Double,
-
-    gross: Double,
-
-    otEarnings: Double,
-
-    otTrend: Double
-) {
-
-    val animatedNet by
-    animateFloatAsState(
-
-        targetValue =
-            net.toFloat(),
-
-        animationSpec =
-            tween(
-                900,
-                easing =
-                    FastOutSlowInEasing
-            ),
-
-        label =
-            "netEarnings"
-    )
-
+private fun HeroEarningsCard(net: Double, gross: Double, otEarnings: Double, otTrend: Double) {
     Card(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(
-                    12.dp,
-                    RoundedCornerShape(28.dp)
-                ),
-
-        shape =
-            RoundedCornerShape(28.dp),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color.Transparent
-            )
+        modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-
         Box(
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(
-
-                        Brush.linearGradient(
-                            listOf(
-                                Navy,
-                                Indigo,
-                                Violet
-                            )
-                        ),
-
-                        RoundedCornerShape(28.dp)
-                    )
-                    .padding(20.dp)
+            modifier = Modifier
+                .background(Brush.linearGradient(listOf(Navy, Indigo, Violet)))
+                .padding(20.dp)
         ) {
-
-            Column {
-
-                Row(
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    horizontalArrangement =
-                        Arrangement.SpaceBetween,
-
-                    verticalAlignment =
-                        Alignment.Top
-
-                ) {
-
-                    Column {
-
-                        Text(
-                            "ESTIMATED TAKE-HOME",
-                            color =
-                                Color.White.copy(
-                                    alpha = .72f
-                                ),
-                            fontSize = 11.sp,
-                            fontWeight =
-                                FontWeight.ExtraBold,
-                            letterSpacing = 1.2.sp
-                        )
-
-                        Spacer(
-                            Modifier.height(6.dp)
-                        )
-
-                        AnimatedContent(
-
-                            targetState =
-                                animatedNet,
-
-                            label =
-                                "netCounter"
-                        ) { value ->
-
-                            Text(
-                                "Rs. ${formatMoney(value.toDouble())}",
-                                color =
-                                    Color.White,
-                                fontSize =
-                                    32.sp,
-                                fontWeight =
-                                    FontWeight.Black
-                            )
-                        }
-                    }
-
-                    Box(
-
-                        modifier =
-                            Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.White.copy(
-                                        alpha = .14f
-                                    )
-                                ),
-
-                        contentAlignment =
-                            Alignment.Center
-                    ) {
-
-                        Icon(
-
-                            Icons.Default.Savings,
-
-                            contentDescription =
-                                null,
-
-                            tint =
-                                Color.White,
-
-                            modifier =
-                                Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                Spacer(
-                    Modifier.height(18.dp)
-                )
-
-                Divider(
-                    color =
-                        Color.White.copy(
-                            alpha = .13f
-                        )
-                )
-
-                Spacer(
-                    Modifier.height(14.dp)
-                )
-
-                Row(
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    horizontalArrangement =
-                        Arrangement.spacedBy(8.dp)
-                ) {
-
-                    HeroMiniMetric(
-                        "Gross",
-                        "Rs. ${formatMoney(gross)}",
-                        Modifier.weight(1f)
-                    )
-
-                    HeroMiniMetric(
-                        "OT",
-                        "Rs. ${formatMoney(otEarnings)}",
-                        Modifier.weight(1f)
-                    )
-
-                    HeroMiniMetric(
-                        "Trend",
-                        "${if (otTrend >= 0) "+" else ""}${otTrend.formatOne()}%",
-                        Modifier.weight(1f)
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("ESTIMATED NET", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = 0.78f))
+                Text(formatCurrency(net), fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MetricPill("Gross", gross, Color.White.copy(alpha = 0.15f))
+                    MetricPill("OT", otEarnings, Color.White.copy(alpha = 0.15f))
+                    MetricPill("Trend", otTrend, Color.White.copy(alpha = 0.15f), percent = true)
                 }
             }
         }
     }
 }
 
-// ============================================================
-
 @Composable
-private fun HeroMiniMetric(
-
-    title: String,
-
-    value: String,
-
-    modifier: Modifier =
-        Modifier
-) {
-
-    Column(
-        modifier =
-            modifier
-    ) {
-
-        Text(
-            title,
-            color =
-                Color.White.copy(
-                    alpha = .62f
-                ),
-            fontSize = 10.sp,
-            fontWeight =
-                FontWeight.SemiBold
-        )
-
-        Spacer(
-            Modifier.height(3.dp)
-        )
-
-        Text(
-            value,
-            color =
-                Color.White,
-            fontSize = 13.sp,
-            fontWeight =
-                FontWeight.Bold
-        )
-    }
-}
-
-// ============================================================
-// SECTION HEADER
-// ============================================================
-
-@Composable
-private fun SectionHeader(
-
-    eyebrow: String,
-
-    title: String,
-
-    subtitle: String
-) {
-
-    Column(
-        modifier =
-            Modifier.padding(
-                horizontal = 2.dp
+private fun MetricPill(label: String, value: Double, background: Color, percent: Boolean = false) {
+    Surface(shape = RoundedCornerShape(16.dp), color = background) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
+            Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
+            Text(
+                if (percent) String.format("%+.1f%%", value) else formatCurrency(value),
+                fontSize = 12.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
-    ) {
-
-        Text(
-            eyebrow,
-            color =
-                Indigo,
-            fontSize =
-                10.sp,
-            fontWeight =
-                FontWeight.ExtraBold,
-            letterSpacing =
-                1.1.sp
-        )
-
-        Spacer(
-            Modifier.height(4.dp)
-        )
-
-        Text(
-            title,
-            color =
-                Slate900,
-            fontSize =
-                22.sp,
-            fontWeight =
-                FontWeight.Black
-        )
-
-        Spacer(
-            Modifier.height(3.dp)
-        )
-
-        Text(
-            subtitle,
-            color =
-                Slate600,
-            fontSize =
-                12.sp
-        )
+        }
     }
 }
 
-// ============================================================
-// WORK SNAPSHOT
-// ============================================================
+@Composable
+private fun SectionHeader(eyebrow: String, title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(eyebrow, fontSize = 10.sp, color = Indigo, fontWeight = FontWeight.ExtraBold)
+        Text(title, fontSize = 20.sp, color = Slate900, fontWeight = FontWeight.ExtraBold)
+        Text(subtitle, fontSize = 12.sp, color = Slate600)
+    }
+}
 
 @Composable
 private fun WorkSnapshotCard(
-
     otHours: Double,
-
     dutyHours: Double,
-
     phHours: Double,
-
     totalWorkedHours: Double,
-
     otEarnings: Double,
-
     salary: Double
 ) {
-
-    val total =
-        max(
-            totalWorkedHours,
-            1.0
-        )
-
-    val dutyFraction =
-        (dutyHours / total)
-            .toFloat()
-            .coerceIn(
-                0f,
-                1f
-            )
-
-    val otFraction =
-        (otHours / total)
-            .toFloat()
-            .coerceIn(
-                0f,
-                1f
-            )
-
-    val phFraction =
-        (phHours / total)
-            .toFloat()
-            .coerceIn(
-                0f,
-                1f
-            )
-
     Card(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(
-                    8.dp,
-                    RoundedCornerShape(24.dp)
-                ),
-
-        shape =
-            RoundedCornerShape(24.dp),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color.White
-            )
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Border)
     ) {
-
-        Column(
-
-            modifier =
-                Modifier.padding(18.dp)
-        ) {
-
-            Row(
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Surface(
-
-                    shape =
-                        RoundedCornerShape(14.dp),
-
-                    color =
-                        Color(0xFFECFEFF)
-                ) {
-
-                    Icon(
-
-                        Icons.Default.Schedule,
-
-                        contentDescription =
-                            null,
-
-                        tint =
-                            Cyan,
-
-                        modifier =
-                            Modifier
-                                .padding(10.dp)
-                                .size(22.dp)
-                    )
-                }
-
-                Spacer(
-                    Modifier.width(10.dp)
-                )
-
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                SnapshotMetric("Duty", "%.1f h".format(dutyHours), Icons.Default.Schedule, Navy)
+                SnapshotMetric("OT", "%.1f h".format(otHours), Icons.Default.MoreTime, Orange)
+                SnapshotMetric("PH", "%.1f h".format(phHours), Icons.Default.Payments, Mint)
+                SnapshotMetric("Total", "%.1f h".format(totalWorkedHours), Icons.Default.Savings, Violet)
+            }
+            Divider()
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-
-                    Text(
-                        "Workload interpretation",
-                        fontWeight =
-                            FontWeight.ExtraBold,
-                        fontSize =
-                            16.sp,
-                        color =
-                            Slate900
-                    )
-
-                    Text(
-                        "Past month • OT + duty + PH",
-                        fontSize =
-                            12.sp,
-                        color =
-                            Slate600
-                    )
+                    Text("Basic salary", fontSize = 11.sp, color = Slate600)
+                    Text(formatCurrency(salary), fontSize = 15.sp, color = Slate900, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("OT earnings", fontSize = 11.sp, color = Slate600)
+                    Text(formatCurrency(otEarnings), fontSize = 15.sp, color = Indigo, fontWeight = FontWeight.Bold)
                 }
             }
-
-            Spacer(
-                Modifier.height(16.dp)
-            )
-
-            StackedHourBar(
-                dutyFraction,
-                otFraction,
-                phFraction
-            )
-
-            Spacer(
-                Modifier.height(10.dp)
-            )
-
-            Row(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(14.dp)
-            ) {
-
-                LegendDot(
-                    "Duty",
-                    Teal,
-                    "${dutyHours.formatOne()} h"
-                )
-
-                LegendDot(
-                    "OT",
-                    Orange,
-                    "${otHours.formatOne()} h"
-                )
-
-                LegendDot(
-                    "PH",
-                    Pink,
-                    "${phHours.formatOne()} h"
-                )
-            }
-
-            Spacer(
-                Modifier.height(18.dp)
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(10.dp)
-            ) {
-
-                InsightCard(
-                    "Total Hours",
-                    "${totalWorkedHours.formatOne()} h",
-                    Icons.Default.MoreTime,
-                    Indigo,
-                    Modifier.weight(1f)
-                )
-
-                InsightCard(
-                    "OT Money",
-                    "Rs. ${formatMoney(otEarnings)}",
-                    Icons.Default.Payments,
-                    Orange,
-                    Modifier.weight(1f)
-                )
-
-                InsightCard(
-                    "Basic",
-                    "Rs. ${formatMoney(salary)}",
-                    Icons.Default.CurrencyExchange,
-                    Mint,
-                    Modifier.weight(1f)
-                )
-            }
         }
     }
 }
-
-// ============================================================
-// ANIMATED WORKLOAD BAR
-// ============================================================
 
 @Composable
-private fun StackedHourBar(
-
-    dutyFraction: Float,
-
-    otFraction: Float,
-
-    phFraction: Float
-) {
-
-    val dutyAnim by
-    animateFloatAsState(
-        dutyFraction,
-        tween(850),
-        label =
-            "dutyBar"
-    )
-
-    val otAnim by
-    animateFloatAsState(
-        otFraction,
-        tween(900),
-        label =
-            "otBar"
-    )
-
-    val phAnim by
-    animateFloatAsState(
-        phFraction,
-        tween(950),
-        label =
-            "phBar"
-    )
-
-    Canvas(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(22.dp)
-                .clip(
-                    RoundedCornerShape(
-                        12.dp
-                    )
-                )
-    ) {
-
-        val width =
-            size.width
-
-        drawRoundRect(
-
-            color =
-                Color(0xFFEFF2F7),
-
-            cornerRadius =
-                CornerRadius(
-                    14f,
-                    14f
-                )
-        )
-
-        var start =
-            0f
-
-        listOf(
-
-            dutyAnim to Teal,
-
-            otAnim to Orange,
-
-            phAnim to Pink
-
-        ).forEach { (fraction, color) ->
-
-            val partWidth =
-                width * fraction
-
-            if (partWidth > 0f) {
-
-                drawRect(
-
-                    color =
-                        color,
-
-                    topLeft =
-                        Offset(
-                            start,
-                            0f
-                        ),
-
-                    size =
-                        size.copy(
-                            width =
-                                partWidth
-                        )
-                )
-
-                start +=
-                    partWidth
-            }
+private fun SnapshotMetric(label: String, value: String, icon: ImageVector, tint: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(shape = CircleShape, color = tint.copy(alpha = 0.1f)) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.padding(8.dp).size(18.dp))
         }
+        Spacer(Modifier.height(5.dp))
+        Text(label, fontSize = 10.sp, color = Slate600)
+        Text(value, fontSize = 11.sp, color = Slate900, fontWeight = FontWeight.Bold)
     }
 }
-
-// ============================================================
-
-@Composable
-private fun LegendDot(
-
-    label: String,
-
-    color: Color,
-
-    value: String
-) {
-
-    Row(
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-
-        Box(
-
-            modifier =
-                Modifier
-                    .size(9.dp)
-                    .clip(CircleShape)
-                    .background(color)
-        )
-
-        Spacer(
-            Modifier.width(5.dp)
-        )
-
-        Column {
-
-            Text(
-                label,
-                fontSize =
-                    10.sp,
-                color =
-                    Slate600,
-                fontWeight =
-                    FontWeight.SemiBold
-            )
-
-            Text(
-                value,
-                fontSize =
-                    12.sp,
-                color =
-                    Slate900,
-                fontWeight =
-                    FontWeight.Bold
-            )
-        }
-    }
-}
-
-// ============================================================
-// INSIGHT CARD
-// ============================================================
-
-@Composable
-private fun InsightCard(
-
-    title: String,
-
-    value: String,
-
-    icon: ImageVector,
-
-    accent: Color,
-
-    modifier: Modifier =
-        Modifier
-) {
-
-    Surface(
-
-        modifier =
-            modifier,
-
-        shape =
-            RoundedCornerShape(
-                16.dp
-            ),
-
-        color =
-            accent.copy(
-                alpha = .08f
-            )
-    ) {
-
-        Column(
-
-            modifier =
-                Modifier.padding(
-                    10.dp
-                )
-        ) {
-
-            Icon(
-                icon,
-                contentDescription =
-                    null,
-                tint =
-                    accent,
-                modifier =
-                    Modifier.size(
-                        18.dp
-                    )
-            )
-
-            Spacer(
-                Modifier.height(6.dp)
-            )
-
-            Text(
-                title,
-                fontSize =
-                    9.sp,
-                color =
-                    Slate600,
-                fontWeight =
-                    FontWeight.SemiBold
-            )
-
-            Spacer(
-                Modifier.height(2.dp)
-            )
-
-            Text(
-                value,
-                fontSize =
-                    12.sp,
-                color =
-                    Slate900,
-                fontWeight =
-                    FontWeight.ExtraBold
-            )
-        }
-    }
-}
-
-// ============================================================
-// SALARY MAKER
-// ============================================================
 
 @Composable
 private fun SalaryMakerCard(
-
     expanded: Boolean,
-
     onExpand: () -> Unit,
-
     basicSalary: String,
-
-    onBasicSalaryChange:
-        (String) -> Unit,
-
+    onBasicSalaryChange: (String) -> Unit,
     otRate: String,
-
-    onOtRateChange:
-        (String) -> Unit,
-
+    onOtRateChange: (String) -> Unit,
     otHours: String,
-
-    onOtHoursChange:
-        (String) -> Unit,
-
+    onOtHoursChange: (String) -> Unit,
     phHours: String,
-
-    onPhHoursChange:
-        (String) -> Unit,
-
+    onPhHoursChange: (String) -> Unit,
     dutyHours: String,
-
-    onDutyHoursChange:
-        (String) -> Unit,
-
+    onDutyHoursChange: (String) -> Unit,
     workingDays: String,
-
-    onWorkingDaysChange:
-        (String) -> Unit,
-
+    onWorkingDaysChange: (String) -> Unit,
     otherDeduction: String,
-
-    onOtherDeductionChange:
-        (String) -> Unit,
-
+    onOtherDeductionChange: (String) -> Unit,
     phRate: Double,
-
     otEarnings: Double,
-
     phEarnings: Double,
-
     gross: Double,
-
     tax: Double,
-
     wop: Double,
-
     otherDeductionAmount: Double,
-
     net: Double
 ) {
-
     Card(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(
-                    8.dp,
-                    RoundedCornerShape(24.dp)
-                ),
-
-        shape =
-            RoundedCornerShape(24.dp),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color.White
-            )
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Border)
     ) {
-
-        Column(
-            modifier =
-                Modifier.padding(18.dp)
-        ) {
-
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            onClick =
-                                onExpand
-                        ),
-
-                verticalAlignment =
-                    Alignment.CenterVertically,
-
-                horizontalArrangement =
-                    Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onExpand),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-
-                Row(
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
-
-                    Surface(
-
-                        shape =
-                            RoundedCornerShape(
-                                14.dp
-                            ),
-
-                        color =
-                            Color(0xFFF5F3FF)
-                    ) {
-
-                        Icon(
-
-                            Icons.Default.Calculate,
-
-                            contentDescription =
-                                null,
-
-                            tint =
-                                Violet,
-
-                            modifier =
-                                Modifier
-                                    .padding(
-                                        10.dp
-                                    )
-                                    .size(
-                                        22.dp
-                                    )
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = CircleShape, color = Indigo.copy(alpha = 0.1f)) {
+                        Icon(Icons.Default.Payments, contentDescription = null, tint = Indigo, modifier = Modifier.padding(9.dp))
                     }
-
-                    Spacer(
-                        Modifier.width(
-                            10.dp
-                        )
-                    )
-
+                    Spacer(Modifier.width(10.dp))
                     Column {
-
-                        Text(
-                            "Salary Maker",
-                            fontWeight =
-                                FontWeight.ExtraBold,
-                            fontSize =
-                                17.sp,
-                            color =
-                                Slate900
-                        )
-
-                        Text(
-                            "Editable monthly inputs",
-                            fontSize =
-                                12.sp,
-                            color =
-                                Slate600
-                        )
+                        Text("Monthly Salary Maker", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                        Text("Inputs → estimate", fontSize = 11.sp, color = Slate600)
                     }
                 }
-
-                Icon(
-
-                    Icons.Default.ChevronRight,
-
-                    contentDescription =
-                        "Expand",
-
-                    tint =
-                        Slate400,
-
-                    modifier =
-                        Modifier.size(
-                            20.dp
-                        )
-                )
+                Icon(Icons.Default.ChevronRight, contentDescription = "Expand", tint = Slate600)
             }
 
-            AnimatedVisibility(
+            AnimatedVisibility(visible = expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    MoneyField("Basic salary", basicSalary, onBasicSalaryChange)
+                    MoneyField("OT rate / hour", otRate, onOtRateChange)
+                    NumberField("OT hours", otHours, onOtHoursChange)
+                    NumberField("PH hours", phHours, onPhHoursChange)
+                    NumberField("Duty hours", dutyHours, onDutyHoursChange)
+                    NumberField("Working days", workingDays, onWorkingDaysChange)
+                    MoneyField("Other deductions", otherDeduction, onOtherDeductionChange)
 
-                visible =
-                    expanded,
-
-                enter =
-                    fadeIn(
-                        tween(220)
-                    ) +
-                            slideInVertically(
-                                tween(300)
-                            ) {
-                                it / 3
-                            },
-
-                exit =
-                    fadeOut(
-                        tween(150)
-                    ) +
-                            slideOutVertically(
-                                tween(180)
-                            ) {
-                                it / 3
-                            }
-            ) {
-
-                Column {
-
-                    Spacer(
-                        Modifier.height(14.dp)
-                    )
-
-                    MoneyInput(
-                        "Basic salary",
-                        basicSalary,
-                        onBasicSalaryChange
-                    )
-
-                    Spacer(
-                        Modifier.height(10.dp)
-                    )
-
-                    Row(
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                10.dp
-                            )
-                    ) {
-
-                        NumberInput(
-                            "OT rate / h",
-                            otRate,
-                            onOtRateChange,
-                            Modifier.weight(
-                                1f
-                            )
-                        )
-
-                        NumberInput(
-                            "OT hours",
-                            otHours,
-                            onOtHoursChange,
-                            Modifier.weight(
-                                1f
-                            )
-                        )
-                    }
-
-                    Spacer(
-                        Modifier.height(10.dp)
-                    )
-
-                    Row(
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                10.dp
-                            )
-                    ) {
-
-                        NumberInput(
-                            "PH hours",
-                            phHours,
-                            onPhHoursChange,
-                            Modifier.weight(
-                                1f
-                            )
-                        )
-
-                        NumberInput(
-                            "Duty hours",
-                            dutyHours,
-                            onDutyHoursChange,
-                            Modifier.weight(
-                                1f
-                            )
-                        )
-                    }
-
-                    Spacer(
-                        Modifier.height(10.dp)
-                    )
-
-                    NumberInput(
-                        "Working days",
-                        workingDays,
-                        onWorkingDaysChange,
-                        Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(
-                        Modifier.height(10.dp)
-                    )
-
-                    MoneyInput(
-                        "Other deduction",
-                        otherDeduction,
-                        onOtherDeductionChange
-                    )
-
-                    Spacer(
-                        Modifier.height(16.dp)
-                    )
-
-                    Divider(
-                        color =
-                            Border
-                    )
-
-                    Spacer(
-                        Modifier.height(14.dp)
-                    )
-
-                    ResultRow(
-                        "OT earnings",
-                        "Rs. ${formatMoney(otEarnings)}",
-                        Orange
-                    )
-
-                    ResultRow(
-                        "PH earnings",
-                        "Rs. ${formatMoney(phEarnings)}",
-                        Pink
-                    )
-
-                    ResultRow(
-                        "Gross salary",
-                        "Rs. ${formatMoney(gross)}",
-                        Indigo
-                    )
-
-                    ResultRow(
-                        "APIT / tax",
-                        "- Rs. ${formatMoney(tax)}",
-                        Slate600
-                    )
-
-                    ResultRow(
-                        "W&OP / pension",
-                        "- Rs. ${formatMoney(wop)}",
-                        Slate600
-                    )
-
-                    ResultRow(
-                        "Other deductions",
-                        "- Rs. ${formatMoney(otherDeductionAmount)}",
-                        Slate600
-                    )
-
-                    Spacer(
-                        Modifier.height(12.dp)
-                    )
-
-                    Surface(
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        shape =
-                            RoundedCornerShape(
-                                18.dp
-                            ),
-
-                        color =
-                            Color(0xFFECFDF5)
-                    ) {
-
-                        Row(
-
-                            modifier =
-                                Modifier.padding(
-                                    14.dp
-                                ),
-
-                            horizontalArrangement =
-                                Arrangement.SpaceBetween,
-
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-
-                            Column {
-
-                                Text(
-                                    "Estimated take-home",
-                                    fontSize =
-                                        11.sp,
-                                    color =
-                                        Teal,
-                                    fontWeight =
-                                        FontWeight.Bold
-                                )
-
-                                Text(
-                                    "After current deductions",
-                                    fontSize =
-                                        10.sp,
-                                    color =
-                                        Slate600
-                                )
-                            }
-
-                            Text(
-
-                                "Rs. ${formatMoney(net)}",
-
-                                fontSize =
-                                    20.sp,
-
-                                fontWeight =
-                                    FontWeight.Black,
-
-                                color =
-                                    Teal
-                            )
-                        }
-                    }
-
-                    Spacer(
-                        Modifier.height(8.dp)
-                    )
-
-                    Text(
-
-                        "PH rate preview: Rs. ${formatMoney(phRate)} / hour",
-
-                        fontSize =
-                            11.sp,
-
-                        color =
-                            Slate600
-                    )
+                    Divider()
+                    CalculationLine("PH rate", formatCurrency(phRate))
+                    CalculationLine("OT earnings", formatCurrency(otEarnings))
+                    CalculationLine("PH earnings", formatCurrency(phEarnings))
+                    CalculationLine("Gross", formatCurrency(gross), strong = true)
+                    CalculationLine("APIT", "− ${formatCurrency(tax)}")
+                    CalculationLine("WOP", "− ${formatCurrency(wop)}")
+                    CalculationLine("Other", "− ${formatCurrency(otherDeductionAmount)}")
+                    CalculationLine("Estimated net", formatCurrency(net), strong = true)
                 }
             }
         }
     }
 }
 
-// ============================================================
-// VARIABLE DEDUCTION CARD
-// ============================================================
-
 @Composable
-private fun VariableDeductionCard(
-
-    value: String,
-
-    onValueChange:
-        (String) -> Unit,
-
-    tax: Double,
-
-    wop: Double,
-
-    total: Double
-) {
-
+private fun VariableDeductionCard(value: String, onValueChange: (String) -> Unit, tax: Double, wop: Double, total: Double) {
     Card(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(
-                    6.dp,
-                    RoundedCornerShape(22.dp)
-                ),
-
-        shape =
-            RoundedCornerShape(22.dp),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color(0xFFFFFBEB)
-            )
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
     ) {
-
-        Column(
-
-            modifier =
-                Modifier.padding(
-                    17.dp
-                )
-        ) {
-
-            Row(
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Surface(
-
-                    shape =
-                        CircleShape,
-
-                    color =
-                        Color(0xFFFEF3C7)
-                ) {
-
-                    Icon(
-
-                        Icons.Default.Payments,
-
-                        contentDescription =
-                            null,
-
-                        tint =
-                            Orange,
-
-                        modifier =
-                            Modifier
-                                .padding(
-                                    8.dp
-                                )
-                                .size(
-                                    18.dp
-                                )
-                    )
-                }
-
-                Spacer(
-                    Modifier.width(9.dp)
-                )
-
-                Column {
-
-                    Text(
-                        "Monthly deductions",
-                        fontSize =
-                            15.sp,
-                        fontWeight =
-                            FontWeight.ExtraBold,
-                        color =
-                            Slate900
-                    )
-
-                    Text(
-                        "Some amounts can change every month",
-                        fontSize =
-                            11.sp,
-                        color =
-                            Slate600
-                    )
-                }
-            }
-
-            Spacer(
-                Modifier.height(12.dp)
-            )
-
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        8.dp
-                    )
-            ) {
-
-                DeductionPill(
-                    "APIT",
-                    tax,
-                    Indigo,
-                    Modifier.weight(
-                        1f
-                    )
-                )
-
-                DeductionPill(
-                    "W&OP",
-                    wop,
-                    Cyan,
-                    Modifier.weight(
-                        1f
-                    )
-                )
-
-                DeductionPill(
-                    "TOTAL",
-                    total,
-                    Orange,
-                    Modifier.weight(
-                        1f
-                    )
-                )
-            }
-
-            Spacer(
-                Modifier.height(10.dp)
-            )
-
-            OutlinedTextField(
-
-                value =
-                    value,
-
-                onValueChange =
-                    onValueChange,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                label = {
-                    Text(
-                        "Additional deduction for this month"
-                    )
-                },
-
-                prefix = {
-                    Text("Rs. ")
-                },
-
-                singleLine =
-                    true,
-
-                keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType =
-                            KeyboardType.Number
-                    )
-            )
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("VARIABLE DEDUCTIONS", fontSize = 10.sp, color = Orange, fontWeight = FontWeight.ExtraBold)
+            Text("Keep monthly adjustments separate from fixed deductions.", fontSize = 12.sp, color = Slate600)
+            MoneyField("Other deduction", value, onValueChange)
+            CalculationLine("APIT", formatCurrency(tax))
+            CalculationLine("WOP", formatCurrency(wop))
+            CalculationLine("Total deductions", formatCurrency(total), strong = true)
         }
     }
 }
-
-// ============================================================
-
-@Composable
-private fun DeductionPill(
-
-    title: String,
-
-    value: Double,
-
-    accent: Color,
-
-    modifier: Modifier =
-        Modifier
-) {
-
-    Surface(
-
-        modifier =
-            modifier,
-
-        shape =
-            RoundedCornerShape(
-                14.dp
-            ),
-
-        color =
-            accent.copy(
-                alpha = .08f
-            )
-    ) {
-
-        Column(
-
-            modifier =
-                Modifier.padding(
-                    9.dp
-                )
-        ) {
-
-            Text(
-                title,
-                fontSize =
-                    9.sp,
-                fontWeight =
-                    FontWeight.ExtraBold,
-                color =
-                    accent
-            )
-
-            Spacer(
-                Modifier.height(2.dp)
-            )
-
-            Text(
-                "Rs. ${formatMoney(value)}",
-                fontSize =
-                    11.sp,
-                fontWeight =
-                    FontWeight.Bold,
-                color =
-                    Slate900
-            )
-        }
-    }
-}
-
-// ============================================================
-// RESULT ROW
-// ============================================================
-
-@Composable
-private fun ResultRow(
-
-    label: String,
-
-    value: String,
-
-    accent: Color
-) {
-
-    Row(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    vertical = 6.dp
-                ),
-
-        horizontalArrangement =
-            Arrangement.SpaceBetween,
-
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-
-        Row(
-            verticalAlignment =
-                Alignment.CenterVertically
-        ) {
-
-            Box(
-
-                modifier =
-                    Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(accent)
-            )
-
-            Spacer(
-                Modifier.width(8.dp)
-            )
-
-            Text(
-                label,
-                fontSize =
-                    12.sp,
-                color =
-                    Slate600
-            )
-        }
-
-        Text(
-            value,
-            fontSize =
-                12.sp,
-            color =
-                Slate900,
-            fontWeight =
-                FontWeight.Bold
-        )
-    }
-}
-
-// ============================================================
-// MONEY INPUT
-// ============================================================
-
-@Composable
-private fun MoneyInput(
-
-    label: String,
-
-    value: String,
-
-    onValueChange:
-        (String) -> Unit
-) {
-
-    OutlinedTextField(
-
-        value =
-            value,
-
-        onValueChange =
-            onValueChange,
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        label = {
-            Text(label)
-        },
-
-        prefix = {
-            Text("Rs. ")
-        },
-
-        singleLine =
-            true,
-
-        keyboardOptions =
-            KeyboardOptions(
-                keyboardType =
-                    KeyboardType.Number
-            )
-    )
-}
-
-// ============================================================
-// NUMBER INPUT
-// ============================================================
-
-@Composable
-private fun NumberInput(
-
-    label: String,
-
-    value: String,
-
-    onValueChange:
-        (String) -> Unit,
-
-    modifier: Modifier
-) {
-
-    OutlinedTextField(
-
-        value =
-            value,
-
-        onValueChange =
-            onValueChange,
-
-        modifier =
-            modifier,
-
-        label = {
-            Text(label)
-        },
-
-        singleLine =
-            true,
-
-        keyboardOptions =
-            KeyboardOptions(
-                keyboardType =
-                    KeyboardType.Number
-            )
-    )
-}
-
-// ============================================================
-// TOOL CARD
-// ============================================================
-
-@Composable
-private fun CompactToolCard(
-
-    title: String,
-
-    subtitle: String,
-
-    icon: ImageVector,
-
-    accent: Color,
-
-    onClick: () -> Unit
-) {
-
-    Card(
-
-        modifier =
-            Modifier
-                .width(185.dp)
-                .clickable(
-                    onClick =
-                        onClick
-                ),
-
-        shape =
-            RoundedCornerShape(
-                20.dp
-            ),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color.White
-            ),
-
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation =
-                    4.dp
-            )
-    ) {
-
-        Row(
-
-            modifier =
-                Modifier.padding(
-                    14.dp
-                ),
-
-            verticalAlignment =
-                Alignment.CenterVertically
-        ) {
-
-            Surface(
-
-                shape =
-                    RoundedCornerShape(
-                        14.dp
-                    ),
-
-                color =
-                    accent.copy(
-                        alpha = .10f
-                    )
-            ) {
-
-                Icon(
-
-                    icon,
-
-                    contentDescription =
-                        null,
-
-                    tint =
-                        accent,
-
-                    modifier =
-                        Modifier
-                            .padding(
-                                9.dp
-                            )
-                            .size(
-                                21.dp
-                            )
-                )
-            }
-
-            Spacer(
-                Modifier.width(9.dp)
-            )
-
-            Column {
-
-                Text(
-                    title,
-                    fontSize =
-                        12.sp,
-                    fontWeight =
-                        FontWeight.ExtraBold,
-                    color =
-                        Slate900
-                )
-
-                Spacer(
-                    Modifier.height(2.dp)
-                )
-
-                Text(
-                    subtitle,
-                    fontSize =
-                        10.sp,
-                    color =
-                        Slate600
-                )
-            }
-        }
-    }
-}
-
-// ============================================================
-// MONTHLY RECORD
-// ============================================================
 
 @Composable
 private fun MonthlyRecordPreview(
-
     basicSalary: Double,
-
     otHours: Double,
-
     dutyHours: Double,
-
     phHours: Double,
-
     gross: Double,
-
     net: Double,
-
     deductions: Double,
-
     workingDays: Double
 ) {
-
     Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(
-                22.dp
-            ),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    Color.White
-            ),
-
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation =
-                    4.dp
-            )
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Border)
     ) {
-
-        Column(
-
-            modifier =
-                Modifier.padding(
-                    17.dp
-                )
-        ) {
-
-            Text(
-                "This Month Record",
-                fontSize =
-                    16.sp,
-                fontWeight =
-                    FontWeight.ExtraBold,
-                color =
-                    Slate900
-            )
-
-            Spacer(
-                Modifier.height(10.dp)
-            )
-
-            RecordLine(
-                "Basic salary",
-                "Rs. ${formatMoney(basicSalary)}"
-            )
-
-            RecordLine(
-                "Working days",
-                workingDays.formatOne()
-            )
-
-            RecordLine(
-                "Duty hours",
-                "${dutyHours.formatOne()} h"
-            )
-
-            RecordLine(
-                "OT hours",
-                "${otHours.formatOne()} h"
-            )
-
-            RecordLine(
-                "PH hours",
-                "${phHours.formatOne()} h"
-            )
-
-            RecordLine(
-                "Gross",
-                "Rs. ${formatMoney(gross)}"
-            )
-
-            RecordLine(
-                "Deductions",
-                "Rs. ${formatMoney(deductions)}"
-            )
-
-            Divider(
-                color =
-                    Border,
-
-                modifier =
-                    Modifier.padding(
-                        vertical = 7.dp
-                    )
-            )
-
-            RecordLine(
-                "Estimated net",
-                "Rs. ${formatMoney(net)}",
-                emphasized = true
-            )
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("MONTHLY RECORD", fontSize = 10.sp, color = Cyan, fontWeight = FontWeight.ExtraBold)
+            CalculationLine("Working days", "%.0f".format(workingDays))
+            CalculationLine("Duty hours", "%.1f".format(dutyHours))
+            CalculationLine("OT hours", "%.1f".format(otHours))
+            CalculationLine("PH hours", "%.1f".format(phHours))
+            Divider()
+            CalculationLine("Basic salary", formatCurrency(basicSalary))
+            CalculationLine("Gross", formatCurrency(gross), strong = true)
+            CalculationLine("Deductions", formatCurrency(deductions))
+            CalculationLine("Estimated net", formatCurrency(net), strong = true)
         }
     }
 }
 
-// ============================================================
-
 @Composable
-private fun RecordLine(
-
-    label: String,
-
-    value: String,
-
-    emphasized: Boolean =
-        false
-) {
-
-    Row(
-
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    vertical = 5.dp
-                ),
-
-        horizontalArrangement =
-            Arrangement.SpaceBetween
-    ) {
-
-        Text(
-
-            label,
-
-            fontSize =
-                if (emphasized) 13.sp
-                else 12.sp,
-
-            color =
-                Slate600,
-
-            fontWeight =
-                if (emphasized)
-                    FontWeight.Bold
-                else
-                    FontWeight.Normal
-        )
-
-        Text(
-
-            value,
-
-            fontSize =
-                if (emphasized) 14.sp
-                else 12.sp,
-
-            color =
-                if (emphasized)
-                    Teal
-                else
-                    Slate900,
-
-            fontWeight =
-                FontWeight.ExtraBold
-        )
+private fun CalculationLine(label: String, value: String, strong: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, fontSize = 12.sp, color = Slate600)
+        Text(value, fontSize = 13.sp, color = Slate900, fontWeight = if (strong) FontWeight.ExtraBold else FontWeight.SemiBold)
     }
 }
 
+@Composable
+private fun MoneyField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
+}
 
-// ============================================================
-// FINANCIAL HISTORY CHART
-// ============================================================
+@Composable
+private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+    )
+}
+
+@Composable
+private fun CompactToolCard(title: String, subtitle: String, icon: ImageVector, accent: Color, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.width(190.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Border)
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = accent.copy(alpha = 0.1f)) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.padding(9.dp).size(20.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(title, fontSize = 13.sp, color = Slate900, fontWeight = FontWeight.Bold)
+                Text(subtitle, fontSize = 10.sp, color = Slate600)
+            }
+        }
+    }
+}
 
 @Composable
 private fun FinancialHistoryChart(
@@ -2695,121 +679,41 @@ private fun FinancialHistoryChart(
     overtime: List<Float>,
     modifier: Modifier = Modifier
 ) {
-    val count = maxOf(basic.size, allowances.size, overtime.size, 1)
-
-    val maxValue = maxOf(
-        basic.maxOrNull() ?: 0f,
-        allowances.maxOrNull() ?: 0f,
-        overtime.maxOrNull() ?: 0f,
-        1f
-    )
+    val maxValue = max(
+        max(basic.maxOrNull()?.toDouble() ?: 0.0, allowances.maxOrNull()?.toDouble() ?: 0.0),
+        overtime.maxOrNull()?.toDouble() ?: 0.0
+    ).toFloat().coerceAtLeast(1f)
 
     Canvas(modifier = modifier) {
-        val left = 44f
-        val right = 12f
-        val top = 14f
-        val bottom = 30f
+        val allSeries = listOf(basic, allowances, overtime)
+        val maxPoints = allSeries.maxOfOrNull { it.size } ?: 0
+        if (maxPoints < 2) return@Canvas
+        val stepX = size.width / (maxPoints - 1)
+        val chartHeight = size.height * 0.82f
 
-        val chartWidth = (size.width - left - right).coerceAtLeast(1f)
-        val chartHeight = (size.height - top - bottom).coerceAtLeast(1f)
-
-        val groupWidth = chartWidth / count
-        val barWidth = (groupWidth * 0.18f).coerceAtLeast(4f)
-        val gap = (groupWidth * 0.04f).coerceAtLeast(2f)
-
-        repeat(4) { index ->
-            val fraction = index / 3f
-            val y = top + chartHeight * (1f - fraction)
-
-            drawLine(
-                color = Border,
-                start = Offset(left, y),
-                end = Offset(size.width - right, y),
-                strokeWidth = 1f
-            )
-        }
-
-        fun drawSeries(
-            values: List<Float>,
-            color: Color,
-            offset: Float
-        ) {
-            values.take(count).forEachIndexed { index, rawValue ->
-                val value = rawValue.coerceAtLeast(0f)
-
-                val barHeight =
-                    chartHeight * (value / maxValue)
-
-                val x =
-                    left +
-                            groupWidth * index +
-                            groupWidth * 0.16f +
-                            offset
-
-                val y =
-                    top +
-                            chartHeight -
-                            barHeight
-
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(x, y),
-                    size = androidx.compose.ui.geometry.Size(
-                        barWidth,
-                        barHeight
-                    ),
-                    cornerRadius = CornerRadius(6f, 6f)
+        allSeries.forEachIndexed { seriesIndex, series ->
+            if (series.isEmpty()) return@forEachIndexed
+            val lineColor = when (seriesIndex) {
+                0 -> Indigo
+                1 -> Mint
+                else -> Orange
+            }
+            val points = series.mapIndexed { index, value ->
+                Offset(
+                    x = index * stepX,
+                    y = chartHeight - (value / maxValue) * chartHeight
                 )
             }
-        }
-
-        drawSeries(
-            values = basic,
-            color = Indigo,
-            offset = 0f
-        )
-
-        drawSeries(
-            values = allowances,
-            color = Mint,
-            offset = barWidth + gap
-        )
-
-        drawSeries(
-            values = overtime,
-            color = Orange,
-            offset = (barWidth + gap) * 2f
-        )
-
-        repeat(count) { index ->
-            val x =
-                left +
-                        groupWidth * index +
-                        groupWidth / 2f
-
-            drawContext.canvas.nativeCanvas.drawText(
-                "M${index + 1}",
-                x - 7f,
-                size.height - 6f,
-                android.graphics.Paint().apply {
-                    color = android.graphics.Color.DKGRAY
-                    textSize = 10f
-                    isAntiAlias = true
-                }
-            )
+            for (i in 0 until points.lastIndex) {
+                drawLine(lineColor, points[i], points[i + 1], strokeWidth = 6f)
+            }
+            points.forEach { point ->
+                drawCircle(lineColor, radius = 7f, center = point)
+                drawCircle(Color.White, radius = 3f, center = point)
+            }
         }
     }
 }
 
-// ============================================================
-// FORMATTING
-// ============================================================
-
-private fun formatMoney(
-    value: Double
-): String =
-    "%,.0f".format(value)
-
-private fun Double.formatOne():
-        String =
-    "%.1f".format(this)
+private fun formatCurrency(value: Double): String =
+    "LKR ${String.format("%,.0f", value)}"
