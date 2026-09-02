@@ -6,8 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Environment
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,8 +36,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,11 +55,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.pasindu.nursingotapp.data.local.DatabaseProvider
@@ -69,10 +65,12 @@ import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
 import com.pasindu.nursingotapp.ui.theme.AdvancedGradient
 import com.pasindu.nursingotapp.ui.theme.AppBackground
+import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
+import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import kotlinx.coroutines.Dispatchers
@@ -123,7 +121,9 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                             updatedAt = now
                         )
                     )
-                    if (existing != null && existing.filePath != target.absolutePath) vault.deleteFile(existing.filePath)
+                    if (existing != null && existing.filePath != target.absolutePath) {
+                        vault.deleteFile(existing.filePath)
+                    }
                 }
                 successMessage
             } catch (e: Exception) {
@@ -151,7 +151,16 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     val requestCameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val monthKey = pendingMonth ?: currentMonthKeySafe()
         if (granted) {
-            launchCameraForPaySheet(context, monthKey, cameraPicker, { cameraOutputUri = it }) { message = it; pendingMonth = null }
+            launchCameraForPaySheet(
+                context = context,
+                monthKey = monthKey,
+                cameraPicker = cameraPicker,
+                onUriReady = { cameraOutputUri = it },
+                onError = { error ->
+                    pendingMonth = null
+                    message = error
+                }
+            )
         } else {
             pendingMonth = null
             message = "Camera permission was denied. You can still add a paysheet from the gallery."
@@ -166,7 +175,16 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     fun startCamera(monthKey: String) {
         pendingMonth = monthKey
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            launchCameraForPaySheet(context, monthKey, cameraPicker, { cameraOutputUri = it }) { message = it; pendingMonth = null }
+            launchCameraForPaySheet(
+                context = context,
+                monthKey = monthKey,
+                cameraPicker = cameraPicker,
+                onUriReady = { cameraOutputUri = it },
+                onError = { error ->
+                    pendingMonth = null
+                    message = error
+                }
+            )
         } else {
             requestCameraPermission.launch(Manifest.permission.CAMERA)
         }
@@ -189,11 +207,15 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     ) {
         Surface(color = AppBackground) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = NursingDimensions.Spacing.md, vertical = NursingDimensions.Spacing.sm),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = NursingDimensions.Spacing.md, vertical = NursingDimensions.Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Slate) }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Slate)
+                    }
                 }
                 Spacer(Modifier.width(NursingDimensions.Spacing.md))
                 Column(Modifier.weight(1f)) {
@@ -201,8 +223,11 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                     Text("Your private monthly paysheet vault", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
                 Surface(color = Emerald.copy(alpha = 0.12f), shape = RoundedCornerShape(NursingDimensions.Radius.pill)) {
-                    Row(Modifier.padding(horizontal = NursingDimensions.Spacing.sm, vertical = NursingDimensions.Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, null, tint = Emerald, modifier = Modifier.size(NursingDimensions.Icon.small))
+                    Row(
+                        Modifier.padding(horizontal = NursingDimensions.Spacing.sm, vertical = NursingDimensions.Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = Emerald, modifier = Modifier.size(NursingDimensions.Icon.small))
                         Spacer(Modifier.width(NursingDimensions.Spacing.xs))
                         Text("PRIVATE", color = Emerald, style = MaterialTheme.typography.labelSmall)
                     }
@@ -211,41 +236,71 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
         }
 
         LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = NursingDimensions.Spacing.lg),
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = NursingDimensions.Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
         ) {
             item { VaultHero(count = documents.size, bytes = usedBytes, onAdd = { showMonthPicker = true; pickerYear = Year.now().value }) }
             item { PaySheetVaultStorageCard(documents) }
             item { PaySheetVaultSearchPanel(documents = documents, onDocumentSelected = { selected = it }) }
             item {
-                Row(Modifier.fillMaxWidth().padding(vertical = NursingDimensions.Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(NursingDimensions.Icon.featured).clip(RoundedCornerShape(NursingDimensions.Radius.medium)).background(Purple.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Folder, null, tint = Purple)
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = NursingDimensions.Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(NursingDimensions.Icon.featured)
+                            .clip(RoundedCornerShape(NursingDimensions.Radius.medium))
+                            .background(Purple.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Folder, contentDescription = null, tint = Purple)
                     }
                     Spacer(Modifier.width(NursingDimensions.Spacing.sm))
                     Column(Modifier.weight(1f)) {
                         Text("Paysheet Archive", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
                         Text("Choose any month and year when adding", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                     }
-                    IconButton(onClick = { showDownloadCenter = true }) { Icon(Icons.Default.Download, "Find and download", tint = Purple) }
+                    IconButton(onClick = { showDownloadCenter = true }) {
+                        Icon(Icons.Default.Download, contentDescription = "Find and download", tint = Purple)
+                    }
                 }
             }
             items(sortedDocuments, key = { it.id }) { document ->
-                VaultMonthCard(document = document, onOpen = { selected = document }, onReplace = { pendingMonth = document.monthKey; showAddChooser = true }, onDelete = { deleteTarget = document })
+                VaultMonthCard(
+                    document = document,
+                    onOpen = { selected = document },
+                    onReplace = { pendingMonth = document.monthKey; showAddChooser = true },
+                    onDelete = { deleteTarget = document }
+                )
             }
             if (documents.isEmpty()) {
                 item {
-                    Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
+                    Surface(
+                        Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)
+                    ) {
                         Row(Modifier.padding(NursingDimensions.Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(54.dp).clip(RoundedCornerShape(NursingDimensions.Radius.large)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                                Icon(Icons.AutoMirrored.Filled.ReceiptLong, null, tint = TextSecondary)
+                            Box(
+                                Modifier
+                                    .size(54.dp)
+                                    .clip(RoundedCornerShape(NursingDimensions.Radius.large))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = TextSecondary)
                             }
                             Spacer(Modifier.width(NursingDimensions.Spacing.md))
                             Column(Modifier.weight(1f)) {
                                 Text("Your vault is empty", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
                                 Text("Choose a month, then add your paysheet.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                             }
-                            IconButton(onClick = { showMonthPicker = true; pickerYear = Year.now().value }) { Icon(Icons.Default.PhotoCamera, null, tint = Color(0xFF0EA5E9)) }
+                            IconButton(onClick = { showMonthPicker = true; pickerYear = Year.now().value }) {
+                                Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = Color(0xFF0EA5E9))
+                            }
                         }
                     }
                 }
@@ -255,55 +310,133 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     }
 
     if (showMonthPicker) {
-        MonthYearPickerDialog(initialYear = pickerYear, initialMonth = pendingMonth?.substringAfter("-")?.toIntOrNull()?.minus(1) ?: LocalDate.now().monthValue - 1, onDismiss = { showMonthPicker = false }) { year, monthIndex ->
+        MonthYearPickerDialog(
+            initialYear = pickerYear,
+            initialMonth = pendingMonth?.substringAfter("-")?.toIntOrNull()?.minus(1) ?: (LocalDate.now().monthValue - 1),
+            onDismiss = { showMonthPicker = false }
+        ) { year: Int, monthIndex: Int ->
             pickerYear = year
             chooseMonth(String.format(Locale.US, "%04d-%02d", year, monthIndex + 1))
         }
     }
+
     if (showAddChooser) {
-        AddSourceDialog(monthKey = pendingMonth ?: currentMonthKeySafe(), onDismiss = { showAddChooser = false; pendingMonth = null }, onCamera = { month -> showAddChooser = false; startCamera(month) }, onGallery = { month -> showAddChooser = false; startGallery(month) }, onChangeMonth = { showAddChooser = false; showMonthPicker = true })
+        AddSourceDialog(
+            monthKey = pendingMonth ?: currentMonthKeySafe(),
+            onDismiss = { showAddChooser = false; pendingMonth = null },
+            onCamera = { month: String -> showAddChooser = false; startCamera(month) },
+            onGallery = { month: String -> showAddChooser = false; startGallery(month) },
+            onChangeMonth = { showAddChooser = false; showMonthPicker = true }
+        )
     }
+
     if (showDownloadCenter) {
-        PaySheetDownloadCenterDialog(documents = documents, initialYear = Year.now().value, context = context, onDismiss = { showDownloadCenter = false }, onMessage = { message = it })
+        PaySheetDownloadCenterDialog(
+            documents = documents,
+            initialYear = Year.now().value,
+            context = context,
+            onDismiss = { showDownloadCenter = false },
+            onMessage = { updatedMessage: String -> message = updatedMessage }
+        )
     }
-    selected?.let { document -> VaultViewer(document = document, onDismiss = { selected = null }, onShare = { sharePaySheetFile(context, document) }, onDownload = { message = downloadPaySheetCopy(context, document) }) }
+
+    selected?.let { document ->
+        VaultViewer(
+            document = document,
+            onDismiss = { selected = null },
+            onShare = { sharePaySheetFile(context, document) },
+            onDownload = { message = downloadPaySheetCopy(context, document) }
+        )
+    }
+
     deleteTarget?.let { document ->
-        AlertDialog(onDismissRequest = { deleteTarget = null }, title = { Text("Delete paysheet?", fontWeight = FontWeight.Black) }, text = { Text("Remove ${document.displayMonth} from your private vault?") }, confirmButton = {
-            TextButton(onClick = { deleteTarget = null; scope.launch(Dispatchers.IO) { vault.deleteFile(document.filePath); dao.delete(document) } }) { Text("DELETE", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Black) }
-        }, dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("CANCEL") } })
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete paysheet?", fontWeight = FontWeight.Black) },
+            text = { Text("Remove ${document.displayMonth} from your private vault?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteTarget = null
+                    scope.launch(Dispatchers.IO) {
+                        vault.deleteFile(document.filePath)
+                        dao.delete(document)
+                    }
+                }) {
+                    Text("DELETE", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("CANCEL") } }
+        )
     }
-    message?.let { text -> AlertDialog(onDismissRequest = { message = null }, title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) }, text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }) }
+
+    message?.let { text ->
+        AlertDialog(
+            onDismissRequest = { message = null },
+            title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) },
+            text = { Text(text) },
+            confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }
+        )
+    }
 }
 
-private fun currentMonthKeySafe(): String = String.format(Locale.US, "%04d-%02d", Year.now().value, LocalDate.now().monthValue)
+private fun currentMonthKeySafe(): String =
+    String.format(Locale.US, "%04d-%02d", Year.now().value, LocalDate.now().monthValue)
 
-private fun displayMonthText(monthKey: String): String = try {
-    val parts = monthKey.split('-')
-    Month.of(parts[1].toInt()).getDisplayName(TextStyle.FULL, Locale.US) + " " + parts[0]
-} catch (_: Exception) { monthKey }
+private fun displayMonthText(monthKey: String): String {
+    return try {
+        val parts = monthKey.split('-')
+        Month.of(parts[1].toInt()).getDisplayName(TextStyle.FULL, Locale.US) + " " + parts[0]
+    } catch (_: Exception) {
+        monthKey
+    }
+}
 
-private fun launchCameraForPaySheet(context: Context, monthKey: String, cameraPicker: ActivityResultLauncher<Uri>, onUriReady: (Uri) -> Unit, onError: (String) -> Unit) {
+private fun launchCameraForPaySheet(
+    context: Context,
+    monthKey: String,
+    cameraPicker: ManagedActivityResultLauncher<Uri, Boolean>,
+    onUriReady: (Uri) -> Unit,
+    onError: (String) -> Unit
+) {
     try {
         val file = File(context.cacheDir, "paysheet_${monthKey.replace('-', '_')}_${System.currentTimeMillis()}.jpg")
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         onUriReady(uri)
         cameraPicker.launch(uri)
-    } catch (e: Exception) { onError(e.message ?: "Unable to open camera.") }
+    } catch (e: Exception) {
+        onError(e.message ?: "Unable to open camera.")
+    }
 }
 
 private fun sharePaySheetFile(context: Context, document: PaySheetDocumentEntity) {
     val file = File(document.filePath)
     if (!file.exists()) return
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "image/*"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }, "Share Pay Sheet"))
+    context.startActivity(
+        Intent.createChooser(
+            Intent(Intent.ACTION_SEND).apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            },
+            "Share Pay Sheet"
+        )
+    )
 }
 
-private fun downloadPaySheetCopy(context: Context, document: PaySheetDocumentEntity): String = try {
-    val source = File(document.filePath)
-    if (!source.exists()) return "Pay sheet file is no longer available."
-    val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-    if (!downloads.exists()) downloads.mkdirs()
-    val target = File(downloads, source.name)
-    source.inputStream().use { input -> target.outputStream().use { output -> input.copyTo(output) } }
-    "Saved a copy to Downloads."
-} catch (e: Exception) { e.message ?: "Unable to save a copy." }
+private fun downloadPaySheetCopy(context: Context, document: PaySheetDocumentEntity): String {
+    return try {
+        val source = File(document.filePath)
+        if (!source.exists()) {
+            "Pay sheet file is no longer available."
+        } else {
+            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloads.exists()) downloads.mkdirs()
+            val target = File(downloads, source.name)
+            source.inputStream().use { input -> target.outputStream().use { output -> input.copyTo(output) } }
+            "Saved a copy to Downloads."
+        }
+    } catch (e: Exception) {
+        e.message ?: "Unable to save a copy."
+    }
+}
