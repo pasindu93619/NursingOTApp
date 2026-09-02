@@ -67,6 +67,17 @@ import androidx.core.content.ContextCompat
 import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
+import com.pasindu.nursingotapp.ui.theme.AdvancedGradient
+import com.pasindu.nursingotapp.ui.theme.AppBackground
+import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
+import com.pasindu.nursingotapp.ui.theme.EmergencyColor
+import com.pasindu.nursingotapp.ui.theme.Emerald
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
+import com.pasindu.nursingotapp.ui.theme.Purple
+import com.pasindu.nursingotapp.ui.theme.Slate
+import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
+import com.pasindu.nursingotapp.ui.theme.TextPrimary
+import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -186,31 +197,60 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
 
     val usedBytes = remember(documents) { documents.sumOf { it.fileSizeBytes } }
     val sortedDocuments = remember(documents) { documents.sortedByDescending { it.monthKey } }
+    val pageBottomPadding = 28.dp
 
     Column(
         Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FC))
+            .background(AppBackground)
             .padding(top = systemBarsPadding.calculateTopPadding())
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF172554))
-            }
-            Column(Modifier.weight(1f)) {
-                Text("Pay Sheet Bank", color = Color(0xFF0F172A), fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text("Your private monthly paysheet vault", color = Color(0xFF64748B), fontSize = 11.sp)
-            }
-            Surface(color = Color(0xFF10B981).copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Lock, null, tint = Color(0xFF10B981), modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(5.dp))
-                    Text("PRIVATE", color = Color(0xFF10B981), fontSize = 8.sp, fontWeight = FontWeight.Black)
+        // Purpose-built compact header: safe-area aware, visually separated from system UI.
+        Surface(color = AppBackground) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = NursingDimensions.Spacing.md,
+                        end = NursingDimensions.Spacing.md,
+                        top = NursingDimensions.Spacing.xs,
+                        bottom = NursingDimensions.Spacing.md
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = SurfaceMuted,
+                    shape = RoundedCornerShape(NursingDimensions.Radius.medium)
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Slate)
+                    }
+                }
+                Spacer(Modifier.width(NursingDimensions.Spacing.md))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Pay Sheet Bank",
+                        color = TextPrimary,
+                        style = androidx.compose.material3.MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        "Your private monthly paysheet vault",
+                        color = TextSecondary,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                    )
+                }
+                Surface(
+                    color = Emerald.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.pill)
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = NursingDimensions.Spacing.md, vertical = NursingDimensions.Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Lock, null, tint = Emerald, modifier = Modifier.size(NursingDimensions.Icon.small))
+                        Spacer(Modifier.width(NursingDimensions.Spacing.xs))
+                        Text("PRIVATE", color = Emerald, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }
@@ -218,24 +258,29 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
         LazyColumn(
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = NursingDimensions.Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
         ) {
             item { VaultHero(count = documents.size, bytes = usedBytes, onAdd = { showMonthPicker = true; pickerYear = currentYear() }) }
             item { PaySheetVaultStorageCard(documents) }
             item { PaySheetVaultSearchPanel(documents = documents, onDocumentSelected = { selected = it }) }
             item {
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF7C3AED).copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Folder, null, tint = Color(0xFF7C3AED))
+                Row(Modifier.fillMaxWidth().padding(vertical = NursingDimensions.Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(NursingDimensions.Icon.featured)
+                            .clip(RoundedCornerShape(NursingDimensions.Radius.medium))
+                            .background(Purple.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Folder, null, tint = Purple)
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(NursingDimensions.Spacing.sm))
                     Column(Modifier.weight(1f)) {
-                        Text("Paysheet Archive", color = Color(0xFF0F172A), fontSize = 19.sp, fontWeight = FontWeight.Black)
-                        Text("Choose any month and year when adding", color = Color(0xFF64748B), fontSize = 10.sp)
+                        Text("Paysheet Archive", color = TextPrimary, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                        Text("Choose any month and year when adding", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                     }
                     IconButton(onClick = { showDownloadCenter = true }) {
-                        Icon(Icons.Default.Download, "Find and download", tint = Color(0xFF4338CA))
+                        Icon(Icons.Default.Download, "Find and download", tint = Purple)
                     }
                 }
             }
@@ -249,24 +294,27 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             }
             if (documents.isEmpty()) {
                 item {
-                    Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(22.dp)) {
-                        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF8FAFC)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.AutoMirrored.Filled.ReceiptLong, null, tint = Color(0xFF94A3B8))
+                    Surface(Modifier.fillMaxWidth(), color = SurfaceWhiteSafe(), shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
+                        Row(Modifier.padding(NursingDimensions.Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(54.dp).clip(RoundedCornerShape(NursingDimensions.Radius.large)).background(SurfaceMuted),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ReceiptLong, null, tint = TextSecondary)
                             }
-                            Spacer(Modifier.width(12.dp))
+                            Spacer(Modifier.width(NursingDimensions.Spacing.md))
                             Column(Modifier.weight(1f)) {
-                                Text("Your vault is empty", color = Color(0xFF0F172A), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("Choose a month, then add your paysheet.", color = Color(0xFF64748B), fontSize = 10.sp)
+                                Text("Your vault is empty", color = TextPrimary, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+                                Text("Choose a month, then add your paysheet.", color = TextSecondary, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                             }
                             IconButton(onClick = { showMonthPicker = true; pickerYear = currentYear() }) {
-                                Icon(Icons.Default.PhotoCamera, null, tint = Color(0xFF1976D2))
+                                Icon(Icons.Default.PhotoCamera, null, tint = ClinicalBlueSafe())
                             }
                         }
                     }
                 }
             }
-            item { Spacer(Modifier.height(24.dp)) }
+            item { Spacer(Modifier.height(pageBottomPadding)) }
         }
     }
 
@@ -318,7 +366,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
                         vault.deleteFile(document.filePath)
                         dao.delete(document)
                     }
-                }) { Text("DELETE", color = Color(0xFFDC2626), fontWeight = FontWeight.Black) }
+                }) { Text("DELETE", color = EmergencyColor, fontWeight = FontWeight.Black) }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("CANCEL") } }
         )
@@ -328,3 +376,8 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
         AlertDialog(onDismissRequest = { message = null }, title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) }, text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } })
     }
 }
+
+@Composable
+private fun SurfaceWhiteSafe(): Color = androidx.compose.material3.MaterialTheme.colorScheme.surface
+
+private fun ClinicalBlueSafe(): Color = androidx.compose.ui.graphics.Color(0xFF0EA5E9)
