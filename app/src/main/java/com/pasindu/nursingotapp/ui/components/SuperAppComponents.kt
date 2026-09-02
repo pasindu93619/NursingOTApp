@@ -233,8 +233,16 @@ fun AnimatedCardEntrance(
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(tween(350)) + if (fromLeft) slideInHorizontally(tween(400)) { -it / 3 } else slideInVertically(tween(400)) { it / 4 } + scaleIn(tween(400), initialScale = 0.92f),
-        exit = fadeOut(tween(200)) + if (fromLeft) slideOutHorizontally(tween(200)) { -it / 5 } else slideOutVertically(tween(200)) { it / 5 } + scaleOut(tween(200), targetScale = 0.96f)
+        enter = fadeIn(tween(350)) + if (fromLeft) {
+            slideInHorizontally(tween(400)) { -it / 3 }
+        } else {
+            slideInVertically(tween(400)) { it / 4 }
+        } + scaleIn(tween(400), initialScale = 0.92f),
+        exit = fadeOut(tween(200)) + if (fromLeft) {
+            slideOutHorizontally(tween(200)) { -it / 5 }
+        } else {
+            slideOutVertically(tween(200)) { it / 5 }
+        } + scaleOut(tween(200), targetScale = 0.96f)
     ) { content() }
 }
 
@@ -247,7 +255,12 @@ fun PulsingGlow(modifier: Modifier = Modifier, color: Color = Color.White, enabl
 @Composable
 fun GradientPulseBadge(text: String, modifier: Modifier = Modifier, gradient: Brush = PositiveGradient) {
     val transition = rememberInfiniteTransition(label = "badge_pulse")
-    val scale by transition.animateFloat(1f, 1.04f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "badge_scale")
+    val scale by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "badge_scale"
+    )
     Box(
         modifier = modifier
             .scale(scale)
@@ -274,7 +287,12 @@ fun GradientProgressCard(
     ) {
         Text(title, style = MaterialTheme.typography.titleLarge, color = Color.White)
         subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.88f)) }
-        LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth(), color = Color.White, trackColor = Color.White.copy(alpha = 0.22f))
+        LinearProgressIndicator(
+            progress = { animatedProgress },
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White,
+            trackColor = Color.White.copy(alpha = 0.22f)
+        )
     }
 }
 
@@ -301,7 +319,12 @@ fun LoadingState(modifier: Modifier = Modifier, message: String = "Loading…") 
 @Composable
 fun SkeletonBlock(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "skeleton")
-    val alpha by transition.animateFloat(0.35f, 0.72f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "skeleton_alpha")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.72f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "skeleton_alpha"
+    )
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha), RoundedCornerShape(NursingDimensions.Radius.medium)))
 }
 
