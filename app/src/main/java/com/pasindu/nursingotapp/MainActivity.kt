@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.pasindu.nursingotapp.ui.navigation.AppNavigation
 import com.pasindu.nursingotapp.ui.theme.NursingOTAppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -18,9 +20,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 🛑 STRICT LIGHT THEME ENFORCEMENT
-        // This overrides the system's dark mode setting entirely for this app.
+        // Keep the clinical app light-first while allowing Compose to control
+        // content/inset behavior consistently across modern Android devices.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
 
         setContent {
             NursingOTAppTheme {
@@ -28,8 +36,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // THIS IS THE FIX!
-                    // We let the AppNavigation handle all the screens now!
                     AppNavigation()
                 }
             }
