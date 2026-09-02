@@ -43,8 +43,9 @@ fun NursingOTAppTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = LightColors, // Hardcoded to always use LightColors
+        colorScheme = LightColors,
         typography = Typography,
+        shapes = NursingShapes,
         content = content
     )
 }
