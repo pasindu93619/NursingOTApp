@@ -69,7 +69,8 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `financial_records`")
+                // v3 and v4 store the same current financial schema. Reusing the
+                // existing table is data-safe and avoids dropping user records.
                 createFinancialRecordsTable(database)
             }
         }
@@ -144,9 +145,10 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `salary_steps_2027`")
+                // v9 already contains the exact v10 salary-step schema. Do not
+                // drop and recreate the table because that would erase salary data.
                 database.execSQL("""
-                    CREATE TABLE `salary_steps_2027` (
+                    CREATE TABLE IF NOT EXISTS `salary_steps_2027` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `grade` TEXT NOT NULL,
                         `salaryStep` INTEGER NOT NULL,
