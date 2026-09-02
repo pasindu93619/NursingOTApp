@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,8 +42,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -57,8 +57,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -66,7 +64,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
@@ -86,6 +83,7 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     val vault = remember { PaySheetVaultManager(context) }
     val scope = rememberCoroutineScope()
     val documents by dao.observeAll().collectAsState(initial = emptyList())
+    val systemBarsPadding = WindowInsets.systemBars.asPaddingValues()
 
     var selected by remember { mutableStateOf<PaySheetDocumentEntity?>(null) }
     var pendingMonth by remember { mutableStateOf<String?>(null) }
@@ -189,8 +187,18 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     val usedBytes = remember(documents) { documents.sumOf { it.fileSizeBytes } }
     val sortedDocuments = remember(documents) { documents.sortedByDescending { it.monthKey } }
 
-    Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC))) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FC))
+            .padding(top = systemBarsPadding.calculateTopPadding())
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color(0xFF172554))
             }
@@ -207,17 +215,15 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
             }
         }
 
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        LazyColumn(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             item { VaultHero(count = documents.size, bytes = usedBytes, onAdd = { showMonthPicker = true; pickerYear = currentYear() }) }
-            item {
-                PaySheetVaultStorageCard(documents)
-            }
-            item {
-                PaySheetVaultSearchPanel(
-                    documents = documents,
-                    onDocumentSelected = { selected = it }
-                )
-            }
+            item { PaySheetVaultStorageCard(documents) }
+            item { PaySheetVaultSearchPanel(documents = documents, onDocumentSelected = { selected = it }) }
             item {
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF7C3AED).copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
@@ -321,249 +327,4 @@ fun PaySheetBankScreen(onBack: () -> Unit) {
     message?.let { text ->
         AlertDialog(onDismissRequest = { message = null }, title = { Text("Pay Sheet Bank", fontWeight = FontWeight.Black) }, text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } })
     }
-}
-
-@Composable
-private fun AddSourceDialog(
-    monthKey: String,
-    onDismiss: () -> Unit,
-    onCamera: (String) -> Unit,
-    onGallery: (String) -> Unit,
-    onChangeMonth: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add paysheet", fontWeight = FontWeight.Black) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(color = Color(0xFFEEF2FF), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onChangeMonth)) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text("ARCHIVE MONTH", color = Color(0xFF64748B), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(4.dp))
-                        Text(displayMonth(monthKey), color = Color(0xFF4338CA), fontSize = 17.sp, fontWeight = FontWeight.Black)
-                        Text("Tap to change month / year", color = Color(0xFF64748B), fontSize = 9.sp)
-                    }
-                }
-                Button(onClick = { onCamera(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-                    Icon(Icons.Default.CameraAlt, null); Spacer(Modifier.width(7.dp)); Text("TAKE PHOTO", fontWeight = FontWeight.Black)
-                }
-                Button(onClick = { onGallery(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF2FF), contentColor = Color(0xFF4338CA))) {
-                    Icon(Icons.Default.PhotoCamera, null); Spacer(Modifier.width(7.dp)); Text("CHOOSE FROM GALLERY", fontWeight = FontWeight.Black)
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } }
-    )
-}
-
-@Composable
-private fun MonthYearPickerDialog(
-    initialYear: Int,
-    initialMonth: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int, Int) -> Unit
-) {
-    var year by remember { mutableStateOf(initialYear) }
-    var month by remember { mutableStateOf(initialMonth.coerceIn(0, 11)) }
-    val months = remember { listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Folder, null, tint = Color(0xFF4338CA))
-                Spacer(Modifier.width(8.dp))
-                Text("Choose pay period", fontWeight = FontWeight.Black)
-            }
-        },
-        text = {
-            Column {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(year.toString(), color = Color(0xFF0F172A), fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    Row {
-                        TextButton(onClick = { year-- }) { Text("‹") }
-                        TextButton(onClick = { year++ }) { Text("›") }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                months.chunked(3).forEach { rowMonths ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        rowMonths.forEachIndexed { index, _ ->
-                            val absoluteMonth = months.indexOf(rowMonths[index])
-                            val isSelected = month == absoluteMonth
-                            Surface(
-                                modifier = Modifier.weight(1f).height(48.dp).clickable { month = absoluteMonth },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) Color(0xFF4338CA) else Color(0xFFF8FAFC)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(months[absoluteMonth], color = if (isSelected) Color.White else Color(0xFF334155), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-                Surface(color = Color(0xFFECFEFF), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    Text("Selected: ${String.format(Locale.US, "%02d/%d", month + 1, year)}", Modifier.padding(12.dp), color = Color(0xFF0F766E), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(year, month) }) { Text("CONTINUE", fontWeight = FontWeight.Black) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } }
-    )
-}
-
-private fun prepareAndLaunchCamera(
-    context: Context,
-    monthKey: String,
-    cameraPicker: androidx.activity.result.ActivityResultLauncher<Uri>,
-    onUriReady: (Uri) -> Unit,
-    onError: (String) -> Unit
-) {
-    try {
-        val directory = File(context.filesDir, "paysheet_camera").apply { mkdirs() }
-        val outputFile = File(directory, "capture_${monthKey}_${System.currentTimeMillis()}.jpg")
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outputFile)
-        onUriReady(uri)
-        cameraPicker.launch(uri)
-    } catch (e: Exception) {
-        onError(e.message ?: "Unable to prepare camera capture.")
-    }
-}
-
-@Composable
-private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) {
-    Card(Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF172554))) {
-        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF172554), Color(0xFF312E81))))) {
-            Column(Modifier.padding(22.dp)) {
-                Surface(color = Color.White.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) { Text("PRIVATE DOCUMENT VAULT", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                Spacer(Modifier.height(12.dp))
-                Text("Never lose a paysheet again.", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(5.dp))
-                Text("One organized, private archive for every month.", color = Color.White.copy(alpha = 0.72f), fontSize = 11.sp)
-                Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HeroMetric(Modifier.weight(1f), count.toString(), "MONTHS", Color(0xFF06B6D4))
-                    HeroMetric(Modifier.weight(1f), formatBytes(bytes), "STORAGE", Color(0xFF10B981))
-                }
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = onAdd, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.White)) {
-                    Icon(Icons.Default.PhotoCamera, null, tint = Color(0xFF172554))
-                    Spacer(Modifier.width(8.dp))
-                    Text("ADD PAY SHEET", color = Color(0xFF172554), fontWeight = FontWeight.Black)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeroMetric(modifier: Modifier, value: String, label: String, accent: Color) {
-    Surface(modifier, color = Color.White.copy(alpha = 0.08f), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(12.dp)) {
-            Text(value, color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(label, color = Color.White.copy(alpha = 0.58f), fontSize = 8.sp, fontWeight = FontWeight.Black)
-        }
-    }
-}
-
-@Composable
-private fun VaultMonthCard(document: PaySheetDocumentEntity, onOpen: () -> Unit, onReplace: () -> Unit, onDelete: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onOpen), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            AndroidView(
-                modifier = Modifier.size(90.dp, 112.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFFF1F5F9)),
-                factory = { ImageView(it).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
-                update = { image -> image.setImageBitmap(BitmapFactory.decodeFile(document.filePath)) }
-            )
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(document.displayMonth, color = Color(0xFF0F172A), fontSize = 18.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(4.dp))
-                Text(formatBytes(document.fileSizeBytes), color = Color(0xFF64748B), fontSize = 10.sp)
-                Text("Private device storage", color = Color(0xFF94A3B8), fontSize = 9.sp)
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    VaultAction(Icons.Default.Visibility, "OPEN", onOpen, Color(0xFF4338CA))
-                    VaultAction(Icons.Default.Download, "REPLACE", onReplace, Color(0xFF0891B2))
-                    VaultAction(Icons.Default.DeleteOutline, "DEL", onDelete, Color(0xFFDC2626))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VaultAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit, color: Color) {
-    Surface(Modifier.clickable(onClick = onClick), color = color.copy(alpha = 0.08f), shape = RoundedCornerShape(10.dp)) {
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(label, color = color, fontSize = 7.sp, fontWeight = FontWeight.Black)
-        }
-    }
-}
-
-@Composable
-private fun VaultViewer(document: PaySheetDocumentEntity, onDismiss: () -> Unit, onShare: () -> Unit, onDownload: () -> Unit) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Paysheet", color = Color(0xFF0F172A), fontSize = 19.sp, fontWeight = FontWeight.Black)
-                        Text(document.displayMonth, color = Color(0xFF64748B), fontSize = 10.sp)
-                    }
-                    IconButton(onClick = onDismiss) { Text("×", color = Color(0xFF475569), fontSize = 27.sp) }
-                }
-                Spacer(Modifier.height(10.dp))
-                AndroidView(modifier = Modifier.fillMaxWidth().height(430.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFFF1F5F9)), factory = { ImageView(it).apply { scaleType = ImageView.ScaleType.FIT_CENTER } }, update = { it.setImageBitmap(BitmapFactory.decodeFile(document.filePath)) })
-                Spacer(Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onDownload, Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF2FF), contentColor = Color(0xFF4338CA))) {
-                        Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text("DOWNLOAD", fontWeight = FontWeight.Black)
-                    }
-                    Button(onClick = onShare, Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp)) {
-                        Icon(Icons.Default.Share, null); Spacer(Modifier.width(6.dp)); Text("SHARE", fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun downloadCopy(context: Context, document: PaySheetDocumentEntity): String {
-    val source = File(document.filePath)
-    if (!source.exists()) return "Paysheet file is no longer available."
-    return try {
-        val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "NursingOS Pay Sheets").apply { mkdirs() }
-        val target = File(downloadsDir, "Paysheet_${document.monthKey}.jpg")
-        source.inputStream().use { input -> FileOutputStream(target).use { output -> input.copyTo(output) } }
-        "Paysheet downloaded to Downloads/NursingOS Pay Sheets."
-    } catch (e: Exception) {
-        "Download failed: ${e.message ?: "unknown error"}"
-    }
-}
-
-private fun shareFile(context: Context, document: PaySheetDocumentEntity) {
-    val file = File(document.filePath)
-    if (!file.exists()) return
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "image/jpeg"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(intent, "Share paysheet"))
-}
-
-private fun currentMonthKey(): String = SimpleDateFormat("yyyy-MM", Locale.US).format(Date())
-private fun currentYear(): Int = SimpleDateFormat("yyyy", Locale.US).format(Date()).toInt()
-private fun currentMonthIndex(): Int = SimpleDateFormat("M", Locale.US).format(Date()).toInt() - 1
-private fun displayMonth(key: String): String = SimpleDateFormat("MMMM yyyy", Locale.US).format(SimpleDateFormat("yyyy-MM", Locale.US).parse(key) ?: Date())
-private fun formatBytes(bytes: Long): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> String.format(Locale.US, "%.1f KB", bytes / 1024.0)
-    else -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
 }
