@@ -60,7 +60,11 @@ fun ClinicalPlanningDashboardScreen(
                 },
                 actions = {
                     IconButton(onClick = { viewModel.purgeOldIsbarNotes() }) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = "Purge >48h Notes", tint = Color(0xFF0284C7))
+                        Icon(
+                            Icons.Default.DeleteSweep,
+                            contentDescription = "Purge >48h Notes",
+                            tint = Color(0xFF0284C7)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -79,6 +83,9 @@ fun ClinicalPlanningDashboardScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // BurnoutMeterCard requires explicit metrics. The clinical-planning
+            // screen currently has no shift-analytics source, so keep neutral
+            // values here rather than inventing clinical workload measurements.
             BurnoutMeterCard(
                 startDate = today.minusDays(6),
                 endDate = today,
@@ -87,8 +94,14 @@ fun ClinicalPlanningDashboardScreen(
                 suggestionText = "Add duty information to see workload and recovery guidance."
             )
 
-            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text("ISBAR Notes", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF0F172A))
                     Text("Saved bedside communication notes", fontSize = 12.sp, color = Color(0xFF64748B))
                     Button(onClick = { showAddNoteDialog = true }) {
@@ -108,8 +121,14 @@ fun ClinicalPlanningDashboardScreen(
                 }
             }
 
-            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text("Clinical Tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF0F172A))
                     Button(onClick = { showAddTaskDialog = true }) {
                         Icon(Icons.Default.NotificationsActive, contentDescription = null)
@@ -120,7 +139,13 @@ fun ClinicalPlanningDashboardScreen(
                         ListItem(
                             headlineContent = { Text(task.taskName, fontWeight = FontWeight.SemiBold) },
                             supportingContent = { Text(task.description) },
-                            leadingContent = { Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFF0284C7)) }
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = Color(0xFF0284C7)
+                                )
+                            }
                         )
                     }
                 }
