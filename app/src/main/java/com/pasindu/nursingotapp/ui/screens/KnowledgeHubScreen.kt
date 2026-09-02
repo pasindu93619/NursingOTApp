@@ -1,6 +1,5 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import android.app.Application
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -29,13 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.ui.KnowledgeHubViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,11 +44,7 @@ import java.util.Locale
 fun KnowledgeHubScreen(
     onNavigateBack: () -> Unit,
 ) {
-    // Safely instantiate the AndroidViewModel
-    val context = LocalContext.current
-    val viewModel: KnowledgeHubViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(context.applicationContext as Application)
-    )
+    val viewModel: KnowledgeHubViewModel = hiltViewModel()
 
     val circulars by viewModel.circulars.collectAsState()
     val flashcards by viewModel.flashcards.collectAsState()
@@ -92,7 +86,6 @@ fun KnowledgeHubScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Custom Tab Row
             TabRow(
                 selectedTabIndex = selectedTabIndex,
                 containerColor = Color.White,
@@ -126,7 +119,6 @@ fun KnowledgeHubScreen(
                 )
             }
 
-            // Tab Content
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedTabIndex) {
                     0 -> CircularsFeed(circulars = circulars)
@@ -137,7 +129,6 @@ fun KnowledgeHubScreen(
         }
     }
 
-    // Add CPD Log Dialog
     if (showAddCpdDialog) {
         var title by remember { mutableStateOf("") }
         var pointsStr by remember { mutableStateOf("") }
@@ -148,7 +139,10 @@ fun KnowledgeHubScreen(
             onDismissRequest = { showAddCpdDialog = false },
             title = { Text("Log New CPD Activity", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
                     OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Seminar/Workshop Title") }, singleLine = true)
                     OutlinedTextField(value = pointsStr, onValueChange = { pointsStr = it }, label = { Text("Earned Points") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                     OutlinedTextField(value = institution, onValueChange = { institution = it }, label = { Text("Speaker/Institution") }, singleLine = true)
@@ -165,24 +159,16 @@ fun KnowledgeHubScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
-                ) {
-                    Text("Save Log")
-                }
+                ) { Text("Save Log") }
             },
-            dismissButton = {
-                TextButton(onClick = { showAddCpdDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showAddCpdDialog = false }) { Text("Cancel") } }
         )
     }
 }
 
 @Composable
 fun CircularsFeed(circulars: List<com.pasindu.nursingotapp.ui.CircularItem>) {
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize()
-    ) {
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
             Text(
                 text = "Ministry of Health Updates",
@@ -193,29 +179,11 @@ fun CircularsFeed(circulars: List<com.pasindu.nursingotapp.ui.CircularItem>) {
             )
         }
         items(circulars) { circular ->
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            color = Color(0xFFE0F2FE),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = circular.category,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0284C7)
-                            )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Surface(color = Color(0xFFE0F2FE), shape = RoundedCornerShape(6.dp)) {
+                            Text(text = circular.category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
                         }
                         Text(text = circular.date, fontSize = 12.sp, color = Color.Gray)
                     }
@@ -234,54 +202,27 @@ fun CircularsFeed(circulars: List<com.pasindu.nursingotapp.ui.CircularItem>) {
 @Composable
 fun CpdTrackerView(cpdLogs: List<com.pasindu.nursingotapp.data.local.entity.CpdLogEntity>) {
     val totalPoints = cpdLogs.sumOf { it.earnedPoints }
-
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize()
-    ) {
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)), modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Total Annual CPD Points", color = Color.LightGray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = "$totalPoints", color = Color(0xFF00FFCC), fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { /* Export to PDF Logic Here */ },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)), modifier = Modifier.fillMaxWidth()) {
                         Text("Export Logbook to PDF", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
-
         if (cpdLogs.isEmpty()) {
             item {
-                Text(
-                    text = "No CPD activities logged yet. Tap the + button to record a seminar.",
-                    color = Color.Gray,
-                    modifier = Modifier.padding(top = 24.dp),
-                    textAlign = TextAlign.Center
-                )
+                Text(text = "No CPD activities logged yet. Tap the + button to record a seminar.", color = Color.Gray, modifier = Modifier.padding(top = 24.dp), textAlign = TextAlign.Center)
             }
         } else {
             items(cpdLogs) { log ->
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(text = log.seminarTitle, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A), modifier = Modifier.weight(1f))
@@ -300,55 +241,20 @@ fun CpdTrackerView(cpdLogs: List<com.pasindu.nursingotapp.data.local.entity.CpdL
 
 @Composable
 fun AiFlashcardsView(flashcards: List<com.pasindu.nursingotapp.ui.FlashcardItem>) {
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize()
-    ) {
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF8E24AA))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "AI Generated Study Cards",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFF0F172A),
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "AI Generated Study Cards", style = MaterialTheme.typography.titleMedium, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
             }
-            Text(
-                text = "Tap a card to reveal the answer.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-            )
+            Text(text = "Tap a card to reveal the answer.", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
         }
-
         items(flashcards) { card ->
             var isFlipped by remember { mutableStateOf(false) }
-
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isFlipped) Color(0xFFE0F2FE) else Color.White
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 120.dp)
-                    .clickable { isFlipped = !isFlipped }
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize().padding(24.dp)
-                ) {
-                    AnimatedContent(
-                        targetState = isFlipped,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                        },
-                        label = "flashcard_flip"
-                    ) { flipped ->
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isFlipped) Color(0xFFE0F2FE) else Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp), modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp).clickable { isFlipped = !isFlipped }) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(24.dp)) {
+                    AnimatedContent(targetState = isFlipped, transitionSpec = { fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300)) }, label = "flashcard_flip") { flipped ->
                         if (flipped) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("ANSWER", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7), letterSpacing = 1.sp)
