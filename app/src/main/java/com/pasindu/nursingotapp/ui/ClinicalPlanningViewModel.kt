@@ -1,20 +1,21 @@
 package com.pasindu.nursingotapp.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pasindu.nursingotapp.data.local.DatabaseProvider
 import com.pasindu.nursingotapp.data.local.dao.ClinicalPlanningDao
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ClinicalPlanningViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val clinicalDao: ClinicalPlanningDao = DatabaseProvider.getDatabase(application).clinicalPlanningDao()
+@HiltViewModel
+class ClinicalPlanningViewModel @Inject constructor(
+    private val clinicalDao: ClinicalPlanningDao
+) : ViewModel() {
 
     val isbarNotes: StateFlow<List<IsbarNoteEntity>> = clinicalDao.getAllIsbarNotes()
         .stateIn(
@@ -39,16 +40,17 @@ class ClinicalPlanningViewModel(application: Application) : AndroidViewModel(app
         recommendation: String
     ) {
         viewModelScope.launch {
-            val note = IsbarNoteEntity(
-                patientIdentifier = patientId,
-                identification = identification,
-                situation = situation,
-                background = background,
-                assessment = assessment,
-                recommendation = recommendation,
-                timestamp = System.currentTimeMillis()
+            clinicalDao.insertIsbarNote(
+                IsbarNoteEntity(
+                    patientIdentifier = patientId,
+                    identification = identification,
+                    situation = situation,
+                    background = background,
+                    assessment = assessment,
+                    recommendation = recommendation,
+                    timestamp = System.currentTimeMillis()
+                )
             )
-            clinicalDao.insertIsbarNote(note)
         }
     }
 
@@ -67,15 +69,16 @@ class ClinicalPlanningViewModel(application: Application) : AndroidViewModel(app
         bypassDnd: Boolean
     ) {
         viewModelScope.launch {
-            val task = ClinicalTaskEntity(
-                taskName = taskName,
-                description = description,
-                priority = priority,
-                triggerTime = triggerTime,
-                isCompleted = false,
-                bypassDnd = bypassDnd
+            clinicalDao.insertTask(
+                ClinicalTaskEntity(
+                    taskName = taskName,
+                    description = description,
+                    priority = priority,
+                    triggerTime = triggerTime,
+                    isCompleted = false,
+                    bypassDnd = bypassDnd
+                )
             )
-            clinicalDao.insertTask(task)
         }
     }
 }
