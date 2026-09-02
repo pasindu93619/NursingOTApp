@@ -1,29 +1,21 @@
 package com.pasindu.nursingotapp.data.local
 
-import android.content.Context
 import androidx.room.testing.MigrationTestHelper
-import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
-import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseMigrationTest {
 
     private lateinit var helper: MigrationTestHelper
-    private lateinit var context: Context
 
     @Before
     fun setUp() {
-        context = ApplicationProvider.getApplicationContext()
         helper = MigrationTestHelper(
             InstrumentationRegistry.getInstrumentation(),
             AppDatabase::class.java
@@ -31,9 +23,10 @@ class AppDatabaseMigrationTest {
     }
 
     @After
-    @Throws(IOException::class)
     fun tearDown() {
-        context.deleteDatabase(TEST_DB)
+        InstrumentationRegistry.getInstrumentation()
+            .targetContext
+            .deleteDatabase(TEST_DB)
     }
 
     @Test
@@ -60,7 +53,6 @@ class AppDatabaseMigrationTest {
                 "SELECT monthYear, basicSalary, calculatedOtAmount, netSalary FROM financial_records WHERE id = 17"
             ).use { cursor ->
                 assertEquals(1, cursor.count)
-                assertNotNull(cursor)
                 cursor.moveToFirst()
                 assertEquals("2026-08", cursor.getString(0))
                 assertEquals(120000.0, cursor.getDouble(1), 0.0)
@@ -103,7 +95,7 @@ class AppDatabaseMigrationTest {
     }
 
     @Test
-    fun migrate9To10MustPreserveSalarySteps() {
+    fun migrate9To10PreservesSalarySteps() {
         helper.createDatabase(TEST_DB, 9).apply {
             execSQL(
                 """
@@ -136,7 +128,7 @@ class AppDatabaseMigrationTest {
     }
 
     @Test
-    fun migrate11To12CreatesPaySheetDocumentsWithoutTouchingExistingData() {
+    fun migrate11To12CreatesPaySheetDocumentsAndPreservesProfile() {
         helper.createDatabase(TEST_DB, 11).apply {
             execSQL(
                 """
@@ -154,6 +146,13 @@ class AppDatabaseMigrationTest {
             true,
             AppDatabase.MIGRATION_11_12
         ).use { db ->
+            db.query("SELECT fullName, salaryStep FROM profile WHERE id = 1").use { cursor ->
+                assertEquals(1, cursor.count)
+                cursor.moveToFirst()
+                assertEquals("Migration Nurse", cursor.getString(0))
+                assertEquals(5, cursor.getInt(1))
+            }
+
             db.execSQL(
                 """
                 INSERT INTO pay_sheet_documents (
@@ -161,13 +160,6 @@ class AppDatabaseMigrationTest {
                 ) VALUES ('2026-08', 'August 2026', '/data/pay-sheet.pdf', 1024, 'abc123', 1710000000000, 1710000005000)
                 """.trimIndent()
             )
-
-            db.query("SELECT fullName, salaryStep FROM profile WHERE id = 1").use { cursor ->
-                assertEquals(1, cursor.count)
-                cursor.moveToFirst()
-                assertEquals("Migration Nurse", cursor.getString(0))
-                assertEquals(5, cursor.getInt(1))
-            }
 
             db.query("SELECT monthKey, sha256 FROM pay_sheet_documents WHERE monthKey = '2026-08'").use { cursor ->
                 assertEquals(1, cursor.count)
