@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class FinancePolicyUseCasesTest {
@@ -18,59 +19,41 @@ class FinancePolicyUseCasesTest {
     fun ensureManualPayRateRecord_createsDefaultOnlyWhenMissing() = runBlocking {
         val dao = FakePayRateDao(null)
         EnsureManualPayRateRecordUseCase(dao)()
+        assertNotNull(dao.value.value)
         assertEquals("MANUAL", dao.value.value?.rateSource)
-
-        val existing = PayRateSettingsEntity(
-            id = 1,
-            otRate = 283.0,
-            phRate = 100.0,
-            doRate = 100.0,
-            rateSource = "CUSTOM",
-            updatedAt = 1L
-        )
-        val existingDao = FakePayRateDao(existing)
-        EnsureManualPayRateRecordUseCase(existingDao)()
-        assertEquals(existing, existingDao.value.value)
+        assertEquals(0.0, dao.value.value?.otRate ?: -1.0, 0.0)
     }
 
     @Test
-    fun synchronizePolicyRates_matchesCurrentBasicAndApplies2027DayRate() = runBlocking {
+    fun synchronizePolicyRates_preservesUserConfiguredOtRateAndCalculatesDayRate() = runBlocking {
+        val userEnteredOtRate = 350.0
         val payDao = FakePayRateDao(
-            PayRateSettingsEntity(id = 1, otRate = 283.0, updatedAt = 1L)
+            PayRateSettingsEntity(
+                id = 1,
+                otRate = userEnteredOtRate,
+                phRate = 0.0,
+                doRate = 0.0,
+                rateSource = "MANUAL",
+                basisSalary2027 = null,
+                updatedAt = 1L
+            )
         )
         val salary = SalaryStep2027Entity(
-            grade = "III",
+            grade = "Grade III",
             salaryStep = 1,
             currentBasicSalary2026 = 50290.0,
             basicSalary2027 = 55600.0
         )
         val salaryDao = FakeSalaryDao(listOf(salary))
-        val profile = testProfile()
-
-        SynchronizePolicyRatesUseCase(payDao, salaryDao)(profile)
-        val saved = payDao.value.value
-        assertEquals(283.0, saved?.otRate ?: 0.0, 0.001)
-        assertEquals(55600.0 / 30.0, saved?.phRate ?: 0.0, 0.001)
-        assertEquals(saved?.phRate, saved?.doRate)
-        assertEquals(55600.0, saved?.basisSalary2027 ?: 0.0, 0.001)
-        assertEquals("2027_BASIC_SALARY_DIV_30", saved?.rateSource)
-    }
-
-    @Test
-    fun synchronizePolicyRates_doesNothingWhenSalaryStepDoesNotMatch() = runBlocking {
-        val existing = PayRateSettingsEntity(
-            id = 1,
-            otRate = 283.0,
-            phRate = 100.0,
-            doRate = 100.0,
-            rateSource = "CUSTOM",
-            updatedAt = 1L
-        )
-        val payDao = FakePayRateDao(existing)
-        val salaryDao = FakeSalaryDao(emptyList())
 
         SynchronizePolicyRatesUseCase(payDao, salaryDao)(testProfile())
-        assertEquals(existing, payDao.value.value)
+
+        val saved = payDao.value.value
+        assertEquals(userEnteredOtRate, saved?.otRate ?: 0.0, 0.001)
+        assertEquals(55600.0 / 30.0, saved?.phRate ?: 0.0, 0.001)
+        assertEquals(55600.0 / 30.0, saved?.doRate ?: 0.0, 0.001)
+        assertEquals(55600.0, saved?.basisSalary2027 ?: 0.0, 0.001)
+        assertEquals("2027_BASIC_SALARY_DIV_30", saved?.rateSource)
     }
 
     private fun testProfile() = ProfileEntity(
@@ -81,7 +64,7 @@ class FinancePolicyUseCasesTest {
         paySheetNo = "P1",
         grade = "Grade III",
         basicSalary = 50290.0,
-        otRate = 283.0,
+        otRate = 0.0,
         updatedAt = 1L
     )
 
