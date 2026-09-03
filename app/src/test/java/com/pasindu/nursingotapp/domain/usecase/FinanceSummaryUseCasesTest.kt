@@ -44,8 +44,7 @@ class FinanceSummaryUseCasesTest {
             phRate = 1000.0,
             doRate = 1000.0,
             rateSource = "MANUAL",
-            basisSalary2027 = null,
-            updatedAt = 0L
+            basisSalary2027 = null
         )
 
         val summary = CalculateFinanceSummaryUseCase()(
