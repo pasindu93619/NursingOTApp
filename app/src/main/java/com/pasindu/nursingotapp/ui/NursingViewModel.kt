@@ -1,35 +1,44 @@
-// com/pasindu/nursingotapp/ui/NursingViewModel.kt
 package com.pasindu.nursingotapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
-import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileDao
-import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
+import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
+import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlin.math.abs
 
 @HiltViewModel
 class NursingViewModel @Inject constructor(
-    private val profileDao: ProfileDao,
-    private val dailyEntryDao: DailyEntryDao,
-    private val profileCompensationDao: ProfileCompensationDao,
-    private val salaryStep2027Dao: SalaryStep2027Dao,
-    private val payRateSettingsDao: PayRateSettingsDao
+    observeProfile: ObserveProfileUseCase,
+    observeProfileCompensation: ObserveProfileCompensationUseCase,
+    observeOtRate: ObserveOtRateUseCase,
+    private val saveProfileUseCase: SaveProfileUseCase,
+    private val saveProfileCompensationUseCase: SaveProfileCompensationUseCase,
+    private val saveOtRateUseCase: SaveOtRateUseCase,
+    private val matchSalaryStepUseCase: MatchSalaryStepUseCase,
+    private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase,
+    private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
+    private val saveDailyEntryUseCase: SaveDailyEntryUseCase,
+    private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase
 ) : ViewModel() {
 
     private val _userProfile = MutableStateFlow<ProfileEntity?>(null)
@@ -48,30 +57,18 @@ class NursingViewModel @Inject constructor(
     val dailyLogs: StateFlow<List<DailyEntryEntity>> = _dailyLogs.asStateFlow()
 
     init {
-        loadProfile()
-        loadProfileCompensation()
-        loadOtRate()
-    }
-
-    private fun loadProfile() {
         viewModelScope.launch {
-            profileDao.observeProfile().collect { profile ->
+            observeProfile().collect { profile ->
                 _userProfile.value = profile
             }
         }
-    }
-
-    private fun loadProfileCompensation() {
         viewModelScope.launch {
-            profileCompensationDao.observe().collect { compensation ->
+            observeProfileCompensation().collect { compensation ->
                 _profileCompensation.value = compensation
             }
         }
-    }
-
-    private fun loadOtRate() {
         viewModelScope.launch {
-            payRateSettingsDao.observe().collect { settings ->
+            observeOtRate().collect { settings ->
                 _configuredOtRate.value = settings?.otRate?.coerceAtLeast(0.0) ?: 0.0
             }
         }
@@ -79,7 +76,7 @@ class NursingViewModel @Inject constructor(
 
     fun saveProfile(profile: ProfileEntity) {
         viewModelScope.launch {
-            profileDao.upsert(profile)
+            saveProfileUseCase(profile)
         }
     }
 
@@ -90,15 +87,11 @@ class NursingViewModel @Inject constructor(
         totalDeductions: Double
     ) {
         viewModelScope.launch {
-            profileCompensationDao.upsert(
-                ProfileCompensationEntity(
-                    id = 1,
-                    riskAllowance = riskAllowance.coerceAtLeast(0.0),
-                    claAllowance = claAllowance.coerceAtLeast(0.0),
-                    additionalAllowancesTotal = additionalAllowancesTotal.coerceAtLeast(0.0),
-                    totalDeductions = totalDeductions.coerceAtLeast(0.0),
-                    updatedAt = System.currentTimeMillis()
-                )
+            saveProfileCompensationUseCase(
+                riskAllowance,
+                claAllowance,
+                additionalAllowancesTotal,
+                totalDeductions
             )
         }
     }
@@ -106,18 +99,7 @@ class NursingViewModel @Inject constructor(
     /** Saves the nurse's Health-sector OT rate; it is independent of salary step. */
     fun saveOtRate(value: Double) {
         viewModelScope.launch {
-            val current = payRateSettingsDao.observe().first()
-            payRateSettingsDao.upsert(
-                PayRateSettingsEntity(
-                    id = 1,
-                    otRate = value.coerceAtLeast(0.0),
-                    phRate = current?.phRate ?: 0.0,
-                    doRate = current?.doRate ?: 0.0,
-                    rateSource = "MANUAL",
-                    basisSalary2027 = current?.basisSalary2027,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
+            saveOtRateUseCase(value)
         }
     }
 
@@ -127,20 +109,9 @@ class NursingViewModel @Inject constructor(
      */
     fun applyMatched2027DayRate() {
         viewModelScope.launch {
-            val matched = _matchedSalary2027.value ?: return@launch
-            val dayRate = matched.basicSalary2027 / 30.0
-            val current = payRateSettingsDao.observe().first()
-            payRateSettingsDao.upsert(
-                PayRateSettingsEntity(
-                    id = 1,
-                    otRate = current?.otRate ?: 0.0,
-                    phRate = dayRate,
-                    doRate = dayRate,
-                    rateSource = "2027_BASIC_SALARY_DIV_30",
-                    basisSalary2027 = matched.basicSalary2027,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
+            _matchedSalary2027.value?.basicSalary2027?.let { basis ->
+                applyMatched2027DayRateUseCase(basis)
+            }
         }
     }
 
@@ -150,25 +121,13 @@ class NursingViewModel @Inject constructor(
      */
     fun matchSalaryStep(grade: String, currentBasicSalary: Double) {
         viewModelScope.launch {
-            if (grade.isBlank() || currentBasicSalary <= 0.0) {
-                _matchedSalary2027.value = null
-                return@launch
-            }
-
-            val rows = salaryStep2027Dao.observeForGrade(grade.trim()).first()
-            _matchedSalary2027.value = rows
-                .minByOrNull { row ->
-                    abs(row.currentBasicSalary2026 - currentBasicSalary)
-                }
-                ?.takeIf { row ->
-                    abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01
-                }
+            _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
         }
     }
 
     fun loadEntriesForClaim(claimPeriodId: Long) {
         viewModelScope.launch {
-            dailyEntryDao.observeEntriesForPeriod(claimPeriodId).collect { logs ->
+            observeClaimDailyEntriesUseCase(claimPeriodId).collect { logs ->
                 _dailyLogs.value = logs
             }
         }
@@ -192,24 +151,30 @@ class NursingViewModel @Inject constructor(
         reason: String
     ) {
         viewModelScope.launch {
-            val entry = DailyEntryEntity(
-                id = id,
-                claimPeriodId = claimPeriodId,
-                date = date,
-                isPH = isPH,
-                isDO = isDO,
-                isLeave = isLeave,
-                leaveType = leaveType,
-                normalTimeIn = normalTimeIn,
-                normalTimeOut = normalTimeOut,
-                normalHours = normalHours,
-                otTimeIn = otTimeIn,
-                otTimeOut = otTimeOut,
-                otHours = otHours,
-                wardOverride = wardOverride,
-                reason = reason
+            saveDailyEntryUseCase(
+                DailyEntryEntity(
+                    id = id,
+                    claimPeriodId = claimPeriodId,
+                    date = date,
+                    isPH = isPH,
+                    isDO = isDO,
+                    isLeave = isLeave,
+                    leaveType = leaveType,
+                    normalTimeIn = normalTimeIn,
+                    normalTimeOut = normalTimeOut,
+                    normalHours = normalHours,
+                    otTimeIn = otTimeIn,
+                    otTimeOut = otTimeOut,
+                    otHours = otHours,
+                    wardOverride = wardOverride,
+                    reason = reason
+                )
             )
-            dailyEntryDao.insertEntry(entry)
         }
     }
+
+    suspend fun getDailyEntryForDate(
+        claimPeriodId: Long,
+        date: LocalDate
+    ): DailyEntryEntity? = getDailyEntryForDateUseCase(claimPeriodId, date)
 }
