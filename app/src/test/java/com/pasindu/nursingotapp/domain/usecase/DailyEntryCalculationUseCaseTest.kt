@@ -22,8 +22,8 @@ class DailyEntryCalculationUseCaseTest {
         )
 
         // Normal duty = 30h and recorded OT = 12h.
-        // The first 6h of OT fills the weekly 36h normal requirement.
-        // The remaining 6h stays payable OT.
+        // First 6h of recorded OT fills the missing 6h normal requirement;
+        // remaining 6h stays payable as OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
@@ -110,8 +110,8 @@ class DailyEntryCalculationUseCaseTest {
         wardOverride = "Normal",
         normalTimeInStr = normalIn,
         normalTimeOutStr = normalOut,
-        otIn = otIn,
-        otOut = otOut,
+        otTimeInStr = otIn,
+        otTimeOutStr = otOut,
         computedNormalHours = normalHours,
         computedOtHours = otHours
     )
