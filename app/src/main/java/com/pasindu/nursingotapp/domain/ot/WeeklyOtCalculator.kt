@@ -12,18 +12,13 @@ import java.time.LocalDate
  * evening/night shift. At claim calculation time, the weekly rule is applied:
  *
  * 1. Sum NORMAL DUTY hours for each Sunday-Saturday week.
- * 2. The payable normal-duty total for the week is capped at 36 hours.
- * 3. If normal-duty hours are below 36, eligible OT hours are used to fill
- *    the remaining normal-hour requirement first.
- * 4. Any OT hours not needed to fill the 36-hour normal requirement remain OT.
- * 5. Any normal-duty hours above 36 are moved to OT.
+ * 2. Pay up to 36 hours as normal.
+ * 3. If normal duty is below 36 hours, recorded OT fills the deficit first.
+ * 4. Any OT not used for the deficit remains OT.
+ * 5. Any normal-duty hours above 36 become OT.
  *
- * Example:
- * - Normal = 30h, OT = 10h -> Normal payable = 36h, OT payable = 4h.
- * - Normal = 48h, OT = 6h -> Normal payable = 36h, OT payable = 18h.
- *
- * The OT rate is independently configured by the user. PH/DO payment-day
- * counts remain independent from the weekly 36-hour allocation.
+ * The allocation list mirrors the weekly payable totals back to individual
+ * days for transparent reporting. Source DailyLog values are never mutated.
  */
 object WeeklyOtCalculator {
     const val WEEKLY_NORMAL_LIMIT_HOURS = 36.0
@@ -78,52 +73,76 @@ object WeeklyOtCalculator {
         val weeklySummaries = mutableListOf<WeeklySummary>()
 
         for ((weekStart, weekLogs) in grouped.toSortedMap()) {
-            val normalDutyHours = weekLogs.sumOf {
+            val sortedLogs = weekLogs.sortedBy { it.date }
+            val normalDutyHours = sortedLogs.sumOf {
                 it.computedNormalHours.toDouble().coerceAtLeast(0.0)
             }
-            val recordedOtHours = weekLogs.sumOf {
+            val recordedOtHours = sortedLogs.sumOf {
                 it.computedOtHours.toDouble().coerceAtLeast(0.0)
             }
 
-            // First determine how much of the normal-duty total is payable as
-            // normal. Any normal-duty time above 36 hours becomes OT.
-            val payableNormalHours = minOf(normalDutyHours, WEEKLY_NORMAL_LIMIT_HOURS)
-            val normalDutyOverflowOt = (normalDutyHours - WEEKLY_NORMAL_LIMIT_HOURS)
-                .coerceAtLeast(0.0)
-
-            // If normal duty is below 36 hours, eligible recorded OT hours
-            // first fill the missing normal-hour requirement.
-            val normalDeficit = (WEEKLY_NORMAL_LIMIT_HOURS - normalDutyHours)
-                .coerceAtLeast(0.0)
+            val payableNormalFromNormalDuty = minOf(
+                normalDutyHours,
+                WEEKLY_NORMAL_LIMIT_HOURS
+            )
+            val normalDeficit = (
+                WEEKLY_NORMAL_LIMIT_HOURS - normalDutyHours
+            ).coerceAtLeast(0.0)
             val otUsedToFillNormal = minOf(recordedOtHours, normalDeficit)
             val remainingRecordedOt = recordedOtHours - otUsedToFillNormal
+            val normalDutyOverflowOt = (
+                normalDutyHours - WEEKLY_NORMAL_LIMIT_HOURS
+            ).coerceAtLeast(0.0)
 
-            val weekNormal = payableNormalHours + otUsedToFillNormal
+            val weekNormal = payableNormalFromNormalDuty + otUsedToFillNormal
             val weekOt = normalDutyOverflowOt + remainingRecordedOt
 
-            // Allocate the weekly result back onto the individual days for
-            // transparent UI/PDF reporting while preserving source entries.
+            // Map the exact weekly payable totals back to the source days.
+            // Recorded normal hours are consumed into normal first. Recorded OT
+            // then fills any remaining normal deficit. Normal overflow and any
+            // remaining recorded OT are allocated into payable OT.
             var normalRemaining = weekNormal
             var otRemaining = weekOt
-            for (log in weekLogs.sortedBy { it.date }) {
-                val recordedNormal = log.computedNormalHours.toDouble().coerceAtLeast(0.0)
-                val recordedOt = log.computedOtHours.toDouble().coerceAtLeast(0.0)
 
-                val normalAllocation = minOf(recordedNormal, normalRemaining)
-                normalRemaining -= normalAllocation
+            for (log in sortedLogs) {
+                val recordedNormal = log.computedNormalHours
+                    .toDouble()
+                    .coerceAtLeast(0.0)
+                val recordedOt = log.computedOtHours
+                    .toDouble()
+                    .coerceAtLeast(0.0)
 
-                val otFromNormalOverflow = (recordedNormal - normalAllocation).coerceAtLeast(0.0)
-                val otAllocation = minOf(
-                    otRemaining,
-                    otFromNormalOverflow + recordedOt
-                )
-                otRemaining -= otAllocation
+                val normalFromNormalDuty = minOf(recordedNormal, normalRemaining)
+                normalRemaining -= normalFromNormalDuty
+
+                val normalFromOt = minOf(recordedOt, normalRemaining)
+                normalRemaining -= normalFromOt
+
+                val normalDutyOverflow = (
+                    recordedNormal - normalFromNormalDuty
+                ).coerceAtLeast(0.0)
+                val remainingRecordedOtForDay = (
+                    recordedOt - normalFromOt
+                ).coerceAtLeast(0.0)
+
+                val otFromNormalOverflow = minOf(normalDutyOverflow, otRemaining)
+                otRemaining -= otFromNormalOverflow
+
+                val otFromRecordedOt = minOf(remainingRecordedOtForDay, otRemaining)
+                otRemaining -= otFromRecordedOt
 
                 allocations += ShiftAllocation(
                     date = log.date,
-                    normalHours = normalAllocation,
-                    otHours = otAllocation
+                    normalHours = normalFromNormalDuty + normalFromOt,
+                    otHours = otFromNormalOverflow + otFromRecordedOt
                 )
+            }
+
+            check(normalRemaining == 0.0) {
+                "Weekly normal allocation could not be mapped to daily entries."
+            }
+            check(otRemaining == 0.0) {
+                "Weekly OT allocation could not be mapped to daily entries."
             }
 
             weeklySummaries += WeeklySummary(
