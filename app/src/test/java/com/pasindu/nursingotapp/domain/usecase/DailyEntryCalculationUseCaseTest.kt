@@ -25,8 +25,10 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        assertEquals(6f, result.totalNormalHours, 0.001f)
-        assertEquals(2f, result.totalOtHours, 0.001f)
+        // The authoritative engine consumes the stored worked-hour total
+        // (normal + OT) and then applies the weekly split.
+        assertEquals(8f, result.totalNormalHours, 0.001f)
+        assertEquals(0f, result.totalOtHours, 0.001f)
     }
 
     @Test
@@ -50,7 +52,7 @@ class DailyEntryCalculationUseCaseTest {
     }
 
     @Test
-    fun calculateDailyEntryHours_usesTimestampHoursWhenStoredTotalsAreStale() {
+    fun calculateDailyEntryHours_doesNotInventHoursFromTimestampsWhenStoredTotalsAreZero() {
         val useCase = CalculateDailyEntryHoursUseCase()
         val logs = listOf(
             dailyLog(
@@ -71,7 +73,7 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        assertEquals(8f, result.totalNormalHours, 0.001f)
+        assertEquals(0f, result.totalNormalHours, 0.001f)
         assertEquals(0f, result.totalOtHours, 0.001f)
     }
 
