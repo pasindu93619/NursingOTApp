@@ -2,19 +2,21 @@ package com.pasindu.nursingotapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
-import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
-import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileDao
-import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
-import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
-import com.pasindu.nursingotapp.logic.CalculationEngine
+import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
+import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveClaimPeriodsUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
+import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import kotlin.math.abs
 
 data class AdvancedFinanceUiState(
@@ -32,8 +33,8 @@ data class AdvancedFinanceUiState(
     val periodSummary: PeriodSummary? = null,
     val payRateSettings: PayRateSettingsEntity? = null,
     val compensation: ProfileCompensationEntity? = null,
-    val claimStart: LocalDate? = null,
-    val claimEnd: LocalDate? = null,
+    val claimStart: java.time.LocalDate? = null,
+    val claimEnd: java.time.LocalDate? = null,
     val apit: Double = 0.0,
     val wop: Double = 0.0,
     val loanDeduction: Double = 0.0,
@@ -63,127 +64,80 @@ data class AdvancedFinanceUiState(
 
 @HiltViewModel
 class AdvancedFinanceViewModel @Inject constructor(
-    private val profileDao: ProfileDao,
-    private val claimPeriodDao: ClaimPeriodDao,
-    private val dailyEntryDao: DailyEntryDao,
-    private val payRateSettingsDao: PayRateSettingsDao,
-    private val profileCompensationDao: ProfileCompensationDao,
-    private val salaryStep2027Dao: SalaryStep2027Dao
+    observeProfile: ObserveProfileUseCase,
+    observeClaimPeriod: ObserveClaimPeriodsUseCase,
+    observePayRates: ObserveOtRateUseCase,
+    observeCompensation: ObserveProfileCompensationUseCase,
+    private val ensureManualPayRateRecordUseCase: EnsureManualPayRateRecordUseCase,
+    private val synchronizePolicyRatesUseCase: SynchronizePolicyRatesUseCase,
+    private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
+    private val calculateFinanceSummaryUseCase: CalculateFinanceSummaryUseCase,
+    private val saveFinanceCompensationUseCase: SaveFinanceCompensationUseCase,
+    private val saveFinanceRatesUseCase: SaveFinanceRatesUseCase
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(AdvancedFinanceUiState())
     val uiState: StateFlow<AdvancedFinanceUiState> = _uiState.asStateFlow()
 
     init {
-        observeProfile()
-        observeClaimPeriod()
-        observePayRateSettings()
-        observeCompensation()
-    }
-
-    private fun observeProfile() = viewModelScope.launch {
-        profileDao.observeProfile().collect { profile ->
+        observeProfile().collectInViewModel { profile ->
             _uiState.value = _uiState.value.copy(profile = profile)
-            ensureManualRateRecordExists()
-            if (profile != null) synchronizePolicyRates(profile)
-            recalculate()
+            viewModelScope.launch {
+                ensureManualPayRateRecordUseCase()
+                if (profile != null) synchronizePolicyRatesUseCase(profile)
+                recalculate()
+            }
         }
-    }
-
-    private fun observeClaimPeriod() = viewModelScope.launch {
-        claimPeriodDao.observeClaimPeriods().collect { periods ->
+        observeClaimPeriod().collectInViewModel { periods ->
             _uiState.value = _uiState.value.copy(claimPeriod = periods.firstOrNull())
             recalculate()
         }
-    }
-
-    private fun observePayRateSettings() = viewModelScope.launch {
-        payRateSettingsDao.observe().collect { settings ->
+        observePayRates().collectInViewModel { settings ->
             _uiState.value = _uiState.value.copy(payRateSettings = settings)
             recalculate()
         }
-    }
-
-    private fun observeCompensation() = viewModelScope.launch {
-        profileCompensationDao.observe().collect { compensation ->
+        observeCompensation().collectInViewModel { compensation ->
             _uiState.value = _uiState.value.copy(compensation = compensation)
             recalculate()
         }
     }
 
-    private fun ensureManualRateRecordExists() = viewModelScope.launch {
-        if (payRateSettingsDao.observe().first() == null) {
-            payRateSettingsDao.upsert(PayRateSettingsEntity(id = 1, rateSource = "MANUAL"))
-        }
-    }
-
-    /**
-     * Uses the stored current 2026 basic + grade to find the authoritative
-     * 2027 paid/basic row. PH and DO are both calculated from that 2027 basis.
-     * OT remains the independently entered Health-sector rate.
-     */
-    private fun synchronizePolicyRates(profile: ProfileEntity) = viewModelScope.launch {
-        val current = payRateSettingsDao.observe().first()
-        val grade = normalizeGrade(profile.grade)
-        val rows = salaryStep2027Dao.observeForGrade(grade).first()
-        val matched = rows.firstOrNull { abs(it.currentBasicSalary2026 - profile.basicSalary) < 0.01 }
-            ?: return@launch
-
-        val dayRate = matched.basicSalary2027 / 30.0
-        val existingOtRate = current?.otRate ?: 0.0
-        val alreadyCorrect = current?.basisSalary2027 == matched.basicSalary2027 &&
-            abs(current.phRate - dayRate) < 0.01 &&
-            abs(current.doRate - dayRate) < 0.01 &&
-            current.rateSource == "2027_BASIC_SALARY_DIV_30"
-
-        if (!alreadyCorrect) {
-            payRateSettingsDao.upsert(
-                PayRateSettingsEntity(
-                    id = 1,
-                    otRate = existingOtRate.coerceAtLeast(0.0),
-                    phRate = dayRate,
-                    doRate = dayRate,
-                    rateSource = "2027_BASIC_SALARY_DIV_30",
-                    basisSalary2027 = matched.basicSalary2027,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-        }
-    }
-
     private fun recalculate() {
         val state = _uiState.value
-        val profile = state.profile
-        val claimPeriod = state.claimPeriod
-        val settings = state.payRateSettings
-        if (profile == null || claimPeriod == null) {
+        val profile = state.profile ?: run {
+            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
+            return
+        }
+        val claimPeriod = state.claimPeriod ?: run {
             _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
             return
         }
 
         viewModelScope.launch {
-            try {
-                dailyEntryDao.observeEntriesForPeriod(claimPeriod.id).collect { entries ->
-                    try {
-                        val result = CalculationEngine.processClaimData(
-                            profileEntity = profile,
-                            entries = entries,
-                            claimStart = claimPeriod.startDate,
-                            claimEnd = claimPeriod.endDate,
-                            payRates = settings?.let { CalculationEngine.PayRates(it.otRate, it.phRate, it.doRate) }
-                        )
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            periodSummary = result.second,
-                            claimStart = claimPeriod.startDate,
-                            claimEnd = claimPeriod.endDate,
-                            errorMessage = null
-                        )
-                    } catch (e: Exception) {
-                        _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message ?: "Unable to calculate financial summary.")
-                    }
+            runCatching {
+                observeClaimDailyEntriesUseCase(claimPeriod.id).first()
+            }.onSuccess { entries ->
+                runCatching {
+                    calculateFinanceSummaryUseCase(
+                        profile = profile,
+                        entries = entries,
+                        claimStart = claimPeriod.startDate,
+                        claimEnd = claimPeriod.endDate,
+                        payRates = state.payRateSettings
+                    )
+                }.onSuccess { summary ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        periodSummary = summary,
+                        claimStart = claimPeriod.startDate,
+                        claimEnd = claimPeriod.endDate,
+                        errorMessage = null
+                    )
+                }.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = error.message ?: "Unable to calculate financial summary.")
                 }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message ?: "Unable to load financial information.")
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = error.message ?: "Unable to load financial information.")
             }
         }
     }
@@ -205,22 +159,21 @@ class AdvancedFinanceViewModel @Inject constructor(
         saveRates(_uiState.value.otRate, dayRate, dayRate, basisSalary2027, "2027_BASIC_SALARY_DIV_30")
     }
 
-    fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) = viewModelScope.launch {
-        profileCompensationDao.upsert(ProfileCompensationEntity(1, riskAllowance.coerceAtLeast(0.0), claAllowance.coerceAtLeast(0.0), additionalAllowancesTotal.coerceAtLeast(0.0), totalDeductions.coerceAtLeast(0.0), System.currentTimeMillis()))
+    fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) {
+        viewModelScope.launch {
+            saveFinanceCompensationUseCase(riskAllowance, claAllowance, additionalAllowancesTotal, totalDeductions)
+        }
     }
 
-    private fun saveRates(otRate: Double, phRate: Double, doRate: Double, basisSalary2027: Double?, source: String) = viewModelScope.launch {
-        payRateSettingsDao.upsert(PayRateSettingsEntity(1, otRate.coerceAtLeast(0.0), phRate.coerceAtLeast(0.0), doRate.coerceAtLeast(0.0), source, basisSalary2027, System.currentTimeMillis()))
+    private fun saveRates(otRate: Double, phRate: Double, doRate: Double, basisSalary2027: Double?, source: String) {
+        viewModelScope.launch {
+            saveFinanceRatesUseCase(otRate, phRate, doRate, basisSalary2027, source)
+        }
     }
 
     private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-    private fun normalizeGrade(value: String): String {
-        val cleaned = value.trim().uppercase().replace("GRADE", "").trim()
-        return when {
-            cleaned == "1" || cleaned == "I" -> "I"
-            cleaned == "2" || cleaned == "II" -> "II"
-            cleaned == "3" || cleaned == "III" -> "III"
-            else -> value.trim().uppercase()
-        }
+
+    private fun <T> kotlinx.coroutines.flow.Flow<T>.collectInViewModel(block: (T) -> Unit) {
+        viewModelScope.launch { collect { block(it) } }
     }
 }
