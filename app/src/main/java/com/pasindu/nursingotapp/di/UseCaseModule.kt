@@ -1,14 +1,18 @@
 package com.pasindu.nursingotapp.di
 
+import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
@@ -47,4 +51,14 @@ object UseCaseModule {
     @Provides
     fun provideApplyMatched2027DayRateUseCase(dao: PayRateSettingsDao) =
         ApplyMatched2027DayRateUseCase(dao)
+
+    @Provides
+    fun provideObserveClaimDailyEntriesUseCase(dao: DailyEntryDao) =
+        ObserveClaimDailyEntriesUseCase(dao)
+
+    @Provides
+    fun provideSaveDailyEntryUseCase(dao: DailyEntryDao) = SaveDailyEntryUseCase(dao)
+
+    @Provides
+    fun provideGetDailyEntryForDateUseCase(dao: DailyEntryDao) = GetDailyEntryForDateUseCase(dao)
 }
