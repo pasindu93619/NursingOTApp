@@ -4,6 +4,7 @@ import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
 import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
+import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
@@ -23,6 +24,7 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveClaimPeriodsForAnalyticsUs
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimPeriodsUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveCpdLogsUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObservePaySheetDocumentsUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
@@ -65,4 +67,5 @@ object UseCaseModule {
     @Provides fun provideAddCpdLogUseCase(dao: KnowledgeHubDao) = AddCpdLogUseCase(dao)
     @Provides fun provideObserveAllDailyEntriesUseCase(dao: DailyEntryDao) = ObserveAllDailyEntriesUseCase(dao)
     @Provides fun provideObserveClaimPeriodsForAnalyticsUseCase(dao: ClaimPeriodDao) = ObserveClaimPeriodsForAnalyticsUseCase(dao)
+    @Provides fun provideObservePaySheetDocumentsUseCase(dao: PaySheetDocumentDao) = ObservePaySheetDocumentsUseCase(dao)
 }
