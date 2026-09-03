@@ -21,8 +21,8 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        // Normal duty = 30h. The first 6h of recorded OT fills the weekly
-        // normal requirement; the remaining 6h stays payable as OT.
+        // Normal duty = 30h and recorded OT = 12h.
+        // 6h of OT fills the 36h normal requirement, leaving 6h as OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
@@ -47,21 +47,20 @@ class DailyEntryCalculationUseCaseTest {
     }
 
     @Test
-    fun calculateDailyEntryHours_preservesRecordedNormalAndOtAsWeeklyTotalsWhenNoDeficitOrOverflow() {
+    fun calculateDailyEntryHours_preservesRecordedOtWhenWeeklyNormalIsExactly36Hours() {
         val useCase = CalculateDailyEntryHoursUseCase()
         val result = useCase(
             logs = listOf(
                 dailyLog(1L, LocalDate.of(2026, 9, 6), 12f, 0f),
                 dailyLog(2L, LocalDate.of(2026, 9, 7), 12f, 0f),
                 dailyLog(3L, LocalDate.of(2026, 9, 8), 12f, 0f),
-                dailyLog(4L, LocalDate.of(2026, 9, 9), 0f, 4f),
-                dailyLog(5L, LocalDate.of(2026, 9, 10), 0f, 2f)
+                dailyLog(4L, LocalDate.of(2026, 9, 9), 0f, 6f)
             ),
             claimStart = LocalDate.of(2026, 9, 1),
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        // Normal duty = 36h, so recorded OT remains OT.
+        // Normal duty = 36h, therefore all recorded OT remains payable OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
