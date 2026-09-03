@@ -36,6 +36,7 @@ import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.SavePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveProfileSettingsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
 import dagger.Module
@@ -52,6 +53,7 @@ object UseCaseModule {
     @Provides fun provideSaveProfileUseCase(dao: ProfileDao) = SaveProfileUseCase(dao)
     @Provides fun provideSaveProfileCompensationUseCase(dao: ProfileCompensationDao) = SaveProfileCompensationUseCase(dao)
     @Provides fun provideSaveOtRateUseCase(dao: PayRateSettingsDao) = SaveOtRateUseCase(dao)
+    @Provides fun provideSaveProfileSettingsUseCase(profileDao: ProfileDao, compensationDao: ProfileCompensationDao, payRateSettingsDao: PayRateSettingsDao) = SaveProfileSettingsUseCase(profileDao, compensationDao, payRateSettingsDao)
     @Provides fun provideMatchSalaryStepUseCase(dao: SalaryStep2027Dao) = MatchSalaryStepUseCase(dao)
     @Provides fun provideApplyMatched2027DayRateUseCase(dao: PayRateSettingsDao) = ApplyMatched2027DayRateUseCase(dao)
     @Provides fun provideCalculateDailyEntryHoursUseCase() = CalculateDailyEntryHoursUseCase()
