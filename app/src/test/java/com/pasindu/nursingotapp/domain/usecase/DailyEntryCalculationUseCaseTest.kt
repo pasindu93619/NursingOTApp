@@ -17,12 +17,13 @@ class DailyEntryCalculationUseCaseTest {
                 dailyLog(3L, LocalDate.of(2026, 9, 8), 6f, 6f),
                 dailyLog(4L, LocalDate.of(2026, 9, 9), 0f, 6f)
             ),
-            claimStart = LocalDate.of(2026, 9, 1),
-            claimEnd = LocalDate.of(2026, 9, 30)
+            claimStart = LocalDate.of(2026, 9, 6),
+            claimEnd = LocalDate.of(2026, 9, 12)
         )
 
         // Normal duty = 30h and recorded OT = 12h.
-        // 6h of OT fills the 36h normal requirement, leaving 6h as OT.
+        // The first 6h of OT fills the weekly 36h normal requirement.
+        // The remaining 6h stays payable OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
@@ -37,11 +38,11 @@ class DailyEntryCalculationUseCaseTest {
                 dailyLog(3L, LocalDate.of(2026, 9, 8), 12f, 0f),
                 dailyLog(4L, LocalDate.of(2026, 9, 9), 12f, 0f)
             ),
-            claimStart = LocalDate.of(2026, 9, 1),
-            claimEnd = LocalDate.of(2026, 9, 30)
+            claimStart = LocalDate.of(2026, 9, 6),
+            claimEnd = LocalDate.of(2026, 9, 12)
         )
 
-        // Normal duty = 48h -> first 36h normal, remaining 12h OT.
+        // Normal duty = 48h -> 36h normal, remaining 12h becomes OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(12f, result.totalOtHours, 0.001f)
     }
@@ -56,8 +57,8 @@ class DailyEntryCalculationUseCaseTest {
                 dailyLog(3L, LocalDate.of(2026, 9, 8), 12f, 0f),
                 dailyLog(4L, LocalDate.of(2026, 9, 9), 0f, 6f)
             ),
-            claimStart = LocalDate.of(2026, 9, 1),
-            claimEnd = LocalDate.of(2026, 9, 30)
+            claimStart = LocalDate.of(2026, 9, 6),
+            claimEnd = LocalDate.of(2026, 9, 12)
         )
 
         // Normal duty = 36h, therefore all recorded OT remains payable OT.
@@ -81,8 +82,8 @@ class DailyEntryCalculationUseCaseTest {
                     otOut = "15.00"
                 )
             ),
-            claimStart = LocalDate.of(2026, 9, 1),
-            claimEnd = LocalDate.of(2026, 9, 30)
+            claimStart = LocalDate.of(2026, 9, 6),
+            claimEnd = LocalDate.of(2026, 9, 12)
         )
 
         assertEquals(0f, result.totalNormalHours, 0.001f)
@@ -109,8 +110,8 @@ class DailyEntryCalculationUseCaseTest {
         wardOverride = "Normal",
         normalTimeInStr = normalIn,
         normalTimeOutStr = normalOut,
-        otTimeInStr = otIn,
-        otTimeOutStr = otOut,
+        otIn = otIn,
+        otOut = otOut,
         computedNormalHours = normalHours,
         computedOtHours = otHours
     )
