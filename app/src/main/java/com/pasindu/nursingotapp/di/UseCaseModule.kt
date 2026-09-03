@@ -18,6 +18,7 @@ import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeletePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.FindPaySheetDocumentUseCase
+import com.pasindu.nursingotapp.domain.usecase.GenerateOtPdfUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveAllDailyEntriesUseCase
@@ -74,4 +75,5 @@ object UseCaseModule {
     @Provides fun provideFindPaySheetDocumentUseCase(dao: PaySheetDocumentDao) = FindPaySheetDocumentUseCase(dao)
     @Provides fun provideSavePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = SavePaySheetDocumentUseCase(dao)
     @Provides fun provideDeletePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = DeletePaySheetDocumentUseCase(dao)
+    @Provides fun provideGenerateOtPdfUseCase() = GenerateOtPdfUseCase()
 }
