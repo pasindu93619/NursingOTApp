@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import kotlin.math.cos
@@ -86,7 +88,7 @@ enum class CardEffect { NONE, WAVE, PARTICLES, ECG, BUBBLES, PULSE_RINGS }
 fun HomeScreen(
     viewModel: NursingViewModel,
     onNavigate: (String) -> Unit,
-    commandCenterViewModel: NurseCommandCenterViewModel = viewModel()
+    commandCenterViewModel: NurseCommandCenterViewModel = hiltViewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     val commandState by commandCenterViewModel.state.collectAsState()
@@ -123,8 +125,8 @@ fun HomeScreen(
         Text("Super App Enhancements", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SecondaryText)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                AnimatedDashboardCard(title = "Clinical Planning", subtitle = "ISBAR Handover & Task Alarms", icon = Icons.Default.Assignment, color = palette.clinicalPlanning, height = 200.dp, effect = CardEffect.BUBBLES, onClick = { onNavigate("clinical_planning") })
-                AnimatedDashboardCard(title = "Knowledge Hub", subtitle = "CPD Ledger & MoH Circulars", icon = Icons.Default.MenuBook, color = palette.knowledgeHub, height = 180.dp, effect = CardEffect.PARTICLES, onClick = { onNavigate("knowledge_hub") })
+                AnimatedDashboardCard(title = "Clinical Planning", subtitle = "ISBAR Handover & Task Alarms", icon = Icons.AutoMirrored.Filled.Assignment, color = palette.clinicalPlanning, height = 200.dp, effect = CardEffect.BUBBLES, onClick = { onNavigate("clinical_planning") })
+                AnimatedDashboardCard(title = "Knowledge Hub", subtitle = "CPD Ledger & MoH Circulars", icon = Icons.AutoMirrored.Filled.MenuBook, color = palette.knowledgeHub, height = 180.dp, effect = CardEffect.PARTICLES, onClick = { onNavigate("knowledge_hub") })
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 AnimatedDashboardCard(title = "Clinical Calculators", subtitle = "IV Drip Metronome & GCS", icon = Icons.Default.MedicalServices, color = palette.calculators, height = 180.dp, effect = CardEffect.ECG, onClick = { onNavigate("clinical_calculators") })
@@ -203,38 +205,28 @@ fun AnimatedDashboardCard(title: String, subtitle: String, icon: ImageVector, co
                     CardEffect.ECG -> {
                         val path = Path(); val baseY = size.height * 0.62f
                         for (x in 0..size.width.toInt() step 10) { val px = x.toFloat(); val phase = (px / size.width * 6.0 + timePhase * 0.3).toFloat(); val pulse = if (sin(phase) > 0.94f) sin(phase * 11f) * 36f else 0f; val py = baseY - pulse; if (x == 0) path.moveTo(px, py) else path.lineTo(px, py) }
-                        drawPath(path, Color.White.copy(alpha = 0.22f), style = Stroke(3f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        drawPath(path, Color.White.copy(alpha = 0.24f), style = Stroke(2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
-                    CardEffect.PULSE_RINGS -> {
-                        val center = Offset(size.width * 0.82f, size.height * 0.46f)
-                        listOf(30f, 52f, 74f).forEachIndexed { index, radius -> drawCircle(Color.White.copy(alpha = 0.15f - index * 0.035f), radius + ((timePhase * 11f + index * 16f) % 20f), center, style = Stroke(2f)) }
-                    }
-                    CardEffect.PARTICLES -> repeat(18) { index ->
-                        val fx = ((index * 71f) % size.width) + cos(timePhase + index) * 10f
-                        val fy = ((index * 43f) % size.height) + sin(timePhase * 0.8f + index) * 12f
-                        drawCircle(Color.White.copy(alpha = 0.16f), radius = 3.5f, center = Offset(fx, fy))
-                    }
-                    CardEffect.BUBBLES -> repeat(6) { index ->
-                        val fx = size.width * (0.18f + index * 0.14f)
-                        val fy = size.height * (0.75f - ((timePhase * 0.07f + index * 0.11f) % 0.55f))
-                        drawCircle(Color.White.copy(alpha = 0.10f), 10f + index * 3f, Offset(fx, fy))
+                    CardEffect.PARTICLES, CardEffect.BUBBLES, CardEffect.PULSE_RINGS -> {
+                        val center = Offset(size.width * 0.82f, size.height * 0.28f)
+                        val radius = 28f + 12f * sin(timePhase)
+                        drawCircle(Color.White.copy(alpha = 0.08f), radius, center)
+                        drawCircle(Color.White.copy(alpha = 0.05f), radius * 1.8f, center)
                     }
                     CardEffect.NONE -> Unit
                 }
                 val shimmerX = size.width * shimmerPhase
-                rotate(-18f, pivot = Offset(shimmerX, size.height / 2f)) {
-                    drawRect(Brush.linearGradient(colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent), start = Offset(-80f, 0f), end = Offset(80f, 0f)), topLeft = Offset(shimmerX - 80f, -size.height), size = androidx.compose.ui.geometry.Size(160f, size.height * 3f))
-                }
+                drawLine(Color.White.copy(alpha = 0.10f), Offset(shimmerX, 0f), Offset(shimmerX + size.width * 0.22f, size.height), 24f, cap = StrokeCap.Round)
             }
-            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Box(Modifier.size(50.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) { Icon(imageVector = icon, contentDescription = null, tint = textColor, modifier = Modifier.size(28.dp)) }
+            Column(modifier = Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                    Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(14.dp)) { Icon(icon, contentDescription = null, tint = textColor, modifier = Modifier.padding(10.dp).size(24.dp)) }
+                    if (isSoon) Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(50.dp)) { Text("SOON", color = textColor, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)) }
+                }
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(title, color = textColor, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                        if (isSoon) { Spacer(Modifier.width(8.dp)); Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(10.dp)) { Text("SOON", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) } }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(subtitle, color = textColor.copy(alpha = 0.84f), fontSize = 12.sp, lineHeight = 17.sp)
+                    Text(title, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(4.dp))
+                    Text(subtitle, color = textColor.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
