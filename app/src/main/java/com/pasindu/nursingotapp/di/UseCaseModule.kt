@@ -15,7 +15,9 @@ import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.CreateClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeleteAllClaimPeriodsUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
+import com.pasindu.nursingotapp.domain.usecase.DeletePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
+import com.pasindu.nursingotapp.domain.usecase.FindPaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveAllDailyEntriesUseCase
@@ -31,6 +33,7 @@ import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.SavePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
@@ -68,4 +71,7 @@ object UseCaseModule {
     @Provides fun provideObserveAllDailyEntriesUseCase(dao: DailyEntryDao) = ObserveAllDailyEntriesUseCase(dao)
     @Provides fun provideObserveClaimPeriodsForAnalyticsUseCase(dao: ClaimPeriodDao) = ObserveClaimPeriodsForAnalyticsUseCase(dao)
     @Provides fun provideObservePaySheetDocumentsUseCase(dao: PaySheetDocumentDao) = ObservePaySheetDocumentsUseCase(dao)
+    @Provides fun provideFindPaySheetDocumentUseCase(dao: PaySheetDocumentDao) = FindPaySheetDocumentUseCase(dao)
+    @Provides fun provideSavePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = SavePaySheetDocumentUseCase(dao)
+    @Provides fun provideDeletePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = DeletePaySheetDocumentUseCase(dao)
 }
