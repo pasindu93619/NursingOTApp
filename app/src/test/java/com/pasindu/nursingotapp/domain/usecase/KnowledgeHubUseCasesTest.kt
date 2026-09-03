@@ -4,6 +4,7 @@ import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -64,7 +65,7 @@ class KnowledgeHubUseCasesTest {
         )
         val dao = FakeKnowledgeHubDao(expected)
 
-        val result = kotlinx.coroutines.flow.first(ObserveCpdLogsUseCase(dao)())
+        val result = ObserveCpdLogsUseCase(dao)().first()
 
         assertEquals(expected, result)
     }
