@@ -1,14 +1,19 @@
 package com.pasindu.nursingotapp.di
 
+import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
 import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.CreateClaimPeriodUseCase
+import com.pasindu.nursingotapp.domain.usecase.DeleteAllClaimPeriodsUseCase
+import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveClaimPeriodsUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
@@ -51,6 +56,24 @@ object UseCaseModule {
     @Provides
     fun provideApplyMatched2027DayRateUseCase(dao: PayRateSettingsDao) =
         ApplyMatched2027DayRateUseCase(dao)
+
+    @Provides
+    fun provideObserveClaimPeriodsUseCase(dao: ClaimPeriodDao) = ObserveClaimPeriodsUseCase(dao)
+
+    @Provides
+    fun provideCreateClaimPeriodUseCase(dao: ClaimPeriodDao) = CreateClaimPeriodUseCase(dao)
+
+    @Provides
+    fun provideDeleteClaimPeriodUseCase(
+        claimPeriodDao: ClaimPeriodDao,
+        dailyEntryDao: DailyEntryDao
+    ) = DeleteClaimPeriodUseCase(claimPeriodDao, dailyEntryDao)
+
+    @Provides
+    fun provideDeleteAllClaimPeriodsUseCase(
+        claimPeriodDao: ClaimPeriodDao,
+        dailyEntryDao: DailyEntryDao
+    ) = DeleteAllClaimPeriodsUseCase(claimPeriodDao, dailyEntryDao)
 
     @Provides
     fun provideObserveClaimDailyEntriesUseCase(dao: DailyEntryDao) =
