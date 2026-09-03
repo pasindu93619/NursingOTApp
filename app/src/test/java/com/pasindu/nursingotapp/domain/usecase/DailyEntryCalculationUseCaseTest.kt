@@ -8,27 +8,25 @@ import org.junit.Test
 class DailyEntryCalculationUseCaseTest {
 
     @Test
-    fun calculateDailyEntryHours_preservesSeparateNormalAndOtHours() {
+    fun calculateDailyEntryHours_usesRecordedNormalAndOtSeparatelyForWeeklyAllocation() {
         val useCase = CalculateDailyEntryHoursUseCase()
-        val logs = listOf(
-            dailyLog(
-                id = 1L,
-                date = LocalDate.of(2026, 9, 6),
-                normalHours = 6f,
-                otHours = 2f
-            )
-        )
-
         val result = useCase(
-            logs = logs,
+            logs = listOf(
+                dailyLog(
+                    id = 1L,
+                    date = LocalDate.of(2026, 9, 6),
+                    normalHours = 6f,
+                    otHours = 2f
+                )
+            ),
             claimStart = LocalDate.of(2026, 9, 1),
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        // Nursing duty hours are stored separately. A 6-hour normal shift
-        // plus 2 hours of OT remains 6 normal + 2 OT in the daily calculation.
-        assertEquals(6f, result.totalNormalHours, 0.001f)
-        assertEquals(2f, result.totalOtHours, 0.001f)
+        // Weekly rule: normal duty is 6h, so 2h recorded OT fills the
+        // missing part of the 36h normal requirement first.
+        assertEquals(8f, result.totalNormalHours, 0.001f)
+        assertEquals(0f, result.totalOtHours, 0.001f)
     }
 
     @Test
@@ -67,8 +65,8 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        // Normal duty = 30h. The first 6h of recorded OT fills the 36h
-        // normal requirement; the remaining 6h stays OT.
+        // Normal duty = 30h. First 6h of recorded OT fills the normal
+        // requirement; the remaining 6h remains OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
