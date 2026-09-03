@@ -78,9 +78,12 @@ class ProfileUseCasesTest {
         private val rows: List<SalaryStep2027Entity>
     ) : SalaryStep2027Dao {
         override fun observeForGrade(grade: String): Flow<List<SalaryStep2027Entity>> = flowOf(rows)
-        override suspend fun insertAll(items: List<SalaryStep2027Entity>) = Unit
+        override suspend fun find(grade: String, salaryStep: Int): SalaryStep2027Entity? = null
+        override suspend fun findByCurrentBasic(grade: String, currentBasicSalary: Double): SalaryStep2027Entity? =
+            rows.firstOrNull { it.grade == grade && kotlin.math.abs(it.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
         override suspend fun count(): Int = rows.size
-        override suspend fun deleteAll() = Unit
+        override suspend fun clearAll() = Unit
+        override suspend fun insertAll(rows: List<SalaryStep2027Entity>) = Unit
     }
 
     private class FakePayRateSettingsDao(
@@ -94,14 +97,12 @@ class ProfileUseCasesTest {
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private class FakeProfileDao : ProfileDao {
         override suspend fun upsert(profile: ProfileEntity) = Unit
         override fun observeProfile(): Flow<ProfileEntity?> = flowOf(null)
         override suspend fun getProfileOnce(): ProfileEntity? = null
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private class FakeProfileCompensationDao : ProfileCompensationDao {
         override suspend fun upsert(compensation: ProfileCompensationEntity) = Unit
         override fun observe(): Flow<ProfileCompensationEntity?> = flowOf(null)
