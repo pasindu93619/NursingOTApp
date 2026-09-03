@@ -6,13 +6,13 @@ import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
-import kotlin.math.abs
+import kotlinx.coroutines.flow.first
 
 class EnsureManualPayRateRecordUseCase(
     private val payRateSettingsDao: PayRateSettingsDao
 ) {
     suspend operator fun invoke() {
-        if (payRateSettingsDao.observe().kotlinx.coroutines.flow.first() == null) {
+        if (payRateSettingsDao.observe().first() == null) {
             payRateSettingsDao.upsert(
                 PayRateSettingsEntity(
                     id = 1,
@@ -37,7 +37,7 @@ class SynchronizePolicyRatesUseCase(
             currentBasicSalary = profile.basicSalary
         ) ?: return
 
-        val current = payRateSettingsDao.observe().kotlinx.coroutines.flow.first()
+        val current = payRateSettingsDao.observe().first()
         val otRate = (current?.otRate ?: profile.otRate).coerceAtLeast(0.0)
         val dayRate = (salaryStep.basicSalary2027 / 30.0).coerceAtLeast(0.0)
 
