@@ -79,11 +79,6 @@ class NurseCommandCenterViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Persist completion of a real clinical task.
-     * The repository update feeds back through the Room Flow, so the
-     * Command Center refreshes its pending count and agenda automatically.
-     */
     fun completeClinicalTask(taskId: Int, taskName: String = "Clinical task") {
         viewModelScope.launch {
             repository.setClinicalTaskCompleted(taskId, true)
@@ -92,7 +87,6 @@ class NurseCommandCenterViewModel @Inject constructor(
         }
     }
 
-    /** Reopen the exact task from the most recent completion action. */
     fun undoLastCompletion() {
         val completed = _undoTask.value ?: return
         viewModelScope.launch {
