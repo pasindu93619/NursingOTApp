@@ -26,6 +26,7 @@ import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
 import dagger.Module
 import dagger.Provides
@@ -70,10 +71,8 @@ object UseCaseModule {
     fun provideEnsureManualPayRateRecordUseCase(dao: PayRateSettingsDao) = EnsureManualPayRateRecordUseCase(dao)
 
     @Provides
-    fun provideSynchronizePolicyRatesUseCase(
-        payRateSettingsDao: PayRateSettingsDao,
-        salaryStep2027Dao: SalaryStep2027Dao
-    ) = SynchronizePolicyRatesUseCase(payRateSettingsDao, salaryStep2027Dao)
+    fun provideSynchronizePolicyRatesUseCase(payRateSettingsDao: PayRateSettingsDao, salaryStep2027Dao: SalaryStep2027Dao) =
+        SynchronizePolicyRatesUseCase(payRateSettingsDao, salaryStep2027Dao)
 
     @Provides
     fun provideSaveFinanceCompensationUseCase(dao: ProfileCompensationDao) = SaveFinanceCompensationUseCase(dao)
