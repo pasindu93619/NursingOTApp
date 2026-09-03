@@ -64,12 +64,10 @@ class KnowledgeHubUseCasesTest {
         )
         val dao = FakeKnowledgeHubDao(expected)
 
-        val result = ObserveCpdLogsUseCase(dao)().firstValue()
+        val result = kotlinx.coroutines.flow.first(ObserveCpdLogsUseCase(dao)())
 
         assertEquals(expected, result)
     }
-
-    private suspend fun <T> Flow<T>.firstValue(): T = kotlinx.coroutines.flow.first(this)
 
     private class FakeKnowledgeHubDao(
         private val logs: List<CpdLogEntity> = emptyList()
