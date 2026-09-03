@@ -5,9 +5,9 @@ import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import java.time.LocalDate
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Test
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -20,8 +20,10 @@ class ClaimPeriodUseCasesTest {
         val dao = FakeClaimPeriodDao()
         val useCase = CreateClaimPeriodUseCase(dao)
 
-        assertFailsWith<IllegalArgumentException> {
-            useCase(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 1), "Normal")
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                useCase(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 1), "Normal")
+            }
         }
     }
 
@@ -75,6 +77,7 @@ class ClaimPeriodUseCasesTest {
         DeleteClaimPeriodUseCase(claimDao, dailyDao)(period)
 
         assertEquals(1, dailyDao.deletePeriodCalls)
+        assertEquals(0, dailyDao.entries.value.size)
         assertEquals(0, claimDao.items.value.size)
     }
 
