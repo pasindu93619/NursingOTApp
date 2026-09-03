@@ -106,5 +106,6 @@ class ProfileUseCasesTest {
     private class FakeProfileCompensationDao : ProfileCompensationDao {
         override suspend fun upsert(compensation: ProfileCompensationEntity) = Unit
         override fun observe(): Flow<ProfileCompensationEntity?> = flowOf(null)
+        override suspend fun getOnce(): ProfileCompensationEntity? = null
     }
 }
