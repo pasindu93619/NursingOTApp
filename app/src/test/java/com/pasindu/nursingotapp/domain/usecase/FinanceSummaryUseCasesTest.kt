@@ -10,7 +10,7 @@ import org.junit.Test
 class FinanceSummaryUseCasesTest {
 
     @Test
-    fun calculateFinanceSummary_usesUserConfiguredOtRate() {
+    fun calculateFinanceSummary_usesUserConfiguredOtRateAfterWeekly36HourSplit() {
         val profile = ProfileEntity(
             id = 1,
             fullName = "Test Nurse",
@@ -22,24 +22,14 @@ class FinanceSummaryUseCasesTest {
             otRate = 0.0,
             updatedAt = 0L
         )
-        val entry = DailyEntryEntity(
-            id = 1,
-            claimPeriodId = 1,
-            date = LocalDate.of(2026, 9, 6),
-            isPH = false,
-            isDO = false,
-            isLeave = false,
-            leaveType = null,
-            normalTimeIn = "07.00",
-            normalTimeOut = "13.00",
-            normalHours = 6f,
-            otTimeIn = "13.00",
-            otTimeOut = "15.00",
-            normalHours = 6f,
-            otHours = 2f,
-            wardOverride = "Normal",
-            reason = ""
+
+        val normalEntries = listOf(
+            entry(2026, 9, 6, normalHours = 12f, otHours = 0f),  // Sunday night
+            entry(2026, 9, 7, normalHours = 12f, otHours = 0f),  // Monday night
+            entry(2026, 9, 8, normalHours = 12f, otHours = 0f),  // Tuesday night
+            entry(2026, 9, 9, normalHours = 12f, otHours = 0f)   // Wednesday night
         )
+
         val userConfiguredOtRate = 350.0
         val rates = PayRateSettingsEntity(
             id = 1,
@@ -52,14 +42,38 @@ class FinanceSummaryUseCasesTest {
 
         val summary = CalculateFinanceSummaryUseCase()(
             profile = profile,
-            entries = listOf(entry),
+            entries = normalEntries,
             claimStart = LocalDate.of(2026, 9, 1),
             claimEnd = LocalDate.of(2026, 9, 30),
             payRates = rates
         )
 
-        assertEquals(8.0f, summary.totalNormalHours)
-        assertEquals(0.0f, summary.totalOTHours)
-        assertEquals(0.0, summary.otAmountRs, 0.001)
+        assertEquals(36.0f, summary.totalNormalHours)
+        assertEquals(12.0f, summary.totalOTHours)
+        assertEquals(userConfiguredOtRate * 12.0, summary.otAmountRs, 0.001)
     }
+
+    private fun entry(
+        year: Int,
+        month: Int,
+        day: Int,
+        normalHours: Float,
+        otHours: Float
+    ) = DailyEntryEntity(
+        id = 0,
+        claimPeriodId = 1,
+        date = LocalDate.of(year, month, day),
+        isPH = false,
+        isDO = false,
+        isLeave = false,
+        leaveType = null,
+        normalTimeIn = "19.00",
+        normalTimeOut = "07.00",
+        normalHours = normalHours,
+        otTimeIn = "",
+        otTimeOut = "",
+        otHours = otHours,
+        wardOverride = "Normal",
+        reason = ""
+    )
 }
