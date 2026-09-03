@@ -21,9 +21,6 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 12)
         )
 
-        // Normal duty = 30h and recorded OT = 12h.
-        // First 6h of recorded OT fills the missing 6h normal requirement;
-        // remaining 6h stays payable as OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
@@ -42,7 +39,6 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 12)
         )
 
-        // Normal duty = 48h -> 36h normal, remaining 12h becomes OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(12f, result.totalOtHours, 0.001f)
     }
@@ -61,7 +57,6 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 12)
         )
 
-        // Normal duty = 36h, therefore all recorded OT remains payable OT.
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(6f, result.totalOtHours, 0.001f)
     }
