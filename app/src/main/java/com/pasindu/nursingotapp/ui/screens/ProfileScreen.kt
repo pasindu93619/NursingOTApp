@@ -209,8 +209,14 @@ fun ProfileScreen(
                     matched2027DayRate?.let { rate ->
                         Surface(Modifier.fillMaxWidth(), color = Color(0xFFECFDF5), shape = RoundedCornerShape(14.dp)) {
                             Column(Modifier.padding(12.dp)) {
-                                Text("PH / DO RATE", color = Green, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                                Text("2027 paid/basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = ${formatMoney(rate)} / day", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("2027 PH / DO RATE", color = Green, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                Text(
+                                    "2027 basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = Rs. ${formatMoney(rate)} / day",
+                                    color = Ink,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text("PH rate: Rs. ${formatMoney(rate)}    •    DO rate: Rs. ${formatMoney(rate)}", color = Green, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -291,11 +297,19 @@ fun ProfileScreen(
         Button(
             onClick = {
                 val basic = parsedMoney(basicSalary)
-                viewModel.saveProfile(ProfileEntity(1, fullName, serviceNo, unit, paySheetNo, grade, basic, 0.0, System.currentTimeMillis(), detectedStep))
-                viewModel.saveProfileCompensation(parsedRisk, parsedCla, additionalTotal, deductions)
-                if (parsedOtRate > 0.0) viewModel.saveOtRate(parsedOtRate)
-                if (matched2027DayRate != null) viewModel.applyMatched2027DayRate()
-                onNavigateToClaimPeriod(true, "")
+                val profile = ProfileEntity(1, fullName, serviceNo, unit, paySheetNo, grade, basic, 0.0, System.currentTimeMillis(), detectedStep)
+                viewModel.saveProfileAndContinue(
+                    profile = profile,
+                    riskAllowance = parsedRisk,
+                    claAllowance = parsedCla,
+                    additionalAllowancesTotal = additionalTotal,
+                    totalDeductions = deductions,
+                    otRate = parsedOtRate,
+                    matched2027Basic = matched2027Basic,
+                    onSaved = {
+                        onNavigateToClaimPeriod(true, "")
+                    }
+                )
             },
             Modifier.fillMaxWidth().height(60.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Blue),
