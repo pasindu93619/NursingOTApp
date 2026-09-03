@@ -8,6 +8,7 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.CalculateDailyEntryHoursUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
@@ -38,7 +39,8 @@ class NursingViewModel @Inject constructor(
     private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val saveDailyEntryUseCase: SaveDailyEntryUseCase,
-    private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase
+    private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase,
+    private val calculateDailyEntryHoursUseCase: CalculateDailyEntryHoursUseCase
 ) : ViewModel() {
 
     private val _userProfile = MutableStateFlow<ProfileEntity?>(null)
@@ -58,14 +60,10 @@ class NursingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            observeProfile().collect { profile ->
-                _userProfile.value = profile
-            }
+            observeProfile().collect { profile -> _userProfile.value = profile }
         }
         viewModelScope.launch {
-            observeProfileCompensation().collect { compensation ->
-                _profileCompensation.value = compensation
-            }
+            observeProfileCompensation().collect { compensation -> _profileCompensation.value = compensation }
         }
         viewModelScope.launch {
             observeOtRate().collect { settings ->
@@ -74,63 +72,34 @@ class NursingViewModel @Inject constructor(
         }
     }
 
-    fun saveProfile(profile: ProfileEntity) {
-        viewModelScope.launch {
-            saveProfileUseCase(profile)
-        }
-    }
+    fun saveProfile(profile: ProfileEntity) = viewModelScope.launch { saveProfileUseCase(profile) }
 
     fun saveProfileCompensation(
         riskAllowance: Double,
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double
-    ) {
-        viewModelScope.launch {
-            saveProfileCompensationUseCase(
-                riskAllowance,
-                claAllowance,
-                additionalAllowancesTotal,
-                totalDeductions
-            )
-        }
+    ) = viewModelScope.launch {
+        saveProfileCompensationUseCase(
+            riskAllowance,
+            claAllowance,
+            additionalAllowancesTotal,
+            totalDeductions
+        )
     }
 
-    /** Saves the nurse's Health-sector OT rate; it is independent of salary step. */
-    fun saveOtRate(value: Double) {
-        viewModelScope.launch {
-            saveOtRateUseCase(value)
-        }
+    fun saveOtRate(value: Double) = viewModelScope.launch { saveOtRateUseCase(value) }
+
+    fun applyMatched2027DayRate() = viewModelScope.launch {
+        _matchedSalary2027.value?.basicSalary2027?.let { applyMatched2027DayRateUseCase(it) }
     }
 
-    /**
-     * The current PH/DO policy basis comes from the 2027 salary-table basic.
-     * The user does not enter a salary step and does not manually enter PH/DO.
-     */
-    fun applyMatched2027DayRate() {
-        viewModelScope.launch {
-            _matchedSalary2027.value?.basicSalary2027?.let { basis ->
-                applyMatched2027DayRateUseCase(basis)
-            }
-        }
+    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = viewModelScope.launch {
+        _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
     }
 
-    /**
-     * Match the current basic salary to the 2026/current salary-step table.
-     * The corresponding row carries the 2027 paid/basic amount.
-     */
-    fun matchSalaryStep(grade: String, currentBasicSalary: Double) {
-        viewModelScope.launch {
-            _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
-        }
-    }
-
-    fun loadEntriesForClaim(claimPeriodId: Long) {
-        viewModelScope.launch {
-            observeClaimDailyEntriesUseCase(claimPeriodId).collect { logs ->
-                _dailyLogs.value = logs
-            }
-        }
+    fun loadEntriesForClaim(claimPeriodId: Long) = viewModelScope.launch {
+        observeClaimDailyEntriesUseCase(claimPeriodId).collect { logs -> _dailyLogs.value = logs }
     }
 
     fun saveDailyEntry(
@@ -149,32 +118,34 @@ class NursingViewModel @Inject constructor(
         otHours: Float,
         wardOverride: String,
         reason: String
-    ) {
-        viewModelScope.launch {
-            saveDailyEntryUseCase(
-                DailyEntryEntity(
-                    id = id,
-                    claimPeriodId = claimPeriodId,
-                    date = date,
-                    isPH = isPH,
-                    isDO = isDO,
-                    isLeave = isLeave,
-                    leaveType = leaveType,
-                    normalTimeIn = normalTimeIn,
-                    normalTimeOut = normalTimeOut,
-                    normalHours = normalHours,
-                    otTimeIn = otTimeIn,
-                    otTimeOut = otTimeOut,
-                    otHours = otHours,
-                    wardOverride = wardOverride,
-                    reason = reason
-                )
+    ) = viewModelScope.launch {
+        saveDailyEntryUseCase(
+            DailyEntryEntity(
+                id = id,
+                claimPeriodId = claimPeriodId,
+                date = date,
+                isPH = isPH,
+                isDO = isDO,
+                isLeave = isLeave,
+                leaveType = leaveType,
+                normalTimeIn = normalTimeIn,
+                normalTimeOut = normalTimeOut,
+                normalHours = normalHours,
+                otTimeIn = otTimeIn,
+                otTimeOut = otTimeOut,
+                otHours = otHours,
+                wardOverride = wardOverride,
+                reason = reason
             )
-        }
+        )
     }
 
-    suspend fun getDailyEntryForDate(
-        claimPeriodId: Long,
-        date: LocalDate
-    ): DailyEntryEntity? = getDailyEntryForDateUseCase(claimPeriodId, date)
+    suspend fun getDailyEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? =
+        getDailyEntryForDateUseCase(claimPeriodId, date)
+
+    fun calculateDailyEntryHours(
+        logs: List<com.pasindu.nursingotapp.data.model.DailyLog>,
+        claimStart: LocalDate,
+        claimEnd: LocalDate
+    ) = calculateDailyEntryHoursUseCase(logs, claimStart, claimEnd)
 }
