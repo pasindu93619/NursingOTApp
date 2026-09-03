@@ -10,7 +10,7 @@ import org.junit.Test
 class FinanceSummaryUseCasesTest {
 
     @Test
-    fun calculateFinanceSummary_usesExistingCalculationEngineContract() {
+    fun calculateFinanceSummary_usesUserConfiguredOtRate() {
         val profile = ProfileEntity(
             id = 1,
             fullName = "Test Nurse",
@@ -19,7 +19,8 @@ class FinanceSummaryUseCasesTest {
             paySheetNo = "P1",
             grade = "III",
             basicSalary = 100000.0,
-            otRate = 283.0
+            otRate = 0.0,
+            updatedAt = 0L
         )
         val entry = DailyEntryEntity(
             id = 1,
@@ -38,14 +39,14 @@ class FinanceSummaryUseCasesTest {
             wardOverride = "Normal",
             reason = ""
         )
+        val userConfiguredOtRate = 350.0
         val rates = PayRateSettingsEntity(
             id = 1,
-            otRate = 283.0,
+            otRate = userConfiguredOtRate,
             phRate = 1000.0,
             doRate = 1000.0,
             rateSource = "MANUAL",
-            basisSalary2027 = null,
-            updatedAt = System.currentTimeMillis()
+            basisSalary2027 = null
         )
 
         val summary = CalculateFinanceSummaryUseCase()(
@@ -58,5 +59,6 @@ class FinanceSummaryUseCasesTest {
 
         assertEquals(6.0f, summary.totalNormalHours)
         assertEquals(2.0f, summary.totalOTHours)
+        assertEquals(userConfiguredOtRate * 2.0, summary.otAmountRs, 0.001)
     }
 }
