@@ -221,7 +221,7 @@ fun AppNavigation() {
                         putExtra(Intent.EXTRA_STREAM, uri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim Form"))
+                    context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim PDF"))
                 }
             )
         }
