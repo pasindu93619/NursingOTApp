@@ -226,10 +226,11 @@ class PdfGenerator(private val context: Context) {
             canvas.drawText(firstWeekStart.month.name, monthX, yearY, bodyPaint)
         }
 
-        val weeklyOtTotalsList = mutableListOf<Float>()
+        val weeklyTrueOtTotals = mutableListOf<Float>()
 
         var weekIndex = 0
-        for ((weekStart, weekLogs) in weekGroups) {
+        for ((weekStart, weekLogsRaw) in weekGroups) {
+            val weekLogs = weekLogsRaw.sortedBy { it.date }
             val daysOfWeek = (0..6).map { weekStart.plusDays(it.toLong()) }
             val authoritativeWeek = WeeklyOtCalculator.calculate(
                 logs = weekLogs,
@@ -239,9 +240,17 @@ class PdfGenerator(private val context: Context) {
                 dayRate = 0.0,
                 doRate = 0.0
             )
+            val weekRecordedDutyHours = weekLogs.sumOf {
+                it.computedNormalHours.toDouble().coerceAtLeast(0.0)
+            }.toFloat()
+            val weekRecordedOtHours = weekLogs.sumOf {
+                it.computedOtHours.toDouble().coerceAtLeast(0.0)
+            }.toFloat()
+            val trueOtHours = (
+                weekRecordedDutyHours - WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS.toFloat() +
+                    weekRecordedOtHours
+                ).coerceAtLeast(0f)
             val authoritativeAllocations = authoritativeWeek.allocations.associateBy { it.date }
-            val totalNormalHours = authoritativeWeek.totalNormalHours.toFloat()
-            val totalOtHours = authoritativeWeek.totalOtHours.toFloat()
             val weekBaseY = weekIndex * weekYOffset
 
             for ((dayIndex, day) in daysOfWeek.withIndex()) {
@@ -291,6 +300,7 @@ class PdfGenerator(private val context: Context) {
                         canvas.drawText(insideText, sX(colNormInX), sY(964f + currentYOffset), centerBodyPaint)
                         canvas.drawText("-", sX(colNormOutX), sY(964f + currentYOffset), centerBodyPaint)
                     } else if (log.computedNormalHours > 0f) {
+                        // Duty Shift columns always show the recorded NORMAL duty.
                         canvas.drawText(log.normalTimeInStr, sX(colNormInX), sY(964f + currentYOffset), centerBodyPaint)
                         canvas.drawText(log.normalTimeOutStr, sX(colNormOutX), sY(964f + currentYOffset), centerBodyPaint)
                     }
@@ -312,14 +322,16 @@ class PdfGenerator(private val context: Context) {
                         }
                     }
 
-                    val authoritativeOtHours = authoritativeAllocations[day]?.otHours?.toFloat() ?: 0f
-                    if (authoritativeOtHours > 0f) {
+                    // OT Shift columns always show the RECORDED OT entry. They are
+                    // independent of the weekly payable redistribution used by the calculator.
+                    val recordedOtHours = log.computedOtHours
+                    if (recordedOtHours > 0f) {
                         canvas.drawText(log.otTimeInStr, sX(colOtInX), sY(964f + currentYOffset), centerBodyPaint)
                         canvas.drawText(log.otTimeOutStr, sX(colOtOutX), sY(964f + currentYOffset), centerBodyPaint)
                         if (dayIndex < 6) {
-                            canvas.drawText(formatHrs(authoritativeOtHours), sX(colOtHrsX), sY(964f + currentYOffset), centerBodyPaint)
+                            canvas.drawText(formatHrs(recordedOtHours), sX(colOtHrsX), sY(964f + currentYOffset), centerBodyPaint)
                         } else {
-                            canvas.drawText(formatHrs(authoritativeOtHours), sX(1735f), sY(1366f + weekBaseY), centerBodyPaint)
+                            canvas.drawText(formatHrs(recordedOtHours), sX(1735f), sY(1366f + weekBaseY), centerBodyPaint)
                         }
                     }
 
@@ -333,9 +345,13 @@ class PdfGenerator(private val context: Context) {
                 }
             }
 
-            canvas.drawText(formatHrs(totalNormalHours), sX(1349f), sY(1390f + weekBaseY), centerBodyPaint)
-            canvas.drawText(formatHrs(totalOtHours), sX(1789f), sY(1386f + weekBaseY), centerBodyPaint)
+            // Weekly totals shown in their respective small total cells:
+            // Duty side = recorded normal-duty hours; OT side = recorded OT hours.
+            canvas.drawText(formatHrs(weekRecordedDutyHours), sX(1349f), sY(1390f + weekBaseY), centerBodyPaint)
+            canvas.drawText(formatHrs(weekRecordedOtHours), sX(1789f), sY(1386f + weekBaseY), centerBodyPaint)
 
+            // "මුළු පඩි ගණන" = true OT actually worked for the week.
+            // Requested formula: (Total Duty Hours - 36) + Total OT Hours.
             val finalTotalX = 2133f
             val finalTotalY = 1370f + weekBaseY
             val finalTotalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -344,17 +360,11 @@ class PdfGenerator(private val context: Context) {
                 typeface = Typeface.create(sinhalaTypeface ?: Typeface.DEFAULT, Typeface.BOLD)
                 textAlign = Paint.Align.CENTER
             }
-
-            // "මුළු පඩි ගණන" / total-pay column: true OT actually worked in the week.
-            // This deliberately uses the requested direct weekly formula, separate
-            // from the authoritative payable OT allocation used elsewhere in the form.
-            val trueOtHours = (totalNormalHours - WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS + totalOtHours)
-                .coerceAtLeast(0f)
             if (trueOtHours > 0f) {
                 canvas.drawText(formatHrs(trueOtHours), sX(finalTotalX), sY(finalTotalY), finalTotalPaint)
             }
 
-            weeklyOtTotalsList.add(trueOtHours)
+            weeklyTrueOtTotals.add(trueOtHours)
             weekIndex++
             if (weekIndex >= 5) break
         }
@@ -371,7 +381,7 @@ class PdfGenerator(private val context: Context) {
         canvas.drawText("Need for service", 0f, 0f, verticalBoldPaint)
         canvas.restore()
 
-        val nonZeroWeeks = weeklyOtTotalsList.filter { it > 0f }
+        val nonZeroWeeks = weeklyTrueOtTotals.filter { it > 0f }
         if (nonZeroWeeks.isNotEmpty()) {
             val equationString = nonZeroWeeks.joinToString(" + ") { formatHrs(it) } + " = " + formatHrs(nonZeroWeeks.sum())
             canvas.drawText(equationString, sX(1000f), sY(3425f), bottomEquationPaint)
