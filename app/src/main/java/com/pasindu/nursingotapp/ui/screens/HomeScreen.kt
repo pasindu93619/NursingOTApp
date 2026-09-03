@@ -35,7 +35,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
@@ -87,10 +86,11 @@ enum class CardEffect { NONE, WAVE, PARTICLES, ECG, BUBBLES, PULSE_RINGS }
 fun HomeScreen(
     viewModel: NursingViewModel,
     onNavigate: (String) -> Unit,
-    commandCenterViewModel: NurseCommandCenterViewModel = hiltViewModel()
+    commandCenterViewModel: NurseCommandCenterViewModel = viewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     val commandState by commandCenterViewModel.state.collectAsState()
+
     val displayFullName = userProfile?.fullName?.takeIf { it.isNotBlank() } ?: commandState.nurseName
     val shortName = displayFullName.split(" ").lastOrNull() ?: displayFullName
     val initial = displayFullName.firstOrNull()?.toString()?.uppercase() ?: "P"
@@ -98,53 +98,37 @@ fun HomeScreen(
     val context = LocalContext.current
     val palette = remember { pickPaletteForThisLaunch(context) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppBackground)
-            .verticalScroll(scrollState)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().background(AppBackground).verticalScroll(scrollState).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Spacer(modifier = Modifier.height(12.dp))
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(18.dp, RoundedCornerShape(26.dp), spotColor = palette.avatar.copy(alpha = 0.35f), ambientColor = palette.avatar.copy(alpha = 0.20f))
-                .border(1.2.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.9f), palette.avatar.copy(alpha = 0.25f), Color.White.copy(alpha = 0.4f))), RoundedCornerShape(26.dp))
-                .clickable { onNavigate("profile") },
-            shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
+            modifier = Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(26.dp), spotColor = palette.avatar.copy(alpha = 0.35f), ambientColor = palette.avatar.copy(alpha = 0.20f)).border(1.2.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.9f), palette.avatar.copy(alpha = 0.25f), Color.White.copy(alpha = 0.4f))), RoundedCornerShape(26.dp)).clickable { onNavigate("profile") },
+            shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f))
         ) {
-            Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(58.dp).background(palette.avatar, CircleShape).border(1.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.15f))), CircleShape), contentAlignment = Alignment.Center) {
-                    Text(initial, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                }
+            Row(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(58.dp).background(palette.avatar, CircleShape).border(1.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.15f))), CircleShape), contentAlignment = Alignment.Center) { Text(initial, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold) }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Hello, $shortName 👋", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = PrimaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(4.dp))
                     Text(if (userProfile == null) "Tap here to setup profile & SLNC" else "Ward 17 In-Charge Dashboard", fontSize = 13.sp, color = SecondaryText, fontWeight = FontWeight.Medium)
                 }
-                Box(Modifier.size(36.dp).background(palette.avatar.copy(alpha = 0.10f), CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.ChevronRight, "Open profile", tint = palette.avatar, modifier = Modifier.size(22.dp))
-                }
+                Box(modifier = Modifier.size(36.dp).background(palette.avatar.copy(alpha = 0.10f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.ChevronRight, "Open profile", tint = palette.avatar, modifier = Modifier.size(22.dp)) }
             }
         }
 
         NursingOSHomeSnapshotCard(state = commandState, onOpen = { onNavigate("nurse_command_center") })
-        AnimatedDashboardCard("Nurse Command Center", "Open the full NursingOS dashboard", Icons.Default.Dashboard, Color(0xFF27187E), 142.dp, effect = CardEffect.PULSE_RINGS, onClick = { onNavigate("nurse_command_center") })
+        AnimatedDashboardCard(title = "Nurse Command Center", subtitle = "Open the full NursingOS dashboard", icon = Icons.Default.Dashboard, color = Color(0xFF27187E), height = 142.dp, effect = CardEffect.PULSE_RINGS, onClick = { onNavigate("nurse_command_center") })
         Text("Core Legacy Module", fontSize = 20.sp, fontWeight = FontWeight.Black, color = PrimaryText)
-        AnimatedDashboardCard("OT & Claim Forms", "A4 Multi-page Claims & 36h Rule Engine", Icons.Default.Description, palette.claimForms, 140.dp, effect = CardEffect.WAVE, onClick = { if (userProfile == null) onNavigate("profile") else onNavigate("claim_period") })
+        AnimatedDashboardCard(title = "OT & Claim Forms", subtitle = "A4 Multi-page Claims & 36h Rule Engine", icon = Icons.Default.Description, color = palette.claimForms, height = 140.dp, effect = CardEffect.WAVE, onClick = { if (userProfile == null) onNavigate("profile") else onNavigate("claim_period") })
         Text("Super App Enhancements", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SecondaryText)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                AnimatedDashboardCard("Clinical Planning", "ISBAR Handover & Task Alarms", Icons.Default.Assignment, palette.clinicalPlanning, 200.dp, effect = CardEffect.BUBBLES, onClick = { onNavigate("clinical_planning") })
-                AnimatedDashboardCard("Knowledge Hub", "CPD Ledger & MoH Circulars", Icons.Default.MenuBook, palette.knowledgeHub, 180.dp, effect = CardEffect.PARTICLES, onClick = { onNavigate("knowledge_hub") })
+                AnimatedDashboardCard(title = "Clinical Planning", subtitle = "ISBAR Handover & Task Alarms", icon = Icons.Default.Assignment, color = palette.clinicalPlanning, height = 200.dp, effect = CardEffect.BUBBLES, onClick = { onNavigate("clinical_planning") })
+                AnimatedDashboardCard(title = "Knowledge Hub", subtitle = "CPD Ledger & MoH Circulars", icon = Icons.Default.MenuBook, color = palette.knowledgeHub, height = 180.dp, effect = CardEffect.PARTICLES, onClick = { onNavigate("knowledge_hub") })
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                AnimatedDashboardCard("Clinical Calculators", "IV Drip Metronome & GCS", Icons.Default.MedicalServices, palette.calculators, 180.dp, effect = CardEffect.ECG, onClick = { onNavigate("clinical_calculators") })
-                AnimatedDashboardCard("Advanced Finance", "Vico Charts, APIT & Loans", Icons.Default.AccountBalance, palette.finance, 200.dp, effect = CardEffect.PULSE_RINGS, onClick = { onNavigate("advanced_finance_hub") })
+                AnimatedDashboardCard(title = "Clinical Calculators", subtitle = "IV Drip Metronome & GCS", icon = Icons.Default.MedicalServices, color = palette.calculators, height = 180.dp, effect = CardEffect.ECG, onClick = { onNavigate("clinical_calculators") })
+                AnimatedDashboardCard(title = "Advanced Finance", subtitle = "Vico Charts, APIT & Loans", icon = Icons.Default.AccountBalance, color = palette.finance, height = 200.dp, effect = CardEffect.PULSE_RINGS, onClick = { onNavigate("advanced_finance_hub") })
             }
         }
         Spacer(Modifier.height(40.dp))
@@ -152,25 +136,15 @@ fun HomeScreen(
 }
 
 @Composable
-private fun NursingOSHomeSnapshotCard(
-    state: com.pasindu.nursingotapp.domain.model.NurseCommandCenterState,
-    onOpen: () -> Unit
-) {
+private fun NursingOSHomeSnapshotCard(state: com.pasindu.nursingotapp.domain.model.NurseCommandCenterState, onOpen: () -> Unit) {
     val accent = Color(0xFF27187E)
     val score = state.wellnessScore
-    val scoreLabel = when {
-        score >= 80 -> "Balanced"
-        score >= 60 -> "Watch workload"
-        else -> "High workload"
-    }
-    Card(Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(28.dp), spotColor = accent.copy(alpha = 0.22f)).clickable(onClick = onOpen), RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    val scoreLabel = when { score >= 80 -> "Balanced"; score >= 60 -> "Watch workload"; else -> "High workload" }
+    Card(modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(28.dp), spotColor = accent.copy(alpha = 0.22f)).clickable(onClick = onOpen), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("NURSINGOS • LIVE", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text("Your nursing day at a glance", color = PrimaryText, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                Surface(color = accent.copy(alpha = 0.08f), shape = RoundedCornerShape(14.dp)) { Text(scoreLabel, Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                Column { Text("NURSINGOS • LIVE", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black); Text("Your nursing day at a glance", color = PrimaryText, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold) }
+                Surface(color = accent.copy(alpha = 0.08f), shape = RoundedCornerShape(14.dp)) { Text(scoreLabel, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SnapshotMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", Icons.Default.Schedule, Modifier.weight(1f))
@@ -183,11 +157,8 @@ private fun NursingOSHomeSnapshotCard(
                 SnapshotMetric("Claim", "${state.claimCompletedDays}/${state.claimTotalDays}", Icons.Default.Description, Modifier.weight(1f))
             }
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Workload balance", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SecondaryText)
-                    Text("$score/100", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = accent)
-                }
-                LinearProgressIndicator(progress = { (score / 100f).coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(10.dp)), color = accent, trackColor = accent.copy(alpha = 0.10f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Workload balance", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SecondaryText); Text("$score/100", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = accent) }
+                LinearProgressIndicator(progress = { (score / 100f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(10.dp)), color = accent, trackColor = accent.copy(alpha = 0.10f))
             }
         }
     }
@@ -197,41 +168,24 @@ private fun NursingOSHomeSnapshotCard(
 private fun SnapshotMetric(label: String, value: String, icon: ImageVector, modifier: Modifier) {
     Surface(modifier = modifier, color = Color(0xFFF8F8FC), shape = RoundedCornerShape(18.dp)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(icon, null, tint = Color(0xFF27187E), modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF27187E), modifier = Modifier.size(18.dp))
             Text(label, color = SecondaryText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             Text(value, color = PrimaryText, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
-private fun moneyShort(value: Double): String = when {
-    value >= 1_000_000 -> "Rs.${String.format("%.1fM", value / 1_000_000)}"
-    value >= 100_000 -> "Rs.${String.format("%.0fK", value / 1_000)}"
-    else -> "Rs.${value.toInt()}"
-}
+private fun moneyShort(value: Double): String = when { value >= 1_000_000 -> "Rs.${String.format("%.1fM", value / 1_000_000)}"; value >= 100_000 -> "Rs.${String.format("%.0fK", value / 1_000)}"; else -> "Rs.${value.toInt()}" }
 
 @Composable
 private fun TodayHomeMiniMetric(label: String, value: String) {
     Surface(modifier = Modifier.width(0.dp).fillMaxWidth(), color = Color.White.copy(alpha = 0.72f), shape = RoundedCornerShape(14.dp)) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
-            Text(value, fontSize = 11.sp, color = PrimaryText, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(label, fontSize = 9.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold); Text(value, fontSize = 11.sp, color = PrimaryText, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
 }
 
 @Composable
-fun AnimatedDashboardCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    color: Color,
-    height: Dp,
-    textColor: Color = Color.White,
-    isSoon: Boolean = false,
-    effect: CardEffect = CardEffect.NONE,
-    onClick: () -> Unit
-) {
+fun AnimatedDashboardCard(title: String, subtitle: String, icon: ImageVector, color: Color, height: Dp, textColor: Color = Color.White, isSoon: Boolean = false, effect: CardEffect = CardEffect.NONE, onClick: () -> Unit) {
     val infiniteTransition = rememberInfiniteTransition(label = "CardEffectsAnimation")
     val scale by infiniteTransition.animateFloat(0.985f, 1.015f, infiniteRepeatable(tween(2800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "PulseScale")
     val timePhase by infiniteTransition.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart), label = "TimePhase")
@@ -273,7 +227,7 @@ fun AnimatedDashboardCard(
                 }
             }
             Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Box(Modifier.size(50.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = textColor, Modifier.size(28.dp)) }
+                Box(Modifier.size(50.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) { Icon(imageVector = icon, contentDescription = null, tint = textColor, modifier = Modifier.size(28.dp)) }
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(title, color = textColor, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
