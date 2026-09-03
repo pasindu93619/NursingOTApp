@@ -2,8 +2,9 @@ package com.pasindu.nursingotapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
+import com.pasindu.nursingotapp.domain.usecase.AddCpdLogUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveCpdLogsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,10 +29,11 @@ data class FlashcardItem(
 
 @HiltViewModel
 class KnowledgeHubViewModel @Inject constructor(
-    private val knowledgeHubDao: KnowledgeHubDao
+    observeCpdLogsUseCase: ObserveCpdLogsUseCase,
+    private val addCpdLogUseCase: AddCpdLogUseCase
 ) : ViewModel() {
 
-    val cpdLogs: StateFlow<List<CpdLogEntity>> = knowledgeHubDao.getAllCpdLogs()
+    val cpdLogs: StateFlow<List<CpdLogEntity>> = observeCpdLogsUseCase()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -56,15 +58,9 @@ class KnowledgeHubViewModel @Inject constructor(
         notes: String
     ) {
         viewModelScope.launch {
-            knowledgeHubDao.insertCpdLog(
-                CpdLogEntity(
-                    seminarTitle = title,
-                    date = System.currentTimeMillis(),
-                    earnedPoints = earnedPoints,
-                    speakerOrInstitution = institution,
-                    notes = notes
-                )
-            )
+            runCatching {
+                addCpdLogUseCase(title, earnedPoints, institution, notes)
+            }
         }
     }
 
