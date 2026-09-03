@@ -3,8 +3,6 @@ package com.pasindu.nursingotapp.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
-import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
-import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
@@ -18,6 +16,7 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveProfileSettingsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +34,7 @@ class NursingViewModel @Inject constructor(
     private val saveProfileUseCase: SaveProfileUseCase,
     private val saveProfileCompensationUseCase: SaveProfileCompensationUseCase,
     private val saveOtRateUseCase: SaveOtRateUseCase,
+    private val saveProfileSettingsUseCase: SaveProfileSettingsUseCase,
     private val matchSalaryStepUseCase: MatchSalaryStepUseCase,
     private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
@@ -46,8 +46,8 @@ class NursingViewModel @Inject constructor(
     private val _userProfile = MutableStateFlow<ProfileEntity?>(null)
     val userProfile: StateFlow<ProfileEntity?> = _userProfile.asStateFlow()
 
-    private val _profileCompensation = MutableStateFlow<ProfileCompensationEntity?>(null)
-    val profileCompensation: StateFlow<ProfileCompensationEntity?> = _profileCompensation.asStateFlow()
+    private val _profileCompensation = MutableStateFlow<com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity?>(null)
+    val profileCompensation: StateFlow<com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity?> = _profileCompensation.asStateFlow()
 
     private val _matchedSalary2027 = MutableStateFlow<SalaryStep2027Entity?>(null)
     val matchedSalary2027: StateFlow<SalaryStep2027Entity?> = _matchedSalary2027.asStateFlow()
@@ -89,6 +89,28 @@ class NursingViewModel @Inject constructor(
     }
 
     fun saveOtRate(value: Double) = viewModelScope.launch { saveOtRateUseCase(value) }
+
+    fun saveProfileAndContinue(
+        profile: ProfileEntity,
+        riskAllowance: Double,
+        claAllowance: Double,
+        additionalAllowancesTotal: Double,
+        totalDeductions: Double,
+        otRate: Double,
+        matched2027Basic: Double?,
+        onSaved: () -> Unit
+    ) = viewModelScope.launch {
+        saveProfileSettingsUseCase(
+            profile = profile,
+            riskAllowance = riskAllowance,
+            claAllowance = claAllowance,
+            additionalAllowancesTotal = additionalAllowancesTotal,
+            totalDeductions = totalDeductions,
+            otRate = otRate,
+            matched2027Basic = matched2027Basic
+        )
+        onSaved()
+    }
 
     fun applyMatched2027DayRate() = viewModelScope.launch {
         _matchedSalary2027.value?.basicSalary2027?.let { applyMatched2027DayRateUseCase(it) }
