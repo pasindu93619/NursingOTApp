@@ -29,6 +29,7 @@ class DeleteClaimPeriodUseCase(
     private val dailyEntryDao: DailyEntryDao
 ) {
     suspend operator fun invoke(period: ClaimPeriodEntity) {
+        // Preserve the existing explicit delete order: child daily entries first, then parent claim.
         dailyEntryDao.deleteEntriesForPeriod(period.id)
         claimPeriodDao.deleteClaimPeriod(period)
     }
@@ -39,6 +40,7 @@ class DeleteAllClaimPeriodsUseCase(
     private val dailyEntryDao: DailyEntryDao
 ) {
     suspend operator fun invoke() {
+        // Preserve the existing explicit delete order for complete history removal.
         dailyEntryDao.deleteAllEntries()
         claimPeriodDao.deleteAllClaimPeriods()
     }
