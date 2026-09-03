@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.CalculateDailyEntryHoursUseCase
 import com.pasindu.nursingotapp.domain.usecase.CreateClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeleteAllClaimPeriodsUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
@@ -84,4 +85,7 @@ object UseCaseModule {
 
     @Provides
     fun provideGetDailyEntryForDateUseCase(dao: DailyEntryDao) = GetDailyEntryForDateUseCase(dao)
+
+    @Provides
+    fun provideCalculateDailyEntryHoursUseCase() = CalculateDailyEntryHoursUseCase()
 }
