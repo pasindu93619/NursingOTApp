@@ -5,13 +5,12 @@ import com.pasindu.nursingotapp.data.local.dao.DailyEntryDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import java.time.LocalDate
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
-import org.junit.Test
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class ClaimPeriodUseCasesTest {
 
@@ -20,11 +19,18 @@ class ClaimPeriodUseCasesTest {
         val dao = FakeClaimPeriodDao()
         val useCase = CreateClaimPeriodUseCase(dao)
 
-        assertThrows(IllegalArgumentException::class.java) {
-            runBlocking {
-                useCase(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 1), "Normal")
-            }
+        var thrown: IllegalArgumentException? = null
+        try {
+            useCase(
+                LocalDate.of(2026, 9, 30),
+                LocalDate.of(2026, 9, 1),
+                "Normal"
+            )
+        } catch (error: IllegalArgumentException) {
+            thrown = error
         }
+
+        assertEquals(true, thrown != null)
     }
 
     @Test
@@ -112,9 +118,8 @@ class ClaimPeriodUseCasesTest {
         override suspend fun insertEntry(entry: DailyEntryEntity) = Unit
         override suspend fun updateEntry(entry: DailyEntryEntity) = Unit
         override suspend fun upsertDailyEntry(entry: DailyEntryEntity) = Unit
-        override fun observeEntriesForPeriod(claimPeriodId: Long): Flow<List<DailyEntryEntity>> = flowOf(
-            entries.value.filter { it.claimPeriodId == claimPeriodId }
-        )
+        override fun observeEntriesForPeriod(claimPeriodId: Long): Flow<List<DailyEntryEntity>> =
+            flowOf(entries.value.filter { it.claimPeriodId == claimPeriodId })
         override fun observeAllEntries(): Flow<List<DailyEntryEntity>> = entries
         override suspend fun getEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? = null
         override suspend fun deleteEntriesForPeriod(claimPeriodId: Long) {
