@@ -8,7 +8,7 @@ import org.junit.Test
 class DailyEntryCalculationUseCaseTest {
 
     @Test
-    fun calculateDailyEntryHours_delegatesToAuthoritativeOtEngine() {
+    fun calculateDailyEntryHours_preservesSeparateNormalAndOtHours() {
         val useCase = CalculateDailyEntryHoursUseCase()
         val logs = listOf(
             dailyLog(
@@ -25,14 +25,14 @@ class DailyEntryCalculationUseCaseTest {
             claimEnd = LocalDate.of(2026, 9, 30)
         )
 
-        // The authoritative engine consumes the stored worked-hour total
-        // (normal + OT) and then applies the weekly split.
-        assertEquals(8f, result.totalNormalHours, 0.001f)
-        assertEquals(0f, result.totalOtHours, 0.001f)
+        // Nursing duty hours are stored separately. A 6-hour normal shift
+        // plus 2 hours of OT remains 6 normal + 2 OT in the daily calculation.
+        assertEquals(6f, result.totalNormalHours, 0.001f)
+        assertEquals(2f, result.totalOtHours, 0.001f)
     }
 
     @Test
-    fun calculateDailyEntryHours_splitsHoursAcrossWeekly36HourBoundary() {
+    fun calculateDailyEntryHours_movesNormalDutyOverflowToOtAtWeeklyBoundary() {
         val useCase = CalculateDailyEntryHoursUseCase()
         val logs = listOf(
             dailyLog(1L, LocalDate.of(2026, 9, 6), 12f, 0f),
@@ -49,6 +49,28 @@ class DailyEntryCalculationUseCaseTest {
 
         assertEquals(36f, result.totalNormalHours, 0.001f)
         assertEquals(12f, result.totalOtHours, 0.001f)
+    }
+
+    @Test
+    fun calculateDailyEntryHours_usesOtToFillWeeklyNormalDeficit() {
+        val useCase = CalculateDailyEntryHoursUseCase()
+        val logs = listOf(
+            dailyLog(1L, LocalDate.of(2026, 9, 6), 12f, 0f),
+            dailyLog(2L, LocalDate.of(2026, 9, 7), 12f, 0f),
+            dailyLog(3L, LocalDate.of(2026, 9, 8), 6f, 6f),
+            dailyLog(4L, LocalDate.of(2026, 9, 9), 0f, 6f)
+        )
+
+        val result = useCase(
+            logs = logs,
+            claimStart = LocalDate.of(2026, 9, 1),
+            claimEnd = LocalDate.of(2026, 9, 30)
+        )
+
+        // Normal duty = 30h. The first 6h of recorded OT fills the 36h
+        // normal requirement; the remaining 6h stays OT.
+        assertEquals(36f, result.totalNormalHours, 0.001f)
+        assertEquals(6f, result.totalOtHours, 0.001f)
     }
 
     @Test
