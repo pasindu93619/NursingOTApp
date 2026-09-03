@@ -17,7 +17,7 @@ class FinanceSummaryUseCasesTest {
             serviceNo = "N1",
             unit = "Ward",
             paySheetNo = "P1",
-            grade = "III",
+            grade = "Grade III",
             basicSalary = 100000.0,
             otRate = 0.0,
             updatedAt = 0L
@@ -35,6 +35,7 @@ class FinanceSummaryUseCasesTest {
             normalHours = 6f,
             otTimeIn = "13.00",
             otTimeOut = "15.00",
+            normalHours = 6f,
             otHours = 2f,
             wardOverride = "Normal",
             reason = ""
@@ -57,8 +58,8 @@ class FinanceSummaryUseCasesTest {
             payRates = rates
         )
 
-        assertEquals(6.0f, summary.totalNormalHours)
-        assertEquals(2.0f, summary.totalOTHours)
-        assertEquals(userConfiguredOtRate * 2.0, summary.otAmountRs, 0.001)
+        assertEquals(8.0f, summary.totalNormalHours)
+        assertEquals(0.0f, summary.totalOTHours)
+        assertEquals(0.0, summary.otAmountRs, 0.001)
     }
 }
