@@ -1,10 +1,9 @@
 // com/pasindu/nursingotapp/ui/screens/ClaimPeriodScreen.kt
 package com.pasindu.nursingotapp.ui.screens
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing // FIXED: Explicitly imported!
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -30,15 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pasindu.nursingotapp.data.local.DatabaseProvider
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.pasindu.nursingotapp.ui.ClaimPeriodViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -51,15 +48,10 @@ import java.util.Locale
 fun ClaimPeriodScreen(
     onNavigateToDailyEntry: (Long, String, String, String) -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToAnalytics: () -> Unit
+    onNavigateToAnalytics: () -> Unit,
+    viewModel: ClaimPeriodViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-
-    val db = remember { DatabaseProvider.getDatabase(context) }
-    val dao = remember { db.claimPeriodDao() }
-    val dailyDao = remember { db.dailyEntryDao() }
-    val pastPeriods by dao.observeClaimPeriods().collectAsState(initial = emptyList())
+    val pastPeriods by viewModel.claimPeriods.collectAsState()
 
     val initialDates = remember {
         val today = LocalDate.now()
@@ -71,21 +63,19 @@ fun ClaimPeriodScreen(
     var startYear by remember { mutableStateOf(initialDates.first.year.toString()) }
     var startMonth by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDates.first.monthValue)) }
     var startDay by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDates.first.dayOfMonth)) }
-
     var endYear by remember { mutableStateOf(initialDates.second.year.toString()) }
     var endMonth by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDates.second.monthValue)) }
     var endDay by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDates.second.dayOfMonth)) }
 
     var startDate by remember { mutableStateOf<LocalDate?>(null) }
     var endDate by remember { mutableStateOf<LocalDate?>(null) }
-
     var showWardSelectionForNew by remember { mutableStateOf(false) }
     var showDeleteAllConfirm by remember { mutableStateOf(false) }
     var periodToDelete by remember { mutableStateOf<ClaimPeriodEntity?>(null) }
-
     var listVisible by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        delay(100)
+        kotlinx.coroutines.delay(100)
         listVisible = true
     }
 
@@ -117,8 +107,6 @@ fun ClaimPeriodScreen(
             modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 24.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // INSIGHTS BANNER
             Card(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clickable { onNavigateToAnalytics() },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -151,7 +139,6 @@ fun ClaimPeriodScreen(
                             Text("Set your month boundaries below.", fontSize = 12.sp, color = Color.Gray)
                         }
                     }
-
                     Spacer(modifier = Modifier.height(20.dp))
                     DateEntryCard("Start Date", startYear, { startYear = it }, startMonth, { startMonth = it }, startDay, { startDay = it })
                     Spacer(modifier = Modifier.height(12.dp))
@@ -172,7 +159,6 @@ fun ClaimPeriodScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Saved History", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -228,7 +214,6 @@ fun ClaimPeriodScreen(
             Spacer(modifier = Modifier.height(40.dp))
         }
 
-        // --- DIALOGS ---
         if (showWardSelectionForNew) {
             AlertDialog(
                 onDismissRequest = { showWardSelectionForNew = false },
@@ -238,11 +223,12 @@ fun ClaimPeriodScreen(
                         Button(
                             onClick = {
                                 showWardSelectionForNew = false
-                                coroutineScope.launch {
-                                    val newEntity = ClaimPeriodEntity(startDate = startDate!!, endDate = endDate!!, createdAt = System.currentTimeMillis(), wardType = "Normal")
-                                    val newId = dao.insertClaimPeriod(newEntity)
-                                    onNavigateToDailyEntry(newId, startDate.toString(), endDate.toString(), "Normal")
-                                }
+                                viewModel.createClaimPeriod(
+                                    startDate = startDate!!,
+                                    endDate = endDate!!,
+                                    wardType = "Normal",
+                                    onCreated = { newId -> onNavigateToDailyEntry(newId, startDate.toString(), endDate.toString(), "Normal") }
+                                )
                             },
                             modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
                         ) { Text("1. Normal Ward Duty (6h Shifts)") }
@@ -250,11 +236,12 @@ fun ClaimPeriodScreen(
                         Button(
                             onClick = {
                                 showWardSelectionForNew = false
-                                coroutineScope.launch {
-                                    val newEntity = ClaimPeriodEntity(startDate = startDate!!, endDate = endDate!!, createdAt = System.currentTimeMillis(), wardType = "Special")
-                                    val newId = dao.insertClaimPeriod(newEntity)
-                                    onNavigateToDailyEntry(newId, startDate.toString(), endDate.toString(), "Special")
-                                }
+                                viewModel.createClaimPeriod(
+                                    startDate = startDate!!,
+                                    endDate = endDate!!,
+                                    wardType = "Special",
+                                    onCreated = { newId -> onNavigateToDailyEntry(newId, startDate.toString(), endDate.toString(), "Special") }
+                                )
                             },
                             modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -273,19 +260,14 @@ fun ClaimPeriodScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            coroutineScope.launch {
-                                dailyDao.deleteEntriesForPeriod(periodToDelete!!.id)
-                                dao.deleteClaimPeriod(periodToDelete!!)
+                            viewModel.deleteClaimPeriod(periodToDelete!!) {
                                 periodToDelete = null
-                                Toast.makeText(context, "Calendar Deleted", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) { Text("Delete") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { periodToDelete = null }) { Text("Cancel") }
-                }
+                dismissButton = { TextButton(onClick = { periodToDelete = null }) { Text("Cancel") } }
             )
         }
 
@@ -297,19 +279,14 @@ fun ClaimPeriodScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            coroutineScope.launch {
-                                dailyDao.deleteAllEntries()
-                                dao.deleteAllClaimPeriods()
+                            viewModel.deleteAll {
                                 showDeleteAllConfirm = false
-                                Toast.makeText(context, "All History Deleted", Toast.LENGTH_LONG).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) { Text("Yes, Delete Everything") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteAllConfirm = false }) { Text("Cancel") }
-                }
+                dismissButton = { TextButton(onClick = { showDeleteAllConfirm = false }) { Text("Cancel") } }
             )
         }
     }
@@ -333,16 +310,16 @@ fun PeriodSummaryCard(start: LocalDate, end: LocalDate) {
     val lastSaturday = end.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY))
     val fullWeeks = if (firstSunday.isAfter(lastSaturday)) 0 else ChronoUnit.WEEKS.between(firstSunday, lastSaturday.plusDays(1)).toInt()
     val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
-
     Box(modifier = Modifier.fillMaxWidth().animateContentSize(spring(stiffness = Spring.StiffnessLow)).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)).padding(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (fullWeeks > 0) {
                 SummaryRow("First Sunday:", firstSunday.format(formatter))
                 SummaryRow("Last Saturday:", lastSaturday.format(formatter))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                SummaryRow("Valid Weeks:", "$fullWeeks (For 36h Rule)")
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                SummaryRow("Full weeks:", fullWeeks.toString())
+                SummaryRow("Coverage:", "Sunday → Saturday")
             } else {
-                Text("⚠️ No full Sunday-to-Saturday weeks found.", color = MaterialTheme.colorScheme.error, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text("The selected period does not contain a full Sunday–Saturday week.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
     }
@@ -351,11 +328,10 @@ fun PeriodSummaryCard(start: LocalDate, end: LocalDate) {
 @Composable
 fun SummaryRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-        Text(text = value, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
+        Text(label, fontWeight = FontWeight.Medium, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
-fun tryParseDate(year: String, month: String, day: String): LocalDate? {
-    return try { LocalDate.of(year.toInt(), month.toInt(), day.toInt()) } catch (e: Exception) { null }
-}
+private fun tryParseDate(year: String, month: String, day: String): LocalDate? =
+    runCatching { LocalDate.of(year.toInt(), month.toInt(), day.toInt()) }.getOrNull()
