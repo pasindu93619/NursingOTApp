@@ -72,6 +72,19 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
+                val hasLegacyFinancialRecords = database.query(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='financial_records'"
+                ).use { it.moveToFirst() }
+
+                if (!hasLegacyFinancialRecords) {
+                    // Some v3 databases were created without the legacy financial table.
+                    // Create the v4 schema directly instead of attempting to rename a
+                    // table that does not exist. No financial data can be preserved here
+                    // because there is no source table to migrate from.
+                    createFinancialRecordsTable(database)
+                    return
+                }
+
                 database.execSQL(
                     "ALTER TABLE `financial_records` RENAME TO `financial_records_legacy`"
                 )
