@@ -62,7 +62,10 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) = createSuperAppTables(database)
         }
         val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) = createSuperAppTables(database)
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // v2 and v3 have identical Room schemas. Preserve all user data
+                // without recreating or replacing any tables.
+            }
         }
         val MIGRATION_1_3 = object : Migration(1, 3) {
             override fun migrate(database: SupportSQLiteDatabase) = createSuperAppTables(database)
