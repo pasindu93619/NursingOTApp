@@ -82,54 +82,67 @@ abstract class AppDatabase : RoomDatabase() {
                     // table that does not exist. No financial data can be preserved here
                     // because there is no source table to migrate from.
                     createFinancialRecordsTable(database)
-                    return
+                } else {
+                    database.execSQL(
+                        "ALTER TABLE `financial_records` RENAME TO `financial_records_legacy`"
+                    )
+                    createFinancialRecordsTable(database)
+
+                    database.execSQL(
+                        """
+                        INSERT INTO `financial_records` (
+                            `id`,
+                            `recordMonth`,
+                            `timestamp`,
+                            `basicSalary`,
+                            `otRate`,
+                            `otHours`,
+                            `phDays`,
+                            `doDays`,
+                            `wopDeduction`,
+                            `apitTaxAmount`,
+                            `loanDeduction`,
+                            `otherDeductions`,
+                            `totalHoursWorked`,
+                            `grossSalary`,
+                            `netSalary`
+                        )
+                        SELECT
+                            `id`,
+                            `monthYear`,
+                            0,
+                            `basicSalary`,
+                            0,
+                            0,
+                            0,
+                            0,
+                            `wopPensionDeduction`,
+                            `apitTaxDeduction`,
+                            `loanDeduction`,
+                            0,
+                            0,
+                            `basicSalary` + `totalAllowance` + `calculatedOtAmount`,
+                            `netSalary`
+                        FROM `financial_records_legacy`
+                        """.trimIndent()
+                    )
+
+                    database.execSQL("DROP TABLE `financial_records_legacy`")
                 }
 
-                database.execSQL(
-                    "ALTER TABLE `financial_records` RENAME TO `financial_records_legacy`"
-                )
-                createFinancialRecordsTable(database)
-
-                database.execSQL(
-                    """
-                    INSERT INTO `financial_records` (
-                        `id`,
-                        `recordMonth`,
-                        `timestamp`,
-                        `basicSalary`,
-                        `otRate`,
-                        `otHours`,
-                        `phDays`,
-                        `doDays`,
-                        `wopDeduction`,
-                        `apitTaxAmount`,
-                        `loanDeduction`,
-                        `otherDeductions`,
-                        `totalHoursWorked`,
-                        `grossSalary`,
-                        `netSalary`
-                    )
-                    SELECT
-                        `id`,
-                        `monthYear`,
-                        0,
-                        `basicSalary`,
-                        0,
-                        0,
-                        0,
-                        0,
-                        `wopPensionDeduction`,
-                        `apitTaxDeduction`,
-                        `loanDeduction`,
-                        0,
-                        0,
-                        `basicSalary` + `totalAllowance` + `calculatedOtAmount`,
-                        `netSalary`
-                    FROM `financial_records_legacy`
-                    """.trimIndent()
-                )
-
-                database.execSQL("DROP TABLE `financial_records_legacy`")
+                // Repair a malformed v3/v4 database where isbar_notes exists but has no
+                // columns. Such a table contains no usable ISBAR data and cannot satisfy
+                // Room's v12 schema validation, so it is safe to replace only in this
+                // specific zero-column case. A valid existing table is preserved.
+                val isbarColumnCount = database.query("PRAGMA table_info(`isbar_notes`)").use { cursor ->
+                    var count = 0
+                    while (cursor.moveToNext()) count++
+                    count
+                }
+                if (isbarColumnCount == 0) {
+                    database.execSQL("DROP TABLE IF EXISTS `isbar_notes`")
+                    createIsbarNotesTable(database)
+                }
             }
         }
         val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -169,8 +182,8 @@ abstract class AppDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS `salary_steps_2027` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `grade` TEXT NOT NULL,
-                        `salaryStep` INTEGER NOT NULL,
                   
+                        `salaryStep` INTEGER NOT NULL,
                         `basicSalary2027` REAL NOT NULL,
                         `effectiveFrom` TEXT NOT NULL,
                         `sourceLabel` TEXT NOT NULL
@@ -242,18 +255,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         private fun createSuperAppTables(database: SupportSQLiteDatabase) {
             createFinancialRecordsTable(database)
-            database.execSQL("""
-                CREATE TABLE IF NOT EXISTS `isbar_notes` (
-                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    `patientIdentifier` TEXT NOT NULL,
-                    `identification` TEXT NOT NULL,
-                    `situation` TEXT NOT NULL,
-                    `background` TEXT NOT NULL,
-                    `assessment` TEXT NOT NULL,
-                    `recommendation` TEXT NOT NULL,
-                    `timestamp` INTEGER NOT NULL
-                )
-            """.trimIndent())
+            createIsbarNotesTable(database)
             database.execSQL("""
                 CREATE TABLE IF NOT EXISTS `clinical_tasks` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -273,6 +275,21 @@ abstract class AppDatabase : RoomDatabase() {
                     `earnedPoints` INTEGER NOT NULL,
                     `speakerOrInstitution` TEXT NOT NULL,
                     `notes` TEXT NOT NULL
+                )
+            """.trimIndent())
+        }
+
+        private fun createIsbarNotesTable(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `isbar_notes` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `patientIdentifier` TEXT NOT NULL,
+                    `identification` TEXT NOT NULL,
+                    `situation` TEXT NOT NULL,
+                    `background` TEXT NOT NULL,
+                    `assessment` TEXT NOT NULL,
+                    `recommendation` TEXT NOT NULL,
+                    `timestamp` INTEGER NOT NULL
                 )
             """.trimIndent())
         }
