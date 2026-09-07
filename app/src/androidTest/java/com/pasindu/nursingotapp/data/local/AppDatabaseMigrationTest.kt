@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,7 +52,8 @@ class AppDatabaseMigrationTest {
         ).use { db ->
             db.query(
                 """
-                SELECT recordMonth,
+                SELECT id,
+                       recordMonth,
                        basicSalary,
                        otRate,
                        otHours,
@@ -69,20 +71,28 @@ class AppDatabaseMigrationTest {
                 """.trimIndent()
             ).use { cursor ->
                 assertEquals(1, cursor.count)
-                cursor.moveToFirst()
-                assertEquals("2026-08", cursor.getString(0))
-                assertEquals(120000.0, cursor.getDouble(1), 0.0)
-                assertEquals(0.0, cursor.getDouble(2), 0.0)
+                assertTrue(cursor.moveToFirst())
+                assertEquals(17, cursor.getInt(0))
+                assertEquals("2026-08", cursor.getString(1))
+                assertEquals(120000.0, cursor.getDouble(2), 0.0)
+
+                // v3 did not store these new decomposed input fields.
+                // Do not invent an OT rate/hours or PH/DO values during migration.
                 assertEquals(0.0, cursor.getDouble(3), 0.0)
                 assertEquals(0.0, cursor.getDouble(4), 0.0)
                 assertEquals(0.0, cursor.getDouble(5), 0.0)
-                assertEquals(9000.0, cursor.getDouble(6), 0.0)
-                assertEquals(1200.0, cursor.getDouble(7), 0.0)
-                assertEquals(2500.0, cursor.getDouble(8), 0.0)
-                assertEquals(0.0, cursor.getDouble(9), 0.0)
+                assertEquals(0.0, cursor.getDouble(6), 0.0)
+
+                assertEquals(9000.0, cursor.getDouble(7), 0.0)
+                assertEquals(1200.0, cursor.getDouble(8), 0.0)
+                assertEquals(2500.0, cursor.getDouble(9), 0.0)
                 assertEquals(0.0, cursor.getDouble(10), 0.0)
                 assertEquals(0.0, cursor.getDouble(11), 0.0)
-                assertEquals(136800.0, cursor.getDouble(12), 0.0)
+
+                // v3 stored allowance and calculated OT as components but v4 stores
+                // a single gross amount. Preserve their aggregate using the v4 gross model.
+                assertEquals(139500.0, cursor.getDouble(12), 0.0)
+                assertEquals(136800.0, cursor.getDouble(13), 0.0)
             }
         }
     }
