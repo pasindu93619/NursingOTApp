@@ -1,6 +1,6 @@
 package com.pasindu.nursingotapp.domain.usecase
 
-import com.pasindu.nursingotapp.data.model.DailyLog
+import com.pasindu.nursingotapp.domain.model.DailyLog
 import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import java.time.LocalDate
 
