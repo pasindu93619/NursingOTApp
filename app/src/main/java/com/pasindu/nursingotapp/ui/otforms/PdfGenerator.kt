@@ -68,7 +68,7 @@ class PdfGenerator(private val context: Context) {
         val originalImgW = 2475f; val originalImgH = 3500f
         fun sX(x: Float): Float = x * (a4Width / originalImgW)
         fun sY(y: Float): Float = y * (a4Height / originalImgH)
-        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); val tableRowHeight = 70f
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); val tableRowHeight = 66f
         canvas.drawText(profile.serviceNo, sX(2113f), sY(80f), bodyPaint)
         canvas.drawText(profile.unit, sX(2050f), sY(156f), bodyPaint)
         canvas.drawText(profile.paySheetNo, sX(2103f), sY(346f), bodyPaint)
@@ -128,7 +128,7 @@ class PdfGenerator(private val context: Context) {
             for ((dayIndex, day) in daysOfWeek.withIndex()) {
                 val log = weekLogs.find { it.date == day }
                 val currentYOffset = weekBaseY + (dayIndex * rowHeight)
-                canvas.drawText(day.format(dateFormatter), sX(colDateX), sY(961f + currentYOffset), centerBodyPaint)
+                canvas.drawText(day.format(dateFormatter), sX(colDateX), sY(955f + currentYOffset), centerBodyPaint)
                 if (log != null) {
                     val rawLeave = log.leaveType ?: ""
                     val isFullLeave = (log.isLeave && rawLeave != "SD") || ((log.isDO || log.isPH) && log.computedNormalHours == 0f && log.computedOtHours == 0f) || (rawLeave == "SD" && log.computedNormalHours == 0f && log.computedOtHours == 0f)
@@ -140,9 +140,9 @@ class PdfGenerator(private val context: Context) {
                         val baseOutside = when { log.isDO -> "DO"; log.isPH -> "PH"; rawLeave == "SD" -> "SD"; rawLeave == "Short Leave" -> "SL"; rawLeave == "Half Casual Leave" -> "CL/2"; else -> "" }
                         outsideText = if (baseOutside.isNotEmpty()) { if (isNight) "$baseOutside/N" else baseOutside } else if (isNight) "N" else ""
                     }
-                    if (outsideText.isNotEmpty()) canvas.drawText(outsideText, sX(colLeaveTextX), sY(964f + currentYOffset), centerBodyPaint)
-                    if (isFullLeave) { canvas.drawText(insideText, sX(colNormInX), sY(964f + currentYOffset), centerBodyPaint); canvas.drawText("-", sX(colNormOutX), sY(964f + currentYOffset), centerBodyPaint) }
-                    else if (log.computedNormalHours > 0f) { canvas.drawText(log.normalTimeInStr, sX(colNormInX), sY(964f + currentYOffset), centerBodyPaint); canvas.drawText(log.normalTimeOutStr, sX(colNormOutX), sY(964f + currentYOffset), centerBodyPaint) }
+                    if (outsideText.isNotEmpty()) canvas.drawText(outsideText, sX(colLeaveTextX), sY(958f + currentYOffset), centerBodyPaint)
+                    if (isFullLeave) { canvas.drawText(insideText, sX(colNormInX), sY(958f + currentYOffset), centerBodyPaint); canvas.drawText("-", sX(colNormOutX), sY(958f + currentYOffset), centerBodyPaint) }
+                    else if (log.computedNormalHours > 0f) { canvas.drawText(log.normalTimeInStr, sX(colNormInX), sY(958f + currentYOffset), centerBodyPaint); canvas.drawText(log.normalTimeOutStr, sX(colNormOutX), sY(958f + currentYOffset), centerBodyPaint) }
                     var dayNormalHoursToPrint = log.computedNormalHours
                     val checkLabel = if (isFullLeave) insideText else outsideText
                     if (dayNormalHoursToPrint == 0f && (checkLabel in payableLabels || insideText in payableLabels)) {
@@ -150,33 +150,32 @@ class PdfGenerator(private val context: Context) {
                         dayNormalHoursToPrint = if (profile.unit.contains("Clinic", true) || profile.unit.contains("Unit", true) || profile.unit.contains("OPD", true)) { if (isWknd) 6f else 8f } else 6f
                     }
                     if (dayNormalHoursToPrint > 0f) {
-                        if (dayIndex < 6) canvas.drawText(formatHrs(dayNormalHoursToPrint), sX(colNormHrsX), sY(964f + currentYOffset), centerBodyPaint)
-                        else canvas.drawText(formatHrs(dayNormalHoursToPrint), sX(1282f), sY(1363f + weekBaseY), centerBodyPaint)
+                        if (dayIndex < 6) canvas.drawText(formatHrs(dayNormalHoursToPrint), sX(colNormHrsX), sY(958f + currentYOffset), centerBodyPaint)
+                        else canvas.drawText(formatHrs(dayNormalHoursToPrint), sX(1282f), sY(1357f + weekBaseY), centerBodyPaint)
                     }
                     val recordedOtHours = log.computedOtHours
                     if (recordedOtHours > 0f) {
-                        canvas.drawText(log.otTimeInStr, sX(colOtInX), sY(964f + currentYOffset), centerBodyPaint)
-                        canvas.drawText(log.otTimeOutStr, sX(colOtOutX), sY(964f + currentYOffset), centerBodyPaint)
-                        if (dayIndex < 6) canvas.drawText(formatHrs(recordedOtHours), sX(colOtHrsX), sY(964f + currentYOffset), centerBodyPaint)
-                        else canvas.drawText(formatHrs(recordedOtHours), sX(1735f), sY(1366f + weekBaseY), centerBodyPaint)
+                        canvas.drawText(log.otTimeInStr, sX(colOtInX), sY(958f + currentYOffset), centerBodyPaint)
+                        canvas.drawText(log.otTimeOutStr, sX(colOtOutX), sY(958f + currentYOffset), centerBodyPaint)
+                        if (dayIndex < 6) canvas.drawText(formatHrs(recordedOtHours), sX(colOtHrsX), sY(958f + currentYOffset), centerBodyPaint)
+                        else canvas.drawText(formatHrs(recordedOtHours), sX(1735f), sY(1360f + weekBaseY), centerBodyPaint)
                     }
                     val customReason = when { !log.reason.isNullOrBlank() && log.reason != "Need for service" -> log.reason; else -> null }
-                    if (customReason != null) canvas.drawText(customReason, sX(1870f), sY(964f + currentYOffset), leftBodyPaint)
+                    if (customReason != null) canvas.drawText(customReason, sX(1870f), sY(958f + currentYOffset), leftBodyPaint)
                 }
             }
 
-            canvas.drawText(formatHrs(weekRecordedDutyHours), sX(1349f), sY(1390f + weekBaseY), centerBodyPaint)
-            canvas.drawText(formatHrs(weekRecordedOtHours), sX(1789f), sY(1386f + weekBaseY), centerBodyPaint)
+            canvas.drawText(formatHrs(weekRecordedDutyHours), sX(1349f), sY(1384f + weekBaseY), centerBodyPaint)
+            canvas.drawText(formatHrs(weekRecordedOtHours), sX(1789f), sY(1380f + weekBaseY), centerBodyPaint)
 
             val finalTotalX = 2133f
-            val finalTotalY = 1370f + weekBaseY
+            val finalTotalY = 1364f + weekBaseY
             val finalTotalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = 10f; typeface = Typeface.create(sinhalaTypeface ?: Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.CENTER }
             if (trueOtHours > 0f) canvas.drawText(formatHrs(trueOtHours), sX(finalTotalX), sY(finalTotalY), finalTotalPaint)
 
-            // Visual calculation line, matching the filled-form example:
+            // Visual calculation line, matching the filled-form example.
             // (Duty - 36) + OT = True OT.
-            // Draw it immediately below the week's total row in the bottom calculation area.
-            val equationY = 1419f + weekBaseY
+            val equationY = 1411f + weekBaseY
             val equationPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = 8.5f; typeface = Typeface.create(sinhalaTypeface ?: Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.CENTER }
             val equation = "${formatHoursForEquation(weekRecordedDutyHours)}-36+${formatHoursForEquation(weekRecordedOtHours)}=${formatHoursForEquation(trueOtHours)}"
             canvas.drawText(equation, sX(2133f), sY(equationY), equationPaint)
@@ -192,7 +191,7 @@ class PdfGenerator(private val context: Context) {
         val nonZeroWeeks = weeklyTrueOtTotals.filter { it > 0f }
         if (nonZeroWeeks.isNotEmpty()) {
             val equationString = nonZeroWeeks.joinToString(" + ") { formatHrs(it) } + " = " + formatHrs(nonZeroWeeks.sum())
-            canvas.drawText(equationString, sX(1000f), sY(3425f), bottomEquationPaint)
+            canvas.drawText(equationString, sX(1000f), sY(3415f), bottomEquationPaint)
         }
         document.finishPage(page)
     }
@@ -202,7 +201,8 @@ class PdfGenerator(private val context: Context) {
         for (i in 1 until sortedLogs.size) { val log = sortedLogs[i]; val type = if (log.isDO) "DO" else "CL"; if (log.date == currentEnd.plusDays(1) && type == currentType) { currentEnd = log.date; currentCount++ } else { blocks.add(LeaveBlock(currentStart, currentEnd, currentType, currentCount)); currentStart = log.date; currentEnd = log.date; currentType = type; currentCount = 1 } }
         blocks.add(LeaveBlock(currentStart, currentEnd, currentType, currentCount)); return blocks
     }
-    private fun filterFullWeekLogs(logs: List<DailyLog>, period: Period): List<DailyLog> { val firstSunday = period.claimStart.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)); val lastSaturday = period.claimEnd.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY)); if (firstSunday.isAfter(lastSaturday)) return emptyList(); return logs.filter { !it.date.isBefore(firstSunday) && !it.date.isAfter(lastSaturday) } }
+    private fun filterFullWeekLogs(logs: List<DailyLog>, period: Period): List<DailyLog> { val firstSunday = period.claimStart.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)); val lastSaturday = period.claimEnd.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY)); if (firstSunday.isAfter(lastSaturday)) return emptyList(); return logs.filter { !it.date.isBefore(firstSunday) && !it.date.isAfter(lastSaturday) }
+    }
     private fun formatDouble(value: Double): String = String.format(Locale.US, "%.2f", value)
     private fun formatFloat(value: Float): String = if (value % 1 == 0f) String.format(Locale.US, "%02d", value.toInt()) else String.format(Locale.US, "%04.1f", value)
     private fun formatHrs(value: Float): String { if (value <= 0f) return ""; return "${formatFloat(value)}h" }
