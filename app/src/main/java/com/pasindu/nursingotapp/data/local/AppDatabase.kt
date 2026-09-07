@@ -69,9 +69,51 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // v3 and v4 store the same current financial schema. Reusing the
-                // existing table is data-safe and avoids dropping user records.
+                database.execSQL(
+                    "ALTER TABLE `financial_records` RENAME TO `financial_records_legacy`"
+                )
                 createFinancialRecordsTable(database)
+
+                database.execSQL(
+                    """
+                    INSERT INTO `financial_records` (
+                        `id`,
+                        `recordMonth`,
+                        `timestamp`,
+                        `basicSalary`,
+                        `otRate`,
+                        `otHours`,
+                        `phDays`,
+                        `doDays`,
+                        `wopDeduction`,
+                        `apitTaxAmount`,
+                        `loanDeduction`,
+                        `otherDeductions`,
+                        `totalHoursWorked`,
+                        `grossSalary`,
+                        `netSalary`
+                    )
+                    SELECT
+                        `id`,
+                        `monthYear`,
+                        0,
+                        `basicSalary`,
+                        0,
+                        0,
+                        0,
+                        0,
+                        `wopPensionDeduction`,
+                        `apitTaxDeduction`,
+                        `loanDeduction`,
+                        0,
+                        0,
+                        0,
+                        `netSalary`
+                    FROM `financial_records_legacy`
+                    """.trimIndent()
+                )
+
+                database.execSQL("DROP TABLE `financial_records_legacy`")
             }
         }
         val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -145,8 +187,6 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // v9 already contains the exact v10 salary-step schema. Do not
-                // drop and recreate the table because that would erase salary data.
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `salary_steps_2027` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
