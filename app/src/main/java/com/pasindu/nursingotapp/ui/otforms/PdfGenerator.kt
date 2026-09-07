@@ -81,46 +81,43 @@ class PdfGenerator(private val context: Context) {
         canvas.drawText(formatDouble(profile.otRate), sX(1473f), sY(673f), bodyPaint)
         canvas.drawText(formatFloat(summary.totalOTHours), sX(520f), sY(730f), bodyPaint)
 
-        // Existing coordinates are preserved. These exact cell-center coordinates are
-        // supplied in the A4 (595 x 842) coordinate system of form_front_bg.
+        // Keep the existing source-form coordinate system. These are the exact
+        // cell-center coordinates measured on the 2475 x 3500 source form.
+        // They MUST be converted with sX()/sY() because the PDF canvas is 595 x 842.
         val tableColumnCenters = floatArrayOf(422f, 982f, 1539f, 2096f)
         val phRowCenters = floatArrayOf(912f, 971f, 1029f, 1085f)
         val doRowCenters = floatArrayOf(1343f, 1401f, 1457f, 1513f)
         val leaveRowCenters = floatArrayOf(1773f, 1831f, 1889f, 1943f)
 
-        // Do not pass these coordinates through sX()/sY(). They are already PDF/A4
-        // coordinates, unlike the legacy coordinates elsewhere in this method.
-        val exactTableX = tableColumnCenters
-        val exactPhY = phRowCenters
-        val exactDoY = doRowCenters
-        val exactLeaveY = leaveRowCenters
-
+        // TABLE 1 = WORKING PH
         val workingPHs = logs.filter { it.isPH && it.computedNormalHours > 0f }.take(4)
         workingPHs.forEachIndexed { index, log ->
-            val y = exactPhY[index]
-            canvas.drawText(log.date.format(dateFormatter), exactTableX[0], y, centerBodyPaint)
-            canvas.drawText("${log.normalTimeInStr}H", exactTableX[1], y, centerBodyPaint)
-            canvas.drawText("${log.normalTimeOutStr}H", exactTableX[2], y, centerBodyPaint)
-            canvas.drawText(formatHrs(log.computedNormalHours), exactTableX[3], y, centerBodyPaint)
+            val y = phRowCenters[index]
+            canvas.drawText(log.date.format(dateFormatter), sX(tableColumnCenters[0]), sY(y), centerBodyPaint)
+            canvas.drawText("${log.normalTimeInStr}H", sX(tableColumnCenters[1]), sY(y), centerBodyPaint)
+            canvas.drawText("${log.normalTimeOutStr}H", sX(tableColumnCenters[2]), sY(y), centerBodyPaint)
+            canvas.drawText(formatHrs(log.computedNormalHours), sX(tableColumnCenters[3]), sY(y), centerBodyPaint)
         }
 
+        // TABLE 2 = WORKING DO
         val workingDOs = logs.filter { it.isDO && it.computedNormalHours > 0f }.take(4)
         workingDOs.forEachIndexed { index, log ->
-            val y = exactDoY[index]
-            canvas.drawText(log.date.format(dateFormatter), exactTableX[0], y, centerBodyPaint)
-            canvas.drawText("${log.normalTimeInStr}H", exactTableX[1], y, centerBodyPaint)
-            canvas.drawText("${log.normalTimeOutStr}H", exactTableX[2], y, centerBodyPaint)
-            canvas.drawText(formatHrs(log.computedNormalHours), exactTableX[3], y, centerBodyPaint)
+            val y = doRowCenters[index]
+            canvas.drawText(log.date.format(dateFormatter), sX(tableColumnCenters[0]), sY(y), centerBodyPaint)
+            canvas.drawText("${log.normalTimeInStr}H", sX(tableColumnCenters[1]), sY(y), centerBodyPaint)
+            canvas.drawText("${log.normalTimeOutStr}H", sX(tableColumnCenters[2]), sY(y), centerBodyPaint)
+            canvas.drawText(formatHrs(log.computedNormalHours), sX(tableColumnCenters[3]), sY(y), centerBodyPaint)
         }
 
-        val leaveLogs = logs.filter { (it.isLeave && it.leaveType == "CL") || (it.isDO && it.computedNormalHours == 0f) }
-        val groupedLeaves = groupConsecutiveLeaves(leaveLogs).take(4)
-        groupedLeaves.forEachIndexed { index, leave ->
-            val y = exactLeaveY[index]
-            canvas.drawText(leave.startDate.format(dateFormatter), exactTableX[0], y, centerBodyPaint)
-            canvas.drawText(leave.endDate.format(dateFormatter), exactTableX[1], y, centerBodyPaint)
-            canvas.drawText(leave.type, exactTableX[2], y, centerBodyPaint)
-            canvas.drawText(leave.totalDays.toString(), exactTableX[3], y, centerBodyPaint)
+        // TABLE 3 = DO LEAVE / NON-WORKING DO
+        // A DO with zero recorded working hours belongs here, not in Table 2.
+        val leaveDOs = logs.filter { it.isDO && it.computedNormalHours == 0f }.take(4)
+        leaveDOs.forEachIndexed { index, log ->
+            val y = leaveRowCenters[index]
+            canvas.drawText(log.date.format(dateFormatter), sX(tableColumnCenters[0]), sY(y), centerBodyPaint)
+            canvas.drawText(log.date.format(dateFormatter), sX(tableColumnCenters[1]), sY(y), centerBodyPaint)
+            canvas.drawText("DO", sX(tableColumnCenters[2]), sY(y), centerBodyPaint)
+            canvas.drawText("1", sX(tableColumnCenters[3]), sY(y), centerBodyPaint)
         }
 
         canvas.drawText(formatFloat(summary.totalOTHours), sX(990f), sY(2076f), centerBodyPaint); canvas.drawText(formatDouble(summary.otAmountRs), sX(2123f), sY(2076f), centerBodyPaint)
@@ -204,8 +201,6 @@ class PdfGenerator(private val context: Context) {
             val finalTotalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = 10f; typeface = Typeface.create(sinhalaTypeface ?: Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.CENTER }
             if (trueOtHours > 0f) canvas.drawText(formatHrs(trueOtHours), sX(finalTotalX), sY(finalTotalY), finalTotalPaint)
 
-            // Visual calculation line, matching the filled-form example.
-            // (Duty - 36) + OT = True OT.
             val equationY = 1411f + weekBaseY
             val equationPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = 8.5f; typeface = Typeface.create(sinhalaTypeface ?: Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.CENTER }
             val equation = "${formatHoursForEquation(weekRecordedDutyHours)}-36+${formatHoursForEquation(weekRecordedOtHours)}=${formatHoursForEquation(trueOtHours)}"
