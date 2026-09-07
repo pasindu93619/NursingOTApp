@@ -96,6 +96,73 @@ class AppDatabaseMigrationTest {
             }
         }
     }
+    @Test
+    fun migrate2To3PreservesLegacyFinancialRecords() {
+        helper.createDatabase(TEST_DB, 2).apply {
+            execSQL(
+                """
+            INSERT INTO financial_records (
+                id,
+                monthYear,
+                basicSalary,
+                totalAllowance,
+                calculatedOtAmount,
+                apitTaxDeduction,
+                wopPensionDeduction,
+                loanDeduction,
+                netSalary
+            ) VALUES (
+                41,
+                '2026-07',
+                115000.0,
+                12000.0,
+                3500.0,
+                1000.0,
+                8500.0,
+                2000.0,
+                119000.0
+            )
+            """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            3,
+            true,
+            AppDatabase.MIGRATION_2_3
+        ).use { db ->
+            db.query(
+                """
+            SELECT
+                id,
+                monthYear,
+                basicSalary,
+                totalAllowance,
+                calculatedOtAmount,
+                apitTaxDeduction,
+                wopPensionDeduction,
+                loanDeduction,
+                netSalary
+            FROM financial_records
+            WHERE id = 41
+            """.trimIndent()
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+                assertEquals(41, cursor.getInt(0))
+                assertEquals("2026-07", cursor.getString(1))
+                assertEquals(115000.0, cursor.getDouble(2), 0.0)
+                assertEquals(12000.0, cursor.getDouble(3), 0.0)
+                assertEquals(3500.0, cursor.getDouble(4), 0.0)
+                assertEquals(1000.0, cursor.getDouble(5), 0.0)
+                assertEquals(8500.0, cursor.getDouble(6), 0.0)
+                assertEquals(2000.0, cursor.getDouble(7), 0.0)
+                assertEquals(119000.0, cursor.getDouble(8), 0.0)
+            }
+        }
+    }
 
     @Test
     fun migrate8To9PreservesSalarySteps() {
