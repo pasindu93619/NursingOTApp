@@ -122,13 +122,10 @@ fun DailyEntryScreen(
                 computedOtHours = entry.otHours
             )
         }
-        val result = com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator.calculate(
+        val result = viewModel.calculateDailyEntryHours(
             logs = logs,
             claimStart = startDate,
-            claimEnd = endDate,
-            otRate = 0.0,
-            dayRate = 0.0,
-            doRate = 0.0
+            claimEnd = endDate
         )
         Pair(result.totalNormalHours.toFloat(), result.totalOtHours.toFloat())
     }
