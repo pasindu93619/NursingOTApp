@@ -50,14 +50,39 @@ class AppDatabaseMigrationTest {
             AppDatabase.MIGRATION_3_4
         ).use { db ->
             db.query(
-                "SELECT monthYear, basicSalary, calculatedOtAmount, netSalary FROM financial_records WHERE id = 17"
+                """
+                SELECT recordMonth,
+                       basicSalary,
+                       otRate,
+                       otHours,
+                       phDays,
+                       doDays,
+                       wopDeduction,
+                       apitTaxAmount,
+                       loanDeduction,
+                       otherDeductions,
+                       totalHoursWorked,
+                       grossSalary,
+                       netSalary
+                FROM financial_records
+                WHERE id = 17
+                """.trimIndent()
             ).use { cursor ->
                 assertEquals(1, cursor.count)
                 cursor.moveToFirst()
                 assertEquals("2026-08", cursor.getString(0))
                 assertEquals(120000.0, cursor.getDouble(1), 0.0)
-                assertEquals(4500.0, cursor.getDouble(2), 0.0)
-                assertEquals(136800.0, cursor.getDouble(3), 0.0)
+                assertEquals(0.0, cursor.getDouble(2), 0.0)
+                assertEquals(0.0, cursor.getDouble(3), 0.0)
+                assertEquals(0.0, cursor.getDouble(4), 0.0)
+                assertEquals(0.0, cursor.getDouble(5), 0.0)
+                assertEquals(9000.0, cursor.getDouble(6), 0.0)
+                assertEquals(1200.0, cursor.getDouble(7), 0.0)
+                assertEquals(2500.0, cursor.getDouble(8), 0.0)
+                assertEquals(0.0, cursor.getDouble(9), 0.0)
+                assertEquals(0.0, cursor.getDouble(10), 0.0)
+                assertEquals(0.0, cursor.getDouble(11), 0.0)
+                assertEquals(136800.0, cursor.getDouble(12), 0.0)
             }
         }
     }
