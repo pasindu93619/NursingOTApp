@@ -73,14 +73,12 @@ class PdfGenerator(private val context: Context) {
         canvas.drawText(formatDouble(profile.otRate), sX(1473f), sY(673f), bodyPaint)
         canvas.drawText(formatFloat(summary.totalOTHours), sX(520f), sY(730f), bodyPaint)
 
-        // These coordinates are measured from the supplied form_front_bg PNG.
-        // The PNG is 1448x2048 and the source-form coordinate system used by
-        // this generator is 2475x3500, so the measured cell centers are mapped
-        // into that source system. They are then converted once by sX/sY.
-        val tableColumnCenters = floatArrayOf(424f, 982f, 1540f, 2098f)
-        val phRowCenters = floatArrayOf(915f, 973f, 1031f, 1086f)
-        val doRowCenters = floatArrayOf(1344f, 1402f, 1458f, 1515f)
-        val leaveRowCenters = floatArrayOf(1775f, 1833f, 1890f, 1946f)
+        // Exact cell-center coordinates supplied in OT_Form_Cell_Coordinates.md.
+        // Source-image coordinate system: 2475 x 3500. Existing sX()/sY() scaling is unchanged.
+        val tableColumnCenters = floatArrayOf(424.5f, 982.25f, 1540f, 2098f)
+        val phRowCenters = floatArrayOf(973f, 1031f, 1086.5f, 1144f)
+        val doRowCenters = floatArrayOf(1403f, 1458.5f, 1516f, 1574f)
+        val leaveRowCenters = floatArrayOf(1832.5f, 1890f, 1946f, 2003.5f)
 
         // TABLE 1: Working PH only.
         val workingPHs = logs.filter { it.isPH && it.computedNormalHours > 0f }.take(4)
