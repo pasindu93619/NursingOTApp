@@ -130,19 +130,24 @@ abstract class AppDatabase : RoomDatabase() {
                     database.execSQL("DROP TABLE `financial_records_legacy`")
                 }
 
-                // Repair a malformed v3/v4 database where isbar_notes exists but has no
-                // columns. Such a table contains no usable ISBAR data and cannot satisfy
-                // Room's v12 schema validation, so it is safe to replace only in this
-                // specific zero-column case. A valid existing table is preserved.
-                val isbarColumnCount = database.query("PRAGMA table_info(`isbar_notes`)").use { cursor ->
-                    var count = 0
-                    while (cursor.moveToNext()) count++
-                    count
-                }
-                if (isbarColumnCount == 0) {
-                    database.execSQL("DROP TABLE IF EXISTS `isbar_notes`")
-                    createIsbarNotesTable(database)
-                }
+                // Repair malformed zero-column tables produced by older Super App
+                // database creation paths. Only a table with zero columns is replaced;
+                // valid tables and all valid user data are preserved.
+                repairZeroColumnTable(
+                    database = database,
+                    tableName = "isbar_notes",
+                    createTable = ::createIsbarNotesTable
+                )
+                repairZeroColumnTable(
+                    database = database,
+                    tableName = "clinical_tasks",
+                    createTable = ::createClinicalTasksTable
+                )
+                repairZeroColumnTable(
+                    database = database,
+                    tableName = "cpd_logs",
+                    createTable = ::createCpdLogsTable
+                )
             }
         }
         val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -182,7 +187,6 @@ abstract class AppDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS `salary_steps_2027` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `grade` TEXT NOT NULL,
-                  
                         `salaryStep` INTEGER NOT NULL,
                         `basicSalary2027` REAL NOT NULL,
                         `effectiveFrom` TEXT NOT NULL,
@@ -256,27 +260,25 @@ abstract class AppDatabase : RoomDatabase() {
         private fun createSuperAppTables(database: SupportSQLiteDatabase) {
             createFinancialRecordsTable(database)
             createIsbarNotesTable(database)
-            database.execSQL("""
-                CREATE TABLE IF NOT EXISTS `clinical_tasks` (
-                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    `taskName` TEXT NOT NULL,
-                    `description` TEXT NOT NULL,
-                    `priority` TEXT NOT NULL,
-                    `triggerTime` INTEGER NOT NULL,
-                    `isCompleted` INTEGER NOT NULL,
-                    `bypassDnd` INTEGER NOT NULL
-                )
-            """.trimIndent())
-            database.execSQL("""
-                CREATE TABLE IF NOT EXISTS `cpd_logs` (
-                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    `seminarTitle` TEXT NOT NULL,
-                    `date` INTEGER NOT NULL,
-                    `earnedPoints` INTEGER NOT NULL,
-                    `speakerOrInstitution` TEXT NOT NULL,
-                    `notes` TEXT NOT NULL
-                )
-            """.trimIndent())
+            createClinicalTasksTable(database)
+            createCpdLogsTable(database)
+        }
+
+        private fun repairZeroColumnTable(
+            database: SupportSQLiteDatabase,
+            tableName: String,
+            createTable: (SupportSQLiteDatabase) -> Unit
+        ) {
+            val columnCount = database.query("PRAGMA table_info(`$tableName`)").use { cursor ->
+                var count = 0
+                while (cursor.moveToNext()) count++
+                count
+            }
+
+            if (columnCount == 0) {
+                database.execSQL("DROP TABLE IF EXISTS `$tableName`")
+                createTable(database)
+            }
         }
 
         private fun createIsbarNotesTable(database: SupportSQLiteDatabase) {
@@ -290,6 +292,33 @@ abstract class AppDatabase : RoomDatabase() {
                     `assessment` TEXT NOT NULL,
                     `recommendation` TEXT NOT NULL,
                     `timestamp` INTEGER NOT NULL
+                )
+            """.trimIndent())
+        }
+
+        private fun createClinicalTasksTable(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `clinical_tasks` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `taskName` TEXT NOT NULL,
+                    `description` TEXT NOT NULL,
+                    `priority` TEXT NOT NULL,
+                    `triggerTime` INTEGER NOT NULL,
+                    `isCompleted` INTEGER NOT NULL,
+                    `bypassDnd` INTEGER NOT NULL
+                )
+            """.trimIndent())
+        }
+
+        private fun createCpdLogsTable(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `cpd_logs` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `seminarTitle` TEXT NOT NULL,
+                    `date` INTEGER NOT NULL,
+                    `earnedPoints` INTEGER NOT NULL,
+                    `speakerOrInstitution` TEXT NOT NULL,
+                    `notes` TEXT NOT NULL
                 )
             """.trimIndent())
         }
