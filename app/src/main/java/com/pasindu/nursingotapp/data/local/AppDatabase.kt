@@ -107,7 +107,7 @@ abstract class AppDatabase : RoomDatabase() {
                         `loanDeduction`,
                         0,
                         0,
-                        0,
+                        `basicSalary` + `totalAllowance` + `calculatedOtAmount`,
                         `netSalary`
                     FROM `financial_records_legacy`
                     """.trimIndent()
