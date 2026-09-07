@@ -22,6 +22,7 @@ import com.pasindu.nursingotapp.data.model.DailyLog
 import com.pasindu.nursingotapp.data.model.Period
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.data.model.UserProfile
+import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
@@ -195,20 +196,23 @@ fun AppNavigation() {
                             )
                         }
                         val period = Period(LocalDate.parse(start), LocalDate.parse(end))
-                        val totalNormalHrs = logs.sumOf { it.computedNormalHours.toDouble() }.toFloat()
-                        val totalOtHrs = logs.sumOf { it.computedOtHours.toDouble() }.toFloat()
-                        val phDays = logs.count { it.isPH }
-                        val doDays = logs.count { it.isDO }
-                        val dayRate = profile.basicSalary / 30.0
+                        val calculation = WeeklyOtCalculator.calculate(
+                            logs = logs,
+                            claimStart = period.claimStart,
+                            claimEnd = period.claimEnd,
+                            otRate = profile.otRate.coerceAtLeast(0.0),
+                            dayRate = profile.basicSalary.coerceAtLeast(0.0) / 30.0,
+                            doRate = profile.basicSalary.coerceAtLeast(0.0) / 30.0
+                        )
                         val summary = PeriodSummary(
-                            totalNormalHrs,
-                            totalOtHrs,
-                            phDays,
-                            doDays,
-                            totalOtHrs * profile.otRate,
-                            phDays * dayRate,
-                            doDays * dayRate,
-                            (totalOtHrs * profile.otRate) + (phDays * dayRate) + (doDays * dayRate)
+                            totalNormalHours = calculation.totalNormalHours.toFloat(),
+                            totalOTHours = calculation.totalOtHours.toFloat(),
+                            totalPHDays = calculation.phDays,
+                            totalDODays = calculation.doDays,
+                            otAmountRs = calculation.otAmountRs,
+                            phAmountRs = calculation.phAmountRs,
+                            doAmountRs = calculation.doAmountRs,
+                            totalAmountRs = calculation.totalAmountRs
                         )
                         PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
                     } else null
