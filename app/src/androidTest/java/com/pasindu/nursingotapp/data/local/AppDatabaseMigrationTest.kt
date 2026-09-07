@@ -355,7 +355,158 @@ class AppDatabaseMigrationTest {
             }
         }
     }
+    @Test
+    fun migrate4To5PreservesFinancialRecordsAndCreatesPayRateSettings() {
+        helper.createDatabase(TEST_DB, 4).apply {
+            execSQL(
+                """
+            INSERT INTO financial_records (
+                id, recordMonth, timestamp, basicSalary, otRate, otHours,
+                phDays, doDays, wopDeduction, apitTaxAmount, loanDeduction,
+                otherDeductions, totalHoursWorked, grossSalary, netSalary
+            ) VALUES (
+                1, '2026-08', 1710000000000, 120000.0, 283.0, 12.0,
+                2.0, 1.0, 9000.0, 1200.0, 2500.0,
+                500.0, 36.0, 139500.0, 136300.0
+            )
+            """.trimIndent()
+            )
+            close()
+        }
 
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            5,
+            true,
+            AppDatabase.MIGRATION_4_5
+        ).use { db ->
+
+            db.query(
+                """
+            SELECT recordMonth, basicSalary, otRate, otHours,
+                   phDays, doDays, grossSalary, netSalary
+            FROM financial_records
+            WHERE id = 1
+            """.trimIndent()
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+
+                assertEquals("2026-08", cursor.getString(0))
+                assertEquals(120000.0, cursor.getDouble(1), 0.0)
+                assertEquals(283.0, cursor.getDouble(2), 0.0)
+                assertEquals(12.0, cursor.getDouble(3), 0.0)
+                assertEquals(2.0, cursor.getDouble(4), 0.0)
+                assertEquals(1.0, cursor.getDouble(5), 0.0)
+                assertEquals(139500.0, cursor.getDouble(6), 0.0)
+                assertEquals(136300.0, cursor.getDouble(7), 0.0)
+            }
+
+            db.query(
+                "SELECT COUNT(*) FROM pay_rate_settings"
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+            }
+        }
+    }
+
+    @Test
+    fun migrate5To6PreservesPayRateSettingsAndCreatesProfileCompensation() {
+        helper.createDatabase(TEST_DB, 5).apply {
+            execSQL(
+                """
+            INSERT INTO pay_rate_settings (
+                id, otRate, phRate, doRate, rateSource,
+                basisSalary2027, updatedAt
+            ) VALUES (
+                1, 283.0, 1884.0, 1884.0,
+                'migration-test', 56520.0, 1710000000000
+            )
+            """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            6,
+            true,
+            AppDatabase.MIGRATION_5_6
+        ).use { db ->
+
+            db.query(
+                """
+            SELECT otRate, phRate, doRate, rateSource,
+                   basisSalary2027, updatedAt
+            FROM pay_rate_settings
+            WHERE id = 1
+            """.trimIndent()
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+
+                assertEquals(283.0, cursor.getDouble(0), 0.0)
+                assertEquals(1884.0, cursor.getDouble(1), 0.0)
+                assertEquals(1884.0, cursor.getDouble(2), 0.0)
+                assertEquals("migration-test", cursor.getString(3))
+                assertEquals(56520.0, cursor.getDouble(4), 0.0)
+                assertEquals(1710000000000, cursor.getLong(5))
+            }
+
+            db.query(
+                "SELECT COUNT(*) FROM profile_compensation"
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+            }
+        }
+    }
+
+    @Test
+    fun migrate10To11PreservesSalarySteps() {
+        helper.createDatabase(TEST_DB, 10).apply {
+            execSQL(
+                """
+            INSERT INTO salary_steps_2027 (
+                id, grade, salaryStep, currentBasicSalary2026,
+                basicSalary2027, effectiveFrom, sourceLabel
+            ) VALUES (
+                51, 'MN 3', 7, 70000.0,
+                77000.0, '2027-01-01', 'migration-test'
+            )
+            """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            11,
+            true,
+            AppDatabase.MIGRATION_10_11
+        ).use { db ->
+
+            db.query(
+                """
+            SELECT grade, salaryStep, currentBasicSalary2026,
+                   basicSalary2027, effectiveFrom, sourceLabel
+            FROM salary_steps_2027
+            WHERE id = 51
+            """.trimIndent()
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+
+                assertEquals("MN 3", cursor.getString(0))
+                assertEquals(7, cursor.getInt(1))
+                assertEquals(70000.0, cursor.getDouble(2), 0.0)
+                assertEquals(77000.0, cursor.getDouble(3), 0.0)
+                assertEquals("2027-01-01", cursor.getString(4))
+                assertEquals("migration-test", cursor.getString(5))
+            }
+        }
+    }
     companion object {
         private const val TEST_DB = "migration-test.db"
     }

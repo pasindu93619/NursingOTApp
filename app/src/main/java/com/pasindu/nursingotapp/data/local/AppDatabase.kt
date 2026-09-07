@@ -205,9 +205,8 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("CREATE TABLE IF NOT EXISTS `salary_table_meta` (`id` INTEGER NOT NULL PRIMARY KEY, `datasetVersion` TEXT NOT NULL)")
-                database.execSQL("DELETE FROM `salary_table_meta`")
-                database.execSQL("INSERT INTO `salary_table_meta` (`id`, `datasetVersion`) VALUES (1, '2026-2027-supplied-paid-amounts-v1')")
+                // v10 and v11 have the same persisted tables relevant to this migration.
+                // Preserve existing salary data without creating untracked tables.
             }
         }
         val MIGRATION_11_12 = object : Migration(11, 12) {
