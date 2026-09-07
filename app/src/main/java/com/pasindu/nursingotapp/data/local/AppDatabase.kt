@@ -157,7 +157,7 @@ abstract class AppDatabase : RoomDatabase() {
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `grade` TEXT NOT NULL,
                         `salaryStep` INTEGER NOT NULL,
-                        `currentBasicSalary2026` REAL NOT NULL,
+                  
                         `basicSalary2027` REAL NOT NULL,
                         `effectiveFrom` TEXT NOT NULL,
                         `sourceLabel` TEXT NOT NULL

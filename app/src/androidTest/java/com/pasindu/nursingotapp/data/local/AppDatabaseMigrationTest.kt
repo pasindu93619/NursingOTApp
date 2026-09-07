@@ -163,7 +163,91 @@ class AppDatabaseMigrationTest {
             }
         }
     }
+    @Test
+    fun migrate6To7PreservesExistingProfileDataAndCreatesSalaryTable() {
+        helper.createDatabase(TEST_DB, 6).apply {
+            execSQL(
+                """
+            INSERT INTO profile (
+                id, fullName, serviceNo, unit, paySheetNo,
+                grade, basicSalary, otRate, updatedAt
+            ) VALUES (
+                1, 'Salary Migration Nurse', 'S-200', 'Ward 3',
+                'PS-200', 'MN 3', 120000.0, 283.0, 1710000000000
+            )
+            """.trimIndent()
+            )
+            close()
+        }
 
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            7,
+            true,
+            AppDatabase.MIGRATION_6_7
+        ).use { db ->
+            db.query(
+                "SELECT fullName, serviceNo, basicSalary, otRate FROM profile WHERE id = 1"
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+                assertEquals("Salary Migration Nurse", cursor.getString(0))
+                assertEquals("S-200", cursor.getString(1))
+                assertEquals(120000.0, cursor.getDouble(2), 0.0)
+                assertEquals(283.0, cursor.getDouble(3), 0.0)
+            }
+
+            db.query(
+                """
+    SELECT grade,
+           salaryStep,
+           basicSalary2027,
+           effectiveFrom,
+           sourceLabel
+    FROM salary_steps_2027
+    """.trimIndent()
+            ).use { cursor ->
+                assertEquals(0, cursor.count)
+            }
+        }
+    }
+
+    @Test
+    fun migrate7To8PreservesProfileDataAndAddsSalaryStep() {
+        helper.createDatabase(TEST_DB, 7).apply {
+            execSQL(
+                """
+            INSERT INTO profile (
+                id, fullName, serviceNo, unit, paySheetNo,
+                grade, basicSalary, otRate, updatedAt
+            ) VALUES (
+                2, 'Profile Migration Nurse', 'S-201', 'Ward 4',
+                'PS-201', 'MN 3', 125000.0, 283.0, 1710000000000
+            )
+            """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            8,
+            true,
+            AppDatabase.MIGRATION_7_8
+        ).use { db ->
+            db.query(
+                "SELECT fullName, serviceNo, basicSalary, otRate, salaryStep FROM profile WHERE id = 2"
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+                assertEquals("Profile Migration Nurse", cursor.getString(0))
+                assertEquals("S-201", cursor.getString(1))
+                assertEquals(125000.0, cursor.getDouble(2), 0.0)
+                assertEquals(283.0, cursor.getDouble(3), 0.0)
+                assertEquals(0, cursor.getInt(4))
+            }
+        }
+    }
     @Test
     fun migrate8To9PreservesSalarySteps() {
         helper.createDatabase(TEST_DB, 8).apply {
