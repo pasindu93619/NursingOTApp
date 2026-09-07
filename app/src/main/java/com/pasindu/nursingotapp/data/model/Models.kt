@@ -1,27 +1,21 @@
 // com/pasindu/nursingotapp/data/model/Models.kt
 package com.pasindu.nursingotapp.data.model
 
+import com.pasindu.nursingotapp.domain.model.DailyLog as DomainDailyLog
 import java.time.LocalDate
 
-data class DailyLog(
-    val id: Long = 0,
-    val date: LocalDate,
-    val isPH: Boolean = false,
-    val isDO: Boolean = false,
-    val isLeave: Boolean = false,
-    val leaveType: String? = null,
-    val reason: String? = null,
-    val wardOverride: String? = null,
-    val normalTimeInStr: String = "",
-    val normalTimeOutStr: String = "",
-    val computedNormalHours: Float = 0f,
-    val otTimeInStr: String = "",
-    val otTimeOutStr: String = "",
-    val computedOtHours: Float = 0f
+/**
+ * Compatibility alias for existing callers while DailyLog ownership moves to the domain layer.
+ * New calculation/domain code should import com.pasindu.nursingotapp.domain.model.DailyLog.
+ */
+@Deprecated(
+    message = "Use com.pasindu.nursingotapp.domain.model.DailyLog",
+    replaceWith = ReplaceWith("DailyLog", "com.pasindu.nursingotapp.domain.model.DailyLog")
 )
+typealias DailyLog = DomainDailyLog
 
 data class PeriodSummary(
-    val totalNormalHours: Float = 0f, // <-- THIS IS THE MISSING VARIABLE WE ADDED!
+    val totalNormalHours: Float = 0f,
     val totalOTHours: Float = 0f,
     val totalPHDays: Int = 0,
     val totalDODays: Int = 0,
