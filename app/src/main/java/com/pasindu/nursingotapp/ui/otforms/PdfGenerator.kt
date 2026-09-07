@@ -68,7 +68,8 @@ class PdfGenerator(private val context: Context) {
         val originalImgW = 2475f; val originalImgH = 3500f
         fun sX(x: Float): Float = x * (a4Width / originalImgW)
         fun sY(y: Float): Float = y * (a4Height / originalImgH)
-        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); val tableRowHeight = 66f
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val tableRowHeight = 72f
         canvas.drawText(profile.serviceNo, sX(2113f), sY(80f), bodyPaint)
         canvas.drawText(profile.unit, sX(2050f), sY(156f), bodyPaint)
         canvas.drawText(profile.paySheetNo, sX(2103f), sY(346f), bodyPaint)
@@ -80,15 +81,15 @@ class PdfGenerator(private val context: Context) {
         canvas.drawText(formatDouble(profile.basicSalary), sX(673f), sY(670f), bodyPaint)
         canvas.drawText(formatDouble(profile.otRate), sX(1473f), sY(673f), bodyPaint)
         canvas.drawText(formatFloat(summary.totalOTHours), sX(520f), sY(730f), bodyPaint)
-        val workingPHs = logs.filter { it.isPH && it.computedNormalHours > 0f }; var phY = 900f
+        val workingPHs = logs.filter { it.isPH && it.computedNormalHours > 0f }; var phY = 914f
         workingPHs.take(4).forEach { log ->
             canvas.drawText(log.date.format(dateFormatter), sX(480f), sY(phY), centerBodyPaint); canvas.drawText("${log.normalTimeInStr}H", sX(1120f), sY(phY), centerBodyPaint); canvas.drawText("${log.normalTimeOutStr}H", sX(1740f), sY(phY), centerBodyPaint); canvas.drawText(formatHrs(log.computedNormalHours), sX(2250f), sY(phY), centerBodyPaint); phY += tableRowHeight
         }
-        val workingDOs = logs.filter { it.isDO && it.computedNormalHours > 0f }; var doY = 1300f
+        val workingDOs = logs.filter { it.isDO && it.computedNormalHours > 0f }; var doY = 1314f
         workingDOs.take(4).forEach { log ->
             canvas.drawText(log.date.format(dateFormatter), sX(480f), sY(doY), centerBodyPaint); canvas.drawText("${log.normalTimeInStr}H", sX(1120f), sY(doY), centerBodyPaint); canvas.drawText("${log.normalTimeOutStr}H", sX(1740f), sY(doY), centerBodyPaint); canvas.drawText(formatHrs(log.computedNormalHours), sX(2250f), sY(doY), centerBodyPaint); doY += tableRowHeight
         }
-        val leaveLogs = logs.filter { (it.isLeave && it.leaveType == "CL") || (it.isDO && it.computedNormalHours == 0f) }; val groupedLeaves = groupConsecutiveLeaves(leaveLogs); var leaveY = 1700f
+        val leaveLogs = logs.filter { (it.isLeave && it.leaveType == "CL") || (it.isDO && it.computedNormalHours == 0f) }; val groupedLeaves = groupConsecutiveLeaves(leaveLogs); var leaveY = 1714f
         groupedLeaves.take(4).forEach { leave ->
             canvas.drawText(leave.startDate.format(dateFormatter), sX(460f), sY(leaveY), centerBodyPaint); canvas.drawText(leave.endDate.format(dateFormatter), sX(980f), sY(leaveY), centerBodyPaint); canvas.drawText(leave.type, sX(1600f), sY(leaveY), centerBodyPaint); canvas.drawText(leave.totalDays.toString(), sX(2200f), sY(leaveY), centerBodyPaint); leaveY += tableRowHeight
         }
