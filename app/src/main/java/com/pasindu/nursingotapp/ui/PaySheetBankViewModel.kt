@@ -48,7 +48,7 @@ class PaySheetBankViewModel @Inject constructor(
     suspend fun findByMonth(monthKey: String): PaySheetDocumentEntity? =
         findPaySheetDocumentUseCase(monthKey)
 
-    fun save(document: PaySheetDocumentEntity) {
+    fun save(document: PaySheetDocumentEntity, successMessage: String = "Paysheet saved securely in your private vault.") {
         _uiState.value = _uiState.value.copy(
             isSaving = true,
             errorMessage = null,
@@ -59,7 +59,7 @@ class PaySheetBankViewModel @Inject constructor(
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
-                        successMessage = "Paysheet saved securely in your private vault."
+                        successMessage = successMessage
                     )
                 }
                 .onFailure { error ->
