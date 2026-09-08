@@ -104,24 +104,16 @@ fun DailyEntryScreen(
     // Rates are intentionally zero here because this screen displays hours only;
     // financial amounts remain owned by AdvancedFinanceViewModel/pay-rate flow.
     val totalCalculated = remember(allSavedEntries, startDate, endDate) {
-        val logs = allSavedEntries.map { entry ->
-            com.pasindu.nursingotapp.data.model.DailyLog(
-                id = entry.id,
-                date = entry.date,
-                isPH = entry.isPH,
-                isDO = entry.isDO,
-                isLeave = entry.isLeave,
-                leaveType = entry.leaveType,
-                reason = entry.reason,
-                wardOverride = entry.wardOverride,
-                normalTimeInStr = entry.normalTimeIn,
-                normalTimeOutStr = entry.normalTimeOut,
-                otTimeInStr = entry.otTimeIn,
-                otTimeOutStr = entry.otTimeOut,
-                computedNormalHours = entry.normalHours,
-                computedOtHours = entry.otHours
-            )
-        }
+        val result = viewModel.calculateSavedDailyEntryHours(
+            entries = allSavedEntries,
+            claimStart = startDate,
+            claimEnd = endDate
+        )
+        Pair(
+            result.totalNormalHours.toFloat(),
+            result.totalOtHours.toFloat()
+        )
+    }
         val result = viewModel.calculateDailyEntryHours(
             logs = logs,
             claimStart = startDate,
