@@ -62,6 +62,7 @@ class NurseCommandCenterRepository(
             val monthlyEntries = entries.filter { entry ->
                 entry.date >= start && entry.date <= end
             }
+            val workedToDateEntries = monthlyEntries.filter { entry -> entry.date <= today }
 
             val todayEntry = entries
                 .filter { it.date == today }
@@ -100,8 +101,9 @@ class NurseCommandCenterRepository(
             }
 
             val payableNormalHours = weeklyResult?.totalNormalHours ?: 0.0
-            val payableOtHours = weeklyResult?.totalOtHours ?: 0.0
-            val phHours = monthlyEntries
+            val workedOtHours = workedToDateEntries
+                .sumOf { it.otHours.toDouble().coerceAtLeast(0.0) }
+            val phHours = workedToDateEntries
                 .filter { it.isPH }
                 .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
 
@@ -119,7 +121,7 @@ class NurseCommandCenterRepository(
             Snapshot(
                 profile = currentProfile,
                 dutyHours = payableNormalHours,
-                otHours = payableOtHours,
+                otHours = workedOtHours,
                 phHours = phHours,
                 claimCompletedDays = monthlyEntries.count {
                     !it.isLeave && (
