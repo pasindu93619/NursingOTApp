@@ -176,7 +176,18 @@ fun AppNavigation() {
                     val dbLogs = viewModel.dailyLogs.value
                     val dbProfile = viewModel.userProfile.value
                     if (dbProfile != null) {
-                        val profile = UserProfile(dbProfile.fullName, dbProfile.serviceNo, dbProfile.unit, dbProfile.paySheetNo, dbProfile.grade, dbProfile.basicSalary, dbProfile.otRate)
+                        val configuredOtRate = viewModel.configuredOtRate.value
+                        val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 }
+                            ?: dbProfile.otRate.coerceAtLeast(0.0)
+                        val profile = UserProfile(
+                            dbProfile.fullName,
+                            dbProfile.serviceNo,
+                            dbProfile.unit,
+                            dbProfile.paySheetNo,
+                            dbProfile.grade,
+                            dbProfile.basicSalary,
+                            effectiveOtRate
+                        )
                         val logs = dbLogs.map { entity ->
                             DailyLog(
                                 id = entity.id,
