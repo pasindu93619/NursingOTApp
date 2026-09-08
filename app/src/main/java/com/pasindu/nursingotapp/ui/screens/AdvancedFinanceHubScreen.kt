@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -80,6 +81,7 @@ private val FinanceMintSoft = Color(0xFFEAFBF5)
 private val FinanceAmberSoft = Color(0xFFFFF6E7)
 private val FinanceInk = Color(0xFF12204A)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedFinanceHubScreen(
     viewModel: AdvancedFinanceViewModel,
@@ -111,14 +113,18 @@ fun AdvancedFinanceHubScreen(
                     }
                 },
                 actions = {
-                    Surface(onClick = { showGuide = true }, color = Purple.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
+                    Surface(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        color = Purple.copy(alpha = 0.10f),
+                        shape = RoundedCornerShape(50.dp),
+                        onClick = { showGuide = true }
+                    ) {
                         Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, null, tint = Purple, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(5.dp))
                             Text("Guide", color = Purple, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-                    Spacer(Modifier.width(8.dp))
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground)
             )
@@ -145,15 +151,9 @@ fun AdvancedFinanceHubScreen(
                     onPaySheets = { onNavigate("pay_sheet_bank") }
                 )
                 PaySheetSummaryCard(state) { onNavigate("pay_sheet_bank") }
-                AnimatedVisibility(showSalary, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) {
-                    SalaryDetailsCard(state)
-                }
-                AnimatedVisibility(showRates, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) {
-                    PayRatesDetailsCard(state, viewModel)
-                }
-                AnimatedVisibility(showCommitments, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) {
-                    CommitmentsEditorCard(state, viewModel)
-                }
+                AnimatedVisibility(showSalary, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) { SalaryDetailsCard(state) }
+                AnimatedVisibility(showRates, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) { PayRatesDetailsCard(state, viewModel) }
+                AnimatedVisibility(showCommitments, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) { CommitmentsEditorCard(state, viewModel) }
                 QuickInsights(state)
                 FinanceSectionHeader("04 • MONEY MOVEMENT", "How your money moves", "Each component comes from the same deterministic finance state.")
                 MoneyMovement(state)
@@ -248,7 +248,7 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
             }
         }
         Spacer(Modifier.height(15.dp))
-        LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
+        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PulseMetric(Modifier.weight(1f), "Normal Duty", "${state.totalNormalHours.oneDecimal()} h", ClinicalPrimaryColor, FinanceBlueSoft)
@@ -274,13 +274,7 @@ private fun PulseMetric(modifier: Modifier, title: String, value: String, accent
 }
 
 @Composable
-private fun FinanceTools(
-    state: AdvancedFinanceUiState,
-    onSalary: () -> Unit,
-    onRates: () -> Unit,
-    onCommitments: () -> Unit,
-    onPaySheets: () -> Unit
-) {
+private fun FinanceTools(state: AdvancedFinanceUiState, onSalary: () -> Unit, onRates: () -> Unit, onCommitments: () -> Unit, onPaySheets: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ToolCard(Modifier.weight(1f), "My Salary", "Full breakdown", Icons.Default.Payments, ClinicalPrimaryColor, FinanceBlueSoft, onSalary)
@@ -295,7 +289,7 @@ private fun FinanceTools(
 
 @Composable
 private fun ToolCard(modifier: Modifier, title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, surface: Color, onClick: () -> Unit) {
-    Card(modifier, onClick = onClick, shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(color = surface, shape = RoundedCornerShape(12.dp)) { Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp)) }
             Spacer(Modifier.width(8.dp))
@@ -312,9 +306,7 @@ private fun ToolCard(modifier: Modifier, title: String, subtitle: String, icon: 
 private fun QuickInsights(state: AdvancedFinanceUiState) {
     FinanceCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(13.dp)) {
-                Icon(Icons.Default.Lightbulb, null, tint = Purple, modifier = Modifier.padding(8.dp))
-            }
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(13.dp)) { Icon(Icons.Default.Lightbulb, null, tint = Purple, modifier = Modifier.padding(8.dp)) }
             Spacer(Modifier.width(9.dp))
             Column {
                 Text("Quick Insights", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -343,9 +335,7 @@ private fun MoneyMovement(state: AdvancedFinanceUiState) {
                 Text("How Your Money Moves", color = FinanceInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
                 Text("Earnings constellation for this period", color = TextSecondary, fontSize = 10.sp)
             }
-            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(50.dp)) {
-                Text("LIVE", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            }
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(50.dp)) { Text("LIVE", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black) }
         }
         Spacer(Modifier.height(14.dp))
         Surface(color = Color(0xFFF7F9FC), shape = RoundedCornerShape(21.dp)) {
@@ -355,7 +345,7 @@ private fun MoneyMovement(state: AdvancedFinanceUiState) {
                     val accent = when (label) { "Basic" -> ClinicalPrimaryColor; "OT" -> Purple; "PH" -> Amber; else -> Emerald }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(label, Modifier.width(48.dp), color = TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        LinearProgressIndicator(progress = { fraction }, Modifier.weight(1f).height(7.dp), color = accent, trackColor = accent.copy(alpha = 0.10f))
+                        LinearProgressIndicator(progress = { fraction }, modifier = Modifier.weight(1f).height(7.dp), color = accent, trackColor = accent.copy(alpha = 0.10f))
                         Spacer(Modifier.width(9.dp))
                         Text(formatRs(value), color = FinanceInk, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
@@ -380,19 +370,8 @@ private fun PayRatesSummary(state: AdvancedFinanceUiState) {
         }
         Spacer(Modifier.height(10.dp))
         Text("Grade ${state.profile?.grade.orEmpty()}", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-        Text(
-            when (state.payRateSettings?.rateSource) {
-                "MANUAL" -> "Using manually configured rates"
-                "BASIC_SALARY_DIV_30", "2027_BASIC_SALARY_DIV_30" -> "PH / Working DO: 2027 basic ÷ 30"
-                else -> "Configured finance pay rates"
-            },
-            color = TextSecondary,
-            fontSize = 10.sp
-        )
-        state.basisSalary2027?.let {
-            Spacer(Modifier.height(5.dp))
-            Text("2027 basic used for day-rate reference: ${formatRs(it)}", color = TextSecondary, fontSize = 10.sp)
-        }
+        Text(when (state.payRateSettings?.rateSource) { "MANUAL" -> "Using manually configured rates"; "BASIC_SALARY_DIV_30", "2027_BASIC_SALARY_DIV_30" -> "PH / Working DO: 2027 basic ÷ 30"; else -> "Configured finance pay rates" }, color = TextSecondary, fontSize = 10.sp)
+        state.basisSalary2027?.let { Spacer(Modifier.height(5.dp)); Text("2027 basic used for day-rate reference: ${formatRs(it)}", color = TextSecondary, fontSize = 10.sp) }
     }
 }
 
@@ -461,19 +440,13 @@ private fun CommitmentsEditorCard(state: AdvancedFinanceUiState, viewModel: Adva
 
 @Composable
 private fun PaySheetSummaryCard(state: AdvancedFinanceUiState, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth(), onClick = onClick, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(13.dp)) {
-                Icon(Icons.Default.Description, null, tint = Purple, modifier = Modifier.padding(9.dp))
-            }
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(13.dp)) { Icon(Icons.Default.Description, null, tint = Purple, modifier = Modifier.padding(9.dp)) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text("Pay Sheet Bank", color = FinanceInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    listOfNotNull(state.profile?.fullName?.takeIf { it.isNotBlank() }, state.profile?.serviceNo?.takeIf { it.isNotBlank() }, state.profile?.paySheetNo?.takeIf { it.isNotBlank() }).joinToString(" • ").ifBlank { "Open saved pay sheets" },
-                    color = TextSecondary,
-                    fontSize = 9.sp
-                )
+                Text(listOfNotNull(state.profile?.fullName?.takeIf { it.isNotBlank() }, state.profile?.serviceNo?.takeIf { it.isNotBlank() }, state.profile?.paySheetNo?.takeIf { it.isNotBlank() }).joinToString(" • ").ifBlank { "Open saved pay sheets" }, color = TextSecondary, fontSize = 9.sp)
             }
             Icon(Icons.Default.ChevronRight, null, tint = Slate)
         }
@@ -515,11 +488,9 @@ private fun RateBox(modifier: Modifier, title: String, value: String, subtitle: 
 
 @Composable
 private fun FinancialPlanningBanner(onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth(), onClick = onClick, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Purple)) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Purple)) {
         Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(14.dp)) {
-                Icon(Icons.Default.ShowChart, null, tint = Color.White, modifier = Modifier.padding(9.dp))
-            }
+            Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.ShowChart, null, tint = Color.White, modifier = Modifier.padding(9.dp)) }
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text("Financial Planning", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -550,15 +521,13 @@ private fun FinanceCard(content: @Composable androidx.compose.foundation.layout.
 private fun FinanceLoadingCard() {
     FinanceCard {
         Text("Loading finance data…", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        LinearProgressIndicator(Modifier.fillMaxWidth(), color = ClinicalPrimaryColor)
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = ClinicalPrimaryColor)
     }
 }
 
 @Composable
 private fun ErrorFinanceCard(message: String) {
-    Surface(Modifier.fillMaxWidth(), color = FinanceAmberSoft, shape = RoundedCornerShape(17.dp)) {
-        Text(message, Modifier.padding(14.dp), color = FinanceInk, fontSize = 10.sp)
-    }
+    Surface(Modifier.fillMaxWidth(), color = FinanceAmberSoft, shape = RoundedCornerShape(17.dp)) { Text(message, Modifier.padding(14.dp), color = FinanceInk, fontSize = 10.sp) }
 }
 
 @Composable
