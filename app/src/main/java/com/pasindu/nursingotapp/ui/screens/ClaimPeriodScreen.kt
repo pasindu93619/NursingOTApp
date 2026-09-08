@@ -13,7 +13,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,9 +20,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.rememberScrollState
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,7 +32,6 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.WorkHistory
 import androidx.compose.material3.AlertDialog
@@ -71,13 +69,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.ui.ClaimPeriodViewModel
-import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.Emerald
-import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import com.pasindu.nursingotapp.ui.theme.Purple
-import com.pasindu.nursingotapp.ui.theme.Slate
-import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -89,8 +83,16 @@ import java.util.Locale
 private val OtBlueSoft = Color(0xFFEAF6FF)
 private val OtPurpleSoft = Color(0xFFF3EEFF)
 private val OtMintSoft = Color(0xFFEAFBF5)
-private val OtAmberSoft = Color(0xFFFFF6E7)
 private val OtInk = Color(0xFF12204A)
+
+private val OtHeroGradient = Brush.horizontalGradient(
+    listOf(
+        Color(0xFF1769E8),
+        Color(0xFF149FE3),
+        Color(0xFF4B78F2),
+        Color(0xFF7B5CEB)
+    )
+)
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -172,27 +174,24 @@ fun ClaimPeriodScreen(
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onNavigateToAnalytics),
                 shape = RoundedCornerShape(25.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Row(
-                    Modifier.fillMaxWidth().background(
-                        Brush.horizontalGradient(listOf(Color(0xFF17233F), Color(0xFF24538C), Color(0xFF08A5D9))),
-                        RoundedCornerShape(25.dp)
-                    ).padding(18.dp),
+                    Modifier.fillMaxWidth().background(OtHeroGradient, RoundedCornerShape(25.dp)).padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(Modifier.size(48.dp), CircleShape, Color.White.copy(alpha = 0.14f)) {
+                    Surface(Modifier.size(50.dp), CircleShape, Color.White.copy(alpha = 0.16f)) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Analytics, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(25.dp))
                         }
                     }
                     Spacer(Modifier.size(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Your OT workspace", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text("Plan • record • review", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("Keep each claim period organized in one place", color = Color.White.copy(alpha = 0.76f), fontSize = 11.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("Your OT workspace", color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Plan • record • review", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Keep each claim period organized in one place", color = Color.White.copy(alpha = 0.84f), fontSize = 11.sp)
                     }
-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                    Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White, modifier = Modifier.size(27.dp))
                 }
             }
 
@@ -200,7 +199,7 @@ fun ClaimPeriodScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(Modifier.padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -211,32 +210,32 @@ fun ClaimPeriodScreen(
                         }
                         Spacer(Modifier.size(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("New claim period", color = OtInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("New claim period", color = OtInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
                             Text("Choose the dates for this claim", color = TextSecondary, fontSize = 11.sp)
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
-                    DateEntryCard("START", startYear, { startYear = it }, startMonth, { startMonth = it }, startDay, { startDay = it })
-                    Spacer(Modifier.height(10.dp))
-                    DateEntryCard("END", endYear, { endYear = it }, endMonth, { endMonth = it }, endDay, { endDay = it })
+                    Spacer(Modifier.height(18.dp))
+                    DateEntryCard("START DATE", startYear, { startYear = it }, startMonth, { startMonth = it }, startDay, { startDay = it })
+                    Spacer(Modifier.height(14.dp))
+                    DateEntryCard("END DATE", endYear, { endYear = it }, endMonth, { endMonth = it }, endDay, { endDay = it })
 
                     AnimatedVisibility(visible = isValidPeriod) {
                         if (startDate != null && endDate != null) {
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(18.dp))
                             PeriodSummaryCard(startDate!!, endDate!!)
                         }
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = { if (isValidPeriod) showWardSelectionForNew = true },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
                         enabled = isValidPeriod,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(17.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor)
                     ) {
-                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(21.dp))
                         Spacer(Modifier.size(8.dp))
                         Text("Start claim calendar", fontWeight = FontWeight.ExtraBold)
                     }
@@ -245,8 +244,8 @@ fun ClaimPeriodScreen(
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Saved periods", color = OtInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Open a period to continue your daily entries", color = TextSecondary, fontSize = 11.sp)
+                    Text("Saved claim periods", color = OtInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Tap a period to view or continue", color = TextSecondary, fontSize = 11.sp)
                 }
                 if (pastPeriods.isNotEmpty()) {
                     TextButton(onClick = { showDeleteAllConfirm = true }) {
@@ -256,11 +255,7 @@ fun ClaimPeriodScreen(
             }
 
             if (pastPeriods.isEmpty()) {
-                Surface(
-                    Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    color = Color.White
-                ) {
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), color = Color.White) {
                     Column(
                         Modifier.fillMaxWidth().padding(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -347,7 +342,9 @@ fun ClaimPeriodScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.deleteClaimPeriod(periodToDelete!!) { periodToDelete = null }
+                            val period = periodToDelete ?: return@Button
+                            periodToDelete = null
+                            viewModel.deleteClaimPeriod(period)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) { Text("Delete") }
@@ -364,7 +361,8 @@ fun ClaimPeriodScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.deleteAll { showDeleteAllConfirm = false }
+                            showDeleteAllConfirm = false
+                            viewModel.deleteAll()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) { Text("Delete everything") }
@@ -389,7 +387,7 @@ private fun SavedPeriodCard(period: ClaimPeriodEntity, onOpen: () -> Unit, onDel
         color = surface
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(46.dp), CircleShape, Color.White.copy(alpha = 0.76f)) {
+            Surface(Modifier.size(46.dp), CircleShape, Color.White.copy(alpha = 0.78f)) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.CalendarMonth, null, tint = accent, modifier = Modifier.size(23.dp))
                 }
@@ -417,7 +415,7 @@ private fun SavedPeriodCard(period: ClaimPeriodEntity, onOpen: () -> Unit, onDel
             }
             Icon(Icons.Default.KeyboardArrowRight, "Open", tint = accent, modifier = Modifier.size(22.dp))
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f), modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.78f), modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -447,9 +445,23 @@ private fun DutyTypeOption(title: String, subtitle: String, accent: Color, surfa
 }
 
 @Composable
-fun DateEntryCard(title: String, year: String, onYearChange: (String) -> Unit, month: String, onMonthChange: (String) -> Unit, day: String, onDayChange: (String) -> Unit) {
+fun DateEntryCard(
+    title: String,
+    year: String,
+    onYearChange: (String) -> Unit,
+    month: String,
+    onMonthChange: (String) -> Unit,
+    day: String,
+    onDayChange: (String) -> Unit
+) {
     Column {
-        Text(title, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = TextSecondary, modifier = Modifier.padding(bottom = 5.dp, start = 2.dp))
+        Text(
+            title,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = TextSecondary,
+            modifier = Modifier.padding(bottom = 7.dp, start = 2.dp)
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             OutlinedTextField(
                 value = year,
@@ -490,17 +502,18 @@ fun PeriodSummaryCard(start: LocalDate, end: LocalDate) {
     val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
 
     Box(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .animateContentSize(spring(stiffness = Spring.StiffnessLow))
-            .clip(RoundedCornerShape(17.dp))
+            .clip(RoundedCornerShape(19.dp))
             .background(OtMintSoft)
-            .padding(14.dp)
+            .padding(16.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
             if (fullWeeks > 0) {
                 SummaryRow("First Sunday", firstSunday.format(formatter))
                 SummaryRow("Last Saturday", lastSaturday.format(formatter))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 3.dp), color = Emerald.copy(alpha = 0.18f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Emerald.copy(alpha = 0.18f))
                 SummaryRow("Full weeks", fullWeeks.toString())
                 SummaryRow("Coverage", "Sunday → Saturday")
             } else {
