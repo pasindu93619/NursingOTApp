@@ -1,267 +1,593 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.CreditScore
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pasindu.nursingotapp.ui.AdvancedFinanceUiState
 import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
+import com.pasindu.nursingotapp.ui.theme.Amber
+import com.pasindu.nursingotapp.ui.theme.AppBackground
+import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
+import com.pasindu.nursingotapp.ui.theme.Emerald
+import com.pasindu.nursingotapp.ui.theme.Purple
+import com.pasindu.nursingotapp.ui.theme.Slate
+import com.pasindu.nursingotapp.ui.theme.TextPrimary
+import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import java.text.NumberFormat
 import java.util.Locale
-import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.sin
 
-private val FinanceBackground = Color(0xFFF5F7FC)
-private val Ink = Color(0xFF0F172A)
-private val Slate = Color(0xFF64748B)
-private val SoftSlate = Color(0xFF94A3B8)
-private val Navy = Color(0xFF172554)
-private val Indigo = Color(0xFF4338CA)
-private val Violet = Color(0xFF7C3AED)
-private val Cyan = Color(0xFF06B6D4)
-private val Mint = Color(0xFF10B981)
-private val Orange = Color(0xFFF97316)
-private val Pink = Color(0xFFEC4899)
-private val CardWhite = Color.White
-private val SoftSurface = Color(0xFFF8FAFC)
-private val SoftBorder = Color(0xFFE2E8F0)
+private val FinanceBlueSoft = Color(0xFFEAF6FF)
+private val FinancePurpleSoft = Color(0xFFF3EEFF)
+private val FinanceMintSoft = Color(0xFFEAFBF5)
+private val FinanceAmberSoft = Color(0xFFFFF6E7)
+private val FinanceInk = Color(0xFF12204A)
 
 @Composable
-fun AdvancedFinanceHubScreen(viewModel: AdvancedFinanceViewModel, onNavigate: (String) -> Unit, onBack: () -> Unit) {
+fun AdvancedFinanceHubScreen(
+    viewModel: AdvancedFinanceViewModel,
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit
+) {
     val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
-    Column(modifier = Modifier.fillMaxSize().background(FinanceBackground).windowInsetsPadding(WindowInsets.statusBars)) {
-        FinanceHeader(onBack)
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 16.dp, vertical = 8.dp).windowInsetsPadding(WindowInsets.navigationBars), verticalArrangement = Arrangement.spacedBy(15.dp)) {
-            AnimatedVisibility(visible = !state.isLoading, enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 5 }) {
-                Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
-                    FinanceHeroCard(state.estimatedNetSalary, state.grossEarnings, state.otAmountRs)
-                    SectionLabel("01 • WORK PULSE", "Your Duty Performance")
-                    WorkPulseCard(state.totalNormalHours, state.totalOTHours, state.totalPHDays, state.totalDODays, state.dutyProgress36Hours) { onNavigate("duty_hours_analytics") }
-                    SectionLabel("02 • MONEY FLOW", "Where Your Earnings Come From")
-                    MoneyFlowCard(state.currentBasicSalary, state.otAmountRs, state.phAmountRs, state.doAmountRs)
-                    PayRatesCard(state.profile?.grade.orEmpty(), state.currentBasicSalary, state.otRate, state.phRate, state.doRate, state.payRateSettings?.rateSource.orEmpty())
-                    ToolRow()
-                    PaySheetBankCard(state.profile?.fullName.orEmpty(), state.profile?.serviceNo.orEmpty(), state.profile?.paySheetNo.orEmpty(), state.profile?.grade.orEmpty(), state.profile?.unit.orEmpty()) { onNavigate("pay_sheet_bank") }
-                    SectionLabel("03 • TAKE-HOME ESTIMATE", "Additional Financial Commitments")
-                    ExternalCommitmentCard(state.loanDeduction, state.otherDeduction, state.estimatedNetSalary, viewModel::updateLoanDeduction, viewModel::updateOtherDeduction)
+    var showGuide by remember { mutableStateOf(false) }
+    var showSalary by remember { mutableStateOf(false) }
+    var showRates by remember { mutableStateOf(false) }
+    var showCommitments by remember { mutableStateOf(false) }
+
+    if (showGuide) FinanceGuideDialog { showGuide = false }
+
+    Scaffold(
+        containerColor = AppBackground,
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = FinanceInk)
+                    }
+                },
+                title = {
+                    Column {
+                        Text("Advanced Finance", color = FinanceInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Duty • Earnings • Loans • Pay Sheet", color = TextSecondary, fontSize = 11.sp)
+                    }
+                },
+                actions = {
+                    Surface(onClick = { showGuide = true }, color = Purple.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
+                        Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, null, tint = Purple, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text("Guide", color = Purple, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground)
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).navigationBarsPadding().verticalScroll(scrollState).padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (state.isLoading) {
+                FinanceLoadingCard()
+            } else {
+                FinanceHeroCard(state)
+                FinanceSectionHeader("01 • EARNINGS OVERVIEW", "Your money at a glance", "A clear summary of this claim period.")
+                EarningsOverview(state)
+                FinanceSectionHeader("02 • WORKLOAD PULSE", "Your duty & OT contribution", "Work inputs behind the current financial estimate.")
+                WorkloadPulse(state)
+                FinanceSectionHeader("03 • FINANCE TOOLS", "Open what you need", "Quick access without hiding the detailed data.")
+                FinanceTools(
+                    state = state,
+                    onSalary = { showSalary = !showSalary },
+                    onRates = { showRates = !showRates },
+                    onCommitments = { showCommitments = !showCommitments },
+                    onPaySheets = { onNavigate("pay_sheet_bank") }
+                )
+                PaySheetSummaryCard(state) { onNavigate("pay_sheet_bank") }
+                AnimatedVisibility(showSalary, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) {
+                    SalaryDetailsCard(state)
                 }
+                AnimatedVisibility(showRates, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) {
+                    PayRatesDetailsCard(state, viewModel)
+                }
+                AnimatedVisibility(showCommitments, enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 4 }, exit = fadeOut(tween(180))) {
+                    CommitmentsEditorCard(state, viewModel)
+                }
+                QuickInsights(state)
+                FinanceSectionHeader("04 • MONEY MOVEMENT", "How your money moves", "Each component comes from the same deterministic finance state.")
+                MoneyMovement(state)
+                FinanceSectionHeader("05 • PAY RATES USED", "Current rate references", "Reference values used by this financial summary.")
+                PayRatesSummary(state)
+                FinanceSectionHeader("06 • FINANCIAL COMMITMENTS", "What reduces take-home pay", "Current listed deductions and external commitments.")
+                CommitmentsSummary(state)
+                FinancialPlanningBanner { showGuide = true }
             }
-            if (state.isLoading) LoadingFinanceState()
             state.errorMessage?.let { ErrorFinanceCard(it) }
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(Modifier.height(18.dp))
         }
     }
 }
 
-@Composable private fun FinanceHeader(onBack: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Navy, modifier = Modifier.size(25.dp)) }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Advanced Finance", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.Black)
-            Text(text = "Duty • Earnings • Loans • Pay Sheet", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        }
-        Surface(color = Mint.copy(alpha = 0.11f), shape = RoundedCornerShape(50.dp)) { Text(text = "SMART FINANCE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-    }
-}
-
-@Composable private fun FinanceHeroCard(netSalary: Double, grossSalary: Double, otAmount: Double) {
-    val transition = rememberInfiniteTransition(label = "heroAnimation")
-    val glow by transition.animateFloat(0.18f, 0.35f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "heroGlow")
-    Card(modifier = Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(30.dp), spotColor = Violet.copy(alpha = 0.22f)), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Navy)) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Canvas(modifier = Modifier.matchParentSize()) {
-                drawCircle(Violet.copy(alpha = glow), 170f, Offset(size.width * 0.88f, size.height * 0.02f))
-                drawCircle(Cyan.copy(alpha = glow * 0.55f), 105f, Offset(size.width * 0.04f, size.height * 0.95f))
-                drawCircle(Mint.copy(alpha = glow * 0.4f), 35f, Offset(size.width * 0.72f, size.height * 0.72f))
-            }
-            Column(modifier = Modifier.padding(22.dp)) {
-                Surface(color = Color.White.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) { Text(text = "THIS CLAIM PERIOD", modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color.White.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp) }
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(text = "Estimated Net", color = Color.White.copy(alpha = 0.70f), fontSize = 12.sp)
-                AnimatedMoney(netSalary, Color.White, true)
-                Spacer(modifier = Modifier.height(15.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) { HeroMetricBox(Modifier.weight(1f), "GROSS", grossSalary, Cyan); HeroMetricBox(Modifier.weight(1f), "OT", otAmount, Orange) }
+@Composable
+private fun FinanceHeroCard(state: AdvancedFinanceUiState) {
+    val animatedNet by animateFloatAsState(state.estimatedNetSalary.toFloat().coerceAtLeast(0f), tween(850, easing = FastOutSlowInEasing), label = "finance_net")
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(27.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
+        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF087BC1), ClinicalPrimaryColor, Purple)), RoundedCornerShape(27.dp)).padding(20.dp)) {
+            Column {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(50.dp)) {
+                        Text("THIS CLAIM PERIOD", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    }
+                    Surface(color = Color.White.copy(alpha = 0.13f), shape = RoundedCornerShape(50.dp)) {
+                        Icon(Icons.Default.Payments, null, tint = Color.White, modifier = Modifier.padding(10.dp))
+                    }
+                }
+                Spacer(Modifier.height(15.dp))
+                Text("Estimated Net Pay", color = Color.White.copy(alpha = 0.82f), fontSize = 13.sp)
+                Text(formatRs(animatedNet.toDouble()), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(15.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroAmount(Modifier.weight(1f), "GROSS", state.grossEarnings)
+                    HeroAmount(Modifier.weight(1f), "OT", state.otAmountRs)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Calculated from the current saved finance data.", color = Color.White.copy(alpha = 0.76f), fontSize = 10.sp)
             }
         }
     }
 }
 
-@Composable private fun HeroMetricBox(modifier: Modifier, title: String, amount: Double, accent: Color) {
-    Surface(modifier = modifier, color = Color.White.copy(alpha = 0.08f), shape = RoundedCornerShape(16.dp)) { Column(modifier = Modifier.padding(12.dp)) { Text(text = title, color = accent.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.height(4.dp)); AnimatedMoney(amount, Color.White, false) } }
-}
-
-@Composable private fun WorkPulseCard(normalHours: Double, otHours: Double, phDays: Int, doDays: Int, progress: Float, onClick: () -> Unit) {
-    val transition = rememberInfiniteTransition(label = "workPulse")
-    val markerPulse by transition.animateFloat(0.85f, 1.15f, infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "markerPulse")
-    val animatedProgress by animateFloatAsState(progress.coerceIn(0f, 1f), tween(1000, easing = FastOutSlowInEasing), label = "workProgress")
-    FinanceCard(onClick = onClick, accent = Cyan) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) { Text(text = "36-HOUR WEEKLY TARGET", color = Cyan, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp); Spacer(modifier = Modifier.height(3.dp)); Text(text = "Workload Pulse", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Black) }
-            Surface(color = if (normalHours >= 36.0) Orange.copy(alpha = 0.11f) else Mint.copy(alpha = 0.11f), shape = RoundedCornerShape(50.dp)) { Text(text = if (normalHours >= 36.0) "TARGET REACHED" else "${normalHours.oneDecimal()}h LOGGED", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = if (normalHours >= 36.0) Orange else Mint, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+@Composable
+private fun HeroAmount(modifier: Modifier, title: String, value: Double) {
+    Surface(modifier, color = Color.White.copy(alpha = 0.12f), shape = RoundedCornerShape(17.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Text(title, color = Color.White.copy(alpha = 0.72f), fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(formatRs(value), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
         }
-        Spacer(modifier = Modifier.height(17.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(22.dp)).background(SoftSurface)) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val y1 = size.height * 0.35f; val y2 = size.height * 0.68f; val left = 18f; val right = size.width - 18f
-                drawLine(SoftBorder, Offset(left, y1), Offset(right, y1), 8f, cap = StrokeCap.Round); drawLine(SoftBorder, Offset(left, y2), Offset(right, y2), 8f, cap = StrokeCap.Round)
-                drawLine(Cyan, Offset(left, y1), Offset(left + (right - left) * animatedProgress, y1), 8f, cap = StrokeCap.Round)
-                val otVisual = (otHours / 36.0).coerceIn(0.0, 1.0).toFloat(); drawLine(Violet, Offset(left, y2), Offset(left + (right - left) * otVisual, y2), 8f, cap = StrokeCap.Round)
-                val markerX = left + (right - left) * 0.5f; drawLine(Orange.copy(alpha = 0.55f), Offset(markerX, 12f), Offset(markerX, size.height - 12f), 3f)
-            }
-            Column(modifier = Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) { PulseLaneLabel("NORMAL DUTY", "${normalHours.oneDecimal()} h", Cyan); PulseLaneLabel("OVERTIME", "${otHours.oneDecimal()} h", Violet) }
-            Box(modifier = Modifier.size(9.dp * markerPulse).clip(CircleShape).background(Orange).align(Alignment.TopEnd))
-        }
-        Spacer(modifier = Modifier.height(14.dp)); Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { PulseMini(Modifier.weight(1f), "NORMAL", "${normalHours.oneDecimal()}h", Cyan); PulseMini(Modifier.weight(1f), "OT", "${otHours.oneDecimal()}h", Violet) }
-        Spacer(modifier = Modifier.height(8.dp)); Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { PulseMini(Modifier.weight(1f), "PH", "$phDays days", Orange); PulseMini(Modifier.weight(1f), "DO", "$doDays days", Mint) }
     }
 }
 
-@Composable private fun PulseLaneLabel(title: String, amount: String, accent: Color) { Row(verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(accent)); Spacer(modifier = Modifier.width(7.dp)); Text(text = title, color = Slate, fontSize = 9.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.width(8.dp)); Text(text = amount, color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Black) } }
-
-@Composable private fun PulseMini(modifier: Modifier, title: String, value: String, accent: Color) { Surface(modifier = modifier, color = accent.copy(alpha = 0.07f), shape = RoundedCornerShape(14.dp)) { Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(accent)); Spacer(modifier = Modifier.width(7.dp)); Column { Text(text = title, color = Slate, fontSize = 8.sp, fontWeight = FontWeight.Black); Text(text = value, color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Black) } } } }
-
-@Composable private fun MoneyFlowCard(basicSalary: Double, otAmount: Double, phAmount: Double, doAmount: Double) {
-    val items = remember(basicSalary, otAmount, phAmount, doAmount) { listOf(MoneyFlowItem("BASIC", basicSalary, Indigo, Icons.Default.AccountBalance), MoneyFlowItem("OT", otAmount, Violet, Icons.AutoMirrored.Filled.TrendingUp), MoneyFlowItem("PH", phAmount, Orange, Icons.Default.Schedule), MoneyFlowItem("DO", doAmount, Mint, Icons.Default.Assessment)) }
-    val total = items.sumOf { it.amount }; val maxValue = max(items.maxOfOrNull { it.amount } ?: 1.0, 1.0)
-    val transition = rememberInfiniteTransition(label = "moneyOrbit"); val phase by transition.animateFloat(0f, (2f * Math.PI).toFloat(), infiniteRepeatable(tween(5200, easing = FastOutSlowInEasing), RepeatMode.Restart), label = "orbitPhase")
-    val reveal by animateFloatAsState(1f, tween(1100, easing = FastOutSlowInEasing), label = "orbitReveal"); val pulseTransition = rememberInfiniteTransition(label = "totalPulse"); val pulse by pulseTransition.animateFloat(0.92f, 1.08f, infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "totalPulse")
-    FinanceCard(accent = Indigo) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text(text = "EARNINGS CONSTELLATION", color = Indigo, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp); Spacer(modifier = Modifier.height(3.dp)); Text(text = "How Your Money Moves", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Black) }; Surface(color = Indigo.copy(alpha = 0.08f), shape = RoundedCornerShape(50.dp)) { Text(text = "LIVE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Indigo, fontSize = 9.sp, fontWeight = FontWeight.Black) } }
-        Spacer(modifier = Modifier.height(14.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(24.dp)).background(SoftSurface)) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val center = Offset(size.width / 2f, size.height * 0.48f); val orbitX = size.width * 0.30f; val orbitY = size.height * 0.30f
-                drawOval(color = SoftBorder.copy(alpha = 0.75f), topLeft = Offset(center.x - orbitX, center.y - orbitY), size = Size(orbitX * 2f, orbitY * 2f), style = Stroke(width = 2f))
-                items.forEachIndexed { index, item -> val angle = phase + index * (2f * Math.PI.toFloat() / items.size); val x = center.x + cos(angle) * orbitX * reveal; val y = center.y + sin(angle) * orbitY * reveal; val normalized = (item.amount / maxValue).coerceIn(0.0, 1.0).toFloat(); val nodeRadius = (14f + normalized * 12f) * reveal; drawLine(item.accent.copy(alpha = 0.16f), center, Offset(x, y), 2.5f, cap = StrokeCap.Round); drawCircle(item.accent.copy(alpha = 0.08f), nodeRadius * 2.2f, Offset(x, y)); drawCircle(item.accent, nodeRadius, Offset(x, y)) }
-            }
-            Box(modifier = Modifier.fillMaxSize()) {
-                Surface(modifier = Modifier.size(104.dp * pulse).align(Alignment.Center), color = Navy, shape = CircleShape, shadowElevation = 10.dp) { Column(modifier = Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text(text = "TOTAL", color = Color.White.copy(alpha = 0.60f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Spacer(modifier = Modifier.height(3.dp)); Text(text = "Rs. ${total.currency()}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black); Text(text = "claim earnings", color = Color.White.copy(alpha = 0.52f), fontSize = 8.sp) } }
-                ConstellationTag(item = items[0], modifier = Modifier.align(Alignment.TopCenter)); ConstellationTag(item = items[1], modifier = Modifier.align(Alignment.CenterEnd)); ConstellationTag(item = items[2], modifier = Modifier.align(Alignment.BottomCenter)); ConstellationTag(item = items[3], modifier = Modifier.align(Alignment.CenterStart))
-            }
-        }
-        Spacer(modifier = Modifier.height(13.dp)); items.forEach { MoneyFlowRow(it) }
+@Composable
+private fun EarningsOverview(state: AdvancedFinanceUiState) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FinanceMetric(Modifier.weight(1f), "Gross", state.grossEarnings, "Total", ClinicalPrimaryColor, FinanceBlueSoft)
+        FinanceMetric(Modifier.weight(1f), "OT", state.otAmountRs, "${state.totalOTHours.oneDecimal()} h", Purple, FinancePurpleSoft)
+        FinanceMetric(Modifier.weight(1f), "Deductions", state.paysheetDeductions, "Listed", Amber, FinanceAmberSoft)
+        FinanceMetric(Modifier.weight(1f), "Net Pay", state.estimatedNetSalary, "Take home", Emerald, FinanceMintSoft)
     }
 }
 
-private data class MoneyFlowItem(val label: String, val amount: Double, val accent: Color, val icon: ImageVector)
+@Composable
+private fun FinanceMetric(modifier: Modifier, title: String, value: Double, subtitle: String, accent: Color, surface: Color) {
+    Surface(modifier, color = surface, shape = RoundedCornerShape(17.dp)) {
+        Column(Modifier.padding(10.dp)) {
+            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(5.dp))
+            Text(formatRs(value), color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+        }
+    }
+}
 
-@Composable private fun ConstellationTag(item: MoneyFlowItem, modifier: Modifier = Modifier) { Surface(modifier = modifier.padding(7.dp), color = Color.White.copy(alpha = 0.96f), shape = RoundedCornerShape(14.dp), shadowElevation = 4.dp) { Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(item.accent)); Spacer(modifier = Modifier.width(6.dp)); Column { Text(text = item.label, color = Slate, fontSize = 8.sp, fontWeight = FontWeight.Black); Text(text = "Rs. ${item.amount.currency()}", color = Ink, fontSize = 9.sp, fontWeight = FontWeight.Bold) } } } }
+@Composable
+private fun WorkloadPulse(state: AdvancedFinanceUiState) {
+    val progress by animateFloatAsState(state.dutyProgress36Hours, tween(850, easing = FastOutSlowInEasing), label = "duty_progress")
+    FinanceCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = FinanceBlueSoft, shape = RoundedCornerShape(13.dp)) {
+                Icon(Icons.Default.ShowChart, null, tint = ClinicalPrimaryColor, modifier = Modifier.padding(9.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Workload Pulse", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Normal duty + overtime for this period", color = TextSecondary, fontSize = 10.sp)
+            }
+            Surface(color = FinanceBlueSoft, shape = RoundedCornerShape(50.dp)) {
+                Text("36h target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.height(15.dp))
+        LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PulseMetric(Modifier.weight(1f), "Normal Duty", "${state.totalNormalHours.oneDecimal()} h", ClinicalPrimaryColor, FinanceBlueSoft)
+            PulseMetric(Modifier.weight(1f), "Overtime", "${state.totalOTHours.oneDecimal()} h", Purple, FinancePurpleSoft)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PulseMetric(Modifier.weight(1f), "PH", "${state.totalPHDays} days", Amber, FinanceAmberSoft)
+            PulseMetric(Modifier.weight(1f), "DO", "${state.totalDODays} days", Emerald, FinanceMintSoft)
+        }
+    }
+}
 
-@Composable private fun MoneyFlowRow(item: MoneyFlowItem) { Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(33.dp).clip(RoundedCornerShape(11.dp)).background(item.accent.copy(alpha = 0.09f)), contentAlignment = Alignment.Center) { Icon(imageVector = item.icon, contentDescription = null, tint = item.accent, modifier = Modifier.size(17.dp)) }; Spacer(modifier = Modifier.width(9.dp)); Text(text = item.label, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.width(8.dp)); Text(text = "Rs. ${item.amount.currency()}", color = Slate, fontSize = 10.sp, fontWeight = FontWeight.Bold) } }
+@Composable
+private fun PulseMetric(modifier: Modifier, title: String, value: String, accent: Color, surface: Color) {
+    Surface(modifier, color = surface, shape = RoundedCornerShape(15.dp)) {
+        Column(Modifier.padding(11.dp)) {
+            Text(title, color = TextSecondary, fontSize = 8.sp)
+            Spacer(Modifier.height(3.dp))
+            Text(value, color = accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
 
-@Composable private fun PayRatesCard(grade: String, basicSalary: Double, otRate: Double, phRate: Double, doRate: Double, rateSource: String) { FinanceCard(accent = Pink) { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column(modifier = Modifier.weight(1f)) { Text(text = "PAY RATES USED", color = Pink, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp); Spacer(modifier = Modifier.height(3.dp)); Text(text = if (grade.isBlank()) "Current profile rules" else "Grade $grade", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Black) }; Surface(color = Pink.copy(alpha = 0.08f), shape = RoundedCornerShape(50.dp)) { Text(text = "ACTIVE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Pink, fontSize = 9.sp, fontWeight = FontWeight.Black) } }; Spacer(modifier = Modifier.height(10.dp)); Surface(modifier = Modifier.fillMaxWidth(), color = SoftSurface, shape = RoundedCornerShape(14.dp)) { Text(text = when (rateSource) { "MANUAL" -> "Using manually configured rates"; "2027_BASIC_SALARY_DIV_30" -> "PH / DO: 2027 basic ÷ 30"; else -> "Configured finance pay rates" }, modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = Slate, fontSize = 9.sp) }; Spacer(modifier = Modifier.height(10.dp)); Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { RateMini(Modifier.weight(1f), "OT", "Rs. ${otRate.currency()}", "per hour", Violet); RateMini(Modifier.weight(1f), "PH", "Rs. ${phRate.currency()}", "per day", Orange); RateMini(Modifier.weight(1f), "WORKING DO", "Rs. ${doRate.currency()}", "per day", Mint) }; Spacer(modifier = Modifier.height(8.dp)); Text(text = "Paysheet basic: Rs. ${basicSalary.currency()}", color = SoftSlate, fontSize = 8.sp) } }
+@Composable
+private fun FinanceTools(
+    state: AdvancedFinanceUiState,
+    onSalary: () -> Unit,
+    onRates: () -> Unit,
+    onCommitments: () -> Unit,
+    onPaySheets: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ToolCard(Modifier.weight(1f), "My Salary", "Full breakdown", Icons.Default.Payments, ClinicalPrimaryColor, FinanceBlueSoft, onSalary)
+            ToolCard(Modifier.weight(1f), "Pay Rates", state.profile?.grade?.let { "Grade $it" } ?: "Current rates", Icons.Default.AccountBalance, Emerald, FinanceMintSoft, onRates)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ToolCard(Modifier.weight(1f), "Loan / Advance", "Commitment inputs", Icons.Default.Calculate, Amber, FinanceAmberSoft, onCommitments)
+            ToolCard(Modifier.weight(1f), "Pay Sheet Bank", "Saved documents", Icons.Default.Description, Purple, FinancePurpleSoft, onPaySheets)
+        }
+    }
+}
 
-@Composable private fun RateMini(modifier: Modifier, title: String, value: String, note: String, accent: Color) { Surface(modifier = modifier, color = accent.copy(alpha = 0.07f), shape = RoundedCornerShape(14.dp)) { Column(modifier = Modifier.padding(10.dp)) { Text(text = title, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.height(4.dp)); Text(text = value, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Black); Text(text = note, color = Slate, fontSize = 7.sp) } } }
+@Composable
+private fun ToolCard(modifier: Modifier, title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, surface: Color, onClick: () -> Unit) {
+    Card(modifier, onClick = onClick, shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = surface, shape = RoundedCornerShape(12.dp)) { Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp)) }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, color = FinanceInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+            }
+            Icon(Icons.Default.ChevronRight, null, tint = Slate, modifier = Modifier.size(16.dp))
+        }
+    }
+}
 
-@Composable private fun ToolRow() { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { ToolTile(Modifier.weight(1f), "Loan Calculator", "EMI planner", Icons.Default.Calculate, Orange) { }; ToolTile(Modifier.weight(1f), "My Salary", "Full breakdown", Icons.Default.Payments, Mint) { } } }
+@Composable
+private fun QuickInsights(state: AdvancedFinanceUiState) {
+    FinanceCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(13.dp)) {
+                Icon(Icons.Default.Lightbulb, null, tint = Purple, modifier = Modifier.padding(8.dp))
+            }
+            Spacer(Modifier.width(9.dp))
+            Column {
+                Text("Quick Insights", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Facts from the current saved state", color = TextSecondary, fontSize = 10.sp)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Surface(color = FinanceMintSoft, shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(12.dp)) {
+                Text("Estimated net pay: ${formatRs(state.estimatedNetSalary)}", color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("OT contributes ${formatRs(state.otAmountRs)}. Listed paysheet deductions are ${formatRs(state.paysheetDeductions)}.", color = TextSecondary, fontSize = 10.sp)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("No percentage trend is shown because this state does not provide a previous-period comparison.", color = TextSecondary, fontSize = 9.sp)
+    }
+}
 
-@Composable private fun ToolTile(modifier: Modifier, title: String, subtitle: String, icon: ImageVector, accent: Color, onClick: () -> Unit) { Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) { Column(modifier = Modifier.padding(16.dp)) { Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) { Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(23.dp)) }; Spacer(modifier = Modifier.height(10.dp)); Text(text = title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black); Spacer(modifier = Modifier.height(3.dp)); Text(text = subtitle, color = Slate, fontSize = 10.sp) } } }
-
-@Composable private fun PaySheetBankCard(fullName: String, serviceNo: String, paySheetNo: String, grade: String, unit: String, onClick: () -> Unit) { FinanceCard(onClick = onClick, accent = Pink) { Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(56.dp).clip(RoundedCornerShape(17.dp)).background(Pink.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) { Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = Pink, modifier = Modifier.size(28.dp)) }; Spacer(modifier = Modifier.width(13.dp)); Column(modifier = Modifier.weight(1f)) { Text(text = "Pay Sheet Bank", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Black); Text(text = fullName.ifBlank { "Nursing Officer" }, color = Slate, fontSize = 11.sp); Spacer(modifier = Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) { SmallInfo("PAY SHEET", paySheetNo); SmallInfo("SERVICE", serviceNo) } } }; Spacer(modifier = Modifier.height(12.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { TinyTag(grade.ifBlank { "Grade" }, Violet); TinyTag(unit.ifBlank { "Unit" }, Pink) } } }
-
-@Composable private fun SmallInfo(label: String, value: String) { Column { Text(text = label, color = SoftSlate, fontSize = 8.sp, fontWeight = FontWeight.Black); Text(text = value.ifBlank { "—" }, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold) } }
-@Composable private fun TinyTag(text: String, color: Color) { Surface(color = color.copy(alpha = 0.09f), shape = RoundedCornerShape(50.dp)) { Text(text = text, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold) } }
-
-@Composable private fun ExternalCommitmentCard(loan: Double, other: Double, netFromPaysheet: Double, onLoanChange: (String) -> Unit, onOtherChange: (String) -> Unit) {
-    val externalTotal = loan + other
-    val availableCash = (netFromPaysheet - externalTotal).coerceAtLeast(0.0)
-    FinanceCard(accent = Orange) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = "Your paysheet deductions are already included above.", color = Slate, fontSize = 11.sp)
-            Surface(modifier = Modifier.fillMaxWidth(), color = SoftSurface, shape = RoundedCornerShape(18.dp)) {
-                Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = "NET PAY FROM PAYSHEET", color = Slate, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    Text(text = "Rs. ${netFromPaysheet.currency()}", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(text = "Based on gross earnings minus your saved Total Paysheet Deductions.", color = SoftSlate, fontSize = 9.sp)
+@Composable
+private fun MoneyMovement(state: AdvancedFinanceUiState) {
+    val items = listOf("Basic" to state.currentBasicSalary, "OT" to state.otAmountRs, "PH" to state.phAmountRs, "DO" to state.doAmountRs)
+    val maxValue = max(items.maxOfOrNull { it.second } ?: 1.0, 1.0)
+    FinanceCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("How Your Money Moves", color = FinanceInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Earnings constellation for this period", color = TextSecondary, fontSize = 10.sp)
+            }
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(50.dp)) {
+                Text("LIVE", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Surface(color = Color(0xFFF7F9FC), shape = RoundedCornerShape(21.dp)) {
+            Column(Modifier.padding(15.dp)) {
+                items.forEach { (label, value) ->
+                    val fraction = (value / maxValue).coerceIn(0.0, 1.0).toFloat()
+                    val accent = when (label) { "Basic" -> ClinicalPrimaryColor; "OT" -> Purple; "PH" -> Amber; else -> Emerald }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.width(48.dp), color = TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        LinearProgressIndicator(progress = { fraction }, Modifier.weight(1f).height(7.dp), color = accent, trackColor = accent.copy(alpha = 0.10f))
+                        Spacer(Modifier.width(9.dp))
+                        Text(formatRs(value), color = FinanceInk, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(9.dp))
                 }
             }
-            Text(text = "EXTERNAL COMMITMENTS", color = Orange, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-            Text(text = "Only enter payments that are NOT included in your paysheet deduction total.", color = Slate, fontSize = 10.sp)
-            CommitmentField("Loan / Advance (not in paysheet)", loan, onLoanChange)
-            CommitmentField("Other Deduction (not in paysheet)", other, onOtherChange)
-            Surface(modifier = Modifier.fillMaxWidth(), color = Orange.copy(alpha = 0.07f), shape = RoundedCornerShape(18.dp)) {
-                Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    FinanceSummaryRow("External commitments", "Rs. ${externalTotal.currency()}", Orange)
-                    FinanceSummaryRow("Available after commitments", "Rs. ${availableCash.currency()}", Mint)
-                }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Claim earnings", color = TextSecondary, fontSize = 10.sp)
+            Text(formatRs(state.currentBasicSalary + state.otAmountRs + state.phAmountRs + state.doAmountRs), color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+@Composable
+private fun PayRatesSummary(state: AdvancedFinanceUiState) {
+    FinanceCard {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RateBox(Modifier.weight(1f), "OT", formatRs(state.otRate), "per hour", Purple, FinancePurpleSoft)
+            RateBox(Modifier.weight(1f), "PH", formatRs(state.phRate), "per day", Amber, FinanceAmberSoft)
+            RateBox(Modifier.weight(1f), "Working DO", formatRs(state.doRate), "per day", Emerald, FinanceMintSoft)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text("Grade ${state.profile?.grade.orEmpty()}", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Text(
+            when (state.payRateSettings?.rateSource) {
+                "MANUAL" -> "Using manually configured rates"
+                "BASIC_SALARY_DIV_30", "2027_BASIC_SALARY_DIV_30" -> "PH / Working DO: 2027 basic ÷ 30"
+                else -> "Configured finance pay rates"
+            },
+            color = TextSecondary,
+            fontSize = 10.sp
+        )
+        state.basisSalary2027?.let {
+            Spacer(Modifier.height(5.dp))
+            Text("2027 basic used for day-rate reference: ${formatRs(it)}", color = TextSecondary, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun CommitmentsSummary(state: AdvancedFinanceUiState) {
+    FinanceCard {
+        CommitmentRow("Paysheet deductions", state.paysheetDeductions)
+        CommitmentRow("Loan / Advance", state.loanDeduction)
+        CommitmentRow("Other deduction", state.otherDeduction)
+        Spacer(Modifier.height(5.dp))
+        Surface(color = FinanceAmberSoft, shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(12.dp)) {
+                CommitmentRow("External commitments", state.loanDeduction + state.otherDeduction)
+                Spacer(Modifier.height(5.dp))
+                CommitmentRow("Estimated available", state.estimatedNetSalary, true)
             }
         }
     }
 }
 
-@Composable private fun CommitmentField(label: String, value: Double, onValueChange: (String) -> Unit) { OutlinedTextField(value = if (value == 0.0) "" else value.toString(), onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(label) }, leadingIcon = { Icon(imageVector = Icons.Default.CreditScore, contentDescription = null, tint = Orange) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(15.dp)) }
-@Composable private fun FinanceSummaryRow(label: String, value: String, valueColor: Color) { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(text = label, color = Slate, fontSize = 11.sp); Text(text = value, color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.Bold) } }
-@Composable private fun FinanceCard(modifier: Modifier = Modifier, accent: Color, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) { val actionModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier; Card(modifier = modifier.fillMaxWidth().then(actionModifier).shadow(8.dp, RoundedCornerShape(24.dp), spotColor = accent.copy(alpha = 0.12f)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = CardWhite)) { Column(modifier = Modifier.animateContentSize().padding(17.dp)) { content() } } }
-@Composable private fun SectionLabel(eyebrow: String, title: String) { Column { Text(text = eyebrow, color = Indigo, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp); Spacer(modifier = Modifier.height(3.dp)); Text(text = title, color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Black) } }
-@Composable private fun AnimatedMoney(amount: Double, color: Color, large: Boolean) { AnimatedContent(targetState = amount, label = "money") { value -> Text(text = "Rs. ${value.currency()}", color = color, fontSize = if (large) 29.sp else 15.sp, fontWeight = FontWeight.Black) } }
-@Composable private fun LoadingFinanceState() { Surface(modifier = Modifier.fillMaxWidth(), color = CardWhite, shape = RoundedCornerShape(24.dp)) { Column(modifier = Modifier.padding(22.dp)) { Text(text = "Loading your financial data…", color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold); Spacer(modifier = Modifier.height(7.dp)); Text(text = "Reading your profile, claim period and duty records.", color = Slate, fontSize = 11.sp) } } }
-@Composable private fun ErrorFinanceCard(message: String) { Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFFFFF1F2), shape = RoundedCornerShape(18.dp)) { Text(text = message, modifier = Modifier.padding(14.dp), color = Color(0xFFBE123C), fontSize = 11.sp, fontWeight = FontWeight.Medium) } }
-private fun Double.oneDecimal(): String = String.format(Locale.US, "%.1f", this)
-private fun Double.currency(): String = NumberFormat.getNumberInstance(Locale.US).apply { maximumFractionDigits = 2; minimumFractionDigits = 0 }.format(this)
+@Composable
+private fun SalaryDetailsCard(state: AdvancedFinanceUiState) {
+    FinanceCard {
+        Text("Salary Breakdown", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        DetailRow("Basic salary", state.currentBasicSalary)
+        DetailRow("Risk allowance", state.riskAllowance)
+        DetailRow("CLA allowance", state.claAllowance)
+        DetailRow("Additional allowances", state.additionalAllowancesTotal)
+        DetailRow("Overtime", state.otAmountRs)
+        DetailRow("PH", state.phAmountRs)
+        DetailRow("Working DO", state.doAmountRs)
+        DetailRow("Gross", state.grossEarnings, true)
+        DetailRow("Paysheet deductions", state.paysheetDeductions)
+        DetailRow("Estimated net", state.estimatedNetSalary, true)
+    }
+}
+
+@Composable
+private fun PayRatesDetailsCard(state: AdvancedFinanceUiState, viewModel: AdvancedFinanceViewModel) {
+    var otRate by remember(state.otRate) { mutableStateOf(state.otRate.toString()) }
+    var phRate by remember(state.phRate) { mutableStateOf(state.phRate.toString()) }
+    var doRate by remember(state.doRate) { mutableStateOf(state.doRate.toString()) }
+    FinanceCard {
+        Text("Pay Rate Settings", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        FinanceInput("OT rate / hour", otRate) { otRate = it; viewModel.updateOtRate(it) }
+        FinanceInput("PH rate / day", phRate) { phRate = it; viewModel.updatePhRate(it) }
+        FinanceInput("Working DO / day", doRate) { doRate = it; viewModel.updateDoRate(it) }
+    }
+}
+
+@Composable
+private fun CommitmentsEditorCard(state: AdvancedFinanceUiState, viewModel: AdvancedFinanceViewModel) {
+    var apit by remember(state.apit) { mutableStateOf(state.apit.toString()) }
+    var wop by remember(state.wop) { mutableStateOf(state.wop.toString()) }
+    var loan by remember(state.loanDeduction) { mutableStateOf(state.loanDeduction.toString()) }
+    var other by remember(state.otherDeduction) { mutableStateOf(state.otherDeduction.toString()) }
+    FinanceCard {
+        Text("Additional Financial Commitments", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Edit only values represented by the existing finance state.", color = TextSecondary, fontSize = 10.sp)
+        FinanceInput("APIT", apit) { apit = it; viewModel.updateApit(it) }
+        FinanceInput("WOP", wop) { wop = it; viewModel.updateWop(it) }
+        FinanceInput("Loan / Advance", loan) { loan = it; viewModel.updateLoanDeduction(it) }
+        FinanceInput("Other deduction", other) { other = it; viewModel.updateOtherDeduction(it) }
+    }
+}
+
+@Composable
+private fun PaySheetSummaryCard(state: AdvancedFinanceUiState, onClick: () -> Unit) {
+    Card(Modifier.fillMaxWidth(), onClick = onClick, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(13.dp)) {
+                Icon(Icons.Default.Description, null, tint = Purple, modifier = Modifier.padding(9.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Pay Sheet Bank", color = FinanceInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    listOfNotNull(state.profile?.fullName?.takeIf { it.isNotBlank() }, state.profile?.serviceNo?.takeIf { it.isNotBlank() }, state.profile?.paySheetNo?.takeIf { it.isNotBlank() }).joinToString(" • ").ifBlank { "Open saved pay sheets" },
+                    color = TextSecondary,
+                    fontSize = 9.sp
+                )
+            }
+            Icon(Icons.Default.ChevronRight, null, tint = Slate)
+        }
+    }
+}
+
+@Composable
+private fun FinanceInput(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+}
+
+@Composable
+private fun DetailRow(label: String, value: Double, emphasis: Boolean = false) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = TextSecondary, fontSize = 10.sp)
+        Text(formatRs(value), color = if (emphasis) Emerald else FinanceInk, fontSize = if (emphasis) 13.sp else 11.sp, fontWeight = if (emphasis) FontWeight.ExtraBold else FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun CommitmentRow(label: String, value: Double, emphasis: Boolean = false) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = TextSecondary, fontSize = 10.sp)
+        Text(formatRs(value), color = if (emphasis) Emerald else FinanceInk, fontSize = if (emphasis) 13.sp else 10.sp, fontWeight = if (emphasis) FontWeight.ExtraBold else FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun RateBox(modifier: Modifier, title: String, value: String, subtitle: String, accent: Color, surface: Color) {
+    Surface(modifier, color = surface, shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(11.dp)) {
+            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(4.dp))
+            Text(value, color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+        }
+    }
+}
+
+@Composable
+private fun FinancialPlanningBanner(onClick: () -> Unit) {
+    Card(Modifier.fillMaxWidth(), onClick = onClick, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Purple)) {
+        Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(14.dp)) {
+                Icon(Icons.Default.ShowChart, null, tint = Color.White, modifier = Modifier.padding(9.dp))
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Financial Planning", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("Review your current financial picture", color = Color.White.copy(alpha = 0.78f), fontSize = 10.sp)
+            }
+            Icon(Icons.Default.ChevronRight, null, tint = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun FinanceSectionHeader(eyebrow: String, title: String, subtitle: String) {
+    Column(Modifier.padding(horizontal = 2.dp)) {
+        Text(eyebrow, color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+        Text(title, color = FinanceInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+        Text(subtitle, color = TextSecondary, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun FinanceCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp), content = content)
+    }
+}
+
+@Composable
+private fun FinanceLoadingCard() {
+    FinanceCard {
+        Text("Loading finance data…", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        LinearProgressIndicator(Modifier.fillMaxWidth(), color = ClinicalPrimaryColor)
+    }
+}
+
+@Composable
+private fun ErrorFinanceCard(message: String) {
+    Surface(Modifier.fillMaxWidth(), color = FinanceAmberSoft, shape = RoundedCornerShape(17.dp)) {
+        Text(message, Modifier.padding(14.dp), color = FinanceInk, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun FinanceGuideDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Finance Dashboard Guide", fontWeight = FontWeight.ExtraBold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                GuideItem("Estimated Net Pay", "Current estimated take-home result from the saved finance state.")
+                GuideItem("Earnings Overview", "Separates gross earnings, OT, deductions and net pay.")
+                GuideItem("Workload Pulse", "Shows normal duty, overtime, PH and DO inputs for this period.")
+                GuideItem("Finance Tools", "Expand salary, pay-rate and commitment details, or open Pay Sheet Bank.")
+                GuideItem("Money Movement", "Compares the deterministic earnings components used by the summary.")
+                GuideItem("Pay Rates Used", "Shows the configured OT, PH and Working DO rates and their source.")
+                GuideItem("Financial Commitments", "Shows paysheet deductions plus external loan and other commitments.")
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } }
+    )
+}
+
+@Composable
+private fun GuideItem(title: String, description: String) {
+    Column {
+        Text(title, color = FinanceInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(description, color = TextSecondary, fontSize = 9.sp)
+    }
+}
+
+private fun Double.oneDecimal(): String = "%.1f".format(Locale.US, this)
+private fun formatRs(value: Double): String = "Rs. " + NumberFormat.getNumberInstance(Locale.US).format(value)
