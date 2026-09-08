@@ -138,7 +138,7 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
             modifier = Modifier.fillMaxWidth().padding(NursingDimensions.Spacing.lg),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(Modifier.size(56.dp), CircleShape, color = ClinicalPrimaryColor) {
+            Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = ClinicalPrimaryColor) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(initial, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 }
@@ -190,7 +190,13 @@ private fun CommandCenterCard(state: NurseCommandCenterState, onOpen: () -> Unit
                     Text("Your nursing day at a glance", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
                 Surface(shape = RoundedCornerShape(50.dp), color = scoreAccent.copy(alpha = 0.10f)) {
-                    Text(scoreLabel, color = scoreAccent, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = scoreLabel,
+                        color = scoreAccent,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
             Spacer(Modifier.height(NursingDimensions.Spacing.lg))
@@ -231,9 +237,9 @@ private fun TodaySummary(state: NurseCommandCenterState) {
 
 @Composable
 private fun TodayCard(title: String, value: String, icon: ImageVector, accent: Color, modifier: Modifier) {
-    Surface(modifier, RoundedCornerShape(NursingDimensions.Radius.large), Color.White, tonalElevation = 1.dp) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(NursingDimensions.Radius.large), color = Color.White, tonalElevation = 1.dp) {
         Column(Modifier.padding(NursingDimensions.Spacing.md), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
-            Surface(CircleShape, color = accent.copy(alpha = 0.10f), modifier = Modifier.size(34.dp)) {
+            Surface(modifier = Modifier.size(34.dp), shape = CircleShape, color = accent.copy(alpha = 0.10f)) {
                 Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp)) }
             }
             Text(title, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
@@ -244,9 +250,9 @@ private fun TodayCard(title: String, value: String, icon: ImageVector, accent: C
 
 @Composable
 private fun QuickActionCard(action: HomeAction, onClick: () -> Unit) {
-    Surface(Modifier.fillMaxWidth().clickable(onClick = onClick), RoundedCornerShape(NursingDimensions.Radius.large), Color.White, tonalElevation = 1.dp) {
+    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = Color.White, tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(NursingDimensions.Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-            Surface(RoundedCornerShape(NursingDimensions.Radius.medium), color = action.accent.copy(alpha = 0.10f), modifier = Modifier.size(48.dp)) {
+            Surface(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = action.accent.copy(alpha = 0.10f)) {
                 Box(contentAlignment = Alignment.Center) { Icon(action.icon, null, tint = action.accent, modifier = Modifier.size(24.dp)) }
             }
             Spacer(Modifier.width(NursingDimensions.Spacing.md))
@@ -276,7 +282,7 @@ private fun SecondaryToolsGrid(onNavigate: (String) -> Unit) {
 
 @Composable
 private fun CompactTool(title: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier.clickable(onClick = onClick), RoundedCornerShape(NursingDimensions.Radius.large), Color.White, tonalElevation = 1.dp) {
+    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = Color.White, tonalElevation = 1.dp) {
         Column(Modifier.padding(NursingDimensions.Spacing.md), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -287,7 +293,7 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 
 @Composable
 private fun HomeMetric(label: String, value: String, icon: ImageVector, accent: Color, modifier: Modifier) {
-    Surface(modifier, RoundedCornerShape(NursingDimensions.Radius.medium), Color(0xFFF8FAFC)) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = Color(0xFFF8FAFC)) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
             Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
