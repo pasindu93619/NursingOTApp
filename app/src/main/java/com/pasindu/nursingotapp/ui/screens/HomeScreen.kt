@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -76,17 +75,17 @@ import com.pasindu.nursingotapp.ui.theme.Slate
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 
-private val FinanceAccent = Color(0xFF2563EB)
 private val HomeBlueSoft = Color(0xFFEAF6FF)
 private val HomePurpleSoft = Color(0xFFF3EEFF)
 private val HomeMintSoft = Color(0xFFEAFBF5)
 private val HomeAmberSoft = Color(0xFFFFF6E7)
+private val HomeInk = Color(0xFF12204A)
 
 private data class HomeAction(
     val title: String,
-    val subtitle: String,
     val icon: ImageVector,
     val accent: Color,
+    val surface: Color,
     val route: String
 )
 
@@ -104,262 +103,269 @@ fun HomeScreen(
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     val commandState by commandCenterViewModel.state.collectAsState()
-    var showDashboardGuide by remember { mutableStateOf(false) }
+    var showGuide by remember { mutableStateOf(false) }
+
     val displayName = userProfile?.fullName?.takeIf { it.isNotBlank() } ?: commandState.nurseName
     val firstName = remember(displayName) {
         displayName.trim().split(" ").firstOrNull().orEmpty().ifBlank { "Nurse" }
     }
     val initial = firstName.firstOrNull()?.uppercaseChar()?.toString() ?: "N"
+
     val actions = remember {
         listOf(
-            HomeAction("OT & Claims", "Duty, OT and claim forms", Icons.Default.Description, ClinicalPrimaryColor, "claim_period"),
-            HomeAction("Clinical Tools", "Calculators and clinical support", Icons.Default.MedicalServices, Emerald, "clinical_calculators"),
-            HomeAction("Finance", "Salary, pay and financial tools", Icons.Default.AccountBalance, FinanceAccent, "advanced_finance_hub"),
-            HomeAction("Clinical Planning", "ISBAR and nursing tasks", Icons.AutoMirrored.Filled.Assignment, Purple, "clinical_planning")
+            HomeAction("OT & Claims", Icons.Default.Description, ClinicalPrimaryColor, HomeBlueSoft, "claim_period"),
+            HomeAction("Finance", Icons.Default.AccountBalance, Emerald, HomeMintSoft, "advanced_finance_hub"),
+            HomeAction("Clinical", Icons.Default.MedicalServices, Amber, HomeAmberSoft, "clinical_calculators"),
+            HomeAction("Planning", Icons.AutoMirrored.Filled.Assignment, Purple, HomePurpleSoft, "clinical_planning")
         )
     }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(AppBackground).safeDrawingPadding(),
         contentPadding = PaddingValues(
-            NursingDimensions.Spacing.lg,
-            NursingDimensions.Spacing.lg,
-            NursingDimensions.Spacing.lg,
-            NursingDimensions.Spacing.xxxl
+            horizontal = NursingDimensions.Spacing.lg,
+            vertical = NursingDimensions.Spacing.lg
         ),
-        verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.lg)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item { HomeWelcomeHeader(firstName, initial, userProfile != null) { onNavigate("profile") } }
         item {
-            CommandCenterCard(
+            ShiftSnapshotCard(
                 state = commandState,
                 onOpen = { onNavigate("nurse_command_center") },
-                onGuide = { showDashboardGuide = true },
+                onGuide = { showGuide = true },
                 onNavigate = onNavigate
             )
         }
-        item { SectionTitle("Today", "The information most useful during your shift") }
-        item { TodaySummary(commandState, onNavigate) }
-        item { SectionTitle("Quick actions", "Your most-used nursing workflows") }
-        items(actions) { action ->
-            QuickActionCard(action) {
-                if (action.route == "claim_period" && userProfile == null) onNavigate("profile") else onNavigate(action.route)
-            }
-        }
-        item { SectionTitle("More for your practice", "Professional tools and learning") }
+        item { SectionTitle("Quick access", "The four workspaces you use most") }
+        item { QuickAccessGrid(actions) { action ->
+            if (action.route == "claim_period" && userProfile == null) onNavigate("profile") else onNavigate(action.route)
+        } }
+        item { FocusCard(commandState, onNavigate) }
+        item { SectionTitle("Your tools", "Everything else stays one tap away") }
         item { SecondaryToolsGrid(onNavigate) }
+        item { Spacer(Modifier.height(8.dp)) }
     }
 
-    if (showDashboardGuide) {
-        DashboardGuideDialog(onDismiss = { showDashboardGuide = false })
-    }
+    if (showGuide) DashboardGuideDialog { showGuide = false }
 }
 
 @Composable
 private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: Boolean, onProfile: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile),
-        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = NursingDimensions.Elevation.card)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().background(
-                brush = Brush.horizontalGradient(listOf(Slate, Color(0xFF253D72), ClinicalPrimaryColor)),
-                shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)
-            ).padding(NursingDimensions.Spacing.lg),
+                Brush.horizontalGradient(listOf(Color(0xFF17233F), Color(0xFF24538C), Color(0xFF08A5D9))),
+                RoundedCornerShape(28.dp)
+            ).padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.16f)) {
+            Surface(Modifier.size(58.dp), CircleShape, Color.White.copy(alpha = 0.16f)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(initial, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(initial, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                 }
             }
-            Spacer(Modifier.width(NursingDimensions.Spacing.md))
+            Spacer(Modifier.width(13.dp))
             Column(Modifier.weight(1f)) {
-                Text("Good day, $firstName", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(NursingDimensions.Spacing.xs))
+                Text("Good day, $firstName", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    if (profileReady) "Your nursing workspace is ready" else "Complete your profile to personalize the app",
-                    color = Color.White.copy(alpha = 0.82f),
-                    style = MaterialTheme.typography.bodyMedium
+                    if (profileReady) "Your nursing workspace is ready" else "Complete your profile to get started",
+                    color = Color.White.copy(alpha = 0.78f),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Icon(Icons.Default.ChevronRight, "Open profile", tint = Color.White.copy(alpha = 0.9f))
+            Icon(Icons.Default.ChevronRight, "Open profile", tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(25.dp))
         }
     }
 }
 
 @Composable
-private fun CommandCenterCard(
+private fun ShiftSnapshotCard(
     state: NurseCommandCenterState,
     onOpen: () -> Unit,
     onGuide: () -> Unit,
     onNavigate: (String) -> Unit
 ) {
     val score = state.wellnessScore.coerceIn(0, 100)
-    val scoreLabel = when {
-        score >= 80 -> "Balanced"
-        score >= 60 -> "Watch workload"
-        else -> "High workload"
-    }
     val scoreAccent = when {
         score >= 80 -> Emerald
         score >= 60 -> Amber
         else -> MaterialTheme.colorScheme.error
     }
+    val scoreText = when {
+        score >= 80 -> "Balanced"
+        score >= 60 -> "Watch workload"
+        else -> "High workload"
+    }
     val animatedScore by animateFloatAsState(
         targetValue = score / 100f,
-        animationSpec = tween(900, easing = FastOutSlowInEasing),
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
         label = "home_workload_progress"
     )
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
-        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = NursingDimensions.Elevation.card)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            Modifier.fillMaxWidth().background(
-                brush = Brush.verticalGradient(listOf(Color.White, HomeBlueSoft.copy(alpha = 0.42f), Color.White))
-            ).padding(NursingDimensions.Spacing.lg)
-        ) {
+        Column(Modifier.padding(18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("NursingOS", color = AiAccentColor, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Text("Command Center", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Your nursing day at a glance", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text("NursingOS", color = AiAccentColor, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text("Shift snapshot", color = HomeInk, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Your most important numbers", color = TextSecondary, fontSize = 11.sp)
                 }
                 Surface(
                     modifier = Modifier.clickable(onClick = onGuide),
                     shape = RoundedCornerShape(50.dp),
                     color = HomeBlueSoft
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(Icons.Default.Info, "Dashboard guide", tint = ClinicalPrimaryColor, modifier = Modifier.size(16.dp))
-                        Text("Guide", color = ClinicalPrimaryColor, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Guide", color = ClinicalPrimaryColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(Modifier.height(NursingDimensions.Spacing.lg))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-                HomeMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", "Normal duty hours recorded this period", "Open OT & Claims", Icons.Default.Schedule, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
-                HomeMetric("OT", "${state.otHoursThisMonth.toInt()} h", "Overtime hours recorded this period", "Review OT & Claims", Icons.Default.MoreTime, Amber, HomeAmberSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
-                HomeMetric("Net", moneyShort(state.estimatedNetSalary), "Estimated net earnings from available data", "Open Finance", Icons.Default.Payments, Emerald, HomeMintSoft, Modifier.weight(1f)) { onNavigate("advanced_finance_hub") }
-            }
-            Spacer(Modifier.height(NursingDimensions.Spacing.md))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-                HomeMetric("Tasks", state.pendingClinicalTasks.toString(), "Clinical or planning tasks still pending", "Open Clinical Planning", Icons.Default.TaskAlt, Purple, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("clinical_planning") }
-                HomeMetric("CPD", "${state.cpdPoints}/${state.cpdTarget}", "CPD points earned against the current target", "Open Knowledge Hub", Icons.Default.School, AiAccentColor, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
-                HomeMetric("Claims", "${state.claimCompletedDays}/${state.claimTotalDays}", "Claim days completed in the current period", "Open OT & Claims", Icons.Default.Description, FinanceAccent, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SnapshotMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", Icons.Default.Schedule, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
+                SnapshotMetric("OT", "${state.otHoursThisMonth.toInt()} h", Icons.Default.MoreTime, Amber, HomeAmberSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
+                SnapshotMetric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, HomeMintSoft, Modifier.weight(1f)) { onNavigate("advanced_finance_hub") }
             }
 
-            Spacer(Modifier.height(NursingDimensions.Spacing.lg))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Workload balance", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
-                Text("$score/100", color = scoreAccent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(15.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Workload", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(scoreText, color = scoreAccent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Text("$score/100", color = scoreAccent, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.ChevronRight, "Open Command Center", tint = Slate, modifier = Modifier.size(18.dp).clickable(onClick = onOpen))
             }
-            Spacer(Modifier.height(NursingDimensions.Spacing.xs))
+            Spacer(Modifier.height(7.dp))
             LinearProgressIndicator(
                 progress = { animatedScore },
                 modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(50.dp)).clickable(onClick = onOpen),
                 color = scoreAccent,
                 trackColor = scoreAccent.copy(alpha = 0.10f)
             )
-            Spacer(Modifier.height(NursingDimensions.Spacing.xs))
-            Text(
-                "Tap any metric to open its workspace • Tap Guide for a simple explanation",
-                color = TextSecondary,
-                style = MaterialTheme.typography.labelSmall
-            )
         }
     }
 }
 
 @Composable
-private fun TodaySummary(state: NurseCommandCenterState, onNavigate: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-        TodayCard("Pending tasks", state.pendingClinicalTasks.toString(), "Tasks waiting for your attention", "Open Clinical Planning", Icons.Default.TaskAlt, Purple, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("clinical_planning") }
-        TodayCard("CPD progress", "${state.cpdPoints}/${state.cpdTarget}", "Your progress toward the current CPD target", "Open Knowledge Hub", Icons.Default.School, AiAccentColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
-    }
-}
-
-@Composable
-private fun TodayCard(title: String, value: String, description: String, action: String, icon: ImageVector, accent: Color, surfaceColor: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = surfaceColor, tonalElevation = 1.dp) {
-        Column(Modifier.padding(NursingDimensions.Spacing.md), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
-            Surface(modifier = Modifier.size(34.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.72f)) {
-                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp)) }
-            }
-            Text(title, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-            Text(value, color = TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(description, color = TextSecondary, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(action, color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+private fun SnapshotMetric(label: String, value: String, icon: ImageVector, accent: Color, surface: Color, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = surface,
+        shape = RoundedCornerShape(17.dp)
+    ) {
+        Column(Modifier.padding(11.dp)) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
+            Spacer(Modifier.height(6.dp))
+            Text(label, color = TextSecondary, fontSize = 9.sp)
+            Text(value, color = HomeInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
-private fun QuickActionCard(action: HomeAction, onClick: () -> Unit) {
-    val surfaceColor = action.accent.copy(alpha = 0.075f)
-    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = surfaceColor, tonalElevation = 1.dp) {
-        Row(Modifier.fillMaxWidth().padding(NursingDimensions.Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-            Surface(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = action.accent.copy(alpha = 0.12f)) {
-                Box(contentAlignment = Alignment.Center) { Icon(action.icon, null, tint = action.accent, modifier = Modifier.size(24.dp)) }
+private fun QuickAccessGrid(actions: List<HomeAction>, onAction: (HomeAction) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            actions[0].let { QuickAccessTile(it, Modifier.weight(1f)) { onAction(it) } }
+            actions[1].let { QuickAccessTile(it, Modifier.weight(1f)) { onAction(it) } }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            actions[2].let { QuickAccessTile(it, Modifier.weight(1f)) { onAction(it) } }
+            actions[3].let { QuickAccessTile(it, Modifier.weight(1f)) { onAction(it) } }
+        }
+    }
+}
+
+@Composable
+private fun QuickAccessTile(action: HomeAction, modifier: Modifier, onClick: () -> Unit) {
+    Surface(modifier = modifier.clickable(onClick = onClick), color = action.surface, shape = RoundedCornerShape(20.dp)) {
+        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(38.dp), RoundedCornerShape(12.dp), Color.White.copy(alpha = 0.72f)) {
+                Box(contentAlignment = Alignment.Center) { Icon(action.icon, null, tint = action.accent, modifier = Modifier.size(20.dp)) }
             }
-            Spacer(Modifier.width(NursingDimensions.Spacing.md))
+            Spacer(Modifier.width(9.dp))
+            Text(action.title, color = HomeInk, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ChevronRight, null, tint = action.accent.copy(alpha = 0.72f), modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun FocusCard(state: NurseCommandCenterState, onNavigate: (String) -> Unit) {
+    val pending = state.pendingClinicalTasks
+    val cpd = "${state.cpdPoints}/${state.cpdTarget}"
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(23.dp),
+        colors = CardDefaults.cardColors(containerColor = HomePurpleSoft),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(45.dp), CircleShape, Color.White.copy(alpha = 0.72f)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.TaskAlt, null, tint = Purple, modifier = Modifier.size(23.dp))
+                }
+            }
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(action.title, color = TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(2.dp))
-                Text(action.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Today's focus", color = HomeInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    when {
+                        pending > 0 -> "$pending task${if (pending == 1) "" else "s"} waiting for you"
+                        state.cpdPoints < state.cpdTarget -> "CPD progress: $cpd"
+                        else -> "Your key workspaces are up to date"
+                    },
+                    color = TextSecondary,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Icon(Icons.Default.ChevronRight, "Open", tint = action.accent.copy(alpha = 0.78f))
+            TextButton(onClick = {
+                if (pending > 0) onNavigate("clinical_planning") else onNavigate("knowledge_hub")
+            }) {
+                Text(if (pending > 0) "Open" else "Learn", color = Purple, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
 
 @Composable
 private fun SecondaryToolsGrid(onNavigate: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-            CompactTool("Knowledge Hub", "CPD & resources", Icons.AutoMirrored.Filled.MenuBook, AiAccentColor, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
-            CompactTool("Salary", "Pay information", Icons.Default.AccountBalance, FinanceAccent, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("salary_calculator") }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-            CompactTool("Pay Sheets", "Saved documents", Icons.Default.Description, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("pay_sheet_bank") }
-            CompactTool("Command Center", "Full dashboard", Icons.Default.Dashboard, Slate, Color(0xFFF1F4F8), Modifier.weight(1f)) { onNavigate("nurse_command_center") }
-        }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        CompactTool("Knowledge", "CPD", Icons.AutoMirrored.Filled.MenuBook, AiAccentColor, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
+        CompactTool("Pay Sheets", "Saved", Icons.Default.Description, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("pay_sheet_bank") }
+        CompactTool("Command", "Full view", Icons.Default.Dashboard, Slate, Color(0xFFF1F4F8), Modifier.weight(1f)) { onNavigate("nurse_command_center") }
     }
 }
 
 @Composable
-private fun CompactTool(title: String, subtitle: String, icon: ImageVector, accent: Color, surfaceColor: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = surfaceColor, tonalElevation = 1.dp) {
-        Column(Modifier.padding(NursingDimensions.Spacing.md), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
-            Surface(modifier = Modifier.size(36.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.74f)) {
-                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp)) }
+private fun CompactTool(title: String, subtitle: String, icon: ImageVector, accent: Color, surface: Color, modifier: Modifier, onClick: () -> Unit) {
+    Surface(modifier = modifier.clickable(onClick = onClick), color = surface, shape = RoundedCornerShape(19.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Surface(Modifier.size(34.dp), CircleShape, Color.White.copy(alpha = 0.76f)) {
+                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp)) }
             }
-            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-
-@Composable
-private fun HomeMetric(label: String, value: String, description: String, action: String, icon: ImageVector, accent: Color, surfaceColor: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = surfaceColor) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
-            Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-            Text(value, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(description, color = TextSecondary, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(action, color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, color = HomeInk, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = TextSecondary, fontSize = 8.sp)
         }
     }
 }
@@ -369,11 +375,9 @@ private fun DashboardGuideDialog(onDismiss: () -> Unit) {
     val items = listOf(
         DashboardGuideItem("Duty", "Normal duty hours recorded for the current period.", "OT & Claims"),
         DashboardGuideItem("OT", "Overtime hours recorded for the current period.", "OT & Claims"),
-        DashboardGuideItem("Net", "Estimated net earnings calculated from the available financial data. It is an estimate, not a payslip.", "Finance"),
-        DashboardGuideItem("Tasks", "Clinical or planning tasks that are still waiting for your attention.", "Clinical Planning"),
-        DashboardGuideItem("CPD", "CPD points earned compared with the current target. For example, 4/10 means 4 points earned from a 10-point target.", "Knowledge Hub"),
-        DashboardGuideItem("Claims", "Claim days completed compared with the total days in the current claim period. For example, 8/30 means 8 days completed out of 30.", "OT & Claims"),
-        DashboardGuideItem("Workload balance", "A 0–100 indicator summarizing the current workload state. Higher values indicate a more balanced state.", "Command Center")
+        DashboardGuideItem("Net", "Estimated net earnings calculated from available financial data. It is an estimate, not a payslip.", "Finance"),
+        DashboardGuideItem("Workload", "A 0–100 indicator summarizing the current workload state.", "Command Center"),
+        DashboardGuideItem("Today's focus", "Highlights the most useful next action based on pending clinical work and CPD progress.", "Planning / Knowledge")
     )
 
     AlertDialog(
@@ -381,15 +385,15 @@ private fun DashboardGuideDialog(onDismiss: () -> Unit) {
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(22.dp))
-                Text("How to read your Home", fontWeight = FontWeight.Bold)
+                Text("How to read Home", fontWeight = FontWeight.Bold)
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("These numbers are shortcuts to the information you use most during a nursing shift.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Text("Home is a quick starting point. Open a workspace when you need the full details.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 items.forEach { item ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(item.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                             Text(item.action, color = ClinicalPrimaryColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         }
@@ -406,7 +410,6 @@ private fun DashboardGuideDialog(onDismiss: () -> Unit) {
 private fun SectionTitle(title: String, subtitle: String) {
     Column(Modifier.fillMaxWidth()) {
         Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(2.dp))
         Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
     }
 }
