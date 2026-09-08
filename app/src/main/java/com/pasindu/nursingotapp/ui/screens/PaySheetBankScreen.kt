@@ -44,6 +44,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,7 @@ fun PaySheetBankScreen(
 ) {
     val context = LocalContext.current
     val documents by viewModel.documents.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val vault = remember { PaySheetVaultManager(context) }
     val scope = rememberCoroutineScope()
 
@@ -103,7 +105,7 @@ fun PaySheetBankScreen(
 
     fun saveImage(uri: Uri, monthKey: String, successMessage: String) {
         scope.launch {
-            message = try {
+            try {
                 withContext(Dispatchers.IO) {
                     val existing = viewModel.findByMonth(monthKey)
                     val target = vault.prepareInput(uri, monthKey)
@@ -118,16 +120,24 @@ fun PaySheetBankScreen(
                             sha256 = vault.sha256(target.absolutePath),
                             createdAt = existing?.createdAt ?: now,
                             updatedAt = now
-                        )
+                        ),
+                        successMessage = successMessage
                     )
                     if (existing != null && existing.filePath != target.absolutePath) {
                         vault.deleteFile(existing.filePath)
                     }
                 }
-                successMessage
             } catch (e: Exception) {
-                e.message ?: "Unable to save paysheet."
+                message = e.message ?: "Unable to prepare paysheet."
             }
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage, uiState.successMessage) {
+        val operationMessage = uiState.errorMessage ?: uiState.successMessage
+        if (operationMessage != null) {
+            message = operationMessage
+            viewModel.clearMessage()
         }
     }
 
