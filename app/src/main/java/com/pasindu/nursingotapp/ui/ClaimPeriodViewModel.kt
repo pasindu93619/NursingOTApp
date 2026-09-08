@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -25,8 +26,8 @@ class ClaimPeriodViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun createClaimPeriod(
-        startDate: java.time.LocalDate,
-        endDate: java.time.LocalDate,
+        startDate: LocalDate,
+        endDate: LocalDate,
         wardType: String,
         onCreated: (Long) -> Unit,
         onError: (Throwable) -> Unit = {}
