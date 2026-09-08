@@ -19,6 +19,7 @@ import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileSettingsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
+import com.pasindu.nursingotapp.ui.model.DailyEntryUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,8 +57,8 @@ class NursingViewModel @Inject constructor(
     private val _configuredOtRate = MutableStateFlow(0.0)
     val configuredOtRate: StateFlow<Double> = _configuredOtRate.asStateFlow()
 
-    private val _dailyLogs = MutableStateFlow<List<DailyEntryEntity>>(emptyList())
-    val dailyLogs: StateFlow<List<DailyEntryEntity>> = _dailyLogs.asStateFlow()
+    private val _dailyLogs = MutableStateFlow<List<DailyEntryUiModel>>(emptyList())
+    val dailyLogs: StateFlow<List<DailyEntryUiModel>> = _dailyLogs.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -122,7 +123,9 @@ class NursingViewModel @Inject constructor(
     }
 
     fun loadEntriesForClaim(claimPeriodId: Long) = viewModelScope.launch {
-        observeClaimDailyEntriesUseCase(claimPeriodId).collect { logs -> _dailyLogs.value = logs }
+        observeClaimDailyEntriesUseCase(claimPeriodId).collect { entries ->
+            _dailyLogs.value = entries.map { it.toUiModel() }
+        }
     }
 
     fun saveDailyEntry(
@@ -173,7 +176,7 @@ class NursingViewModel @Inject constructor(
     ) = calculateDailyEntryHoursUseCase(logs, claimStart, claimEnd)
 
     fun calculateSavedDailyEntryHours(
-        entries: List<DailyEntryEntity>,
+        entries: List<DailyEntryUiModel>,
         claimStart: LocalDate,
         claimEnd: LocalDate
     ) = calculateDailyEntryHoursUseCase(
@@ -199,3 +202,21 @@ class NursingViewModel @Inject constructor(
         claimEnd = claimEnd
     )
 }
+
+private fun DailyEntryEntity.toUiModel() = DailyEntryUiModel(
+    id = id,
+    claimPeriodId = claimPeriodId,
+    date = date,
+    isPH = isPH,
+    isDO = isDO,
+    isLeave = isLeave,
+    leaveType = leaveType,
+    normalTimeIn = normalTimeIn,
+    normalTimeOut = normalTimeOut,
+    normalHours = normalHours,
+    otTimeIn = otTimeIn,
+    otTimeOut = otTimeOut,
+    otHours = otHours,
+    wardOverride = wardOverride,
+    reason = reason
+)
