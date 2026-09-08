@@ -217,17 +217,21 @@ fun ClaimPeriodScreen(
 
                     Spacer(Modifier.height(18.dp))
                     DateEntryCard("START DATE", startYear, { startYear = it }, startMonth, { startMonth = it }, startDay, { startDay = it })
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
                     DateEntryCard("END DATE", endYear, { endYear = it }, endMonth, { endMonth = it }, endDay, { endDay = it })
 
                     AnimatedVisibility(visible = isValidPeriod) {
                         if (startDate != null && endDate != null) {
-                            Spacer(Modifier.height(18.dp))
+                            Spacer(Modifier.height(30.dp))
                             PeriodSummaryCard(startDate!!, endDate!!)
+                            Spacer(Modifier.height(18.dp))
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    if (!isValidPeriod) {
+                        Spacer(Modifier.height(18.dp))
+                    }
+
                     Button(
                         onClick = { if (isValidPeriod) showWardSelectionForNew = true },
                         modifier = Modifier.fillMaxWidth().height(54.dp),
@@ -455,13 +459,7 @@ fun DateEntryCard(
     onDayChange: (String) -> Unit
 ) {
     Column {
-        Text(
-            title,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = TextSecondary,
-            modifier = Modifier.padding(bottom = 7.dp, start = 2.dp)
-        )
+        Text(title, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = TextSecondary, modifier = Modifier.padding(bottom = 7.dp, start = 2.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             OutlinedTextField(
                 value = year,
@@ -502,8 +500,7 @@ fun PeriodSummaryCard(start: LocalDate, end: LocalDate) {
     val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
             .animateContentSize(spring(stiffness = Spring.StiffnessLow))
             .clip(RoundedCornerShape(19.dp))
             .background(OtMintSoft)
