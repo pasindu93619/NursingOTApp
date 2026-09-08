@@ -245,7 +245,7 @@ fun FinancialDashboardScreen(
             FinanceWorkPulseCard(
                 dutyHours = duty,
                 otHours = ot,
-                phDays = financialState.totalPHDays,
+                phDays = financialState.totalPHDays.toDouble(),
                 totalWorked = totalWorked
             )
 
