@@ -114,14 +114,6 @@ fun DailyEntryScreen(
             result.totalOtHours.toFloat()
         )
     }
-        val result = viewModel.calculateDailyEntryHours(
-            logs = logs,
-            claimStart = startDate,
-            claimEnd = endDate
-        )
-        Pair(result.totalNormalHours.toFloat(), result.totalOtHours.toFloat())
-    }
-
     val totalNormalHrs = totalCalculated.first
     val totalOtHrs = totalCalculated.second
 
