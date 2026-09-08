@@ -59,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.pasindu.nursingotapp.ui.theme.AdvancedGradient
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
@@ -221,6 +223,33 @@ fun AnimatedProgress(progress: Float, modifier: Modifier = Modifier, label: Stri
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
         label?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
         LinearProgressIndicator(progress = { animated }, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+fun AnimatedCircularProgress(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    size: Dp = NursingDimensions.Icon.hero,
+    strokeWidth: Dp = 6.dp,
+    label: String? = null
+) {
+    val animated by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(1000, easing = FastOutSlowInEasing),
+        label = "circular_progress"
+    )
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)
+    ) {
+        CircularProgressIndicator(
+            progress = { animated },
+            modifier = Modifier.size(size),
+            strokeWidth = strokeWidth
+        )
+        label?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
     }
 }
 
