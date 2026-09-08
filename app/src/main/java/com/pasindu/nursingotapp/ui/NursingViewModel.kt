@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
+import com.pasindu.nursingotapp.domain.model.DailyLog
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateDailyEntryHoursUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
@@ -166,8 +167,35 @@ class NursingViewModel @Inject constructor(
         getDailyEntryForDateUseCase(claimPeriodId, date)
 
     fun calculateDailyEntryHours(
-        logs: List<com.pasindu.nursingotapp.data.model.DailyLog>,
+        logs: List<DailyLog>,
         claimStart: LocalDate,
         claimEnd: LocalDate
     ) = calculateDailyEntryHoursUseCase(logs, claimStart, claimEnd)
+
+    fun calculateSavedDailyEntryHours(
+        entries: List<DailyEntryEntity>,
+        claimStart: LocalDate,
+        claimEnd: LocalDate
+    ) = calculateDailyEntryHoursUseCase(
+        logs = entries.map { entry ->
+            DailyLog(
+                id = entry.id,
+                date = entry.date,
+                isPH = entry.isPH,
+                isDO = entry.isDO,
+                isLeave = entry.isLeave,
+                leaveType = entry.leaveType,
+                reason = entry.reason,
+                wardOverride = entry.wardOverride,
+                normalTimeInStr = entry.normalTimeIn,
+                normalTimeOutStr = entry.normalTimeOut,
+                computedNormalHours = entry.normalHours,
+                otTimeInStr = entry.otTimeIn,
+                otTimeOutStr = entry.otTimeOut,
+                computedOtHours = entry.otHours
+            )
+        },
+        claimStart = claimStart,
+        claimEnd = claimEnd
+    )
 }
