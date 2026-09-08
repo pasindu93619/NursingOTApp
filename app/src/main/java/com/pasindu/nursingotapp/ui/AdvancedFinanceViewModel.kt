@@ -83,9 +83,13 @@ class AdvancedFinanceViewModel @Inject constructor(
         observeProfile().collectInViewModel { profile ->
             _uiState.value = _uiState.value.copy(profile = profile)
             viewModelScope.launch {
-                ensureManualPayRateRecordUseCase()
-                if (profile != null) synchronizePolicyRatesUseCase(profile)
-                recalculate()
+                runCatching {
+                    ensureManualPayRateRecordUseCase()
+                    if (profile != null) synchronizePolicyRatesUseCase(profile)
+                    recalculate()
+                }.onFailure { error ->
+                    setError(error, "Unable to initialize financial information.")
+                }
             }
         }
         observeClaimPeriod().collectInViewModel { periods ->
@@ -134,10 +138,10 @@ class AdvancedFinanceViewModel @Inject constructor(
                         errorMessage = null
                     )
                 }.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = error.message ?: "Unable to calculate financial summary.")
+                    setError(error, "Unable to calculate financial summary.")
                 }
             }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = error.message ?: "Unable to load financial information.")
+                setError(error, "Unable to load financial information.")
             }
         }
     }
@@ -160,15 +164,29 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 
     fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) {
-        viewModelScope.launch {
+        launchWithError("Unable to save compensation information.") {
             saveFinanceCompensationUseCase(riskAllowance, claAllowance, additionalAllowancesTotal, totalDeductions)
         }
     }
 
     private fun saveRates(otRate: Double, phRate: Double, doRate: Double, basisSalary2027: Double?, source: String) {
-        viewModelScope.launch {
+        launchWithError("Unable to save pay rate settings.") {
             saveFinanceRatesUseCase(otRate, phRate, doRate, basisSalary2027, source)
         }
+    }
+
+    private fun launchWithError(message: String, block: suspend () -> Unit) {
+        viewModelScope.launch {
+            runCatching { block() }
+                .onFailure { error -> setError(error, message) }
+        }
+    }
+
+    private fun setError(error: Throwable, fallbackMessage: String) {
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            errorMessage = error.message?.takeIf { it.isNotBlank() } ?: fallbackMessage
+        )
     }
 
     private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
