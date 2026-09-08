@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,10 @@ import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 
 private val FinanceAccent = Color(0xFF2563EB)
+private val HomeBlueSoft = Color(0xFFEAF6FF)
+private val HomePurpleSoft = Color(0xFFF3EEFF)
+private val HomeMintSoft = Color(0xFFEAFBF5)
+private val HomeAmberSoft = Color(0xFFFFF6E7)
 
 private data class HomeAction(
     val title: String,
@@ -135,14 +140,22 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile),
         shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
-        colors = CardDefaults.cardColors(containerColor = Slate),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = NursingDimensions.Elevation.card)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(NursingDimensions.Spacing.lg),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        listOf(Slate, Color(0xFF253D72), ClinicalPrimaryColor)
+                    ),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)
+                )
+                .padding(NursingDimensions.Spacing.lg),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = ClinicalPrimaryColor) {
+            Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.16f)) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(initial, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 }
@@ -153,11 +166,11 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
                 Spacer(Modifier.height(NursingDimensions.Spacing.xs))
                 Text(
                     if (profileReady) "Your nursing workspace is ready" else "Complete your profile to personalize the app",
-                    color = Color.White.copy(alpha = 0.72f),
+                    color = Color.White.copy(alpha = 0.82f),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            Icon(Icons.Default.ChevronRight, "Open profile", tint = Color.White.copy(alpha = 0.8f))
+            Icon(Icons.Default.ChevronRight, "Open profile", tint = Color.White.copy(alpha = 0.9f))
         }
     }
 }
@@ -186,7 +199,16 @@ private fun CommandCenterCard(state: NurseCommandCenterState, onOpen: () -> Unit
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = NursingDimensions.Elevation.card)
     ) {
-        Column(Modifier.fillMaxWidth().padding(NursingDimensions.Spacing.lg)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(Color.White, HomeBlueSoft.copy(alpha = 0.42f), Color.White)
+                    )
+                )
+                .padding(NursingDimensions.Spacing.lg)
+        ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("NursingOS", color = AiAccentColor, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -205,15 +227,15 @@ private fun CommandCenterCard(state: NurseCommandCenterState, onOpen: () -> Unit
             }
             Spacer(Modifier.height(NursingDimensions.Spacing.lg))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-                HomeMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", Icons.Default.Schedule, ClinicalPrimaryColor, Modifier.weight(1f))
-                HomeMetric("OT", "${state.otHoursThisMonth.toInt()} h", Icons.Default.MoreTime, Amber, Modifier.weight(1f))
-                HomeMetric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, Modifier.weight(1f))
+                HomeMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", Icons.Default.Schedule, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f))
+                HomeMetric("OT", "${state.otHoursThisMonth.toInt()} h", Icons.Default.MoreTime, Amber, HomeAmberSoft, Modifier.weight(1f))
+                HomeMetric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, HomeMintSoft, Modifier.weight(1f))
             }
             Spacer(Modifier.height(NursingDimensions.Spacing.md))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-                HomeMetric("Tasks", state.pendingClinicalTasks.toString(), Icons.Default.TaskAlt, Purple, Modifier.weight(1f))
-                HomeMetric("CPD", "${state.cpdPoints}/${state.cpdTarget}", Icons.Default.School, AiAccentColor, Modifier.weight(1f))
-                HomeMetric("Claims", "${state.claimCompletedDays}/${state.claimTotalDays}", Icons.Default.Description, FinanceAccent, Modifier.weight(1f))
+                HomeMetric("Tasks", state.pendingClinicalTasks.toString(), Icons.Default.TaskAlt, Purple, HomePurpleSoft, Modifier.weight(1f))
+                HomeMetric("CPD", "${state.cpdPoints}/${state.cpdTarget}", Icons.Default.School, AiAccentColor, HomePurpleSoft, Modifier.weight(1f))
+                HomeMetric("Claims", "${state.claimCompletedDays}/${state.claimTotalDays}", Icons.Default.Description, FinanceAccent, HomeBlueSoft, Modifier.weight(1f))
             }
             Spacer(Modifier.height(NursingDimensions.Spacing.lg))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -234,16 +256,16 @@ private fun CommandCenterCard(state: NurseCommandCenterState, onOpen: () -> Unit
 @Composable
 private fun TodaySummary(state: NurseCommandCenterState) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-        TodayCard("Pending tasks", state.pendingClinicalTasks.toString(), Icons.Default.TaskAlt, Purple, Modifier.weight(1f))
-        TodayCard("CPD progress", "${state.cpdPoints}/${state.cpdTarget}", Icons.Default.School, AiAccentColor, Modifier.weight(1f))
+        TodayCard("Pending tasks", state.pendingClinicalTasks.toString(), Icons.Default.TaskAlt, Purple, HomePurpleSoft, Modifier.weight(1f))
+        TodayCard("CPD progress", "${state.cpdPoints}/${state.cpdTarget}", Icons.Default.School, AiAccentColor, HomeBlueSoft, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun TodayCard(title: String, value: String, icon: ImageVector, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(NursingDimensions.Radius.large), color = Color.White, tonalElevation = 1.dp) {
+private fun TodayCard(title: String, value: String, icon: ImageVector, accent: Color, surfaceColor: Color, modifier: Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(NursingDimensions.Radius.large), color = surfaceColor, tonalElevation = 1.dp) {
         Column(Modifier.padding(NursingDimensions.Spacing.md), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
-            Surface(modifier = Modifier.size(34.dp), shape = CircleShape, color = accent.copy(alpha = 0.10f)) {
+            Surface(modifier = Modifier.size(34.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.72f)) {
                 Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp)) }
             }
             Text(title, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
@@ -254,9 +276,10 @@ private fun TodayCard(title: String, value: String, icon: ImageVector, accent: C
 
 @Composable
 private fun QuickActionCard(action: HomeAction, onClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = Color.White, tonalElevation = 1.dp) {
+    val surfaceColor = action.accent.copy(alpha = 0.075f)
+    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = surfaceColor, tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(NursingDimensions.Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-            Surface(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = action.accent.copy(alpha = 0.10f)) {
+            Surface(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = action.accent.copy(alpha = 0.12f)) {
                 Box(contentAlignment = Alignment.Center) { Icon(action.icon, null, tint = action.accent, modifier = Modifier.size(24.dp)) }
             }
             Spacer(Modifier.width(NursingDimensions.Spacing.md))
@@ -265,7 +288,7 @@ private fun QuickActionCard(action: HomeAction, onClick: () -> Unit) {
                 Spacer(Modifier.height(2.dp))
                 Text(action.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Icon(Icons.Default.ChevronRight, "Open", tint = TextSecondary)
+            Icon(Icons.Default.ChevronRight, "Open", tint = action.accent.copy(alpha = 0.78f))
         }
     }
 }
@@ -274,21 +297,23 @@ private fun QuickActionCard(action: HomeAction, onClick: () -> Unit) {
 private fun SecondaryToolsGrid(onNavigate: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-            CompactTool("Knowledge Hub", "CPD & resources", Icons.AutoMirrored.Filled.MenuBook, AiAccentColor, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
-            CompactTool("Salary", "Pay information", Icons.Default.AccountBalance, FinanceAccent, Modifier.weight(1f)) { onNavigate("salary_calculator") }
+            CompactTool("Knowledge Hub", "CPD & resources", Icons.AutoMirrored.Filled.MenuBook, AiAccentColor, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
+            CompactTool("Salary", "Pay information", Icons.Default.AccountBalance, FinanceAccent, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("salary_calculator") }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
-            CompactTool("Pay Sheets", "Saved documents", Icons.Default.Description, ClinicalPrimaryColor, Modifier.weight(1f)) { onNavigate("pay_sheet_bank") }
-            CompactTool("Command Center", "Full dashboard", Icons.Default.Dashboard, Slate, Modifier.weight(1f)) { onNavigate("nurse_command_center") }
+            CompactTool("Pay Sheets", "Saved documents", Icons.Default.Description, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("pay_sheet_bank") }
+            CompactTool("Command Center", "Full dashboard", Icons.Default.Dashboard, Slate, Color(0xFFF1F4F8), Modifier.weight(1f)) { onNavigate("nurse_command_center") }
         }
     }
 }
 
 @Composable
-private fun CompactTool(title: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = Color.White, tonalElevation = 1.dp) {
+private fun CompactTool(title: String, subtitle: String, icon: ImageVector, accent: Color, surfaceColor: Color, modifier: Modifier, onClick: () -> Unit) {
+    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NursingDimensions.Radius.large), color = surfaceColor, tonalElevation = 1.dp) {
         Column(Modifier.padding(NursingDimensions.Spacing.md), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+            Surface(modifier = Modifier.size(36.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.74f)) {
+                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp)) }
+            }
             Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -296,8 +321,8 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 }
 
 @Composable
-private fun HomeMetric(label: String, value: String, icon: ImageVector, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = Color(0xFFF8FAFC)) {
+private fun HomeMetric(label: String, value: String, icon: ImageVector, accent: Color, surfaceColor: Color, modifier: Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = surfaceColor) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
             Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
