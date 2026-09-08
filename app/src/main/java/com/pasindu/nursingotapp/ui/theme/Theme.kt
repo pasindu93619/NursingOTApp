@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
     primary = md_theme_light_primary,
@@ -61,8 +62,10 @@ private val DarkColors = darkColorScheme(
 /**
  * Unified Nursing Super App theme.
  * ClinicalLight is the default production mode for clinical readability.
- * AdvancedAi and Emergency are semantic surface modes layered on top of the
- * same palette so clinical calculations never depend on theme selection.
+ * AdvancedAi and Emergency remain semantic surface modes layered on top of
+ * the same palette so clinical calculations never depend on theme selection.
+ * DarkColors is defined centrally for the finalized light/dark architecture,
+ * while the current production mode remains light-first.
  */
 @Composable
 fun NursingOTAppTheme(
