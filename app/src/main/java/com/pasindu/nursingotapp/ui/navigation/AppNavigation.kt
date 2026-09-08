@@ -196,13 +196,17 @@ fun AppNavigation() {
                             )
                         }
                         val period = Period(LocalDate.parse(start), LocalDate.parse(end))
+                        val matched2027Basic = viewModel.matchedSalary2027.value?.basicSalary2027
+                        val workingDayRate = matched2027Basic?.takeIf { it > 0.0 }
+                            ?.div(30.0)
+                            ?: profile.basicSalary.coerceAtLeast(0.0) / 30.0
                         val calculation = WeeklyOtCalculator.calculate(
                             logs = logs,
                             claimStart = period.claimStart,
                             claimEnd = period.claimEnd,
                             otRate = profile.otRate.coerceAtLeast(0.0),
-                            dayRate = profile.basicSalary.coerceAtLeast(0.0) / 30.0,
-                            doRate = profile.basicSalary.coerceAtLeast(0.0) / 30.0
+                            dayRate = workingDayRate,
+                            doRate = workingDayRate
                         )
                         val summary = PeriodSummary(
                             totalNormalHours = calculation.totalNormalHours.toFloat(),
