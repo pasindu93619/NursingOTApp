@@ -9,8 +9,18 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -37,8 +47,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -133,7 +143,7 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
         }
     }
 
-    val dropProgress = remember { Animatable(0f) }
+    val dropProgress = remember { androidx.compose.animation.core.Animatable(0f) }
     var isHapticEnabled by remember { mutableStateOf(false) }
     var flashScreen by remember { mutableStateOf(false) }
 
@@ -172,8 +182,8 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
         if (pumpRateMlHr > 0) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
 
-    if (showScienceDialog) GravityScienceDialog(dropsPerMinute) { showScienceDialog = false }
-    if (showGuideDialog) InfusionGuideDialog(currentMode) { showGuideDialog = false }
+    if (showScienceDialog) GravityScienceDialog(dropsPerMinute = dropsPerMinute) { showScienceDialog = false }
+    if (showGuideDialog) InfusionGuideDialog(mode = currentMode) { showGuideDialog = false }
 
     if (showSafetyWarning) {
         AlertDialog(
@@ -210,25 +220,35 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                 }
                 Box(Modifier.fillMaxSize().background(Color(0xFF00FFCC).copy(alpha = flashAlpha * 0.15f)).border(8.dp, Color(0xFF00FFCC).copy(alpha = flashAlpha))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        val stroke = Stroke(width = 8.dp.toPx())
+                        val strokeWidth = 8.dp.toPx()
                         val c = Color(0xFF00FFCC).copy(alpha = 0.5f)
                         val len = 100f
-                        drawLine(c, Offset(0f, 0f), Offset(len, 0f), strokeWidth = stroke.width)
-                        drawLine(c, Offset(0f, 0f), Offset(0f, len), strokeWidth = stroke.width)
-                        drawLine(c, Offset(size.width, 0f), Offset(size.width - len, 0f), strokeWidth = stroke.width)
-                        drawLine(c, Offset(size.width, 0f), Offset(size.width, len), strokeWidth = stroke.width)
-                        drawLine(c, Offset(0f, size.height), Offset(len, size.height), strokeWidth = stroke.width)
-                        drawLine(c, Offset(0f, size.height), Offset(0f, size.height - len), strokeWidth = stroke.width)
-                        drawLine(c, Offset(size.width, size.height), Offset(size.width - len, size.height), strokeWidth = stroke.width)
-                        drawLine(c, Offset(size.width, size.height), Offset(size.width, size.height - len), strokeWidth = stroke.width)
+                        drawLine(c, Offset(0f, 0f), Offset(len, 0f), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(0f, 0f), Offset(0f, len), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(size.width, 0f), Offset(size.width - len, 0f), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(size.width, 0f), Offset(size.width, len), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(0f, size.height), Offset(len, size.height), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(0f, size.height), Offset(0f, size.height - len), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(size.width, size.height), Offset(size.width - len, size.height), strokeWidth = strokeWidth)
+                        drawLine(c, Offset(size.width, size.height), Offset(size.width, size.height - len), strokeWidth = strokeWidth)
                     }
                 }
                 if (currentArState == ArState.SYNCING || currentArState == ArState.CALIBRATING) {
                     Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTransformGestures { _, pan, zoom, _ -> scale = (scale * zoom).coerceIn(0.5f, 4f); offset += pan } }) {
-                        HologramDripChamberGraphic(factor = selectedDropFactor, progress = dropProgress.value, modifier = Modifier.align(Alignment.Center).graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y).size(100.dp, 200.dp))
+                        HologramDripChamberGraphic(
+                            factor = selectedDropFactor,
+                            progress = dropProgress.value,
+                            modifier = Modifier.align(Alignment.Center).graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y).size(100.dp, 200.dp)
+                        )
                     }
                 }
-                Row(Modifier.align(Alignment.TopCenter).padding(top = 24.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.align(Alignment.TopCenter).padding(top = 24.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("ℹ️", fontSize = 22.sp, modifier = Modifier.clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); currentArState = ArState.INSTRUCTIONS })
                     Text("📳", fontSize = 22.sp, modifier = Modifier.graphicsLayer(alpha = if (isHapticEnabled) 1f else 0.4f).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); isHapticEnabled = !isHapticEnabled })
                     Text("🔦", fontSize = 22.sp, modifier = Modifier.graphicsLayer(alpha = if (isFlashlightOn) 1f else 0.4f).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); isFlashlightOn = !isFlashlightOn })
@@ -239,27 +259,88 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                         when (state) {
                             ArState.INSTRUCTIONS -> Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("AR Calibration Guide 🎯", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-                                Spacer(Modifier.height(16.dp)); Text("1. Zoom & Drag the neon hologram to fit perfectly over the physical IV chamber.\n\n2. Adjust the physical roller clamp until the real drop splashes EXACTLY when the neon drop splashes.\n\n3. Proceed to the precision interval check to mathematically verify the rate.", color = Color.LightGray, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
-                                Spacer(Modifier.height(24.dp)); Button(onClick = { currentArState = ArState.SYNCING }, Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC))) { Text("BEGIN SYNCING", color = Color.Black, fontWeight = FontWeight.ExtraBold) }
+                                Spacer(Modifier.height(16.dp))
+                                Text("1. Zoom & Drag the neon hologram to fit the physical IV chamber.\n\n2. Adjust the roller clamp while matching the real drop rhythm to the visual guide.\n\n3. Proceed to the precision interval check to verify the observed rate.", color = Color.LightGray, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp)
+                                Spacer(Modifier.height(24.dp))
+                                Button(onClick = { currentArState = ArState.SYNCING }, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC))) { Text("BEGIN SYNCING", color = Color.Black, fontWeight = FontWeight.ExtraBold) }
                             }
                             ArState.SYNCING -> Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(24.dp)).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Row(verticalAlignment = Alignment.Bottom) { Text("$dropsPerMinute", color = Color(0xFF00FFCC), fontSize = 48.sp, fontWeight = FontWeight.ExtraBold); Text(" drops/min target", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, Modifier.padding(bottom = 8.dp, start = 8.dp)) }
-                                Spacer(Modifier.height(16.dp)); Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); calibrationTaps = emptyList(); currentArState = ArState.CALIBRATING }, Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC)), shape = RoundedCornerShape(16.dp)) { Text("SYNC COMPLETE - VERIFY", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold) }
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(dropsPerMinute.toString(), color = Color(0xFF00FFCC), fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(" drops/min target", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp, start = 8.dp))
+                                }
+                                Spacer(Modifier.height(16.dp))
+                                Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); calibrationTaps = emptyList(); currentArState = ArState.CALIBRATING }, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC)), shape = RoundedCornerShape(16.dp)) { Text("SYNC COMPLETE - VERIFY", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold) }
                             }
                             ArState.CALIBRATING -> Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.9f), RoundedCornerShape(24.dp)).border(2.dp, Color(0xFF00FFCC), RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Precision Interval Check", color = Color(0xFF00FFCC), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                                Spacer(Modifier.height(8.dp)); Text("Tap the button below exactly as the next 4 drops fall. We will measure the milliseconds between them.", color = Color.LightGray, fontSize = 13.sp, textAlign = TextAlign.Center)
-                                Spacer(Modifier.height(20.dp)); Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { for (i in 0..3) { val isFilled = i < calibrationTaps.size; Box(Modifier.size(24.dp).background(if (isFilled) Color(0xFF00FFCC) else Color.Transparent, CircleShape).border(2.dp, Color(0xFF00FFCC), CircleShape)) } }
-                                Spacer(Modifier.height(24.dp)); Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); calibrationTaps = calibrationTaps + System.currentTimeMillis(); if (calibrationTaps.size == 4) { val intervals = calibrationTaps.zipWithNext { a, b -> b - a }; val avgInterval = intervals.average(); measuredDpm = (60000 / avgInterval).roundToInt(); currentArState = ArState.RESULT } }, Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = IvBlue), shape = RoundedCornerShape(16.dp)) { Text(if (calibrationTaps.isEmpty()) "TAP EXACTLY ON DROP 1" else "TAP ON NEXT DROP", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold) }
+                                Spacer(Modifier.height(8.dp))
+                                Text("Tap the button below as the next 4 drops fall. The interval between taps is used only as an observed-rate check.", color = Color.LightGray, fontSize = 13.sp, textAlign = TextAlign.Center)
+                                Spacer(Modifier.height(20.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    for (i in 0..3) {
+                                        val isFilled = i < calibrationTaps.size
+                                        Box(Modifier.size(24.dp).background(if (isFilled) Color(0xFF00FFCC) else Color.Transparent, CircleShape).border(2.dp, Color(0xFF00FFCC), CircleShape))
+                                    }
+                                }
+                                Spacer(Modifier.height(24.dp))
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        calibrationTaps = calibrationTaps + System.currentTimeMillis()
+                                        if (calibrationTaps.size == 4) {
+                                            val intervals = calibrationTaps.zipWithNext { a, b -> b - a }
+                                            val avgInterval = intervals.average()
+                                            measuredDpm = if (avgInterval > 0) (60000 / avgInterval).roundToInt() else 0
+                                            currentArState = ArState.RESULT
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = IvBlue),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text(
+                                        text = when {
+                                            calibrationTaps.isEmpty() -> "TAP EXACTLY ON DROP 1"
+                                            calibrationTaps.size < 4 -> "TAP ON NEXT DROP"
+                                            else -> "CHECK COMPLETE"
+                                        },
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
                             }
                             ArState.RESULT -> {
                                 val diff = kotlin.math.abs(measuredDpm - dropsPerMinute)
                                 val isAcceptable = diff <= 4
                                 val resultColor = if (isAcceptable) Color(0xFF00FFCC) else Color(0xFFE53935)
                                 Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.95f), RoundedCornerShape(24.dp)).border(2.dp, resultColor, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(if (isAcceptable) "VERIFIED CLINICALLY SAFE ✅" else "RECALIBRATION REQUIRED ⚠️", color = resultColor, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, textAlign = TextAlign.Center)
-                                    Spacer(Modifier.height(16.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Target", color = Color.Gray, fontSize = 12.sp); Text("$dropsPerMinute", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold) }; Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Measured", color = Color.Gray, fontSize = 12.sp); Text("$measuredDpm", color = resultColor, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold) } }
-                                    Spacer(Modifier.height(24.dp)); if (isAcceptable) Button(onClick = { showSyncMode = false }, Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC))) { Text("FINISH & CLOSE", color = Color.Black, fontWeight = FontWeight.ExtraBold) } else { Button(onClick = { calibrationTaps = emptyList(); currentArState = ArState.CALIBRATING }, Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))) { Text("RETRY CALIBRATION", color = Color.White, fontWeight = FontWeight.ExtraBold) }; Spacer(Modifier.height(8.dp)); TextButton(onClick = { currentArState = ArState.SYNCING }) { Text("Return to Hologram Sync", color = Color.LightGray) } }
+                                    Text(
+                                        text = if (isAcceptable) "OBSERVED RATE CLOSE TO TARGET ✅" else "RATE DIFFERENCE DETECTED ⚠️",
+                                        color = resultColor,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 18.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("Target", color = Color.Gray, fontSize = 12.sp)
+                                            Text(dropsPerMinute.toString(), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                        }
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("Measured", color = Color.Gray, fontSize = 12.sp)
+                                            Text(measuredDpm.toString(), color = resultColor, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                        }
+                                    }
+                                    Spacer(Modifier.height(24.dp))
+                                    if (isAcceptable) {
+                                        Button(onClick = { showSyncMode = false }, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FFCC))) { Text("FINISH & CLOSE", color = Color.Black, fontWeight = FontWeight.ExtraBold) }
+                                    } else {
+                                        Button(onClick = { calibrationTaps = emptyList(); currentArState = ArState.CALIBRATING }, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))) { Text("RETRY CALIBRATION", color = Color.White, fontWeight = FontWeight.ExtraBold) }
+                                        Spacer(Modifier.height(8.dp))
+                                        TextButton(onClick = { currentArState = ArState.SYNCING }) { Text("Return to Hologram Sync", color = Color.LightGray) }
+                                    }
                                 }
                             }
                         }
@@ -301,40 +382,49 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                                 OutlinedTextField(value = timeMinutes, onValueChange = { timeMinutes = it }, label = { Text("Minutes") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(16.dp))
                             }
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) { Text("Select IV giving set", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = IvInk); Text("Confirm the drop factor on the package", fontSize = 10.sp, color = IvSlate) }
+                                Column(Modifier.weight(1f)) {
+                                    Text("Select IV giving set", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = IvInk)
+                                    Text("Confirm the drop factor on the package", fontSize = 10.sp, color = IvSlate)
+                                }
                                 IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }) { Icon(Icons.Default.Info, contentDescription = "Learn more", tint = IvBlue) }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 dropFactors.forEach { factor ->
                                     val isSelected = selectedDropFactor == factor
                                     val isMicro = factor == 60
-                                    Surface(modifier = Modifier.weight(1f).height(60.dp).clickable { selectedDropFactor = factor; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }, shape = RoundedCornerShape(16.dp), color = if (isSelected) IvBlue else IvBlueSoft, border = BorderStroke(1.dp, if (isSelected) IvBlue else IvBlue.copy(alpha = 0.14f)), tonalElevation = if (isSelected) 3.dp else 0.dp) {
-                                        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text(factor.toString(), fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (isSelected) Color.White else IvInk); Text(if (isMicro) "Micro" else "Macro", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White.copy(alpha = .86f) else IvSlate) }
+                                    Surface(
+                                        modifier = Modifier.weight(1f).height(60.dp).clickable { selectedDropFactor = factor; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = if (isSelected) IvBlueSoft else Color.White,
+                                        border = BorderStroke(1.dp, if (isSelected) IvBlue else Color(0xFFE2E8F0))
+                                    ) {
+                                        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                            Text(factor.toString(), color = if (isSelected) IvBlue else IvInk, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                            Text(if (isMicro) "micro" else "macro", color = if (isSelected) IvBlue else IvSlate, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                        }
                                     }
-                                }
-                            }
-                            AnimatedContent(targetState = selectedDropFactor, transitionSpec = { (slideInVertically { it / 2 } + fadeIn(tween(260))).togetherWith(slideOutVertically { -it / 2 } + fadeOut(tween(180))).using(SizeTransform(clip = false)) }, label = "factorInfo") { factor ->
-                                val (guideColor, guideTitle, guideText) = when (factor) {
-                                    10 -> Triple(Color(0xFFE53935), "MACRO (10 gtt/mL)", "Verify this drop factor on the package before calculation.")
-                                    15 -> Triple(IvBlue, "MACRO (15 gtt/mL)", "Standard macro set. Confirm the printed drop factor.")
-                                    20 -> Triple(IvBlue, "MACRO (20 gtt/mL)", "Common macro set. Confirm the printed drop factor.")
-                                    60 -> Triple(IvPurple, "MICRO (60 gtt/mL)", "Microdrip set for precise low-volume administration. Confirm the printed drop factor.")
-                                    else -> Triple(IvSlate, "", "")
-                                }
-                                Row(Modifier.fillMaxWidth().background(guideColor.copy(alpha = 0.08f), RoundedCornerShape(18.dp)).border(1.dp, guideColor.copy(alpha = 0.2f), RoundedCornerShape(18.dp)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    AnimatedMiniDripChamberGraphic(factor = factor, accentColor = guideColor, progress = dropProgress.value, modifier = Modifier.size(36.dp, 60.dp))
-                                    Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text(guideTitle, fontSize = 12.sp, color = guideColor, fontWeight = FontWeight.ExtraBold); Spacer(Modifier.height(2.dp)); Text(guideText, fontSize = 12.sp, color = IvSlate, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp) }
                                 }
                             }
                             Surface(color = IvBlueSoft, shape = RoundedCornerShape(22.dp), tonalElevation = 1.dp) {
                                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("REQUIRED INFUSION RATE", fontSize = 10.sp, color = IvBlue, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                     Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(if (dropsPerMinute > 0) dropsPerMinute.toString() else "0", fontSize = 52.sp, fontWeight = FontWeight.Black, color = IvInk)
-                                        Spacer(Modifier.width(8.dp)); Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 8.dp)) { Text("💧", fontSize = 22.sp, modifier = Modifier.graphicsLayer(scaleX = mainScreenDropScale, scaleY = mainScreenDropScale)); Text("drops/min", fontSize = 12.sp, color = IvBlue, fontWeight = FontWeight.ExtraBold) }
+                                        Text(dropsPerMinute.toString(), fontSize = 52.sp, fontWeight = FontWeight.Black, color = IvInk)
+                                        Spacer(Modifier.width(8.dp))
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 8.dp)) {
+                                            Text("💧", fontSize = 22.sp, modifier = Modifier.graphicsLayer(scaleX = mainScreenDropScale, scaleY = mainScreenDropScale))
+                                            Text("drops/min", fontSize = 12.sp, color = IvBlue, fontWeight = FontWeight.ExtraBold)
+                                        }
                                     }
-                                    if (dropsPerMinute > 0) { Spacer(Modifier.height(18.dp)); Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showSafetyWarning = true }, shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = IvBlue)) { Text("OPEN AR SYNC", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) } }
+                                    if (dropsPerMinute > 0) {
+                                        Spacer(Modifier.height(18.dp))
+                                        Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showSafetyWarning = true }, shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = IvBlue)) { Text("OPEN AR SYNC", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) }
+                                    }
                                 }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(onClick = { showScienceDialog = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) { Text("Science", fontWeight = FontWeight.Bold) }
+                                OutlinedButton(onClick = { showGuideDialog = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) { Text("Guide", fontWeight = FontWeight.Bold) }
                             }
                         }
                     }
@@ -383,6 +473,7 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                                     Text("Verify the prescribed concentration, dose and local protocol before use.", color = IvSlate, fontSize = 10.sp, textAlign = TextAlign.Center, lineHeight = 15.sp)
                                 }
                             }
+                            Box(Modifier.fillMaxWidth().height(150.dp)) { AnimatedVolumetricPumpGraphic(rate = pumpRateMlHr) }
                         }
                     }
                 }
@@ -392,11 +483,102 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun HologramDripChamberGraphic(factor: Int, progress: Float, modifier: Modifier = Modifier) {
+    val isMicro = factor == 60
+    val neonColor = Color(0xFF00FFCC)
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(color = neonColor.copy(alpha = 0.8f), size = Size(w, h), cornerRadius = CornerRadius(16f, 16f), style = Stroke(width = 4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f), 0f)))
+        drawLine(color = neonColor.copy(alpha = 0.5f), start = Offset(0f, h * 0.6f), end = Offset(w, h * 0.6f), strokeWidth = 2f)
+        if (isMicro) drawRect(color = neonColor, topLeft = Offset(w / 2 - 2f, 0f), size = Size(4f, h * 0.2f), style = Stroke(2f)) else drawRect(color = neonColor, topLeft = Offset(w / 2 - 8f, 0f), size = Size(16f, h * 0.15f), style = Stroke(2f))
+        val dropRadius = if (isMicro) w * 0.1f else w * 0.25f
+        val startY = if (isMicro) h * 0.2f + dropRadius else h * 0.15f + dropRadius
+        val endY = h * 0.6f
+        when {
+            progress <= 0f -> Unit
+            progress < 0.8f -> drawCircle(color = neonColor, radius = dropRadius * (progress / 0.8f), center = Offset(w / 2, startY))
+            progress < 0.95f -> {
+                val t = (progress - 0.8f) / 0.15f
+                drawOval(color = neonColor, topLeft = Offset((w / 2) - dropRadius, (startY + ((endY - startY) * t)) - (dropRadius * 1.2f)), size = Size(dropRadius * 2, dropRadius * 2.4f))
+            }
+            else -> {
+                val t = (progress - 0.95f) / 0.05f
+                drawOval(color = neonColor.copy(alpha = 1f - t), topLeft = Offset((w / 2) - (dropRadius * 2 * t), endY - (dropRadius * t)), size = Size(dropRadius * 4 * t, dropRadius * 2 * t), style = Stroke(4f))
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedMiniDripChamberGraphic(factor: Int, accentColor: Color, progress: Float, modifier: Modifier = Modifier) {
+    val isMicro = factor == 60
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(color = Color.Gray.copy(alpha = 0.4f), size = Size(w, h), cornerRadius = CornerRadius(16f, 16f), style = Stroke(width = 4f))
+        drawRoundRect(brush = Brush.verticalGradient(listOf(Color.Transparent, accentColor.copy(alpha = 0.8f))), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.4f), cornerRadius = CornerRadius(16f, 16f))
+        if (isMicro) drawRect(color = Color.DarkGray, topLeft = Offset(w / 2 - 2f, 0f), size = Size(4f, h * 0.2f)) else drawRect(color = Color.DarkGray, topLeft = Offset(w / 2 - 8f, 0f), size = Size(16f, h * 0.15f))
+        val dropRadius = if (isMicro) w * 0.1f else w * 0.25f
+        val startY = if (isMicro) h * 0.2f + dropRadius else h * 0.15f + dropRadius
+        val endY = h * 0.6f
+        when {
+            progress <= 0f -> Unit
+            progress < 0.8f -> drawCircle(color = accentColor, radius = dropRadius * (progress / 0.8f), center = Offset(w / 2, startY))
+            progress < 0.95f -> {
+                val t = (progress - 0.8f) / 0.15f
+                drawOval(color = accentColor, topLeft = Offset((w / 2) - dropRadius, (startY + ((endY - startY) * t)) - (dropRadius * 1.2f)), size = Size(dropRadius * 2, dropRadius * 2.4f))
+            }
+            else -> {
+                val t = (progress - 0.95f) / 0.05f
+                drawOval(color = accentColor.copy(alpha = 1f - t), topLeft = Offset((w / 2) - (dropRadius * 2 * t), endY - (dropRadius * t)), size = Size(dropRadius * 4 * t, dropRadius * 2 * t))
+            }
+        }
+    }
+}
+
+@Composable
+fun LiveCameraPreview(isFlashlightOn: Boolean, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
+    AndroidView(
+        factory = { ctx ->
+            val previewView = PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
+            val executor = ContextCompat.getMainExecutor(ctx)
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                try {
+                    cameraProvider.unbindAll()
+                    val camera = cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview)
+                    cameraControl = camera.cameraControl
+                    cameraControl?.enableTorch(isFlashlightOn)
+                } catch (_: Exception) {
+                }
+            }, executor)
+            previewView
+        },
+        update = { cameraControl?.enableTorch(isFlashlightOn) },
+        modifier = modifier
+    )
+}
+
+@Composable
 fun AnimatedVolumetricPumpGraphic(rate: Float) {
     var rotationAngle by remember { mutableFloatStateOf(0f) }
     val animatedSpeed by animateFloatAsState(targetValue = if (rate > 0) (rate / 20f).coerceIn(1f, 25f) else 0f, label = "pump_speed")
     val infiniteTransition = rememberInfiniteTransition(label = "pump_glow")
-    val glowPulse by infiniteTransition.animateFloat(0.6f, 1f, infiniteRepeatable(animation = tween(if (rate > 0) (1000 / animatedSpeed).toInt().coerceAtLeast(100) else 1000, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "glow")
+    val glowPulse by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (rate > 0) (1000 / animatedSpeed).toInt().coerceAtLeast(100) else 1000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
     LaunchedEffect(Unit) {
         while (isActive) {
             withFrameMillis {
