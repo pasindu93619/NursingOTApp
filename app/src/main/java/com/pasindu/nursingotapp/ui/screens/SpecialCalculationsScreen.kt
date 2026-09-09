@@ -54,11 +54,11 @@ enum class SpecialMode(val title: String, val emoji: String, val themeColor: Col
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SpecialCalculationsScreen() {
+fun SpecialCalculationsScreen(initialMode: SpecialMode = SpecialMode.INSULIN) {
     val haptic = LocalHapticFeedback.current
     var isVisible by remember { mutableStateOf(false) }
     var showGuideDialog by remember { mutableStateOf(false) }
-    var currentMode by remember { mutableStateOf(SpecialMode.INSULIN) }
+    var currentMode by remember(initialMode) { mutableStateOf(initialMode) }
 
     // --- INSULIN STATE ---
     var bgLevel by remember { mutableStateOf("") }
@@ -118,7 +118,9 @@ fun SpecialCalculationsScreen() {
         if (pcaMaxDoses > 0 && bolus > 0) (Math.round((pcaMaxDoses * bolus) * 100.0) / 100.0).toFloat() else 0f
     }
 
-    LaunchedEffect(slidingScaleUnits, insIvRate, hepRateMlHr, pcaMaxLimit) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+    LaunchedEffect(slidingScaleUnits, insIvRate, hepRateMlHr, pcaMaxLimit) {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
 
     if (showGuideDialog) SpecialClinicalGuideDialog(currentMode, onDismiss = { showGuideDialog = false })
 
@@ -226,7 +228,7 @@ fun SpecialCalculationsScreen() {
             val (resultVal, resultUnit, resultTitle, show) = when (currentMode) {
                 SpecialMode.INSULIN -> listOf(insIvRate.toString(), "mL/hr", "IV INFUSION RATE", insIvRate > 0f)
                 SpecialMode.HEPARIN -> listOf(hepRateMlHr.toString(), "mL/hr", "HEPARIN PUMP RATE", hepRateMlHr > 0f)
-                SpecialMode.PCA -> listOf(pcaMaxLimit.toString(), "Limit/hr", "MAXIMUM ALLOWED ($pcaMaxDoses doses)", pcaMaxLimit > 0f)
+                SpecialMode.PCA -> listOf(pcaMaxLimit.toString(), "Limit/hr", "THEORETICAL LOCKOUT CAPACITY ($pcaMaxDoses doses)", pcaMaxLimit > 0f)
             }
 
             if (show as Boolean) {
@@ -252,161 +254,35 @@ fun AnimatedHighAlertGraphic(mode: SpecialMode) {
     val infiniteTransition = rememberInfiniteTransition(label = "")
     val phase by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 2 * PI.toFloat(), animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width; val h = size.height; val center = Offset(w/2, h/2)
-
-        when (mode) {
-            SpecialMode.INSULIN -> {
-                // Glucose Hexagons
-                val hexRadius = 40f
-                for (i in -1..1) {
-                    val xOffset = center.x + (i * hexRadius * 1.8f)
-                    val yOffset = center.y + sin(phase + i) * 20f
-
-                    val path = Path().apply {
-                        for (j in 0..5) {
-                            val angle = j * (PI / 3) + (PI / 6)
-                            val px = xOffset + hexRadius * cos(angle).toFloat()
-                            val py = yOffset + hexRadius * sin(angle).toFloat()
-                            if (j == 0) moveTo(px, py) else lineTo(px, py)
-                        }
-                        close()
-                    }
-                    drawPath(path, color = ThemeInsulinBlue.copy(alpha = 0.4f), style = Stroke(width = 4f, cap = StrokeCap.Round))
-                    drawCircle(color = ThemeInsulinBlue, radius = 8f, center = Offset(xOffset, yOffset))
-                }
-            }
-            SpecialMode.HEPARIN -> {
-                // Arterial Waveform - FIXED WITH PROPER PATH APPLY
-                val path = Path().apply {
-                    moveTo(0f, center.y)
-                    for (x in 0..w.toInt() step 5) {
-                        val nx = x.toFloat()
-                        val y = center.y - (sin((nx / w) * 4 * PI + phase).toFloat() * 30f) - (if (x % 150 in 60..90) sin(phase) * 60f else 0f)
-                        lineTo(nx, y)
-                    }
-                }
-                drawPath(path, brush = Brush.horizontalGradient(listOf(Color.Transparent, ThemeRuby, Color.Transparent)), style = Stroke(width = 8f, cap = StrokeCap.Round))
-
-                // Blood particles
-                for (i in 0..2) {
-                    val px = (w * ((phase / (2 * PI)) + (i * 0.3f))) % w
-                    val py = center.y - (sin((px / w) * 4 * PI + phase).toFloat() * 30f)
-                    drawCircle(color = ThemeRuby, radius = 12f, center = Offset(px.toFloat(), py))
-                }
-            }
-            SpecialMode.PCA -> {
-                // Security Lockout Shield
-                val pulseRadius = 50f + (sin(phase) + 1f) * 20f
-
-                // Shield body
-                val shieldPath = Path().apply {
-                    moveTo(center.x, center.y - 60f)
-                    lineTo(center.x + 50f, center.y - 40f)
-                    lineTo(center.x + 50f, center.y + 20f)
-                    quadraticBezierTo(center.x + 50f, center.y + 60f, center.x, center.y + 80f)
-                    quadraticBezierTo(center.x - 50f, center.y + 60f, center.x - 50f, center.y + 20f)
-                    lineTo(center.x - 50f, center.y - 40f)
-                    close()
-                }
-                drawPath(shieldPath, color = ThemePCAPurple.copy(alpha = 0.2f))
-                drawPath(shieldPath, color = ThemePCAPurple, style = Stroke(width = 6f))
-
-                // Pulsing rings indicating lockout time
-                drawCircle(color = ThemePCAPurple.copy(alpha = 0.5f), radius = pulseRadius, center = center, style = Stroke(width = 4f))
-                drawCircle(color = ThemePCAPurple.copy(alpha = 0.2f), radius = pulseRadius * 1.5f, center = center, style = Stroke(width = 2f))
-
-                // Center keyhole
-                drawCircle(color = ThemePCAPurple, radius = 10f, center = Offset(center.x, center.y - 10f))
-                drawRoundRect(color = ThemePCAPurple, topLeft = Offset(center.x - 6f, center.y - 5f), size = Size(12f, 20f), cornerRadius = CornerRadius(4f, 4f))
-            }
-        }
+    Canvas(modifier = Modifier.size(160.dp)) {
+        val center = Offset(size.width / 2, size.height / 2)
+        val radius = size.minDimension / 3
+        val pulse = (sin(phase) + 1f) / 2f
+        drawCircle(color = mode.themeColor.copy(alpha = 0.10f + pulse * 0.10f), radius = radius + pulse * 20f, center = center)
+        drawCircle(color = mode.themeColor.copy(alpha = 0.18f), radius = radius, center = center, style = Stroke(width = 4f))
+        drawCircle(color = mode.themeColor, radius = 18f, center = center)
     }
 }
 
 @Composable
-fun SpecialClinicalGuideDialog(currentMode: SpecialMode, onDismiss: () -> Unit) {
+fun SpecialClinicalGuideDialog(mode: SpecialMode, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(
-            modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            // FIXED: Added explicit background to prevent the dialog from showing a black background
-            Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).padding(24.dp).verticalScroll(rememberScrollState())) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(currentMode.emoji, fontSize = 32.sp)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Clinical Guide", fontSize = 14.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text(currentMode.title, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = currentMode.themeColor)
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.height(24.dp))
-
-                when (currentMode) {
-                    SpecialMode.INSULIN -> {
-                        Text("International Units (IU)", fontWeight = FontWeight.ExtraBold, color = ThemeInsulinBlue, fontSize = 18.sp)
-                        Text("1 IU of insulin ≈ 0.0347 mg. Always process dose orders as \"units\" and calculate fluids in units/mL.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text("1. Sliding Scale", fontWeight = FontWeight.ExtraBold, color = ThemeInsulinBlue, fontSize = 16.sp)
-                        Box(modifier = Modifier.fillMaxWidth().background(ThemeInsulinBlue.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
-                            Text("Units to give = (BG − 100) ÷ 10", fontWeight = FontWeight.ExtraBold, color = ThemeInsulinBlue)
-                        }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text("2. Intravenous Infusion", fontWeight = FontWeight.ExtraBold, color = ThemeInsulinBlue, fontSize = 16.sp)
-                        Text("Rate (mL/hr) = [ (Ordered U/kg/hr) × Weight (kg) ] ÷ Concentration (U/mL)", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f), fontWeight = FontWeight.Bold)
-                    }
-                    SpecialMode.HEPARIN -> {
-                        Text("Heparin Infusions", fontWeight = FontWeight.ExtraBold, color = ThemeRuby, fontSize = 18.sp)
-                        Text("Heparin is completely weight-dependent and must be calculated in two precise steps.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text("Step 1: Total Units/hr", fontWeight = FontWeight.Bold, color = ThemeRuby)
-                        Box(modifier = Modifier.fillMaxWidth().background(ThemeRuby.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
-                            Text("Units/hr = (units/kg/hr) × weight (kg)", fontWeight = FontWeight.ExtraBold, color = ThemeRuby)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text("Step 2: Pump Rate (mL/hr)", fontWeight = FontWeight.Bold, color = ThemeRuby)
-                        Box(modifier = Modifier.fillMaxWidth().background(ThemeRuby.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
-                            Text("Rate (mL/hr) = (Units/hr × Bag Vol) ÷ Total Units in Bag", fontWeight = FontWeight.ExtraBold, color = ThemeRuby)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Titration Adjustments: If a nomogram dictates a change in dose (ΔU/kg/hr), you MUST recalculate the new total Units/hr from scratch and repeat the formula.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
-                    }
-                    SpecialMode.PCA -> {
-                        Text("Patient-Controlled Analgesia (PCA)", fontWeight = FontWeight.ExtraBold, color = ThemePCAPurple, fontSize = 18.sp)
-                        Text("Verifying a patient cannot exceed their safe maximum hourly limit.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text("1. Calculate Max Doses", fontWeight = FontWeight.Bold, color = ThemePCAPurple)
-                        Box(modifier = Modifier.fillMaxWidth().background(ThemePCAPurple.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
-                            Text("Max Doses/hr = 60 minutes ÷ Lockout Time", fontWeight = FontWeight.ExtraBold, color = ThemePCAPurple)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Example: A 5-minute lockout allows a max of 12 doses per hour (60/5). If the bolus is 1 mg, the maximum limit is 12 mg/h.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.8f))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // CRITICAL SAFETY BOX
-                Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("HIGH-ALERT MEDICATION", fontWeight = FontWeight.ExtraBold, color = Color(0xFFC62828), fontSize = 16.sp)
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("• Insulin, Heparin, and Opioids are classified globally as High-Alert medications.\n• Errors in these calculations can be immediately fatal.\n• ALWAYS require an independent double-check by a second registered nurse before beginning or titrating these infusions.", fontSize = 13.sp, color = Color(0xFFB71C1C), lineHeight = 20.sp, fontWeight = FontWeight.ExtraBold)
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = currentMode.themeColor)) { Text("Acknowledge Risk & Close", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        Card(modifier = Modifier.fillMaxWidth().padding(20.dp), shape = RoundedCornerShape(24.dp)) {
+            Column(modifier = Modifier.padding(22.dp)) {
+                Text("${mode.title} clinical guide", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = mode.themeColor)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    when (mode) {
+                        SpecialMode.INSULIN -> "Use the prescribed insulin order and institution-specific glucose protocol. Verify units, concentration, timing and patient-specific targets before administration."
+                        SpecialMode.HEPARIN -> "Use the prescribed heparin order and institutional titration protocol. Verify patient weight, concentration, units/hr and pump settings independently."
+                        SpecialMode.PCA -> "PCA settings are order- and policy-dependent. Lockout-derived capacity is not a patient-specific maximum dose. Verify basal rate, loading dose, one-hour/four-hour limits and all other programmed safeguards."
+                    },
+                    fontSize = 13.sp,
+                    color = Color(0xFF475467),
+                    lineHeight = 19.sp
+                )
+                Spacer(Modifier.height(16.dp))
+                Text("CLOSE", modifier = Modifier.clickable(onClick = onDismiss), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = mode.themeColor)
             }
         }
     }
