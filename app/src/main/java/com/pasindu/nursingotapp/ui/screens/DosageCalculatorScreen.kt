@@ -69,7 +69,9 @@ fun DosageCalculatorScreen() {
 
     val standardResult = calculateStandard(desired, available, suppliedVolume)
     val weightDose = calculateWeightDose(weight, dosePerKg)
-    val weightDraw = calculateStandard(weightDose, available, suppliedVolume)
+    val weightDraw = weightDose?.let {
+        calculateStandard(it.toString(), available, suppliedVolume)
+    }
     val percentMgMl = calculatePercentageMgMl(percent)
     val percentGrams = calculatePercentageTotalGrams(percentMgMl, percentVolume)
     val dilutionStockDraw = calculateDilutionDraw(stockConcentration, targetConcentration, finalVolume)
