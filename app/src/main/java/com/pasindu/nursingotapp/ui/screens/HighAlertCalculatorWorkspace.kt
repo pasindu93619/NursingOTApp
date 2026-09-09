@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -49,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import kotlin.math.floor
 import kotlin.math.round
 
@@ -96,7 +97,8 @@ fun HighAlertCalculatorWorkspaceScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(Color.White),
+                        .background(Color.White)
+                        .clickable(onClick = onNavigateBack),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = WorkspaceNavy)
@@ -111,7 +113,8 @@ fun HighAlertCalculatorWorkspaceScreen(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(currentMode.themeColor.copy(alpha = .10f)),
+                    .background(currentMode.themeColor.copy(alpha = .10f))
+                    .clickable { showGuide = true },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.HelpOutline, contentDescription = "Safety guide", tint = currentMode.themeColor)
@@ -163,8 +166,8 @@ fun HighAlertCalculatorWorkspaceScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(18.dp))
                         .background(if (selected) mode.themeColor else Color.White)
-                        .padding(horizontal = 15.dp, vertical = 10.dp)
-                        .clip(RoundedCornerShape(18.dp)),
+                        .clickable { currentMode = mode }
+                        .padding(horizontal = 15.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -210,7 +213,6 @@ fun HighAlertCalculatorWorkspaceScreen(
     }
 
     if (showGuide) {
-        // Kept as state for future guide integration; existing SpecialClinicalGuideDialog remains the source.
         SpecialClinicalGuideDialog(currentMode) { showGuide = false }
     }
 }
@@ -355,13 +357,13 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit) {
+private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier.fillMaxWidth()) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(16.dp)
     )
 }
@@ -372,18 +374,6 @@ private fun PairFields(left: String, leftValue: String, onLeft: (String) -> Unit
         NumberField(left, leftValue, onLeft, Modifier.weight(1f))
         NumberField(right, rightValue, onRight, Modifier.weight(1f))
     }
-}
-
-@Composable
-private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp)
-    )
 }
 
 @Composable
@@ -419,6 +409,6 @@ private fun Formula(text: String) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Text("Formula · $text", modifier = Modifier.padding(12.dp), fontSize = 11.sp, color = WorkspaceSlate, lineHeight = 17.sp)
+        Text("Formula · $text", modifier = Modifier.padding(14.dp), fontSize = 11.sp, color = WorkspaceSlate, lineHeight = 17.sp)
     }
 }
