@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -102,7 +102,6 @@ fun HighAlertClinicalWorkspaceScreen(
         Spacer(Modifier.height(4.dp))
         Text("Choose the calculation workflow you need at the bedside.", fontSize = 13.sp, color = HighAlertSlate)
         Spacer(Modifier.height(14.dp))
-
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(end = 10.dp)
@@ -111,7 +110,6 @@ fun HighAlertClinicalWorkspaceScreen(
                 HighAlertToolCard(tool = tool, onClick = { onOpenCalculator(tool.mode) })
             }
         }
-
         Spacer(Modifier.height(22.dp))
         BedsideCheckCard()
         Spacer(Modifier.height(16.dp))
@@ -126,20 +124,9 @@ fun HighAlertClinicalWorkspaceScreen(
 
 @Composable
 private fun HighAlertTopBar(onNavigateBack: () -> Unit, onInfo: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable(onClick = onNavigateBack),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White).clickable(onClick = onNavigateBack), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = HighAlertNavy)
             }
             Spacer(Modifier.width(12.dp))
@@ -148,14 +135,7 @@ private fun HighAlertTopBar(onNavigateBack: () -> Unit, onInfo: () -> Unit) {
                 Text("Medication Workspace", fontSize = 13.sp, color = HighAlertSlate)
             }
         }
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(HighAlertBlue.copy(alpha = .10f))
-                .clickable(onClick = onInfo),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(HighAlertBlue.copy(alpha = .10f)).clickable(onClick = onInfo), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Info, contentDescription = "Clinical information", tint = HighAlertBlue)
         }
     }
@@ -163,53 +143,20 @@ private fun HighAlertTopBar(onNavigateBack: () -> Unit, onInfo: () -> Unit) {
 
 @Composable
 private fun HighAlertHero() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(30.dp))
-            .background(HighAlertGradient)
-            .padding(22.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(HighAlertGradient).padding(22.dp)) {
         Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text(
-                        "CRITICAL CALCULATIONS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White.copy(alpha = .80f),
-                        letterSpacing = 1.4.sp
-                    )
+                    Text("CRITICAL CALCULATIONS", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = .80f), letterSpacing = 1.4.sp)
                     Spacer(Modifier.height(7.dp))
-                    Text(
-                        "Slow down.\nCheck twice.",
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        lineHeight = 31.sp
-                    )
+                    Text("Slow down.\nCheck twice.", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, lineHeight = 31.sp)
                 }
-                Box(
-                    modifier = Modifier
-                        .size(58.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = .16f)),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(58.dp).clip(CircleShape).background(Color.White.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Medication, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Text(
-                "A focused bedside workspace for high-alert medication calculations.",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = .92f),
-                lineHeight = 20.sp
-            )
+            Text("A focused bedside workspace for high-alert medication calculations.", fontSize = 14.sp, color = Color.White.copy(alpha = .92f), lineHeight = 20.sp)
             Spacer(Modifier.height(17.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HeroPill("3 tools")
@@ -222,47 +169,23 @@ private fun HighAlertHero() {
 
 @Composable
 private fun HeroPill(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50.dp))
-            .background(Color.White.copy(alpha = .16f))
-            .padding(horizontal = 11.dp, vertical = 7.dp)
-    ) {
+    Box(modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color.White.copy(alpha = .16f)).padding(horizontal = 11.dp, vertical = 7.dp)) {
         Text(text, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun SafetyBanner() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E6)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFE7B3)),
-                contentAlignment = Alignment.Center
-            ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E6)), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.Top) {
+            Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFFFE7B3)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Security, contentDescription = null, tint = HighAlertAmber, modifier = Modifier.size(19.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("VERIFY BEFORE ADMINISTRATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = HighAlertAmber, letterSpacing = .9.sp)
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    "Use the prescribed protocol, concentration and patient-specific parameters. This calculator does not replace an order or local policy.",
-                    fontSize = 12.sp,
-                    color = Color(0xFF5C4B26),
-                    lineHeight = 18.sp
-                )
+                Text("Use the prescribed protocol, concentration and patient-specific parameters. This calculator does not replace an order or local policy.", fontSize = 12.sp, color = Color(0xFF5C4B26), lineHeight = 18.sp)
             }
         }
     }
@@ -270,28 +193,10 @@ private fun SafetyBanner() {
 
 @Composable
 private fun HighAlertToolCard(tool: HighAlertTool, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .width(170.dp)
-            .height(170.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+    Card(modifier = Modifier.width(170.dp).height(170.dp).clickable(onClick = onClick), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(tool.accent.copy(alpha = .11f)),
-                    contentAlignment = Alignment.Center
-                ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(tool.accent.copy(alpha = .11f)), contentAlignment = Alignment.Center) {
                     Text(tool.badge, color = tool.accent, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Icon(Icons.Default.ArrowForward, contentDescription = null, tint = tool.accent, modifier = Modifier.size(18.dp))
@@ -308,21 +213,10 @@ private fun HighAlertToolCard(tool: HighAlertTool, onClick: () -> Unit) {
 
 @Composable
 private fun BedsideCheckCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(HighAlertBlue.copy(alpha = .10f)),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(HighAlertBlue.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = HighAlertBlue, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(10.dp))
@@ -342,13 +236,7 @@ private fun BedsideCheckCard() {
 @Composable
 private fun CheckRow(number: String, text: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(HighAlertBlue.copy(alpha = .10f)),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.size(28.dp).clip(RoundedCornerShape(10.dp)).background(HighAlertBlue.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
             Text(number, color = HighAlertBlue, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
         }
         Spacer(Modifier.width(10.dp))
@@ -358,30 +246,15 @@ private fun CheckRow(number: String, text: String) {
 
 @Composable
 private fun DoubleCheckFooter() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = HighAlertNavy)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = HighAlertNavy)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = .10f)),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
                 Text("✓", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("DOUBLE-CHECK", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                Text(
-                    "Recheck the calculation, order and pump settings before administration.",
-                    color = Color.White.copy(alpha = .82f),
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp
-                )
+                Text("Recheck the calculation, order and pump settings before administration.", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, lineHeight = 18.sp)
             }
         }
     }
@@ -389,21 +262,11 @@ private fun DoubleCheckFooter() {
 
 @Composable
 private fun HighAlertInfoPanel(onDismiss: () -> Unit) {
-    Card(
-        modifier = Modifier.padding(20.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
+    Card(modifier = Modifier.padding(20.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)) {
         Column(Modifier.padding(20.dp)) {
             Text("High-alert medication", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = HighAlertBlue)
             Spacer(Modifier.height(8.dp))
-            Text(
-                "Always verify the active prescription, medication concentration, patient weight and local protocol before administration.",
-                fontSize = 13.sp,
-                color = Color(0xFF475467),
-                lineHeight = 19.sp
-            )
+            Text("Always verify the active prescription, medication concentration, patient weight and local protocol before administration.", fontSize = 13.sp, color = Color(0xFF475467), lineHeight = 19.sp)
             Spacer(Modifier.height(14.dp))
             Text("CLOSE", Modifier.clickable(onClick = onDismiss), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighAlertBlue)
         }
