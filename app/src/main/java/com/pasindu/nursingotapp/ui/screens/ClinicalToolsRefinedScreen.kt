@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,10 +42,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +57,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
-import kotlinx.coroutines.delay
 
 private const val REFINED_PREFS = "clinical_tools_search"
 private const val REFINED_HISTORY = "history"
@@ -81,7 +80,7 @@ fun ClinicalToolsRefinedScreen(
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var history by remember { mutableStateOf(loadHistory(context)) }
 
-    val tools = remember(onOpenIvDrip, onOpenDosage, onOpenWeightInfusion, onOpenBsa, onOpenPediatric, onOpenConversions, onOpenSpecial, onOpenEmergency, onOpenIcu) {
+    val tools = remember {
         listOf(
             ToolItem("emergency", "Crash Cart Engine", "Arrest • anaphylaxis • defibrillation", "🚨", ClinicalToolDesignTokens.red, listOf("emergency", "arrest", "cpr", "anaphylaxis", "adrenaline", "epinephrine", "shock", "rsi", "හදිසි", "ඇඩ්‍රිනලින්"), onOpenEmergency),
             ToolItem("icu", "ICU Critical Care", "Vasoactive • sedation • fluids • renal", "🫀", ClinicalToolDesignTokens.blue, listOf("icu", "critical", "vasoactive", "sedation", "electrolyte", "potassium", "kcl", "noradrenaline", "dopamine", "inotrope", "පොටෑසියම්"), onOpenIcu),
@@ -96,13 +95,15 @@ fun ClinicalToolsRefinedScreen(
     }
 
     val normalized = query.trim().lowercase(Locale.ROOT)
-    val filtered = remember(normalized, tools) {
-        if (normalized.isBlank()) tools else tools.filter { tool ->
+    val filtered = remember(normalized) {
+        if (normalized.isBlank()) tools else {
             val tokens = normalized.split(" ", ",", "/", "-", "%").filter(String::isNotBlank)
-            tokens.any { token ->
-                tool.title.lowercase(Locale.ROOT).contains(token) ||
-                    tool.subtitle.lowercase(Locale.ROOT).contains(token) ||
-                    tool.keywords.any { keyword -> keyword.contains(token, ignoreCase = true) }
+            tools.filter { tool ->
+                tokens.any { token ->
+                    tool.title.lowercase(Locale.ROOT).contains(token) ||
+                        tool.subtitle.lowercase(Locale.ROOT).contains(token) ||
+                        tool.keywords.any { keyword -> keyword.contains(token, ignoreCase = true) }
+                }
             }
         }
     }
@@ -118,10 +119,20 @@ fun ClinicalToolsRefinedScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(ClinicalToolDesignTokens.background).statusBarsPadding().navigationBarsPadding()
+        Modifier
+            .fillMaxSize()
+            .background(ClinicalToolDesignTokens.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).background(Color.White, CircleShape).clickable(onClick = onNavigateBack), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(44.dp).background(Color.White, CircleShape).clickable(onClick = onNavigateBack),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ClinicalToolDesignTokens.ink)
             }
             Spacer(Modifier.width(12.dp))
@@ -137,7 +148,9 @@ fun ClinicalToolsRefinedScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Box(Modifier.fillMaxWidth().background(ClinicalToolDesignTokens.hero, RoundedCornerShape(28.dp)).padding(22.dp)) {
+                Box(
+                    Modifier.fillMaxWidth().background(ClinicalToolDesignTokens.hero, RoundedCornerShape(28.dp)).padding(22.dp)
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Row(verticalAlignment = Alignment.Top) {
                             Column(Modifier.weight(1f)) {
@@ -209,7 +222,12 @@ fun ClinicalToolsRefinedScreen(
                 }
             } else {
                 items(filtered, key = { it.id }) { tool ->
-                    RefinedToolCard(tool, expanded = selectedCategory == tool.id, onOpen = { tool.open() }, onToggle = { selectedCategory = if (selectedCategory == tool.id) null else tool.id })
+                    RefinedToolCard(
+                        tool,
+                        expanded = selectedCategory == tool.id,
+                        onOpen = { tool.open() },
+                        onToggle = { selectedCategory = if (selectedCategory == tool.id) null else tool.id }
+                    )
                 }
             }
         }
@@ -266,30 +284,44 @@ private fun ClinicalSearchCard(
                 placeholder = { Text("IV drip, insulin, ICU, ළමා මාත්‍රාව…", fontSize = 12.sp, color = ClinicalToolDesignTokens.slate, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ClinicalToolDesignTokens.blue) },
                 trailingIcon = {
-                    if (query.isNotBlank()) IconButton(onClick = onClear) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = ClinicalToolDesignTokens.slate) }
+                    if (query.isNotBlank()) {
+                        IconButton(onClick = onClear) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = ClinicalToolDesignTokens.slate) }
+                    }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 singleLine = true,
                 shape = RoundedCornerShape(17.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, focusedBorderColor = ClinicalToolDesignTokens.cyan, unfocusedBorderColor = Color(0xFFE2E8F0)),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = ClinicalToolDesignTokens.cyan,
+                    unfocusedBorderColor = Color(0xFFE2E8F0)
+                ),
                 textStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = ClinicalToolDesignTokens.ink)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 listOf("IV drip", "Dosage", "ICU", "Emergency").forEach { chip ->
-                    Surface(color = ClinicalToolDesignTokens.softBlue, shape = RoundedCornerShape(50.dp), modifier = Modifier.clickable { onHistoryClick(chip) }) {
-                        Text(chip, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = ClinicalToolDesignTokens.blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Surface(
+                        Modifier.clickable { onHistoryClick(chip) },
+                        shape = RoundedCornerShape(50.dp),
+                        color = ClinicalToolDesignTokens.softBlue
+                    ) {
+                        Text(chip, Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalToolDesignTokens.blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             if (focused && query.isBlank() && history.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Recent searches", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    history.forEach { past ->
-                        Row(Modifier.fillMaxWidth().clickable { onHistoryClick(past) }.padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    history.forEach { pastQuery ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onHistoryClick(pastQuery) }.padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(Icons.Default.History, contentDescription = null, tint = ClinicalToolDesignTokens.slate, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text(past, color = ClinicalToolDesignTokens.ink, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(pastQuery, color = ClinicalToolDesignTokens.ink, fontSize = 12.sp)
                         }
                     }
                 }
@@ -299,15 +331,20 @@ private fun ClinicalSearchCard(
 }
 
 @Composable
-private fun RefinedToolCard(tool: ToolItem, expanded: Boolean, onOpen: () -> Unit, onToggle: () -> Unit) {
+private fun RefinedToolCard(
+    tool: ToolItem,
+    expanded: Boolean,
+    onOpen: () -> Unit,
+    onToggle: () -> Unit
+) {
     Card(
-        Modifier.fillMaxWidth().clickable(onClick = onOpen),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.Top) {
                 Box(Modifier.size(56.dp).background(tool.accent.copy(alpha = .10f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
                     Text(tool.icon, fontSize = 25.sp)
                 }
@@ -316,40 +353,35 @@ private fun RefinedToolCard(tool: ToolItem, expanded: Boolean, onOpen: () -> Uni
                     Text(tool.title, color = ClinicalToolDesignTokens.ink, fontSize = 17.sp, fontWeight = FontWeight.Black)
                     Text(tool.subtitle, color = tool.accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                Box(Modifier.size(42.dp).background(tool.accent, CircleShape).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
-                    Text(if (expanded) "−" else "+", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Surface(color = tool.accent, shape = CircleShape, modifier = Modifier.clickable(onClick = onToggle)) {
+                    Icon(Icons.Default.Calculate, contentDescription = "Open ${tool.title}", tint = Color.White, modifier = Modifier.padding(10.dp).size(18.dp))
                 }
             }
             if (expanded) {
-                Spacer(Modifier.height(12.dp))
-                Surface(color = tool.accent.copy(alpha = .07f), shape = RoundedCornerShape(15.dp)) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("READY FOR BEDSID E", color = tool.accent, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
-                        Text("Tap the card to open the workflow. Inputs and outputs stay inside the dedicated calculator so this hub remains lightweight.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
-                    }
-                }
+                Spacer(Modifier.height(8.dp))
+                Text("Tap the card to open this clinical workflow.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp)
             }
         }
     }
 }
 
-private fun loadHistory(context: Context): List<String> =
-    context.getSharedPreferences(REFINED_PREFS, Context.MODE_PRIVATE)
+private fun loadHistory(context: Context): List<String> {
+    return context.getSharedPreferences(REFINED_PREFS, Context.MODE_PRIVATE)
         .getString(REFINED_HISTORY, "")
-        ?.split("|::|")
-        ?.filter(String::isNotBlank)
-        ?.take(5)
-        ?: emptyList()
+        .orEmpty()
+        .split("|::|")
+        .filter(String::isNotBlank)
+        .take(5)
+}
 
-private fun saveHistory(context: Context, value: String) {
-    val cleaned = value.trim()
+private fun saveHistory(context: Context, query: String) {
+    val cleaned = query.trim()
     if (cleaned.isBlank()) return
-    val items = loadHistory(context).toMutableList().apply {
-        remove(cleaned)
-        add(0, cleaned)
-    }.take(5)
+    val current = loadHistory(context).toMutableList()
+    current.remove(cleaned)
+    current.add(0, cleaned)
     context.getSharedPreferences(REFINED_PREFS, Context.MODE_PRIVATE)
         .edit()
-        .putString(REFINED_HISTORY, items.joinToString("|::|"))
+        .putString(REFINED_HISTORY, current.take(5).joinToString("|::|"))
         .apply()
 }
