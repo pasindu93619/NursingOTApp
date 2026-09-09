@@ -72,7 +72,10 @@ fun AppNavigation() {
             val mode = backStackEntry.arguments?.getString("mode")
                 ?.let { runCatching { SpecialMode.valueOf(it) }.getOrNull() }
                 ?: SpecialMode.INSULIN
-            SpecialCalculationsScreen(initialMode = mode)
+            HighAlertCalculatorWorkspaceScreen(
+                initialMode = mode,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("icu_calculators") { IcuClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }) }
