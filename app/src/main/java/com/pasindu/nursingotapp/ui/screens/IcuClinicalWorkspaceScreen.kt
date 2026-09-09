@@ -19,8 +19,21 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -42,6 +55,7 @@ private val IcuHero = Brush.horizontalGradient(listOf(Color(0xFF1769E8), Color(0
 
 data class IcuWorkspaceTool(val title: String, val subtitle: String, val icon: String, val accent: Color, val detail: String)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IcuClinicalWorkspaceScreen(onNavigateBack: () -> Unit) {
     var selectedTool by remember { mutableStateOf<IcuWorkspaceTool?>(null) }
