@@ -1,4 +1,3 @@
-// com/pasindu/nursingotapp/ui/screens/DailyEntryScreen.kt
 package com.pasindu.nursingotapp.ui.screens
 
 import android.widget.Toast
@@ -35,7 +34,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.clip
+import androidx.compose.ui.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -161,72 +161,81 @@ fun DailyEntryScreen(
                         Surface(Modifier.weight(1f), shape = RoundedCornerShape(18.dp), color = DailyBlueSoft) { Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) { Text("PERIOD PROGRESS", color = DailyCyan, fontSize = 8.sp, fontWeight = FontWeight.Black); Text("$completedCount / ${allDates.size} days", color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) } }
                         Surface(shape = RoundedCornerShape(18.dp), color = DailyMintSoft) { Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.End) { Text("TOTAL", color = Color(0xFF0E9F73), fontSize = 8.sp, fontWeight = FontWeight.Black); Text(String.format(Locale.US, "%.1fh • %.1fh OT", animatedNormalHrs, animatedOtHrs), color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) } }
                     }
-                    Button(enabled = !isSavingBulk && (stagedEdits.isNotEmpty() || isAutoFillMode), onClick = {
-                        isSavingBulk = true
-                        Toast.makeText(context, "Applying changes... please wait", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch {
-                            withContext(Dispatchers.IO) {
-                                val daysToProcess = if (isAutoFillMode) allDates else stagedEdits.keys.toList()
-                                for (date in daysToProcess) {
-                                    val edit = stagedEdits[date] ?: StagedEdit()
-                                    val existing = allSavedEntries.find { it.date == date }
-                                    val eId = existing?.id ?: 0L
-                                    val isWknd = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
-                                    var isL = existing?.isLeave ?: false
-                                    var isD = existing?.isDO ?: false
-                                    var isP = existing?.isPH ?: false
-                                    var lType = existing?.leaveType
-                                    var nIn = existing?.normalTimeIn ?: ""
-                                    var nOut = existing?.normalTimeOut ?: ""
-                                    var nHrs = existing?.normalHours ?: 0f
-                                    var oIn = existing?.otTimeIn ?: ""
-                                    var oOut = existing?.otTimeOut ?: ""
-                                    var oHrs = existing?.otHours ?: 0f
-                                    fun getLeaveHrs(): Float = if (wardType == "Normal") 6f else if (isWknd) 6f else 8f
-                                    val isShortDay = isWknd || edit.leave == "PH" || edit.leave == "Work PH" || (edit.leave == null && isP)
-                                    when (edit.shift) {
-                                        "Morn (7-13)" -> { nIn = "07.00"; nOut = "13.00"; nHrs = 6f; isL = false; lType = null }
-                                        "Eve (13-19)" -> { nIn = "13.00"; nOut = "19.00"; nHrs = 6f; isL = false; lType = null }
-                                        "Night (19-7)" -> { nIn = "19.00"; nOut = "07.00"; nHrs = 12f; isL = false; lType = null }
-                                        "Day (7-16)" -> { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
-                                        "Custom Shift" -> { nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }
-                                        "Clear Shift" -> { nIn = ""; nOut = ""; nHrs = 0f; isL = false; lType = null }
-                                        null -> if (isAutoFillMode && nIn.isEmpty() && edit.leave == null && !isL) { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
+                    Button(
+                        enabled = !isSavingBulk && (stagedEdits.isNotEmpty() || isAutoFillMode),
+                        onClick = {
+                            isSavingBulk = true
+                            Toast.makeText(context, "Applying changes... please wait", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                withContext(Dispatchers.IO) {
+                                    val daysToProcess = if (isAutoFillMode) allDates else stagedEdits.keys.toList()
+                                    for (date in daysToProcess) {
+                                        val edit = stagedEdits[date] ?: StagedEdit()
+                                        val existing = allSavedEntries.find { it.date == date }
+                                        val eId = existing?.id ?: 0L
+                                        val isWknd = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+                                        var isL = existing?.isLeave ?: false
+                                        var isD = existing?.isDO ?: false
+                                        var isP = existing?.isPH ?: false
+                                        var lType = existing?.leaveType
+                                        var nIn = existing?.normalTimeIn ?: ""
+                                        var nOut = existing?.normalTimeOut ?: ""
+                                        var nHrs = existing?.normalHours ?: 0f
+                                        var oIn = existing?.otTimeIn ?: ""
+                                        var oOut = existing?.otTimeOut ?: ""
+                                        var oHrs = existing?.otHours ?: 0f
+                                        fun getLeaveHrs(): Float = if (wardType == "Normal") 6f else if (isWknd) 6f else 8f
+                                        val isShortDay = isWknd || edit.leave == "PH" || edit.leave == "Work PH" || (edit.leave == null && isP)
+                                        when (edit.shift) {
+                                            "Morn (7-13)" -> { nIn = "07.00"; nOut = "13.00"; nHrs = 6f; isL = false; lType = null }
+                                            "Eve (13-19)" -> { nIn = "13.00"; nOut = "19.00"; nHrs = 6f; isL = false; lType = null }
+                                            "Night (19-7)" -> { nIn = "19.00"; nOut = "07.00"; nHrs = 12f; isL = false; lType = null }
+                                            "Day (7-16)" -> { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
+                                            "Custom Shift" -> { nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }
+                                            "Clear Shift" -> { nIn = ""; nOut = ""; nHrs = 0f; isL = false; lType = null }
+                                            null -> if (isAutoFillMode && nIn.isEmpty() && edit.leave == null && !isL) { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
+                                        }
+                                        when (edit.leave) {
+                                            "CL", "VL", "sL", "DL" -> { isL = true; lType = edit.leave.replace("sL", "Special Leave"); nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false; oIn = ""; oOut = ""; oHrs = 0f }
+                                            "DO" -> { isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
+                                            "PH" -> { isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f }
+                                            "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }
+                                            "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
+                                            "CL/2" -> { isL = false; lType = "Half Casual Leave"; nIn = customIn; nOut = customOut; nHrs = getLeaveHrs() }
+                                            "SL (Short)" -> { isL = false; lType = "Short Leave"; nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f }
+                                            "Work DO" -> { isD = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = if (isWknd) "13.00" else "16.00"; nHrs = if (isWknd) 6f else 9f } }
+                                            "Work PH" -> { isP = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = "13.00"; nHrs = 6f } }
+                                            "Clear Leave", "Clear Exceptions" -> { isD = false; isP = false; isL = false; lType = null }
+                                            null -> Unit
+                                        }
+                                        when (edit.ot) {
+                                            "Morn OT" -> { oIn = "07.00"; oOut = "13.00"; oHrs = 6f }
+                                            "Eve OT" -> { oIn = "13.00"; oOut = "19.00"; oHrs = 6f }
+                                            "Night OT" -> { oIn = "19.00"; oOut = "07.00"; oHrs = 12f }
+                                            "Custom OT" -> { oIn = customIn; oOut = customOut; oHrs = customHrs.toFloatOrNull() ?: 0f }
+                                            "Clear OT" -> { oIn = ""; oOut = ""; oHrs = 0f }
+                                            null -> Unit
+                                        }
+                                        if (edit.shift != null && edit.leave == null) {
+                                            if (lType == "DO") { isL = false; isD = true }
+                                            if (lType == "PH") { isL = false; isP = true }
+                                        }
+                                        viewModel.saveDailyEntry(id = eId, claimPeriodId = claimPeriodId, date = date, isPH = isP, isDO = isD, isLeave = isL, leaveType = lType, normalTimeIn = nIn, normalTimeOut = nOut, normalHours = nHrs, otTimeIn = oIn, otTimeOut = oOut, otHours = oHrs, wardOverride = "", reason = "Need for service")
                                     }
-                                    when (edit.leave) {
-                                        "CL", "VL", "sL", "DL" -> { isL = true; lType = edit.leave.replace("sL", "Special Leave"); nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false; oIn = ""; oOut = ""; oHrs = 0f }
-                                        "DO" -> { isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
-                                        "PH" -> { isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f }
-                                        "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }
-                                        "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
-                                        "CL/2" -> { isL = false; lType = "Half Casual Leave"; nIn = customIn; nOut = customOut; nHrs = getLeaveHrs() }
-                                        "SL (Short)" -> { isL = false; lType = "Short Leave"; nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f }
-                                        "Work DO" -> { isD = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = if (isWknd) "13.00" else "16.00"; nHrs = if (isWknd) 6f else 9f } }
-                                        "Work PH" -> { isP = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = "13.00"; nHrs = 6f } }
-                                        "Clear Leave", "Clear Exceptions" -> { isD = false; isP = false; isL = false; lType = null }
-                                        null -> Unit
-                                    }
-                                    when (edit.ot) {
-                                        "Morn OT" -> { oIn = "07.00"; oOut = "13.00"; oHrs = 6f }
-                                        "Eve OT" -> { oIn = "13.00"; oOut = "19.00"; oHrs = 6f }
-                                        "Night OT" -> { oIn = "19.00"; oOut = "07.00"; oHrs = 12f }
-                                        "Custom OT" -> { oIn = customIn; oOut = customOut; oHrs = customHrs.toFloatOrNull() ?: 0f }
-                                        "Clear OT" -> { oIn = ""; oOut = ""; oHrs = 0f }
-                                        null -> Unit
-                                    }
-                                    if (edit.shift != null && edit.leave == null) { if (lType == "DO") { isL = false; isD = true }; if (lType == "PH") { isL = false; isP = true } }
-                                    viewModel.saveDailyEntry(id = eId, claimPeriodId = claimPeriodId, date = date, isPH = isP, isDO = isD, isLeave = isL, leaveType = lType, normalTimeIn = nIn, normalTimeOut = nOut, normalHours = nHrs, otTimeIn = oIn, otTimeOut = oOut, otHours = oHrs, wardOverride = "", reason = "Need for service")
                                 }
+                                delay(300)
+                                viewModel.loadEntriesForClaim(claimPeriodId)
+                                isSavingBulk = false
+                                isAutoFillMode = false
+                                stagedEdits.clear()
+                                Toast.makeText(context, "Saved Successfully!", Toast.LENGTH_SHORT).show()
                             }
-                            delay(300)
-                            viewModel.loadEntriesForClaim(claimPeriodId)
-                            isSavingBulk = false
-                            isAutoFillMode = false
-                            stagedEdits.clear()
-                            Toast.makeText(context, "Saved Successfully!", Toast.LENGTH_SHORT).show()
-                        }
-                    }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)) {
-                        Icon(if (isSavingBulk) Icons.Default.MoreHoriz else Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(17.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+                    ) {
+                        Icon(if (isSavingBulk) Icons.Default.MoreHoriz else Icons.Default.Save, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(when { isSavingBulk -> "Saving..."; isAutoFillMode -> "Auto-Fill & Save"; else -> "Save selected days" }, fontWeight = FontWeight.ExtraBold)
                     }
@@ -251,25 +260,71 @@ fun DailyEntryScreen(
         }
 
         if (showCustomDialog) {
-            Dialog(onDismissRequest = { showCustomDialog = false }) { Surface(shape = RoundedCornerShape(24.dp), color = Color.White) { Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { Text("Configure custom entry", color = DailyInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold); Text("Set the time range and hours used for this brush.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp); OutlinedTextField(value = customIn, onValueChange = { customIn = it }, label = { Text("Time in (e.g. 07.00)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth()); OutlinedTextField(value = customOut, onValueChange = { customOut = it }, label = { Text("Time out (e.g. 17.00)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth()); OutlinedTextField(value = customHrs, onValueChange = { customHrs = it }, label = { Text("Total hours (e.g. 10.0)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth()); Button(onClick = { showCustomDialog = false }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)) { Text("Apply brush", fontWeight = FontWeight.ExtraBold) } } } }
-        if (showAutoFillDialog) { AlertDialog(onDismissRequest = { if (!isSavingBulk) showAutoFillDialog = false }, title = { Text("Smart Auto-Fill", fontWeight = FontWeight.ExtraBold) }, text = { Text("Would you like to mark your Leaves, DOs, and PHs first?\n\nAfter marking them, the app will automatically fill the rest of the month with weekday and weekend duty patterns.") }, confirmButton = { Button(enabled = !isSavingBulk, onClick = { showAutoFillDialog = false; stagedEdits.clear(); isAutoFillMode = true; setCategory(CATEGORY_LEAVE_REST) }) { Text("Yes, plan exceptions") } }, dismissButton = { TextButton(enabled = !isSavingBulk, onClick = { showAutoFillDialog = false }) { Text("Cancel") } }) }
-        if (previewPdfFile != null) PdfPreviewDialog(pdfFile = previewPdfFile!!, onDismiss = { previewPdfFile = null }, onConfirm = { onSaveAndSharePdf(previewPdfFile!!); previewPdfFile = null })
-        if (isGeneratingPdf) Dialog(onDismissRequest = {}) { Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) { Row(Modifier.padding(24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) { CircularProgressIndicator(color = DailyCyan); Text("Generating Form...", fontWeight = FontWeight.SemiBold, fontSize = 16.sp) } } }
+            Dialog(onDismissRequest = { showCustomDialog = false }) {
+                Surface(shape = RoundedCornerShape(24.dp), color = Color.White) {
+                    Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("Configure custom entry", color = DailyInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Set the time range and hours used for this brush.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                        OutlinedTextField(value = customIn, onValueChange = { customIn = it }, label = { Text("Time in (e.g. 07.00)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = customOut, onValueChange = { customOut = it }, label = { Text("Time out (e.g. 17.00)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = customHrs, onValueChange = { customHrs = it }, label = { Text("Total hours (e.g. 10.0)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Button(onClick = { showCustomDialog = false }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)) { Text("Apply brush", fontWeight = FontWeight.ExtraBold) }
+                    }
+                }
+            }
+        }
+
+        if (showAutoFillDialog) {
+            AlertDialog(onDismissRequest = { if (!isSavingBulk) showAutoFillDialog = false }, title = { Text("Smart Auto-Fill", fontWeight = FontWeight.ExtraBold) }, text = { Text("Would you like to mark your Leaves, DOs, and PHs first?\n\nAfter marking them, the app will automatically fill the rest of the month with weekday and weekend duty patterns.") }, confirmButton = { Button(enabled = !isSavingBulk, onClick = { showAutoFillDialog = false; stagedEdits.clear(); isAutoFillMode = true; setCategory(CATEGORY_LEAVE_REST) }) { Text("Yes, plan exceptions") } }, dismissButton = { TextButton(enabled = !isSavingBulk, onClick = { showAutoFillDialog = false }) { Text("Cancel") } })
+        }
+    }
+
+    if (previewPdfFile != null) {
+        PdfPreviewDialog(
+            pdfFile = previewPdfFile!!,
+            onDismiss = { previewPdfFile = null },
+            onConfirm = {
+                val file = previewPdfFile ?: return@PdfPreviewDialog
+                onSaveAndSharePdf(file)
+                previewPdfFile = null
+            }
+        )
+    }
+
+    if (isGeneratingPdf) {
+        Dialog(onDismissRequest = {}) {
+            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
+                Row(Modifier.padding(24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    CircularProgressIndicator(color = DailyCyan)
+                    Text("Generating Form...", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun HeroStat(modifier: Modifier, title: String, value: String) {
-    Surface(modifier, color = Color.White.copy(alpha = .14f), shape = RoundedCornerShape(17.dp)) { Column(Modifier.padding(11.dp)) { Text(title, color = Color.White.copy(alpha = .7f), fontSize = 7.sp, fontWeight = FontWeight.Black); Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold) }
+    Surface(modifier, color = Color.White.copy(alpha = .14f), shape = RoundedCornerShape(17.dp)) {
+        Column(Modifier.padding(11.dp)) {
+            Text(title, color = Color.White.copy(alpha = .7f), fontSize = 7.sp, fontWeight = FontWeight.Black)
+            Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+        }
     }
 }
 
 @Composable
 private fun KeyItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(color)); Text(label, Modifier.padding(start = 6.dp), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(color))
+        Text(label, Modifier.padding(start = 6.dp), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+    }
 }
 
 @Composable
 private fun KeyItem(brush: Brush, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(brush)); Text(label, Modifier.padding(start = 6.dp), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(brush))
+        Text(label, Modifier.padding(start = 6.dp), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+    }
 }
