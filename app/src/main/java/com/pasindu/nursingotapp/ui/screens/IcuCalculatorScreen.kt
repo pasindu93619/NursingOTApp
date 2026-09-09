@@ -18,34 +18,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,29 +88,61 @@ fun IcuCalculatorScreen(onNavigateBack: () -> Unit) {
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("ICU Clinical Tools", fontSize = 20.sp, fontWeight = FontWeight.Black, color = IcuInk)
-                        Text("Critical-care calculations, organized for bedside use", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = IcuBlue)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { if (selected == null) onNavigateBack() else selected = null }) {
-                        Icon(if (selected == null) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Close, contentDescription = "Back", tint = IcuInk)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = IcuBg)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(IcuBg)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            IcuHeader(selected = selected, onNavigateBack = onNavigateBack, onClose = { selected = null })
+            if (selected == null) {
+                IcuHome(calculators = calculators, onSelect = { selected = it })
+            } else {
+                IcuDetail(selected!!)
+            }
+        }
+    }
+}
+
+@Composable
+private fun IcuHeader(
+    selected: IcuCalculatorDefinition?,
+    onNavigateBack: () -> Unit,
+    onClose: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(Color.White, CircleShape)
+                .clickable { if (selected == null) onNavigateBack() else onClose() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (selected == null) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Close,
+                contentDescription = if (selected == null) "Back" else "Close",
+                tint = IcuInk
             )
-        },
-        containerColor = IcuBg
-    ) { padding ->
-        if (selected == null) {
-            IcuHome(calculators, padding) { selected = it }
-        } else {
-            IcuDetail(selected!!, padding)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                selected?.title ?: "ICU Clinical Tools",
+                color = IcuInk,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                if (selected == null) "Critical-care calculations, organized for bedside use" else "Focused bedside calculator",
+                color = IcuBlue,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -128,81 +150,75 @@ fun IcuCalculatorScreen(onNavigateBack: () -> Unit) {
 @Composable
 private fun IcuHome(
     calculators: List<IcuCalculatorDefinition>,
-    padding: PaddingValues,
     onSelect: (IcuCalculatorDefinition) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().imePadding(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Spacer(Modifier.height(4.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-        ) {
-            Box(Modifier.fillMaxWidth().background(IcuHero, RoundedCornerShape(28.dp)).padding(22.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Column(Modifier.weight(1f)) {
-                            Text("CRITICAL CARE WORKSPACE", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp, color = Color.White.copy(alpha = .75f))
-                            Text("ICU calculations, without the clutter", fontSize = 25.sp, lineHeight = 30.sp, fontWeight = FontWeight.Black, color = Color.White)
-                            Spacer(Modifier.height(4.dp))
-                            Text("Choose the clinical task first. Enter only the values needed for that calculation.", fontSize = 11.sp, lineHeight = 16.sp, color = Color.White.copy(alpha = .88f))
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            ) {
+                Box(Modifier.fillMaxWidth().background(IcuHero, RoundedCornerShape(28.dp)).padding(22.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Column(Modifier.weight(1f)) {
+                                Text("CRITICAL CARE WORKSPACE", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp, color = Color.White.copy(alpha = .75f))
+                                Text("ICU calculations, without the clutter", fontSize = 25.sp, lineHeight = 30.sp, fontWeight = FontWeight.Black, color = Color.White)
+                                Spacer(Modifier.height(4.dp))
+                                Text("Choose the clinical task first. Enter only the values needed for that calculation.", fontSize = 11.sp, lineHeight = 16.sp, color = Color.White.copy(alpha = .88f))
+                            }
+                            Surface(color = Color.White.copy(alpha = .16f), shape = CircleShape) {
+                                Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = Color.White, modifier = Modifier.padding(12.dp))
+                            }
                         }
-                        Surface(color = Color.White.copy(alpha = .16f), shape = CircleShape) {
-                            Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = Color.White, modifier = Modifier.padding(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IcuStat("TOOLS", calculators.size.toString(), Modifier.weight(1f))
+                            IcuStat("OFFLINE", "READY", Modifier.weight(1f))
+                            IcuStat("MODE", "ICU", Modifier.weight(1f))
                         }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IcuStat("TOOLS", calculators.size.toString(), Modifier.weight(1f))
-                        IcuStat("OFFLINE", "READY", Modifier.weight(1f))
-                        IcuStat("MODE", "ICU", Modifier.weight(1f))
                     }
                 }
             }
         }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E8)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = Color.White.copy(alpha = .85f), shape = CircleShape) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = IcuAmber, modifier = Modifier.padding(8.dp))
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E8)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = Color.White.copy(alpha = .85f), shape = CircleShape) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = IcuAmber, modifier = Modifier.padding(8.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Bedside safety", color = IcuInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Verify patient weight, concentration, units and the local ICU protocol before administration.", color = IcuSlate, fontSize = 10.sp, lineHeight = 15.sp)
+                    }
                 }
-                Spacer(Modifier.width(10.dp))
+            }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Bedside safety", color = IcuInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Verify patient weight, concentration, units and the local ICU protocol before administration.", color = IcuSlate, fontSize = 10.sp, lineHeight = 15.sp)
+                    Text("Critical-care engines", color = IcuInk, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text("Tap a workflow to focus on one calculation.", color = IcuSlate, fontSize = 11.sp)
+                }
+                Surface(color = Color.White, shape = RoundedCornerShape(12.dp)) {
+                    Icon(Icons.Default.Calculate, contentDescription = null, tint = IcuBlue, modifier = Modifier.padding(8.dp))
                 }
             }
         }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Critical-care engines", color = IcuInk, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                Text("Tap a workflow to focus on one calculation.", color = IcuSlate, fontSize = 11.sp)
-            }
-            Surface(color = Color.White, shape = RoundedCornerShape(12.dp)) {
-                Icon(Icons.Default.Calculate, contentDescription = null, tint = IcuBlue, modifier = Modifier.padding(8.dp))
-            }
-        }
-
-        calculators.forEach { calculator ->
+        items(calculators, key = { it.title }) { calculator ->
             IcuToolCard(calculator) { onSelect(calculator) }
         }
-        Spacer(Modifier.height(20.dp))
     }
 }
 
@@ -243,42 +259,37 @@ private fun IcuToolCard(tool: IcuCalculatorDefinition, onClick: () -> Unit) {
 }
 
 @Composable
-private fun IcuDetail(calculator: IcuCalculatorDefinition, padding: PaddingValues) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+private fun IcuDetail(calculator: IcuCalculatorDefinition) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().imePadding(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Spacer(Modifier.height(4.dp))
-        Surface(color = calculator.accent.copy(alpha = .09f), shape = RoundedCornerShape(18.dp)) {
-            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).background(calculator.accent.copy(alpha = .13f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
-                    Text(calculator.icon, fontSize = 21.sp)
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(calculator.subtitle, color = calculator.accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Text("Focused bedside workspace", color = IcuInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        item {
+            Surface(color = calculator.accent.copy(alpha = .09f), shape = RoundedCornerShape(18.dp)) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).background(calculator.accent.copy(alpha = .13f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+                        Text(calculator.icon, fontSize = 21.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(calculator.subtitle, color = calculator.accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Text("Focused bedside workspace", color = IcuInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
         }
-
-        when (calculator.title) {
-            "Vasoactive Inotropes" -> VasoactiveIcuCalculator()
-            "Sedation & Analgesia" -> SedationIcuCalculator()
-            "Electrolyte Protocols" -> ElectrolyteIcuCalculator()
-            "Glycemic Control" -> GlycemicIcuCalculator()
-            "Fluid Resuscitation" -> FluidIcuCalculator()
-            "Renal Function" -> RenalIcuCalculator()
-            "Hemodynamics" -> HemodynamicsIcuCalculator()
+        item {
+            when (calculator.title) {
+                "Vasoactive Inotropes" -> VasoactiveIcuCalculator()
+                "Sedation & Analgesia" -> SedationIcuCalculator()
+                "Electrolyte Protocols" -> ElectrolyteIcuCalculator()
+                "Glycemic Control" -> GlycemicIcuCalculator()
+                "Fluid Resuscitation" -> FluidIcuCalculator()
+                "Renal Function" -> RenalIcuCalculator()
+                "Hemodynamics" -> HemodynamicsIcuCalculator()
+            }
         }
-        Spacer(Modifier.height(22.dp))
     }
 }
 
@@ -295,9 +306,9 @@ private fun VasoactiveIcuCalculator() {
     val concentration = if (m > 0 && v > 0) m * 1000.0 / v else 0.0
     val rate = if (d > 0 && w > 0 && concentration > 0) d * w * 60.0 / concentration else 0.0
     CalculatorCard("Vasoactive dosing", "Dose → syringe-pump rate", IcuRed) {
-        PairInput("Dose (mcg/kg/min)", dose, { dose = it }, "Weight (kg)", weight, { weight = it })
-        PairInput("Drug amount (mg)", mg, { mg = it }, "Final volume (mL)", volume, { volume = it })
-        ResultPanel(IcuRed, "Set pump to", if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0", "mL/hr")
+        PairInput("Dose (mcg/kg/min)", dose, { value -> dose = value }, "Weight (kg)", weight, { value -> weight = value })
+        PairInput("Drug amount (mg)", mg, { value -> mg = value }, "Final volume (mL)", volume, { value -> volume = value })
+        ResultPanel(IcuRed, "Set pump to", String.format(Locale.US, "%.1f", rate), "mL/hr")
         FormulaText("Concentration = mg × 1000 ÷ mL; rate = dose × kg × 60 ÷ concentration")
         SafetyText("Confirm the exact drug, concentration, target dose and local titration protocol before use.")
     }
@@ -316,9 +327,9 @@ private fun SedationIcuCalculator() {
     val concentration = if (m > 0 && v > 0) m / v else 0.0
     val rate = if (d > 0 && w > 0 && concentration > 0) d * w / concentration else 0.0
     CalculatorCard("Sedation & analgesia", "Weight-based infusion setup", IcuPurple) {
-        PairInput("Dose (mg/kg/hr)", dose, { dose = it }, "Weight (kg)", weight, { weight = it })
-        PairInput("Drug amount (mg)", mg, { mg = it }, "Final volume (mL)", volume, { volume = it })
-        ResultPanel(IcuPurple, "Set pump to", if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0", "mL/hr")
+        PairInput("Dose (mg/kg/hr)", dose, { value -> dose = value }, "Weight (kg)", weight, { value -> weight = value })
+        PairInput("Drug amount (mg)", mg, { value -> mg = value }, "Final volume (mL)", volume, { value -> volume = value })
+        ResultPanel(IcuPurple, "Set pump to", String.format(Locale.US, "%.1f", rate), "mL/hr")
         FormulaText("Rate = ordered dose × weight ÷ concentration")
         SafetyText("Verify the medication, concentration, target dose and patient-specific sedation/analgesia plan.")
     }
@@ -335,9 +346,9 @@ private fun ElectrolyteIcuCalculator() {
     val flow = if (h > 0) v / h else 0.0
     val delivery = if (h > 0) d / h else 0.0
     CalculatorCard("Electrolyte replacement", "Infusion volume and hourly delivery", IcuGreen) {
-        PairInput("Target dose (mEq or g)", dose, { dose = it }, "Infusion time (hr)", hours, { hours = it })
-        NumberInput("Diluent volume (mL)", volume) { volume = it }
-        ResultPanel(IcuGreen, "Target flow rate", if (flow > 0) String.format(Locale.US, "%.1f", flow) else "0.0", "mL/hr")
+        PairInput("Target dose (mEq or g)", dose, { value -> dose = value }, "Infusion time (hr)", hours, { value -> hours = value })
+        NumberInput("Diluent volume (mL)", volume, { value -> volume = value })
+        ResultPanel(IcuGreen, "Target flow rate", String.format(Locale.US, "%.1f", flow), "mL/hr")
         if (delivery > 0) SupportingValue("Dose delivery", String.format(Locale.US, "%.2f", delivery), "per hour", IcuGreen)
         FormulaText("Flow = diluent volume ÷ infusion time")
         SafetyText("Electrolyte limits and route-specific administration rates must follow the local ICU protocol.")
@@ -355,9 +366,9 @@ private fun GlycemicIcuCalculator() {
     val concentration = if (v > 0) u / v else 0.0
     val rate = if (concentration > 0 && t > 0) t / concentration else 0.0
     CalculatorCard("Glycemic control", "Insulin concentration → pump rate", IcuCyan) {
-        NumberInput("Target rate (Units/hr)", target) { target = it }
-        PairInput("Insulin (Units)", units, { units = it }, "Final volume (mL)", volume, { volume = it })
-        ResultPanel(IcuCyan, "Set syringe pump to", if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0", "mL/hr")
+        NumberInput("Target rate (Units/hr)", target, { value -> target = value })
+        PairInput("Insulin (Units)", units, { value -> units = value }, "Final volume (mL)", volume, { value -> volume = value })
+        ResultPanel(IcuCyan, "Set syringe pump to", String.format(Locale.US, "%.1f", rate), "mL/hr")
         FormulaText("Concentration = units ÷ volume; rate = target units/hr ÷ concentration")
         SafetyText("Verify the prescribed insulin preparation and glucose-management protocol before programming the pump.")
     }
@@ -373,11 +384,11 @@ private fun FluidIcuCalculator() {
     val first8 = if (total > 0) total / 16.0 else 0.0
     val next16 = if (total > 0) total / 32.0 else 0.0
     CalculatorCard("Fluid resuscitation", "Parkland calculation workspace", IcuBlue) {
-        PairInput("Weight (kg)", weight, { weight = it }, "Burn TBSA (%)", tbsa, { tbsa = it })
-        ResultPanel(IcuBlue, "Total 24-hour volume", if (total > 0) String.format(Locale.US, "%.0f", total) else "0", "mL")
+        PairInput("Weight (kg)", weight, { value -> weight = value }, "Burn TBSA (%)", tbsa, { value -> tbsa = value })
+        ResultPanel(IcuBlue, "Total 24-hour volume", String.format(Locale.US, "%.0f", total), "mL")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            SupportingValue("First 8 hr rate", if (first8 > 0) String.format(Locale.US, "%.1f", first8) else "0.0", "mL/hr", IcuBlue, Modifier.weight(1f))
-            SupportingValue("Next 16 hr rate", if (next16 > 0) String.format(Locale.US, "%.1f", next16) else "0.0", "mL/hr", IcuBlue, Modifier.weight(1f))
+            SupportingValue("First 8 hr rate", String.format(Locale.US, "%.1f", first8), "mL/hr", IcuBlue, Modifier.weight(1f))
+            SupportingValue("Next 16 hr rate", String.format(Locale.US, "%.1f", next16), "mL/hr", IcuBlue, Modifier.weight(1f))
         }
         FormulaText("Total = 4 × weight × TBSA; half in first 8 hr and half over next 16 hr")
         SafetyText("This is a formula workspace. Confirm TBSA method, elapsed time and current burn-resuscitation protocol before use.")
@@ -395,15 +406,10 @@ private fun RenalIcuCalculator() {
     val c = creatinine.toDoubleOrNull() ?: 0.0
     val clearance = if (a > 0 && w > 0 && c > 0) ((140.0 - a) * w / (72.0 * c)) * if (male) 1.0 else 0.85 else 0.0
     CalculatorCard("Renal function", "Cockcroft-Gault creatinine clearance", Color(0xFF6366F1)) {
-        PairInput("Age (yr)", age, { age = it }, "Weight (kg)", weight, { weight = it })
-        NumberInput("Creatinine (mg/dL)", creatinine) { creatinine = it }
-        Button(
-            onClick = { male = !male },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
-            shape = RoundedCornerShape(14.dp)
-        ) { Text(if (male) "SEX: MALE" else "SEX: FEMALE", fontWeight = FontWeight.Bold) }
-        ResultPanel(Color(0xFF6366F1), "Estimated clearance", if (clearance > 0) String.format(Locale.US, "%.1f", clearance) else "0.0", "mL/min")
+        PairInput("Age (yr)", age, { value -> age = value }, "Weight (kg)", weight, { value -> weight = value })
+        NumberInput("Creatinine (mg/dL)", creatinine, { value -> creatinine = value })
+        SimpleActionButton(if (male) "SEX: MALE" else "SEX: FEMALE", Color(0xFF6366F1)) { male = !male }
+        ResultPanel(Color(0xFF6366F1), "Estimated clearance", String.format(Locale.US, "%.1f", clearance), "mL/min")
         FormulaText("CrCl = (140 − age) × weight ÷ (72 × serum creatinine); × 0.85 for female")
         SafetyText("Use the result as a calculation aid and apply the prescribing guideline appropriate to the patient and indication.")
     }
@@ -420,10 +426,10 @@ private fun HemodynamicsIcuCalculator() {
     val map = (sbp + 2.0 * dbp) / 3.0
     val svr = if (co > 0) ((map - 10.0) * 80.0) / co else 0.0
     CalculatorCard("Hemodynamics", "MAP and SVR review", IcuAmber) {
-        PairInput("Systolic BP", systolic, { systolic = it }, "Diastolic BP", diastolic, { diastolic = it })
-        NumberInput("Cardiac output (L/min)", cardiacOutput) { cardiacOutput = it }
-        ResultPanel(IcuAmber, "Mean arterial pressure", if (map > 0) String.format(Locale.US, "%.0f", map) else "0", "mmHg")
-        SupportingValue("Systemic vascular resistance", if (svr > 0) String.format(Locale.US, "%.0f", svr) else "0", "dyn·s/cm⁵", IcuAmber)
+        PairInput("Systolic BP", systolic, { value -> systolic = value }, "Diastolic BP", diastolic, { value -> diastolic = value })
+        NumberInput("Cardiac output (L/min)", cardiacOutput, { value -> cardiacOutput = value })
+        ResultPanel(IcuAmber, "Mean arterial pressure", String.format(Locale.US, "%.0f", map), "mmHg")
+        SupportingValue("Systemic vascular resistance", String.format(Locale.US, "%.0f", svr), "dyn·s/cm⁵", IcuAmber)
         FormulaText("MAP = (SBP + 2 × DBP) ÷ 3; SVR = (MAP − 10) × 80 ÷ cardiac output")
     }
 }
@@ -447,14 +453,20 @@ private fun CalculatorCard(title: String, subtitle: String, accent: Color, conte
                     Text(subtitle, fontSize = 12.sp, color = IcuSlate)
                 }
             }
-            HorizontalDivider(color = Color(0xFFE7ECF3))
             content()
         }
     }
 }
 
 @Composable
-private fun PairInput(leftLabel: String, leftValue: String, onLeft: (String) -> Unit, rightLabel: String, rightValue: String, onRight: (String) -> Unit) {
+private fun PairInput(
+    leftLabel: String,
+    leftValue: String,
+    onLeft: (String) -> Unit,
+    rightLabel: String,
+    rightValue: String,
+    onRight: (String) -> Unit
+) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         NumberInput(leftLabel, leftValue, onLeft, Modifier.weight(1f))
         NumberInput(rightLabel, rightValue, onRight, Modifier.weight(1f))
@@ -462,7 +474,12 @@ private fun PairInput(leftLabel: String, leftValue: String, onLeft: (String) -> 
 }
 
 @Composable
-private fun NumberInput(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier.fillMaxWidth()) {
+private fun NumberInput(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth()
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -482,17 +499,17 @@ private fun ResultPanel(accent: Color, label: String, value: String, unit: Strin
         colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = .08f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(42.dp).background(accent.copy(alpha = .14f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = accent)
+        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(42.dp).background(accent.copy(alpha = .13f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(label.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp, color = IcuSlate)
+                Text(label.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = IcuSlate, letterSpacing = .7.sp)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(value, fontSize = 30.sp, fontWeight = FontWeight.Black, color = accent)
+                    Text(value, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, color = accent)
                     Spacer(Modifier.width(6.dp))
-                    Text(unit, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = accent.copy(alpha = .78f))
+                    Text(unit, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = accent.copy(alpha = .75f))
                 }
             }
         }
@@ -501,32 +518,42 @@ private fun ResultPanel(accent: Color, label: String, value: String, unit: Strin
 
 @Composable
 private fun SupportingValue(title: String, value: String, unit: String, accent: Color, modifier: Modifier = Modifier.fillMaxWidth()) {
-    Surface(modifier = modifier, color = Color(0xFFF8FAFC), shape = RoundedCornerShape(16.dp)) {
+    Card(modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)), elevation = CardDefaults.cardElevation(0.dp)) {
         Column(Modifier.padding(12.dp)) {
-            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black, color = IcuSlate)
+            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = IcuSlate)
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = accent)
+                Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = accent)
                 Spacer(Modifier.width(4.dp))
-                Text(unit, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = IcuSlate)
+                Text(unit, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = IcuSlate)
             }
         }
     }
 }
 
 @Composable
+private fun SimpleActionButton(text: String, accent: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxWidth().background(accent, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 private fun FormulaText(text: String) {
-    Surface(color = Color(0xFFF8FAFC), shape = RoundedCornerShape(14.dp)) {
-        Text("Formula · $text", Modifier.padding(12.dp), fontSize = 10.sp, color = IcuSlate, lineHeight = 16.sp)
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)), elevation = CardDefaults.cardElevation(0.dp)) {
+        Text("Formula · $text", Modifier.padding(14.dp), fontSize = 11.sp, color = IcuSlate, lineHeight = 17.sp)
     }
 }
 
 @Composable
 private fun SafetyText(text: String) {
-    Surface(color = Color(0xFFFFF8ED), shape = RoundedCornerShape(14.dp)) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7E8)), elevation = CardDefaults.cardElevation(0.dp)) {
+        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Default.Warning, contentDescription = null, tint = IcuAmber, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(text, fontSize = 10.sp, lineHeight = 15.sp, color = IcuSlate)
+            Text(text, fontSize = 11.sp, lineHeight = 16.sp, color = IcuInk)
         }
     }
 }
