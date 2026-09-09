@@ -1,7 +1,9 @@
 package com.pasindu.nursingotapp.ui.navigation
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +31,7 @@ import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import java.io.File
 import java.time.LocalDate
 
 @Composable
@@ -173,76 +176,96 @@ fun AppNavigation() {
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onGeneratePdfRequest = {
-                    val dbLogs = viewModel.dailyLogs.value
-                    val dbProfile = viewModel.userProfile.value
-                    if (dbProfile != null) {
-                        val configuredOtRate = viewModel.configuredOtRate.value
-                        val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 }
-                            ?: dbProfile.otRate.coerceAtLeast(0.0)
-                        val profile = UserProfile(
-                            dbProfile.fullName,
-                            dbProfile.serviceNo,
-                            dbProfile.unit,
-                            dbProfile.paySheetNo,
-                            dbProfile.grade,
-                            dbProfile.basicSalary,
-                            effectiveOtRate
-                        )
-                        val logs = dbLogs.map { entity ->
-                            DailyLog(
-                                id = entity.id,
-                                date = entity.date,
-                                isPH = entity.isPH,
-                                isDO = entity.isDO,
-                                isLeave = entity.isLeave,
-                                leaveType = entity.leaveType,
-                                reason = entity.reason,
-                                wardOverride = entity.wardOverride,
-                                normalTimeInStr = entity.normalTimeIn,
-                                normalTimeOutStr = entity.normalTimeOut,
-                                computedNormalHours = entity.normalHours,
-                                otTimeInStr = entity.otTimeIn,
-                                otTimeOutStr = entity.otTimeOut,
-                                computedOtHours = entity.otHours
-                            )
-                        }
-                        val period = Period(LocalDate.parse(start), LocalDate.parse(end))
-                        val matched2027Basic = viewModel.matchedSalary2027.value?.basicSalary2027
-                        val workingDayRate = matched2027Basic?.takeIf { it > 0.0 }
-                            ?.div(30.0)
-                            ?: profile.basicSalary.coerceAtLeast(0.0) / 30.0
-                        val calculation = WeeklyOtCalculator.calculate(
-                            logs = logs,
-                            claimStart = period.claimStart,
-                            claimEnd = period.claimEnd,
-                            otRate = profile.otRate.coerceAtLeast(0.0),
-                            dayRate = workingDayRate,
-                            doRate = workingDayRate
-                        )
-                        val summary = PeriodSummary(
-                            totalNormalHours = calculation.totalNormalHours.toFloat(),
-                            totalOTHours = calculation.totalOtHours.toFloat(),
-                            totalPHDays = calculation.phDays,
-                            totalDODays = calculation.doDays,
-                            otAmountRs = calculation.otAmountRs,
-                            phAmountRs = calculation.phAmountRs,
-                            doAmountRs = calculation.doAmountRs,
-                            totalAmountRs = calculation.totalAmountRs
-                        )
-                        PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
-                    } else null
+                    generateOtPdf(context, viewModel, start, end)
                 },
                 onSaveAndSharePdf = { file ->
-                    FileShareUtils.savePdfToDownloads(context, file)
-                    val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "application/pdf"
-                        putExtra(Intent.EXTRA_STREAM, uri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    val shareUri = FileShareUtils.savePdfToDownloads(context, file)
+                    if (shareUri != null) {
+                        FileShareUtils.showSavedToast(context)
+                        shareSavedPdf(context, shareUri)
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim PDF"))
                 }
             )
         }
+    }
+}
+
+private fun generateOtPdf(
+    context: Context,
+    viewModel: NursingViewModel,
+    start: String,
+    end: String
+): File? {
+    val dbLogs = viewModel.dailyLogs.value
+    val dbProfile = viewModel.userProfile.value
+    if (dbProfile == null) return null
+
+    val configuredOtRate = viewModel.configuredOtRate.value
+    val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 }
+        ?: dbProfile.otRate.coerceAtLeast(0.0)
+    val profile = UserProfile(
+        dbProfile.fullName,
+        dbProfile.serviceNo,
+        dbProfile.unit,
+        dbProfile.paySheetNo,
+        dbProfile.grade,
+        dbProfile.basicSalary,
+        effectiveOtRate
+    )
+
+    val logs = dbLogs.map { entity ->
+        DailyLog(
+            id = entity.id,
+            date = entity.date,
+            isPH = entity.isPH,
+            isDO = entity.isDO,
+            isLeave = entity.isLeave,
+            leaveType = entity.leaveType,
+            reason = entity.reason,
+            wardOverride = entity.wardOverride,
+            normalTimeInStr = entity.normalTimeIn,
+            normalTimeOutStr = entity.normalTimeOut,
+            computedNormalHours = entity.normalHours,
+            otTimeInStr = entity.otTimeIn,
+            otTimeOutStr = entity.otTimeOut,
+            computedOtHours = entity.otHours
+        )
+    }
+    val period = Period(LocalDate.parse(start), LocalDate.parse(end))
+    val matched2027Basic = viewModel.matchedSalary2027.value?.basicSalary2027
+    val workingDayRate = matched2027Basic?.takeIf { it > 0.0 }?.div(30.0)
+        ?: profile.basicSalary.coerceAtLeast(0.0) / 30.0
+    val calculation = WeeklyOtCalculator.calculate(
+        logs = logs,
+        claimStart = period.claimStart,
+        claimEnd = period.claimEnd,
+        otRate = profile.otRate.coerceAtLeast(0.0),
+        dayRate = workingDayRate,
+        doRate = workingDayRate
+    )
+    val summary = PeriodSummary(
+        totalNormalHours = calculation.totalNormalHours.toFloat(),
+        totalOTHours = calculation.totalOtHours.toFloat(),
+        totalPHDays = calculation.phDays,
+        totalDODays = calculation.doDays,
+        otAmountRs = calculation.otAmountRs,
+        phAmountRs = calculation.phAmountRs,
+        doAmountRs = calculation.doAmountRs,
+        totalAmountRs = calculation.totalAmountRs
+    )
+    return PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
+}
+
+private fun shareSavedPdf(context: Context, uri: Uri) {
+    try {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share OT Claim PDF"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "The PDF was saved, but sharing is unavailable.", Toast.LENGTH_LONG).show()
     }
 }
