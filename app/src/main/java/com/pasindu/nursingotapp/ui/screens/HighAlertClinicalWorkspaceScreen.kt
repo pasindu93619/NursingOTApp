@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -102,7 +102,6 @@ fun HighAlertClinicalWorkspaceScreen(
         Spacer(Modifier.height(4.dp))
         Text("Choose the calculation workflow you need at the bedside.", fontSize = 13.sp, color = HighAlertSlate)
         Spacer(Modifier.height(14.dp))
-
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(end = 10.dp)
@@ -111,7 +110,6 @@ fun HighAlertClinicalWorkspaceScreen(
                 HighAlertToolCard(tool = tool, onClick = { onOpenCalculator(tool.mode) })
             }
         }
-
         Spacer(Modifier.height(22.dp))
         BedsideCheckCard()
         Spacer(Modifier.height(16.dp))
@@ -177,21 +175,9 @@ private fun HighAlertHero() {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(
-                        "CRITICAL CALCULATIONS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White.copy(alpha = .80f),
-                        letterSpacing = 1.4.sp
-                    )
+                    Text("CRITICAL CALCULATIONS", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = .80f), letterSpacing = 1.4.sp)
                     Spacer(Modifier.height(7.dp))
-                    Text(
-                        "Slow down.\nCheck twice.",
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        lineHeight = 31.sp
-                    )
+                    Text("Slow down.\nCheck twice.", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, lineHeight = 31.sp)
                 }
                 Box(
                     modifier = Modifier
@@ -204,12 +190,7 @@ private fun HighAlertHero() {
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Text(
-                "A focused bedside workspace for high-alert medication calculations.",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = .92f),
-                lineHeight = 20.sp
-            )
+            Text("A focused bedside workspace for high-alert medication calculations.", fontSize = 14.sp, color = Color.White.copy(alpha = .92f), lineHeight = 20.sp)
             Spacer(Modifier.height(17.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HeroPill("3 tools")
@@ -257,12 +238,7 @@ private fun SafetyBanner() {
             Column {
                 Text("VERIFY BEFORE ADMINISTRATION", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = HighAlertAmber, letterSpacing = .9.sp)
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    "Use the prescribed protocol, concentration and patient-specific parameters. This calculator does not replace an order or local policy.",
-                    fontSize = 12.sp,
-                    color = Color(0xFF5C4B26),
-                    lineHeight = 18.sp
-                )
+                Text("Use the prescribed protocol, concentration and patient-specific parameters. This calculator does not replace an order or local policy.", fontSize = 12.sp, color = Color(0xFF5C4B26), lineHeight = 18.sp)
             }
         }
     }
@@ -376,12 +352,7 @@ private fun DoubleCheckFooter() {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("DOUBLE-CHECK", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                Text(
-                    "Recheck the calculation, order and pump settings before administration.",
-                    color = Color.White.copy(alpha = .82f),
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp
-                )
+                Text("Recheck the calculation, order and pump settings before administration.", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, lineHeight = 18.sp)
             }
         }
     }
@@ -398,12 +369,7 @@ private fun HighAlertInfoPanel(onDismiss: () -> Unit) {
         Column(Modifier.padding(20.dp)) {
             Text("High-alert medication", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = HighAlertBlue)
             Spacer(Modifier.height(8.dp))
-            Text(
-                "Always verify the active prescription, medication concentration, patient weight and local protocol before administration.",
-                fontSize = 13.sp,
-                color = Color(0xFF475467),
-                lineHeight = 19.sp
-            )
+            Text("Always verify the active prescription, medication concentration, patient weight and local protocol before administration.", fontSize = 13.sp, color = Color(0xFF475467), lineHeight = 19.sp)
             Spacer(Modifier.height(14.dp))
             Text("CLOSE", Modifier.clickable(onClick = onDismiss), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighAlertBlue)
         }
