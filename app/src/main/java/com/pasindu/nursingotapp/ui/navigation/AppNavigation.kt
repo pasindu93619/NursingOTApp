@@ -52,7 +52,21 @@ fun AppNavigation() {
         composable("pay_sheet_bank") { PaySheetBankScreen(onBack = { navController.popBackStack() }) }
         composable("clinical_planning") { ClinicalPlanningDashboardScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("knowledge_hub") { KnowledgeHubScreen(onNavigateBack = { navController.popBackStack() }) }
-        composable("clinical_calculators") { ClinicalToolsScreen(onNavigateToIvDrip = { navController.navigate("iv_drip") }, onNavigateToDosage = { navController.navigate("dosage_calc") }, onNavigateToWeightInfusion = { navController.navigate("weight_infusion") }, onNavigateToBsa = { navController.navigate("bsa_calc") }, onNavigateToPediatric = { navController.navigate("pediatric_rules") }, onNavigateToConversions = { navController.navigate("unit_conversions") }, onNavigateToSpecialCalcs = { navController.navigate("special_calcs") }, onNavigateToEmergency = { navController.navigate("emergency_calcs") }, onNavigateToIcu = { navController.navigate("icu_calculators") }, onNavigateBack = { navController.popBackStack() }) }
+        composable("clinical_calculators") {
+            ClinicalToolsRefinedScreen(
+                context = context,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenIvDrip = { navController.navigate("iv_drip") },
+                onOpenDosage = { navController.navigate("dosage_calc") },
+                onOpenWeightInfusion = { navController.navigate("weight_infusion") },
+                onOpenBsa = { navController.navigate("bsa_calc") },
+                onOpenPediatric = { navController.navigate("pediatric_rules") },
+                onOpenConversions = { navController.navigate("unit_conversions") },
+                onOpenSpecial = { navController.navigate("special_calcs") },
+                onOpenEmergency = { navController.navigate("emergency_calcs") },
+                onOpenIcu = { navController.navigate("icu_calculators") }
+            )
+        }
         composable("iv_drip") { Scaffold { padding -> IvDripCalculatorCard(modifier = Modifier.fillMaxSize().padding(padding)) } }
         composable("dosage_calc") { DosageCalculatorScreen() }
         composable("weight_infusion") { WeightInfusionScreen() }
@@ -61,7 +75,7 @@ fun AppNavigation() {
         composable("unit_conversions") { UnitConversionsScreen() }
         composable("special_calcs") { HighAlertClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
-        composable("icu_calculators") { IcuClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("icu_calculators") { IcuCalculatorScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("vasoactive_infusions") { VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("daily_entry/{claimPeriodId}/{start}/{end}/{wardType}", arguments = listOf(navArgument("claimPeriodId") { type = NavType.LongType }, navArgument("start") { type = NavType.StringType }, navArgument("end") { type = NavType.StringType }, navArgument("wardType") { type = NavType.StringType })) { backStackEntry ->
             val claimPeriodId = backStackEntry.arguments?.getLong("claimPeriodId") ?: 0L
