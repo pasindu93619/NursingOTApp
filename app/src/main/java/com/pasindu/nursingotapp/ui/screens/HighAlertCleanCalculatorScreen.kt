@@ -27,7 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Opacity
@@ -82,42 +81,29 @@ fun HighAlertCleanCalculatorScreen(
             .padding(horizontal = 18.dp)
     ) {
         Spacer(Modifier.height(8.dp))
-
         Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .background(Color.White, CircleShape)
-                        .clickable(onClick = onNavigateBack),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = CleanNavy)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("High-Alert Calcs", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = mode.themeColor)
-                    Text("Bedside medication workspace", fontSize = 12.sp, color = CleanSlate)
-                }
-            }
-
             Box(
-                Modifier
+                modifier = Modifier
                     .size(44.dp)
-                    .background(mode.themeColor.copy(alpha = 0.10f), CircleShape),
+                    .background(Color.White, CircleShape)
+                    .clickable(onClick = onNavigateBack),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.HelpOutline, contentDescription = "Safety guide", tint = mode.themeColor)
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = CleanNavy)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("High-Alert Calcs", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = mode.themeColor)
+                Text("Bedside medication workspace", fontSize = 12.sp, color = CleanSlate)
             }
         }
 
         Spacer(Modifier.height(14.dp))
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .background(CleanGradient, RoundedCornerShape(28.dp))
                 .padding(22.dp)
@@ -132,15 +118,10 @@ fun HighAlertCleanCalculatorScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(mode.title, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            mode.subtitle(),
-                            fontSize = 13.sp,
-                            color = Color.White.copy(alpha = 0.92f),
-                            lineHeight = 18.sp
-                        )
+                        Text(mode.subtitle(), fontSize = 13.sp, color = Color.White.copy(alpha = 0.92f), lineHeight = 18.sp)
                     }
                     Text(mode.emoji, fontSize = 30.sp)
                 }
@@ -158,14 +139,11 @@ fun HighAlertCleanCalculatorScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 2.dp)
         ) {
-            items(SpecialMode.values()) { item ->
+            items(SpecialMode.values().toList()) { item ->
                 val selected = item == mode
                 Box(
-                    Modifier
-                        .background(
-                            if (selected) item.themeColor else Color.White,
-                            RoundedCornerShape(18.dp)
-                        )
+                    modifier = Modifier
+                        .background(if (selected) item.themeColor else Color.White, RoundedCornerShape(18.dp))
                         .clickable { mode = item }
                         .padding(horizontal = 15.dp, vertical = 10.dp)
                 ) {
@@ -255,6 +233,7 @@ private fun SafetyBanner(mode: SpecialMode) {
         SpecialMode.HEPARIN -> "Verify weight, prescribed units/hr, concentration and pump settings against the active order."
         SpecialMode.PCA -> "Lockout-derived capacity is mathematical only. Verify basal rate, loading dose and all programmed limits."
     }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -276,23 +255,24 @@ private fun InsulinCleanCard() {
     var dose by remember { mutableStateOf("") }
     var concentration by remember { mutableStateOf("") }
 
-    val scaleUnits = remember(bg) {
-        HighAlertCalculatorMath.insulinSlidingScaleUnits(bg)
-    }
+    val scaleUnits = remember(bg) { HighAlertCalculatorMath.insulinSlidingScaleUnits(bg) }
     val rate = remember(weight, dose, concentration) {
         HighAlertCalculatorMath.insulinIvRate(weight, dose, concentration)
     }
 
     CalculatorCard("Insulin dosing", "Use only the prescribed protocol and concentration", CleanBlue) {
         SectionLabel("GLUCOSE CHECK")
-        NumericField("Blood glucose (mg/dL)", bg) { bg = it }
+        NumericField("Blood glucose (mg/dL)", bg, { value -> bg = value })
         if (scaleUnits > 0) {
             ResultCard(CleanBlue, Icons.Default.Medication, "Protocol input result", scaleUnits.toString(), "units")
         }
         HorizontalDivider(color = Color(0xFFE5E7EB))
         SectionLabel("CONTINUOUS IV INFUSION")
-        PairFields("Weight (kg)", weight, { weight = it }, "Order (U/kg/hr)", dose, { dose = it })
-        NumericField("Concentration (U/mL)", concentration) { concentration = it }
+        PairFields(
+            "Weight (kg)", weight, { value -> weight = value },
+            "Order (U/kg/hr)", dose, { value -> dose = value }
+        )
+        NumericField("Concentration (U/mL)", concentration, { value -> concentration = value })
         if (rate > 0.0) {
             ResultCard(CleanBlue, Icons.Default.Speed, "IV infusion rate", "%.1f".format(rate), "mL/hr")
         }
@@ -307,22 +287,26 @@ private fun HeparinCleanCard() {
     var bagUnits by remember { mutableStateOf("") }
     var bagMl by remember { mutableStateOf("") }
 
-    val unitsHr = remember(weight, dose) {
-        HighAlertCalculatorMath.heparinUnitsPerHour(weight, dose)
-    }
+    val unitsHr = remember(weight, dose) { HighAlertCalculatorMath.heparinUnitsPerHour(weight, dose) }
     val rate = remember(unitsHr, bagUnits, bagMl) {
         HighAlertCalculatorMath.heparinPumpRate(unitsHr, bagUnits, bagMl)
     }
 
     CalculatorCard("Heparin pump", "Weight-based order to pump setup", CleanRed) {
         SectionLabel("STEP 1 · PATIENT NEED")
-        PairFields("Weight (kg)", weight, { weight = it }, "Order (U/kg/hr)", dose, { dose = it })
+        PairFields(
+            "Weight (kg)", weight, { value -> weight = value },
+            "Order (U/kg/hr)", dose, { value -> dose = value }
+        )
         if (unitsHr > 0.0) {
             ResultCard(CleanRed, Icons.Default.Speed, "Required dose", "%.0f".format(unitsHr), "units/hr")
         }
         HorizontalDivider(color = Color(0xFFE5E7EB))
         SectionLabel("STEP 2 · IV PUMP SETUP")
-        PairFields("Bag units", bagUnits, { bagUnits = it }, "Bag volume (mL)", bagMl, { bagMl = it })
+        PairFields(
+            "Bag units", bagUnits, { value -> bagUnits = value },
+            "Bag volume (mL)", bagMl, { value -> bagMl = value }
+        )
         if (rate > 0.0) {
             ResultCard(CleanRed, Icons.Default.Opacity, "Heparin pump rate", "%.1f".format(rate), "mL/hr")
         }
@@ -344,8 +328,8 @@ private fun PcaCleanCard() {
 
     CalculatorCard("PCA lockout review", "Check programmed safeguards against the active order", CleanPcaPurple) {
         SectionLabel("PROGRAMMED VALUES")
-        NumericField("Bolus dose", bolus) { bolus = it }
-        NumericField("Lockout interval (min)", lockout) { lockout = it }
+        NumericField("Bolus dose", bolus, { value -> bolus = value })
+        NumericField("Lockout interval (min)", lockout, { value -> lockout = value })
         if (limit > 0.0) {
             ResultCard(
                 CleanPcaPurple,
@@ -405,9 +389,10 @@ private fun CalculatorCard(
             Spacer(Modifier.height(16.dp))
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                content = content
-            )
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                content()
+            }
         }
     }
 }
@@ -448,8 +433,8 @@ private fun PairFields(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        NumericField(left, leftValue, onLeft, Modifier.weight(1f))
-        NumericField(right, rightValue, onRight, Modifier.weight(1f))
+        NumericField(left, leftValue, { value -> onLeft(value) }, Modifier.weight(1f))
+        NumericField(right, rightValue, { value -> onRight(value) }, Modifier.weight(1f))
     }
 }
 
