@@ -264,6 +264,46 @@ private fun HeroStat(title: String, value: String, modifier: Modifier) {
 }
 
 @Composable
+private fun RefinedToolCard(
+    tool: ToolItem,
+    expanded: Boolean,
+    onOpen: () -> Unit,
+    onToggle: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (expanded) 4.dp else 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = tool.accent.copy(alpha = .10f), shape = RoundedCornerShape(15.dp)) {
+                    Text(tool.icon, modifier = Modifier.padding(11.dp), fontSize = 22.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(tool.title, color = ClinicalToolDesignTokens.ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                    Text(tool.subtitle, color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                }
+                Surface(color = tool.accent, shape = CircleShape, modifier = Modifier.clickable(onClick = onOpen)) {
+                    Text("OPEN", modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            if (expanded) {
+                Surface(color = tool.accent.copy(alpha = .07f), shape = RoundedCornerShape(15.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocalHospital, contentDescription = null, tint = tool.accent, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Verified deterministic engine. Review indication, units, patient data and local protocol before use.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ClinicalAiAssistantCard(
     query: String,
     focused: Boolean,
