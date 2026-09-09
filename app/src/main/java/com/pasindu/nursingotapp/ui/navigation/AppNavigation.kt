@@ -51,7 +51,7 @@ fun AppNavigation() {
         composable("advanced_finance_hub") { val advancedFinanceViewModel: AdvancedFinanceViewModel = hiltViewModel(); AdvancedFinanceHubScreen(viewModel = advancedFinanceViewModel, onNavigate = { route -> navController.navigate(route) }, onBack = { navController.popBackStack() }) }
         composable("pay_sheet_bank") { PaySheetBankScreen(onBack = { navController.popBackStack() }) }
         composable("clinical_planning") { ClinicalPlanningDashboardScreen(onNavigateBack = { navController.popBackStack() }) }
-        composable("knowledge_hub") { KnowledgeHubScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("knowledge_hub") { KnowledgeHubModernScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("clinical_calculators") {
             ClinicalToolsRefinedScreen(
                 context = context,
