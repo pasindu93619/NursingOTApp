@@ -61,7 +61,7 @@ fun AppNavigation() {
         composable("unit_conversions") { UnitConversionsScreen() }
         composable("special_calcs") { HighAlertClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
-        composable("icu_calculators") { IcuClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable("icu_calculators") { IcuCalculatorScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("vasoactive_infusions") { VasoactiveInfusionsScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("daily_entry/{claimPeriodId}/{start}/{end}/{wardType}", arguments = listOf(navArgument("claimPeriodId") { type = NavType.LongType }, navArgument("start") { type = NavType.StringType }, navArgument("end") { type = NavType.StringType }, navArgument("wardType") { type = NavType.StringType })) { backStackEntry ->
             val claimPeriodId = backStackEntry.arguments?.getLong("claimPeriodId") ?: 0L
