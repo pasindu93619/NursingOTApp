@@ -24,29 +24,29 @@ object ClinicalAiRouter {
         val text = query.trim().lowercase()
         if (text.isBlank()) return null
 
-        val tokens: List<String> = Regex("[^\\p{L}\\p{N}/+]+")
-            .split(text)
+        val tokens: List<String> = Regex("[^\\p{L}\\p{N}/+]+").split(text)
             .filter { token: String -> token.isNotBlank() }
 
-        val ranked: List<Pair<Route, Int>> = routes
-            .map { route: Route ->
-                val score: Int = tokens.sumOf { token: String ->
-                    when {
-                        route.id == "iv" && token == "iv" -> 8
-                        route.keywords.any { keyword: String -> keyword.equals(token, ignoreCase = true) } -> 6
-                        route.keywords.any { keyword: String -> keyword.contains(token, ignoreCase = true) } -> 3
-                        else -> 0
-                    }
+        var bestRoute: Route? = null
+        var bestScore = 0
+
+        for (route: Route in routes) {
+            var routeScore = 0
+            for (token: String in tokens) {
+                routeScore += when {
+                    route.id == "iv" && token == "iv" -> 8
+                    route.keywords.any { keyword: String -> keyword.equals(token, ignoreCase = true) } -> 6
+                    route.keywords.any { keyword: String -> keyword.contains(token, ignoreCase = true) } -> 3
+                    else -> 0
                 }
-                route to score
             }
-            .sortedByDescending { pair: Pair<Route, Int> -> pair.second }
+            if (routeScore > bestScore) {
+                bestScore = routeScore
+                bestRoute = route
+            }
+        }
 
-        val best: Pair<Route, Int> = ranked.firstOrNull() ?: return null
-        val bestRoute: Route = best.first
-        val bestScore: Int = best.second
-
-        if (bestScore <= 0) {
+        if (bestScore <= 0 || bestRoute == null) {
             return ClinicalAiSuggestion(
                 title = "No verified in-app match",
                 message = "I could not map this request to a built-in clinical engine. Use a verified clinical reference rather than inventing a calculation.",
@@ -57,7 +57,10 @@ object ClinicalAiRouter {
         return ClinicalAiSuggestion(
             title = "Suggested tool: ${bestRoute.title}",
             message = "AI routing only. Open the deterministic calculator and verify the indication, units, patient data, preparation, and local protocol.",
-            severity = if (bestRoute.id == "emergency" || bestRoute.id == "high" || bestRoute.id == "icu") AiSeverity.HIGH_ALERT else AiSeverity.INFO,
+            severity = when (bestRoute.id) {
+                "emergency", "high", "icu" -> AiSeverity.HIGH_ALERT
+                else -> AiSeverity.INFO
+            },
             actions = listOf(bestRoute.id)
         )
     }
