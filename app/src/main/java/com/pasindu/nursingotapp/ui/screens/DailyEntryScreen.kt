@@ -178,7 +178,338 @@ fun DailyEntryScreen(
                         Surface(Modifier.weight(1f), shape = RoundedCornerShape(18.dp), color = DailyBlueSoft) { Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) { Text("PERIOD PROGRESS", color = DailyCyan, fontSize = 8.sp, fontWeight = FontWeight.Black); Text("$completedCount / ${allDates.size} days", color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) } }
                         Surface(shape = RoundedCornerShape(18.dp), color = DailyMintSoft) { Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.End) { Text("TOTAL", color = Color(0xFF0E9F73), fontSize = 8.sp, fontWeight = FontWeight.Black); Text(String.format(Locale.US, "%.1fh • %.1fh OT", animatedNormalHrs, animatedOtHrs), color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) } }
                     }
-                    Button(enabled = !isSavingBulk && (stagedEdits.isNotEmpty() || isAutoFillMode), onClick = { isSavingBulk = true; Toast.makeText(context, "Applying changes... please wait", Toast.LENGTH_SHORT).show(); coroutineScope.launch { withContext(Dispatchers.IO) { val daysToProcess = if (isAutoFillMode) allDates else stagedEdits.keys.toList(); for (date in daysToProcess) { val edit = stagedEdits[date] ?: StagedEdit(); val existing = allSavedEntries.find { it.date == date }; val eId = existing?.id ?: 0L; val isWknd = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY; var isL = existing?.isLeave ?: false; var isD = existing?.isDO ?: false; var isP = existing?.isPH ?: false; var lType = existing?.leaveType; var nIn = existing?.normalTimeIn ?: ""; var nOut = existing?.normalTimeOut ?: ""; var nHrs = existing?.normalHours ?: 0f; var oIn = existing?.otTimeIn ?: ""; var oOut = existing?.otTimeOut ?: ""; var oHrs = existing?.otHours ?: 0f; fun getLeaveHrs(): Float = if (wardType == "Normal") 6f else if (isWknd) 6f else 8f; val isShortDay = isWknd || edit.leave == "PH" || edit.leave == "Work PH" || (edit.leave == null && isP); when (edit.shift) { "Morn (7-13)" -> { nIn = "07.00"; nOut = "13.00"; nHrs = 6f; isL = false; lType = null }; "Eve (13-19)" -> { nIn = "13.00"; nOut = "19.00"; nHrs = 6f; isL = false; lType = null }; "Night (19-7)" -> { nIn = "19.00"; nOut = "07.00"; nHrs = 12f; isL = false; lType = null }; "Day (7-16)" -> { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }; "Custom Shift" -> { nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }; "Clear Shift" -> { nIn = ""; nOut = ""; nHrs = 0f; isL = false; lType = null }; null -> if (isAutoFillMode && nIn.isEmpty() && edit.leave == null && !isL) { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null } }; when (edit.leave) { "CL", "VL", "sL", "DL" -> { isL = true; lType = edit.leave.replace("sL", "Special Leave"); nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false; oIn = ""; oOut = ""; oHrs = 0f }; "DO" -> { isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }; "PH" -> { isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f }; "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }; "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }; "CL/2" -> { isL = false; lType = "Half Casual Leave"; nIn = customIn; nOut = customOut; nHrs = getLeaveHrs() }; "SL (Short)" -> { isL = false; lType = "Short Leave"; nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f }; "Work DO" -> { isD = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = if (isWknd) "13.00" else "16.00"; nHrs = if (isWknd) 6f else 9f } }; "Work PH" -> { isP = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = "13.00"; nHrs = 6f } }; "Clear Leave", "Clear Exceptions" -> { isD = false; isP = false; isL = false; lType = null }; null -> Unit }; when (edit.ot) { "Morn OT" -> { oIn = "07.00"; oOut = "13.00"; oHrs = 6f }; "Eve OT" -> { oIn = "13.00"; oOut = "19.00"; oHrs = 6f }; "Night OT" -> { oIn = "19.00"; oOut = "07.00"; oHrs = 12f }; "Custom OT" -> { oIn = customIn; oOut = customOut; oHrs = customHrs.toFloatOrNull() ?: 0f }; "Clear OT" -> { oIn = ""; oOut = ""; oHrs = 0f }; null -> Unit }; if (edit.shift != null && edit.leave == null) { if (lType == "DO") { isL = false; isD = true }; if (lType == "PH") { isL = false; isP = true } }; viewModel.saveDailyEntry(id = eId, claimPeriodId = claimPeriodId, date = date, isPH = isP, isDO = isD, isLeave = isL, leaveType = lType, normalTimeIn = nIn, normalTimeOut = nOut, normalHours = nHrs, otTimeIn = oIn, otTimeOut = oOut, otHours = oHrs, wardOverride = "", reason = "Need for service") } }; delay(300); viewModel.loadEntriesForClaim(claimPeriodId); isSavingBulk = false; isAutoFillMode = false; stagedEdits.clear(); Toast.makeText(context, "Saved Successfully!", Toast.LENGTH_SHORT).show() } }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)) { Icon(if (isSavingBulk) Icons.Default.MoreHoriz else Icons.Default.Save, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(if (isSavingBulk) "Saving..." else if (isAutoFillMode) "Auto-Fill & Save" else "Save selected days", fontWeight = FontWeight.ExtraBold) }
+                    Button(
+                        enabled = !isSavingBulk && (stagedEdits.isNotEmpty() || isAutoFillMode),
+                        onClick = {
+                            isSavingBulk = true
+                            Toast.makeText(
+                                context,
+                                "Applying changes... please wait",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            coroutineScope.launch {
+                                withContext(Dispatchers.IO) {
+                                    val daysToProcess =
+                                        if (isAutoFillMode) allDates else stagedEdits.keys.toList()
+
+                                    for (date in daysToProcess) {
+                                        val edit = stagedEdits[date] ?: StagedEdit()
+                                        val existing = allSavedEntries.find { it.date == date }
+                                        val eId = existing?.id ?: 0L
+
+                                        val isWknd =
+                                            date.dayOfWeek == DayOfWeek.SATURDAY ||
+                                                    date.dayOfWeek == DayOfWeek.SUNDAY
+
+                                        var isL = existing?.isLeave ?: false
+                                        var isD = existing?.isDO ?: false
+                                        var isP = existing?.isPH ?: false
+                                        var lType = existing?.leaveType
+
+                                        var nIn = existing?.normalTimeIn ?: ""
+                                        var nOut = existing?.normalTimeOut ?: ""
+                                        var nHrs = existing?.normalHours ?: 0f
+
+                                        var oIn = existing?.otTimeIn ?: ""
+                                        var oOut = existing?.otTimeOut ?: ""
+                                        var oHrs = existing?.otHours ?: 0f
+
+                                        fun getLeaveHrs(): Float =
+                                            if (wardType == "Normal") {
+                                                6f
+                                            } else if (isWknd) {
+                                                6f
+                                            } else {
+                                                8f
+                                            }
+
+                                        val isShortDay =
+                                            isWknd ||
+                                                    edit.leave == "PH" ||
+                                                    edit.leave == "Work PH" ||
+                                                    (edit.leave == null && isP)
+
+                                        when (edit.shift) {
+                                            "Morn (7-13)" -> {
+                                                nIn = "07.00"
+                                                nOut = "13.00"
+                                                nHrs = 6f
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            "Eve (13-19)" -> {
+                                                nIn = "13.00"
+                                                nOut = "19.00"
+                                                nHrs = 6f
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            "Night (19-7)" -> {
+                                                nIn = "19.00"
+                                                nOut = "07.00"
+                                                nHrs = 12f
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            "Day (7-16)" -> {
+                                                nIn = "07.00"
+                                                nOut = if (isShortDay) "13.00" else "16.00"
+                                                nHrs = if (isShortDay) 6f else 9f
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            "Custom Shift" -> {
+                                                nIn = customIn
+                                                nOut = customOut
+                                                nHrs = customHrs.toFloatOrNull() ?: 0f
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            "Clear Shift" -> {
+                                                nIn = ""
+                                                nOut = ""
+                                                nHrs = 0f
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            null -> {
+                                                if (
+                                                    isAutoFillMode &&
+                                                    nIn.isEmpty() &&
+                                                    edit.leave == null &&
+                                                    !isL
+                                                ) {
+                                                    nIn = "07.00"
+                                                    nOut = if (isShortDay) "13.00" else "16.00"
+                                                    nHrs = if (isShortDay) 6f else 9f
+                                                    isL = false
+                                                    lType = null
+                                                }
+                                            }
+                                        }
+
+                                        when (edit.leave) {
+                                            "CL", "VL", "sL", "DL" -> {
+                                                isL = true
+                                                lType = edit.leave.replace("sL", "Special Leave")
+                                                nIn = ""
+                                                nOut = ""
+                                                nHrs = getLeaveHrs()
+                                                isD = false
+                                                isP = false
+                                                oIn = ""
+                                                oOut = ""
+                                                oHrs = 0f
+                                            }
+
+                                            "DO" -> {
+                                                isL = true
+                                                lType = "DO"
+                                                isD = true
+                                                isP = false
+                                                nIn = ""
+                                                nOut = ""
+                                                nHrs = 0f
+                                                oIn = ""
+                                                oOut = ""
+                                                oHrs = 0f
+                                            }
+
+                                            "PH" -> {
+                                                isL = true
+                                                lType = "PH"
+                                                isP = true
+                                                isD = false
+                                                nIn = ""
+                                                nOut = ""
+                                                nHrs = getLeaveHrs()
+                                                oIn = ""
+                                                oOut = ""
+                                                oHrs = 0f
+                                            }
+
+                                            "SD" -> {
+                                                isL = true
+                                                lType = "SD"
+                                                isD = false
+                                                isP = false
+                                                nIn = ""
+                                                nOut = ""
+                                                nHrs = 0f
+                                            }
+
+                                            "AB" -> {
+                                                isL = true
+                                                lType = "Absent"
+                                                nIn = ""
+                                                nOut = ""
+                                                nHrs = 0f
+                                                oIn = ""
+                                                oOut = ""
+                                                oHrs = 0f
+                                            }
+
+                                            "CL/2" -> {
+                                                isL = false
+                                                lType = "Half Casual Leave"
+                                                nIn = customIn
+                                                nOut = customOut
+                                                nHrs = getLeaveHrs()
+                                            }
+
+                                            "SL (Short)" -> {
+                                                isL = false
+                                                lType = "Short Leave"
+                                                nIn = customIn
+                                                nOut = customOut
+                                                nHrs = customHrs.toFloatOrNull() ?: 0f
+                                            }
+
+                                            "Work DO" -> {
+                                                isD = true
+                                                isL = false
+                                                lType = null
+
+                                                if (wardType == "Special" && nIn.isEmpty()) {
+                                                    nIn = "07.00"
+                                                    nOut = if (isWknd) "13.00" else "16.00"
+                                                    nHrs = if (isWknd) 6f else 9f
+                                                }
+                                            }
+
+                                            "Work PH" -> {
+                                                isP = true
+                                                isL = false
+                                                lType = null
+
+                                                if (wardType == "Special" && nIn.isEmpty()) {
+                                                    nIn = "07.00"
+                                                    nOut = "13.00"
+                                                    nHrs = 6f
+                                                }
+                                            }
+
+                                            "Clear Leave", "Clear Exceptions" -> {
+                                                isD = false
+                                                isP = false
+                                                isL = false
+                                                lType = null
+                                            }
+
+                                            null -> Unit
+                                        }
+
+                                        when (edit.ot) {
+                                            "Morn OT" -> {
+                                                oIn = "07.00"
+                                                oOut = "13.00"
+                                                oHrs = 6f
+                                            }
+
+                                            "Eve OT" -> {
+                                                oIn = "13.00"
+                                                oOut = "19.00"
+                                                oHrs = 6f
+                                            }
+
+                                            "Night OT" -> {
+                                                oIn = "19.00"
+                                                oOut = "07.00"
+                                                oHrs = 12f
+                                            }
+
+                                            "Custom OT" -> {
+                                                oIn = customIn
+                                                oOut = customOut
+                                                oHrs = customHrs.toFloatOrNull() ?: 0f
+                                            }
+
+                                            "Clear OT" -> {
+                                                oIn = ""
+                                                oOut = ""
+                                                oHrs = 0f
+                                            }
+
+                                            null -> Unit
+                                        }
+
+                                        if (edit.shift != null && edit.leave == null) {
+                                            if (lType == "DO") {
+                                                isL = false
+                                                isD = true
+                                            }
+
+                                            if (lType == "PH") {
+                                                isL = false
+                                                isP = true
+                                            }
+                                        }
+
+                                        viewModel.saveDailyEntry(
+                                            id = eId,
+                                            claimPeriodId = claimPeriodId,
+                                            date = date,
+                                            isPH = isP,
+                                            isDO = isD,
+                                            isLeave = isL,
+                                            leaveType = lType,
+                                            normalTimeIn = nIn,
+                                            normalTimeOut = nOut,
+                                            normalHours = nHrs,
+                                            otTimeIn = oIn,
+                                            otTimeOut = oOut,
+                                            otHours = oHrs,
+                                            wardOverride = "",
+                                            reason = "Need for service"
+                                        )
+                                    }
+                                }
+
+                                delay(300)
+                                viewModel.loadEntriesForClaim(claimPeriodId)
+                                isSavingBulk = false
+                                isAutoFillMode = false
+                                stagedEdits.clear()
+
+                                Toast.makeText(
+                                    context,
+                                    "Saved Successfully!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(17.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DailyCyan
+                        )
+                    ) {
+                        Icon(
+                            if (isSavingBulk) Icons.Default.MoreHoriz else Icons.Default.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+
+                        Spacer(Modifier.width(6.dp))
+
+                        Text(
+                            when {
+                                isSavingBulk -> "Saving..."
+                                isAutoFillMode -> "Auto-Fill & Save"
+                                else -> "Save selected days"
+                            },
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
             }
         }
