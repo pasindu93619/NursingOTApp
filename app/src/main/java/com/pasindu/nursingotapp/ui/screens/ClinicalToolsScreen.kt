@@ -3,15 +3,31 @@ package com.pasindu.nursingotapp.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,37 +39,50 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Emergency
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.TravelExplore
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -64,22 +93,23 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
-// --- PREMIUM LIGHT THEME PALETTE ---
-private val ToolsBgWhite = Color(0xFFF8FAFC)
-private val ToolsSlateDark = Color(0xFF0F172A)
-private val ToolsSlateLight = Color(0xFF64748B)
-private val TechBluePrimary = Color(0xFF2979FF)
-private val AiPurple = Color(0xFFD500F9)
-private val AiCyan = Color(0xFF00E5FF)
+private val ClinicalBg = Color(0xFFF8FAFC)
+private val ClinicalInk = Color(0xFF12204A)
+private val ClinicalSecondary = Color(0xFF5B6B82)
+private val ClinicalBlue = Color(0xFF1769E8)
+private val ClinicalCyan = Color(0xFF14A6E0)
+private val ClinicalPurple = Color(0xFF7257E8)
+private val ClinicalMint = Color(0xFFEAFBF5)
+private val ClinicalBlueSoft = Color(0xFFEAF6FF)
+private val ClinicalPurpleSoft = Color(0xFFF3EEFF)
+private val ClinicalAmberSoft = Color(0xFFFFF6E7)
+private val ClinicalAmber = Color(0xFFF59E0B)
+private val ClinicalRedSoft = Color(0xFFFFF0F1)
+private val ClinicalRed = Color(0xFFE5484D)
 
-// --- DATA MODELS ---
-data class ClinicalToolModule(
+private data class ClinicalToolModule(
     val id: String,
     val title: String,
     val subtitle: String,
@@ -95,9 +125,8 @@ data class ClinicalToolModule(
     val limitations: String
 )
 
-data class WebCalculatorSource(val name: String, val subtitle: String, val url: String, val badgeColor: Color)
+private data class WebCalculatorSource(val name: String, val subtitle: String, val url: String, val badgeColor: Color)
 
-// --- SHARED PREFERENCES HELPER FOR AI HISTORY ---
 private const val PREFS_NAME = "ai_search_prefs"
 private const val KEY_HISTORY = "search_history"
 
@@ -134,50 +163,37 @@ fun ClinicalToolsScreen(
     var historyItems by remember { mutableStateOf(getSearchHistory(context)) }
     var evaluationTrigger by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) { delay(100); isVisible = true }
+    LaunchedEffect(Unit) { delay(120); isVisible = true }
 
-    // --- DEEP APP AWARENESS REPOSITORY ---
     val allTools = remember {
         listOf(
-            ClinicalToolModule("emergency", "Crash Cart Engine", "Cardiac Arrest, Anaphylaxis, RSI", "• Instant Parallel Processing\n• Weight-Based Resuscitation\n• Code Red Animated ECG", "🚨", Color(0xFFFF1744), Color(0xFFD50000), 50, { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onNavigateToEmergency() }, listOf("crash", "cart", "cardiac", "arrest", "anaphylaxis", "rsi", "emergency", "resuscitation", "cpr", "adrenaline", "epinephrine", "shock", "defib", "vtach", "vfib", "asystole"), listOf("හෘදයාබාධ", "ඇඩ්‍රිනලින්", "හදිසි", "ශොක්", "ඇනෆිලැක්සිස්", "cpr", "arrest", "hadisi"), "ACLS Protocols, Rapid Push Adrenaline/Amiodarone derivations.", "Cannot calculate custom continuous infusions outside of the crash cart rapid push protocol."),
-            ClinicalToolModule("icu", "ICU Critical Care", "Vasoactive, Sedation & Fluids", "• Inotrope Dose-Rate (μg/kg/min)\n• Electrolyte Repletion (K+, Mg++)\n• TPN & Pharmacokinetics", "🫀", Color(0xFF2979FF), Color(0xFF0D47A1), 100, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToIcu() }, listOf("icu", "critical", "vasoactive", "sedation", "fluid", "infusion", "electrolyte", "potassium", "kcl", "noradrenaline", "norepinephrine", "dopamine", "dobutamine", "inotrope", "magnesium"), listOf("අයිසීයූ", "පොටෑසියම්", "නොරැඩ්‍රිනලින්", "ඩොපමයින්", "ඉලෙක්ට්‍රොලයිට්"), "Inotropes, Syringe Pumps, Analgesia, Sedation & Electrolyte Balancing.", "Does not calculate anion gap, ABG interpretation, or MAP calculations."),
-            ClinicalToolModule("dosage", "Advanced Dosage", "5-in-1 Math Engine", "• Standard Liquid & % Solutions\n• Dilutions (C₁V₁=C₂V₂)\n• Powder Reconstitution", "💊", Color(0xFFD500F9), Color(0xFF4A148C), 150, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToDosage() }, listOf("dosage", "math", "dilution", "reconstitution", "powder", "dextrose", "concentration", "liquid", "c1v1", "c2v2", "ampoule", "vial", "diluent", "antibiotic", "ceftriaxone"), listOf("ඩෙක්ස්ට්‍රෝස්", "දියාරු", "කුඩු", "මාත්‍රාව", "බෙහෙත්", "ප්‍රතිශතය", "ද්‍රාවණය"), "Dextrose Dilutions (Active + Zero % Diluent), Reconstitution & Liquid Dosage (D/H*Q).", "CANNOT mix two active percentages together (e.g. 10% + 50%). Cannot do Alligation Math."),
-            ClinicalToolModule("iv_drip", "IV Drip Sync", "Drops Per Minute & AR", "• Macro (10/15/20) & Micro (60) Sets\n• Live AR Hologram Synchronization\n• 15-Second Clinical Tap Verification", "💧", Color(0xFF00E5FF), Color(0xFF006064), 200, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToIvDrip() }, listOf("iv", "drip", "sync", "drops", "minute", "macro", "micro", "flow rate", "drop factor", "gtt", "saline", "normal saline", "dpm", "chamber", "gravity set"), listOf("ඩ්‍රිප්", "බිංදු", "පැයට බිංදු", "සේලයින්", "වතුර"), "Gravity Drip Calibration (Drops/min) & Visual Holographic Sync.", "Does not control physical electronic hardware syringe pumps via Bluetooth."),
-            ClinicalToolModule("special_calcs", "High-Alert Specials", "Insulin, Heparin, PCA", "• Sliding Scale & IV Insulin\n• Heparin Weight-Based Protocols\n• Opioid PCA Lockout Limits", "🩸", Color(0xFFE53935), Color(0xFFB71C1C), 250, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToSpecialCalcs() }, listOf("high alert", "insulin", "heparin", "pca", "opioid", "sliding scale", "actrapid", "blood sugar", "glucose", "cbg", "dka", "aptt"), listOf("ඉන්සියුලින්", "හෙපරින්", "සීනි", "ග්ලූකෝස්", "රුධිර සීනි"), "Continuous IV Insulin Protocols & Heparin Nomograms.", "Does not adjust algorithm dynamically for acute renal impairment."),
-            ClinicalToolModule("weight_infusion", "Weight & Infusions", "mg/kg & mcg/kg/min", "• Pediatric Simple Dosing\n• Complex Continuous Infusion Rates\n• Built-in Safety & Weight Alerts", "⚖️", Color(0xFF00BFA5), Color(0xFF004D40), 300, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToWeightInfusion() }, listOf("weight", "infusion", "mg/kg", "mcg/kg/min", "continuous", "rate", "body weight", "milligrams per kilogram"), listOf("බර", "බර අනුව", "ශරීර බර", "කිලෝග්‍රෑම්", "bara", "weight"), "Weight-Based Continuous Drug Infusion Rates (mcg/kg/min & mg/kg/hr).", "Does not substitute clinical judgement for absolute maximum ceiling doses."),
-            ClinicalToolModule("conversions", "Unit Conversions", "Mass, Volume & mEq", "• Metric & Household Equivalents\n• Electrolyte mEq to mg Engine\n• Instant Bi-Directional Translation", "🔄", Color(0xFF651FFF), Color(0xFF311B92), 350, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToConversions() }, listOf("unit", "conversion", "convert", "mass", "volume", "meq", "mg", "mcg", "grams", "micrograms", "milligrams", "liters"), listOf("හුවමාරුව", "ඒකක", "මිලිග්‍රෑම්", "මයික්‍රෝග්‍රෑම්", "පරිවර්තනය"), "Bi-Directional Metric, Mass, Volume & Electrolyte (mEq to mg) Conversions.", "Temperature or complex radiological unit conversions not included."),
-            ClinicalToolModule("bsa", "BSA & Chemo", "Mosteller BSA (m²)", "• Chemotherapy Surface Area Dosing\n• High-Risk Pediatric Calculations\n• Height/Weight Nomogram Engine", "📏", Color(0xFFF50057), Color(0xFF880E4F), 400, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToBsa() }, listOf("bsa", "chemo", "chemotherapy", "mosteller", "surface area", "body surface area", "m2", "height", "height weight", "oncology"), listOf("පිළිකා", "කීමෝ", "ශරීර වර්ගඵලය", "උස බර", "chemo", "cancer", "bsa"), "Oncology Body Surface Area (BSA) using Mosteller & Chemotherapy Dosing.", "Does not calculate Cockcroft-Gault Creatinine Clearance for chemo limits."),
-            ClinicalToolModule("pediatric", "Legacy Paediatric", "Clark, Young & Fried", "• Age & Weight Approximation Rules\n• Fraction of Adult Dose Calculation\n• Built-in Legacy Safety Limits", "🧒", Color(0xFFFF9100), Color(0xFFE65100), 450, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToPediatric() }, listOf("pediatric", "paediatric", "clark", "young", "fried", "child", "age", "infant", "baby", "child dose", "fraction of adult dose"), listOf("ළමා", "ළමුන්", "බබා", "ළමා මාත්‍රාව", "වයස", "බබාගේ බර", "lamaa"), "Pediatric Rule Approximations (Clark, Young, Fried).", "Modern standard recommends exact mg/kg dosing, not these historical age formulas.")
+            ClinicalToolModule("emergency", "Crash Cart Engine", "Cardiac arrest • Anaphylaxis • RSI", "Rapid emergency calculations with protocol-focused support.", "🚨", ClinicalRed, Color(0xFFC62828), 40, { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onNavigateToEmergency() }, listOf("crash", "cart", "cardiac", "arrest", "anaphylaxis", "rsi", "emergency", "resuscitation", "cpr", "adrenaline", "epinephrine", "shock", "defib", "vtach", "vfib", "asystole"), listOf("හෘදයාබාධ", "ඇඩ්‍රිනලින්", "හදිසි", "ශොක්", "ඇනෆිලැක්සිස්", "cpr", "arrest", "hadisi"), "ACLS-oriented rapid calculations and resuscitation support.", "Does not replace local emergency protocols or clinician judgement."),
+            ClinicalToolModule("icu", "ICU Critical Care", "Vasoactive • Sedation • Fluids", "Weight-based critical-care calculations in one focused workspace.", "🫀", ClinicalBlue, Color(0xFF0D47A1), 80, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToIcu() }, listOf("icu", "critical", "vasoactive", "sedation", "fluid", "infusion", "electrolyte", "potassium", "kcl", "noradrenaline", "norepinephrine", "dopamine", "dobutamine", "inotrope", "magnesium"), listOf("අයිසීයූ", "පොටෑසියම්", "නොරැඩ්‍රිනලින්", "ඩොපමීන්", "ඉලෙක්ට්‍රොලයිට්"), "Inotropes, syringe pumps, analgesia, sedation and electrolyte support.", "Does not calculate anion gap, ABG interpretation, or MAP."),
+            ClinicalToolModule("dosage", "Advanced Dosage", "Liquid • Dilution • Reconstitution", "Five-in-one medication-math workspace for common bedside calculations.", "💊", ClinicalPurple, Color(0xFF4A148C), 120, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToDosage() }, listOf("dosage", "math", "dilution", "reconstitution", "powder", "dextrose", "concentration", "liquid", "c1v1", "c2v2", "ampoule", "vial", "diluent", "antibiotic", "ceftriaxone"), listOf("ඩෙක්ස්ට්‍රෝස්", "දියාරු", "කුඩු", "මාත්‍රාව", "බෙහෙත්", "ප්‍රතිශතය", "ද්‍රාවණය"), "Liquid dosage, dilution and powder reconstitution support.", "Does not mix two active percentages or perform alligation math."),
+            ClinicalToolModule("iv_drip", "IV Drip Sync", "Drops / min • Gravity sets", "Quick drip-rate support for common macro and micro sets.", "💧", ClinicalCyan, Color(0xFF006064), 160, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToIvDrip() }, listOf("iv", "drip", "sync", "drops", "minute", "macro", "micro", "flow rate", "drop factor", "gtt", "saline", "normal saline", "dpm", "chamber", "gravity set"), listOf("ඩ්‍රිප්", "බිංදු", "පැයට බිංදු", "සේලයින්", "වතුර"), "Gravity drip calculations and visual synchronisation.", "Does not control physical syringe pumps by Bluetooth."),
+            ClinicalToolModule("special_calcs", "High-Alert Specials", "Insulin • Heparin • PCA", "Focused tools for medications where calculation accuracy matters most.", "🩸", ClinicalRed, Color(0xFFB71C1C), 200, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToSpecialCalcs() }, listOf("high alert", "insulin", "heparin", "pca", "opioid", "sliding scale", "actrapid", "blood sugar", "glucose", "cbg", "dka", "aptt"), listOf("ඉන්සියුලින්", "හෙපරින්", "සීනි", "ග්ලූකෝස්", "රුධිර සීනි"), "Insulin, heparin and PCA calculation support.", "Does not dynamically adjust for acute renal impairment."),
+            ClinicalToolModule("weight_infusion", "Weight & Infusions", "mg/kg • mcg/kg/min", "Convert weight-based orders into practical infusion rates.", "⚖️", Color(0xFF00BFA5), Color(0xFF004D40), 240, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToWeightInfusion() }, listOf("weight", "infusion", "mg/kg", "mcg/kg/min", "continuous", "rate", "body weight", "milligrams per kilogram"), listOf("බර", "බර අනුව", "ශරීර බර", "කිලෝග්‍රෑම්", "bara", "weight"), "Weight-based continuous infusion rate calculations.", "Does not replace maximum-dose or patient-specific clinical checks."),
+            ClinicalToolModule("conversions", "Unit Conversions", "Mass • Volume • mEq", "Fast bidirectional conversions without leaving the clinical workspace.", "🔄", ClinicalPurple, Color(0xFF311B92), 280, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToConversions() }, listOf("unit", "conversion", "convert", "mass", "volume", "meq", "mg", "mcg", "grams", "micrograms", "milligrams", "liters"), listOf("හුවමාරුව", "ඒකක", "මිලිග්‍රෑම්", "මයික්‍රෝග්‍රෑම්", "පරිවර්තනය"), "Metric, mass, volume and electrolyte conversions.", "Complex radiological unit conversions are not included."),
+            ClinicalToolModule("bsa", "BSA & Chemo", "Mosteller BSA • m²", "Height and weight based body-surface-area support for oncology workflows.", "📏", Color(0xFFF50057), Color(0xFF880E4F), 320, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToBsa() }, listOf("bsa", "chemo", "chemotherapy", "mosteller", "surface area", "body surface area", "m2", "height", "height weight", "oncology"), listOf("පිළිකා", "කීමෝ", "ශරීර වර්ගඵලය", "උස බර", "chemo", "cancer", "bsa"), "Mosteller BSA and chemotherapy support.", "Does not calculate Cockcroft-Gault creatinine clearance."),
+            ClinicalToolModule("pediatric", "Paediatric Rules", "Clark • Young • Fried", "Legacy age and weight approximations presented with their limitations.", "🧒", ClinicalAmber, Color(0xFFE65100), 360, { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateToPediatric() }, listOf("pediatric", "paediatric", "clark", "young", "fried", "child", "age", "infant", "baby", "child dose", "fraction of adult dose"), listOf("ළමා", "ළමුන්", "බබා", "ළමා මාත්‍රාව", "වයස", "බබාගේ බර", "lamaa"), "Clark, Young and Fried approximations.", "Historical approximations; exact mg/kg dosing may be preferred clinically.")
         )
     }
 
-    // --- AI MATH LIMITATION & INTENT SCORER ---
     val searchIntentResult = remember(searchQuery, evaluationTrigger) {
         val trimmed = searchQuery.trim().lowercase()
         if (trimmed.isBlank()) return@remember Pair<ClinicalToolModule?, List<ClinicalToolModule>>(null, allTools)
-
-        // 🚨 CRITICAL MEDICAL LIMITATION INTERCEPTOR 🚨
         val hasMultiSolutes = (trimmed.count { it == '%' } >= 2) && (trimmed.contains("mix") || trimmed.contains("using") || trimmed.contains("make") || trimmed.contains("and") || trimmed.contains("හා"))
         val isExplicitlyUnsupported = trimmed.contains("creatinine") || trimmed.contains("gfr") || trimmed.contains("anion gap") || trimmed.contains("parkland") || trimmed.contains("burn") || trimmed.contains("map") || trimmed.contains("arterial pressure") || trimmed.contains("sodium correction") || trimmed.contains("hyponatremia")
-
-        if (hasMultiSolutes || isExplicitlyUnsupported) {
-            return@remember Pair<ClinicalToolModule?, List<ClinicalToolModule>>(null, emptyList()) // Triggers Web Fallback
-        }
-
+        if (hasMultiSolutes || isExplicitlyUnsupported) return@remember Pair<ClinicalToolModule?, List<ClinicalToolModule>>(null, emptyList())
         val tokens = trimmed.split(" ", ",", "-", "/", "%").filter { it.isNotBlank() }
         val scoredTools = allTools.map { tool ->
             var score = 0
             if (tool.title.lowercase().contains(trimmed)) score += 50
             if (tool.subtitle.lowercase().contains(trimmed)) score += 30
-
             for (token in tokens) {
-                if (tool.keywords.any { it.equals(token, ignoreCase = true) }) score += 20
-                else if (tool.keywords.any { it.contains(token, ignoreCase = true) }) score += 10
-                if (tool.sinhalaKeywords.any { it.equals(token, ignoreCase = true) }) score += 25
-                else if (tool.sinhalaKeywords.any { it.contains(token, ignoreCase = true) }) score += 12
+                if (tool.keywords.any { it.equals(token, ignoreCase = true) }) score += 20 else if (tool.keywords.any { it.contains(token, ignoreCase = true) }) score += 10
+                if (tool.sinhalaKeywords.any { it.equals(token, ignoreCase = true) }) score += 25 else if (tool.sinhalaKeywords.any { it.contains(token, ignoreCase = true) }) score += 12
             }
-
-            // High-Confidence Nursing Context Overrides
             if (trimmed.contains("dextrose") || trimmed.contains("dilut") || trimmed.contains("powder") || trimmed.contains("කුඩු") || trimmed.contains("දියාරු")) if (tool.id == "dosage") score += 60
             if (trimmed.contains("arrest") || trimmed.contains("cpr") || trimmed.contains("adrenaline") || trimmed.contains("anaphylaxis") || trimmed.contains("shock") || trimmed.contains("හදිසි")) if (tool.id == "emergency") score += 60
             if (trimmed.contains("drip") || trimmed.contains("drop") || trimmed.contains("gtt") || trimmed.contains("බිංදු") || trimmed.contains("සේලයින්") || trimmed.contains("වතුර")) if (tool.id == "iv_drip") score += 60
@@ -187,13 +203,10 @@ fun ClinicalToolsScreen(
             if (trimmed.contains("convert") || trimmed.contains("mcg") || trimmed.contains("meq") || trimmed.contains("හුවමාරු")) if (tool.id == "conversions") score += 60
             if (trimmed.contains("child") || trimmed.contains("baby") || trimmed.contains("lamaa") || trimmed.contains("clark") || trimmed.contains("young") || trimmed.contains("ළමා")) if (tool.id == "pediatric") score += 60
             if (trimmed.contains("mcg/kg/min") || trimmed.contains("mg/kg") || trimmed.contains("rate") || trimmed.contains("බර අනුව")) if (tool.id == "weight_infusion") score += 60
-
             Pair(tool, score)
         }
-
         val bestMatch = scoredTools.filter { it.second >= 30 }.maxByOrNull { it.second }?.first
         val matchingList = scoredTools.filter { it.second > 0 }.sortedByDescending { it.second }.map { it.first }
-
         Pair(bestMatch, matchingList)
     }
 
@@ -201,304 +214,265 @@ fun ClinicalToolsScreen(
     val filteredTools = if (searchQuery.isBlank()) allTools else searchIntentResult.second
 
     fun executeSearch() {
-        keyboardController?.hide()
-        focusManager.clearFocus()
-        saveSearchHistory(context, searchQuery)
-        historyItems = getSearchHistory(context)
-        evaluationTrigger++
-
-        if (bestMatchTool != null) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            bestMatchTool.onClick()
-        }
+        keyboardController?.hide(); focusManager.clearFocus(); saveSearchHistory(context, searchQuery); historyItems = getSearchHistory(context); evaluationTrigger++
+        if (bestMatchTool != null) { haptic.performHapticFeedback(HapticFeedbackType.LongPress); bestMatchTool.onClick() }
     }
 
     Scaffold(
+        containerColor = ClinicalBg,
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.TopAppBar(
                 title = {
                     Column {
-                        Text("Clinical Tools", fontWeight = FontWeight.Black, color = ToolsSlateDark, fontSize = 22.sp)
-                        Text("Medical Math & AI Guidance", fontSize = 12.sp, color = TechBluePrimary, fontWeight = FontWeight.Bold)
+                        Text("Clinical Tools", color = ClinicalInk, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Verified bedside calculations", color = ClinicalBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ToolsSlateDark) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ClinicalInk) } },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
-        },
-        containerColor = Color.Transparent
+        }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().background(ToolsBgWhite).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { focusManager.clearFocus() }) {
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            ClinicalHeroHeader(toolCount = allTools.size)
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                ClinicalSearchCard(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onSubmit = ::executeSearch,
+                    focused = searchBarFocused,
+                    onFocusChanged = { searchBarFocused = it }
+                )
 
-            // 🧠 MIND-BLOWING NEURAL AI WAVEFORM BACKGROUND 🧠
-            AnimatedNeuralWaveBackground(isVisible)
-
-            Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // 🌟 GLOWING AI SEARCH BAR 🌟
-                CreativeAiSearchBar(query = searchQuery, onQueryChange = { searchQuery = it }, onSubmit = { executeSearch() }, onFocusChanged = { searchBarFocused = it })
-
-                // 🌟 DROPDOWN SEARCH HISTORY 🌟
                 AnimatedVisibility(
                     visible = searchBarFocused && searchQuery.isBlank() && historyItems.isNotEmpty(),
-                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp).shadow(12.dp, RoundedCornerShape(16.dp), spotColor = AiPurple.copy(alpha = 0.3f)),
-                        colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                            Text("Recent AI Searches", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(1.dp)) {
+                        Column(Modifier.padding(vertical = 6.dp)) {
+                            Text("Recent searches", Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = ClinicalSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             historyItems.forEach { pastQuery ->
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().clickable { searchQuery = pastQuery; executeSearch() }.padding(horizontal = 16.dp, vertical = 12.dp),
+                                    Modifier.fillMaxWidth().clickable { searchQuery = pastQuery; executeSearch() }.padding(horizontal = 16.dp, vertical = 11.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.History, contentDescription = "History", tint = Color.LightGray, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(pastQuery, fontSize = 14.sp, color = ToolsSlateDark, fontWeight = FontWeight.Medium)
+                                    Icon(Icons.Default.History, null, tint = ClinicalBlue, modifier = Modifier.size(17.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(pastQuery, color = ClinicalInk, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                 }
-                                HorizontalDivider(color = Color(0xFFF1F5F9))
                             }
                         }
                     }
                 }
 
-                // 🌟 HIGH-CONFIDENCE INTENT BADGE 🌟
-                AnimatedVisibility(
-                    visible = !searchBarFocused && searchQuery.isNotBlank() && bestMatchTool != null,
-                    enter = slideInVertically(
-                        initialOffsetY = { -20 },
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                    ) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { -20 }) + fadeOut()
-                ) {
-                    if (bestMatchTool != null) {
-                        GlowingIntentBadge(tool = bestMatchTool, onLaunch = { executeSearch() })
+                if (!searchBarFocused && searchQuery.isNotBlank() && bestMatchTool != null) {
+                    ClinicalIntentCard(bestMatchTool) { executeSearch() }
+                }
+
+                ClinicalQuickActions(
+                    emergency = { onNavigateToEmergency() },
+                    dosage = { onNavigateToDosage() },
+                    drip = { onNavigateToIvDrip() }
+                )
+
+                ClinicalSectionHeader(
+                    title = if (searchQuery.isBlank()) "Clinical engines" else "Matching engines (${filteredTools.size})",
+                    subtitle = "Select the calculation workspace you need"
+                )
+
+                if (filteredTools.isNotEmpty()) {
+                    filteredTools.forEach { tool ->
+                        ClinicalToolCard(visible = isVisible, tool = tool)
+                    }
+                } else {
+                    SmartWebCalculatorResolverCard(query = searchQuery) { targetUrl ->
+                        saveSearchHistory(context, searchQuery)
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)))
                     }
                 }
 
-                if (!searchBarFocused) {
-                    Text(
-                        text = if (searchQuery.isBlank()) "Select a clinical engine:" else "Matching Calculators (${filteredTools.size}):",
-                        fontSize = 15.sp, color = ToolsSlateLight, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
-                    )
-
-                    // 🌟 3D HOLOGRAPHIC TOOL CARDS WITH AI EXPANSION 🌟
-                    if (filteredTools.isNotEmpty()) {
-                        filteredTools.forEach { tool ->
-                            HolographicToolCard(
-                                visible = isVisible,
-                                tool = tool
-                            )
-                        }
-                    } else {
-                        // 🌟 SMART CLINICAL WEB SUPPORT FALLBACK 🌟
-                        SmartWebCalculatorResolverCard(query = searchQuery) { targetUrl ->
-                            saveSearchHistory(context, searchQuery)
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
-                            context.startActivity(intent)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(40.dp))
+                ClinicalSafetyCard()
+                Spacer(Modifier.height(18.dp))
             }
         }
     }
 }
 
 @Composable
-fun AnimatedNeuralWaveBackground(isVisible: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition(label = "wave")
-    val phase1 by infiniteTransition.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(8000, easing = LinearEasing)), label = "")
-    val phase2 by infiniteTransition.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(12000, easing = LinearEasing)), label = "")
-    val alphaAnim by animateFloatAsState(if (isVisible) 1f else 0f, tween(2000), label = "")
-
-    Canvas(modifier = Modifier.fillMaxSize().alpha(alphaAnim)) {
-        val w = size.width
-        val h = size.height * 0.35f
-
-        drawRect(Color(0xFFF8FAFC))
-
-        for (i in 0..2) {
-            val wavePath = Path()
-            wavePath.moveTo(0f, h)
-
-            for (x in 0..w.toInt() step 10) {
-                val normalizedX = x / w
-                val amplitude = h * 0.15f * (1f - normalizedX)
-                val y = (h * 0.5f) + sin((normalizedX * 10f) + phase1 + (i * 2f)) * amplitude + cos((normalizedX * 5f) + phase2) * amplitude
-
-                if (x == 0) wavePath.moveTo(x.toFloat(), y) else wavePath.lineTo(x.toFloat(), y)
+private fun ClinicalHeroHeader(toolCount: Int) {
+    Card(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Box(
+            Modifier.fillMaxWidth().background(
+                Brush.horizontalGradient(listOf(Color(0xFF17233F), Color(0xFF24538C), Color(0xFF08A5D9))),
+                RoundedCornerShape(28.dp)
+            ).padding(20.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Surface(Modifier.size(62.dp), CircleShape, Color.White.copy(alpha = .15f)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.MedicalServices, null, tint = Color.White, modifier = Modifier.size(31.dp))
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("CLINICAL WORKSPACE", color = Color.White.copy(alpha = .72f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    Text("Calculate with confidence", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text("${toolCount} focused engines • offline-first support", color = Color.White.copy(alpha = .84f), fontSize = 11.sp)
+                }
             }
+            Row(Modifier.align(Alignment.BottomEnd).padding(top = 76.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                ClinicalHeroPill("OFFLINE", ClinicalMint)
+                ClinicalHeroPill("NURSE-FIRST", ClinicalBlueSoft)
+            }
+        }
+    }
+}
 
-            val strokeColor = if (i == 0) AiCyan else if (i == 1) AiPurple else TechBluePrimary
-            drawPath(
-                path = wavePath,
-                color = strokeColor.copy(alpha = 0.3f - (i * 0.1f)),
-                style = Stroke(width = 8f + (i * 4f), cap = StrokeCap.Round, join = StrokeJoin.Round)
+@Composable
+private fun ClinicalHeroPill(text: String, surface: Color) {
+    Surface(shape = RoundedCornerShape(50.dp), color = surface.copy(alpha = .16f)) {
+        Text(text, Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun ClinicalSearchCard(query: String, onQueryChange: (String) -> Unit, onSubmit: () -> Unit, focused: Boolean, onFocusChanged: (Boolean) -> Unit) {
+    Card(shape = RoundedCornerShape(23.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(Modifier.size(42.dp), CircleShape, ClinicalPurpleSoft) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Psychology, null, tint = ClinicalPurple, modifier = Modifier.size(23.dp)) }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Find a calculator", color = ClinicalInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("English or Sinhala • smart routing only", color = ClinicalSecondary, fontSize = 10.sp)
+                }
+                Surface(shape = RoundedCornerShape(50.dp), color = ClinicalBlueSoft) {
+                    Text("AI ROUTER", Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = ClinicalBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChanged(it.isFocused) },
+                placeholder = { Text("Try: IV drip, insulin, ICU, ළමා මාත්‍රාව…", color = ClinicalSecondary, fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.AutoAwesome, null, tint = ClinicalPurple) },
+                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Close, null, tint = ClinicalSecondary) } else Icon(Icons.Default.Calculate, null, tint = ClinicalBlue) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = ClinicalBlue, unfocusedBorderColor = Color(0xFFD9E1EC), focusedContainerColor = Color.White, unfocusedContainerColor = Color.White),
+                textStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = ClinicalInk)
             )
         }
     }
 }
 
 @Composable
-fun CreativeAiSearchBar(query: String, onQueryChange: (String) -> Unit, onSubmit: () -> Unit, onFocusChanged: (Boolean) -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "sweep")
-    val angle by infiniteTransition.animateFloat(0f, 360f, infiniteRepeatable(tween(3000, easing = LinearEasing)), label = "")
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = AiPurple.copy(alpha = 0.5f))
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.White)
-            .drawBehind {
-                rotate(angle) {
-                    drawCircle(
-                        brush = Brush.sweepGradient(listOf(TechBluePrimary, AiPurple, AiCyan, TechBluePrimary)),
-                        radius = size.width,
-                        blendMode = BlendMode.SrcIn
-                    )
-                }
-            }
-            .padding(2.dp)
-            .background(Color.White, RoundedCornerShape(22.dp))
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChanged(it.isFocused) },
-            placeholder = { Text("Ask AI: '10% dextrose mix' or 'ළමා මාත්‍රාව'", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = "AI", tint = AiPurple, modifier = Modifier.size(24.dp)) },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Gray) }
-                } else {
-                    Icon(Icons.Default.Psychology, tint = TechBluePrimary.copy(alpha = 0.7f), contentDescription = "NLP Analyzer")
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent
-            ),
-            textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ToolsSlateDark)
-        )
+private fun ClinicalQuickActions(emergency: () -> Unit, dosage: () -> Unit, drip: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ClinicalSectionHeader("Quick clinical actions", "Jump straight into the tools you use most")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ClinicalQuickAction("Emergency", Icons.Default.Emergency, ClinicalRedSoft, ClinicalRed, emergency, Modifier.weight(1f))
+            ClinicalQuickAction("Dosage", Icons.Default.Calculate, ClinicalPurpleSoft, ClinicalPurple, dosage, Modifier.weight(1f))
+            ClinicalQuickAction("IV drip", Icons.Default.WaterDrop, ClinicalBlueSoft, ClinicalBlue, drip, Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
-fun HolographicToolCard(
-    visible: Boolean,
-    tool: ClinicalToolModule
-) {
-    val haptic = LocalHapticFeedback.current
+private fun ClinicalQuickAction(title: String, icon: ImageVector, background: Color, accent: Color, onClick: () -> Unit, modifier: Modifier) {
+    Surface(onClick = onClick, modifier = modifier.height(86.dp), shape = RoundedCornerShape(19.dp), color = background) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.height(5.dp))
+            Text(title, color = ClinicalInk, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+@Composable
+private fun ClinicalSectionHeader(title: String, subtitle: String) {
+    Column {
+        Text(title, color = ClinicalInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+        Text(subtitle, color = ClinicalSecondary, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun ClinicalIntentCard(tool: ClinicalToolModule, onLaunch: () -> Unit) {
+    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = ClinicalInk), elevation = CardDefaults.cardElevation(3.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onLaunch)) {
+        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(48.dp), CircleShape, tool.colorStart) { Box(contentAlignment = Alignment.Center) { Text(tool.emoji, fontSize = 22.sp) } }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("BEST MATCH", color = ClinicalCyan, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(tool.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                Text(tool.subtitle, color = Color.White.copy(alpha = .72f), fontSize = 10.sp)
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+@Composable
+private fun ClinicalToolCard(visible: Boolean, tool: ClinicalToolModule) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-
-    var isExpanded by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "")
-    val shadowAlpha by animateFloatAsState(if (isPressed) 0.2f else 0.5f, spring(), label = "")
-
-    val infiniteTransition = rememberInfiniteTransition(label = "CardFloat")
-    val floatY by infiniteTransition.animateFloat(
-        initialValue = -3f, targetValue = 3f,
-        animationSpec = infiniteRepeatable(animation = tween(2500, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse),
-        label = "FloatY"
-    )
-
-    val dashPhase by infiniteTransition.animateFloat(0f, 100f, infiniteRepeatable(tween(2000, easing = LinearEasing)), label = "")
+    var expanded by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (isPressed) .985f else 1f, tween(120, easing = FastOutSlowInEasing), label = "tool_card_scale")
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(
-            initialOffsetY = { 150 },
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-        ) + fadeIn(tween(600, delayMillis = tool.delay))
+        enter = fadeIn(tween(350, delayMillis = tool.delay)) + expandVertically(),
+        exit = fadeOut(tween(150)) + shrinkVertically()
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = floatY.dp)
-                .graphicsLayer { scaleX = scale; scaleY = scale }
-                .zIndex(if (isExpanded || isPressed) 10f else 0f)
-                .shadow(elevation = if (isExpanded) 20.dp else if (isPressed) 8.dp else 16.dp, shape = RoundedCornerShape(24.dp), spotColor = tool.colorStart.copy(alpha = shadowAlpha))
-                .clickable(interactionSource = interactionSource, indication = null, onClick = tool.onClick)
-                .border(1.dp, tool.colorStart.copy(alpha = 0.2f), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }.shadow(4.dp, RoundedCornerShape(23.dp)).clickable(interactionSource, indication = null, onClick = tool.onClick),
+            shape = RoundedCornerShape(23.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(1.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color.White, tool.colorStart.copy(alpha = 0.05f)))).padding(20.dp)) {
-
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Box(
-                        modifier = Modifier.size(64.dp).drawWithContent {
-                            drawRoundRect(
-                                brush = Brush.linearGradient(listOf(tool.colorStart, tool.colorEnd)),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(32f, 32f),
-                                style = Stroke(width = 4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 15f), dashPhase))
-                            )
-                            drawContent()
-                        }.background(tool.colorStart.copy(alpha = 0.1f), RoundedCornerShape(16.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(tool.emoji, fontSize = 28.sp, modifier = Modifier.scale(if(isPressed) 0.8f else 1f))
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Surface(Modifier.size(54.dp), RoundedCornerShape(17.dp), tool.colorStart.copy(alpha = .12f)) {
+                        Box(contentAlignment = Alignment.Center) { Text(tool.emoji, fontSize = 25.sp) }
                     }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = tool.title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = ToolsSlateDark, letterSpacing = (-0.5).sp)
-                        Text(text = tool.subtitle, fontSize = 13.sp, color = tool.colorStart, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = tool.description, fontSize = 13.sp, color = ToolsSlateLight, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(13.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(tool.title, color = ClinicalInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(tool.subtitle, color = tool.colorStart, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(5.dp))
+                        Text(tool.description, color = ClinicalSecondary, fontSize = 11.sp, lineHeight = 17.sp)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = tool.colorStart, modifier = Modifier.size(20.dp).padding(top = 2.dp))
+                }
+                Spacer(Modifier.height(10.dp))
+                Surface(onClick = { expanded = !expanded }, shape = RoundedCornerShape(12.dp), color = tool.colorStart.copy(alpha = .08f), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Shield, null, tint = tool.colorStart, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text(if (expanded) "Hide clinical notes" else "View capabilities & limits", color = tool.colorStart, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, tint = tool.colorStart)
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(tool.colorStart.copy(alpha = 0.1f))
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            isExpanded = !isExpanded
-                        }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Memory, contentDescription = "AI", tint = tool.colorStart, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("View AI Engine Specs", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tool.colorStart)
-                    }
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Expand",
-                        tint = tool.colorStart
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = isExpanded,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Column(modifier = Modifier.padding(top = 16.dp)) {
-                        Text("✅ CAPABILITIES", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32), letterSpacing = 1.sp)
-                        Text(tool.capabilities, fontSize = 13.sp, color = ToolsSlateDark, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
-
-                        Text("❌ LIMITATIONS (Triggers Web Resolver)", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFD32F2F), letterSpacing = 1.sp)
-                        Text(tool.limitations, fontSize = 13.sp, color = ToolsSlateDark, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp))
+                AnimatedVisibility(expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    Column(Modifier.padding(top = 11.dp)) {
+                        Text("CAPABILITIES", color = Color(0xFF198754), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(tool.capabilities, color = ClinicalInk, fontSize = 11.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 3.dp, bottom = 9.dp))
+                        Text("LIMITS", color = ClinicalRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(tool.limitations, color = ClinicalInk, fontSize = 11.sp, lineHeight = 17.sp, modifier = Modifier.padding(top = 3.dp))
                     }
                 }
             }
@@ -507,106 +481,58 @@ fun HolographicToolCard(
 }
 
 @Composable
-fun GlowingIntentBadge(tool: ClinicalToolModule, onLaunch: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "")
-    val pulse by infiniteTransition.animateFloat(0.8f, 1f, infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp * pulse, RoundedCornerShape(20.dp), spotColor = tool.colorStart).clip(RoundedCornerShape(20.dp)).clickable { onLaunch() },
-        shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A))
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF0F172A), tool.colorStart.copy(alpha = 0.35f)))).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(46.dp).background(tool.colorStart, CircleShape).scale(pulse), contentAlignment = Alignment.Center) { Text(tool.emoji, fontSize = 22.sp) }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("AI MATCH FOUND", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = tool.colorStart, letterSpacing = 1.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(modifier = Modifier.background(tool.colorStart.copy(alpha = 0.2f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                            Text("Auto-Route Ready", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Text(tool.title, fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color.White)
-                    Text("Solves: ${tool.capabilities}", fontSize = 11.sp, color = Color.LightGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            IconButton(onClick = onLaunch, modifier = Modifier.background(tool.colorStart, CircleShape).size(40.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Open", tint = Color.White, modifier = Modifier.size(20.dp))
+private fun ClinicalSafetyCard() {
+    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = ClinicalAmberSoft), elevation = CardDefaults.cardElevation(0.dp)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
+            Surface(Modifier.size(38.dp), CircleShape, Color.White.copy(alpha = .7f)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.WarningAmber, null, tint = ClinicalAmber, modifier = Modifier.size(21.dp)) } }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text("Clinical calculation aid", color = ClinicalInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Confirm the medication order, concentration, patient weight and local protocol before administration.", color = ClinicalSecondary, fontSize = 10.sp, lineHeight = 16.sp)
             }
         }
     }
 }
 
 @Composable
-fun SmartWebCalculatorResolverCard(query: String, onOpenUrl: (String) -> Unit) {
+private fun SmartWebCalculatorResolverCard(query: String, onOpenUrl: (String) -> Unit) {
     val cleanQuery = query.trim()
     val encodedQuery = Uri.encode(cleanQuery)
     val isAlligation = cleanQuery.contains("%") && (cleanQuery.contains("mix") || cleanQuery.contains("using") || cleanQuery.contains("හා"))
-
     val webSources = listOf(
-        WebCalculatorSource("MDCalc Medical Engine", "Evidence-Based Clinical Decision Rules", "https://www.mdcalc.com/calc?search=$encodedQuery", Color(0xFF00ACC1)),
-        WebCalculatorSource("Medscape Calculator Hub", "Formulas, Critical Care & Dosing", "https://reference.medscape.com/search?q=$encodedQuery+calculator", Color(0xFF1E88E5)),
-        WebCalculatorSource("ClinCalc Online Suite", "Clinical Pharmacokinetics & Equations", "https://clincalc.com/?s=$encodedQuery", Color(0xFF43A047)),
-        WebCalculatorSource("NCBI / NIH Guidelines", "Peer-Reviewed Medical Literature", "https://pubmed.ncbi.nlm.nih.gov/?term=$encodedQuery+calculation+formula", Color(0xFF8E24AA))
+        WebCalculatorSource("MDCalc Medical Engine", "Evidence-based clinical decision rules", "https://www.mdcalc.com/calc?search=$encodedQuery", ClinicalCyan),
+        WebCalculatorSource("Medscape Calculator Hub", "Clinical dosing and equations", "https://reference.medscape.com/search?q=$encodedQuery+calculator", ClinicalBlue),
+        WebCalculatorSource("ClinCalc Online Suite", "Pharmacokinetics and equations", "https://clincalc.com/?s=$encodedQuery", Color(0xFF43A047)),
+        WebCalculatorSource("NCBI / NIH", "Biomedical literature and guidance", "https://pubmed.ncbi.nlm.nih.gov/?term=$encodedQuery+calculation+formula", ClinicalPurple)
     )
-
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Card(shape = RoundedCornerShape(23.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(48.dp).background(Color(0xFF0F172A), CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.TravelExplore, contentDescription = "Web Search", tint = AiCyan, modifier = Modifier.size(28.dp))
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column {
-                    Text(if (isAlligation) "Complex Admixture Detected" else "Clinical Web Resolver", fontSize = 18.sp, fontWeight = FontWeight.Black, color = ToolsSlateDark)
-                    Text(if (isAlligation) "Requires Pearson's Square (Alligation)" else "No exact offline match for: \"$cleanQuery\"", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                Surface(Modifier.size(46.dp), CircleShape, ClinicalInk) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.TravelExplore, null, tint = ClinicalCyan, modifier = Modifier.size(25.dp)) } }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(if (isAlligation) "Complex admixture detected" else "Clinical web resolver", color = ClinicalInk, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (isAlligation) "This route needs Pearson's Square / alligation" else "No exact offline engine matched this request", color = ClinicalSecondary, fontSize = 10.sp)
                 }
             }
-
-            Text(
-                if (isAlligation) "Mixing two different active concentrations (e.g. 5% and 50%) is not a standard dilution (C1V1). Our AI has found the correct 'Alligation' web calculators for you:"
-                else "Our AI has generated verified clinical links to perform this calculation directly online:",
-                fontSize = 13.sp, color = ToolsSlateLight, lineHeight = 18.sp, fontWeight = FontWeight.Medium
-            )
-
-            HorizontalDivider(color = Color(0xFFF1F5F9))
-
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                webSources.forEach { source ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFF8FAFC)).border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp)).clickable { onOpenUrl(source.url) }.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(8.dp).background(source.badgeColor, CircleShape))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(source.name, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = ToolsSlateDark)
-                            }
-                            Text(source.subtitle, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
-                        }
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open Link", tint = TechBluePrimary, modifier = Modifier.size(18.dp))
+            Text(if (isAlligation) "The app keeps unsupported calculations outside its deterministic engines and provides reference destinations instead." else "Use an external reference only when the requested calculation is outside the supported offline tools.", color = ClinicalSecondary, fontSize = 11.sp, lineHeight = 17.sp)
+            HorizontalDivider(color = Color(0xFFE8EDF3))
+            webSources.forEach { source ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(ClinicalBg).border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp)).clickable { onOpenUrl(source.url) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).background(source.badgeColor, CircleShape))
+                    Spacer(Modifier.width(9.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(source.name, color = ClinicalInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(source.subtitle, color = ClinicalSecondary, fontSize = 9.sp)
                     }
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = ClinicalBlue, modifier = Modifier.size(17.dp))
                 }
             }
-
-            Button(
-                onClick = {
-                    val searchString = if (isAlligation) "$cleanQuery alligation pearson square calculator nursing" else "$cleanQuery medical clinical calculation formula guidelines"
-                    onOpenUrl("https://www.google.com/search?q=" + Uri.encode(searchString))
-                },
-                modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A))
-            ) {
-                Icon(Icons.Default.Language, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Search Google Medical Guidelines", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Button(onClick = {
+                val searchString = if (isAlligation) "$cleanQuery alligation pearson square calculator nursing" else "$cleanQuery medical clinical calculation formula guidelines"
+                onOpenUrl("https://www.google.com/search?q=" + Uri.encode(searchString))
+            }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = ClinicalInk)) {
+                Icon(Icons.Default.Language, null, tint = Color.White, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(7.dp)); Text("Search medical references", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
