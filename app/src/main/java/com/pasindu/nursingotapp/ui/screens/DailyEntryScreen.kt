@@ -15,7 +15,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -35,6 +47,7 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -99,11 +112,7 @@ import java.util.Locale
 
 val weekend_background_highlight = Color(0xFFF1F3F5)
 
-data class StagedEdit(
-    val shift: String? = null,
-    val ot: String? = null,
-    val leave: String? = null
-)
+data class StagedEdit(val shift: String? = null, val ot: String? = null, val leave: String? = null)
 
 private val DailyInk = Color(0xFF12204A)
 private val DailyBlue = Color(0xFF1769E8)
@@ -114,9 +123,7 @@ private val DailyPurpleSoft = Color(0xFFF3EEFF)
 private val DailyMintSoft = Color(0xFFEAFBF5)
 private val DailyAmberSoft = Color(0xFFFFF6E7)
 
-private val DailyHeroGradient = Brush.horizontalGradient(
-    listOf(DailyBlue, DailyCyan, Color(0xFF4B78F2), DailyPurple)
-)
+private val DailyHeroGradient = Brush.horizontalGradient(listOf(DailyBlue, DailyCyan, Color(0xFF4B78F2), DailyPurple))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,12 +141,11 @@ fun DailyEntryScreen(
     val haptic = LocalHapticFeedback.current
     val allSavedEntries by viewModel.dailyLogs.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+
     val startDate = remember(startDateStr) { LocalDate.parse(startDateStr) }
     val endDate = remember(endDateStr) { LocalDate.parse(endDateStr) }
-    val allDates = remember(startDate, endDate) {
-        val daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).toInt()
-        (0..daysBetween).map { startDate.plusDays(it.toLong()) }
-    }
+    val daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).toInt()
+    val allDates = remember(startDate, endDate) { (0..daysBetween).map { startDate.plusDays(it.toLong()) } }
 
     var brushCategory by remember { mutableStateOf("Shifts") }
     var selectedBrush by remember { mutableStateOf(if (wardType == "Normal") "Morn (7-13)" else "Day (7-16)") }
@@ -147,26 +153,16 @@ fun DailyEntryScreen(
     var customIn by remember { mutableStateOf("07.00") }
     var customOut by remember { mutableStateOf("17.00") }
     var customHrs by remember { mutableStateOf("10.0") }
+
     val totalCalculated = remember(allSavedEntries, startDate, endDate) {
-        val result = viewModel.calculateSavedDailyEntryHours(
-            entries = allSavedEntries,
-            claimStart = startDate,
-            claimEnd = endDate
-        )
+        val result = viewModel.calculateSavedDailyEntryHours(entries = allSavedEntries, claimStart = startDate, claimEnd = endDate)
         Pair(result.totalNormalHours.toFloat(), result.totalOtHours.toFloat())
     }
     val totalNormalHrs = totalCalculated.first
     val totalOtHrs = totalCalculated.second
-    val animatedNormalHrs by animateFloatAsState(
-        targetValue = totalNormalHrs,
-        animationSpec = tween(900, easing = FastOutSlowInEasing),
-        label = "normal_hours"
-    )
-    val animatedOtHrs by animateFloatAsState(
-        targetValue = totalOtHrs,
-        animationSpec = tween(900, easing = FastOutSlowInEasing),
-        label = "ot_hours"
-    )
+    val animatedNormalHrs by animateFloatAsState(targetValue = totalNormalHrs, animationSpec = tween(900, easing = FastOutSlowInEasing), label = "normal_hours")
+    val animatedOtHrs by animateFloatAsState(targetValue = totalOtHrs, animationSpec = tween(900, easing = FastOutSlowInEasing), label = "ot_hours")
+
     val stagedEdits = remember { mutableStateMapOf<LocalDate, StagedEdit>() }
     var isSavingBulk by remember { mutableStateOf(false) }
     var isAutoFillMode by remember { mutableStateOf(false) }
@@ -174,9 +170,11 @@ fun DailyEntryScreen(
     var isGeneratingPdf by remember { mutableStateOf(false) }
     var previewPdfFile by remember { mutableStateOf<File?>(null) }
 
-    val completedCount = allDates.count { date ->
-        val entry = allSavedEntries.find { it.date == date }
-        entry != null && (entry.normalHours > 0f || entry.otHours > 0f || entry.isLeave || entry.isDO || entry.isPH)
+    val completedCount = remember(allSavedEntries, allDates) {
+        allDates.count { date ->
+            val entry = allSavedEntries.find { it.date == date }
+            entry != null && (entry.normalHours > 0f || entry.otHours > 0f || entry.isLeave || entry.isDO || entry.isPH)
+        }
     }
     val completionFraction = if (allDates.isEmpty()) 0f else completedCount.toFloat() / allDates.size.toFloat()
 
@@ -204,7 +202,7 @@ fun DailyEntryScreen(
                 customHrs = "2.0"
             }
         }
-        if (brush == "Custom Shift" || brush == "Custom OT" || brush == "CL/2" || brush == "SL (Short)") {
+        if (brush in setOf("Custom Shift", "Custom OT", "CL/2", "SL (Short)")) {
             showCustomDialog = true
         }
     }
@@ -221,30 +219,28 @@ fun DailyEntryScreen(
     fun stageDates(dates: List<LocalDate>, brush: String) {
         dates.forEach { date ->
             val current = stagedEdits[date] ?: StagedEdit()
-            stagedEdits[date] = when {
-                brush == "Clear Shift" -> current.copy(shift = "Clear Shift")
-                brush == "Clear OT" -> current.copy(ot = "Clear OT")
-                brush == "Clear Leave" -> current.copy(leave = "Clear Leave")
-                brushCategory == "Shifts" -> current.copy(shift = brush)
-                brushCategory == "OT" -> current.copy(ot = brush)
-                else -> current.copy(leave = brush)
+            stagedEdits[date] = when (brush) {
+                "Clear Shift" -> current.copy(shift = "Clear Shift")
+                "Clear OT" -> current.copy(ot = "Clear OT")
+                "Clear Leave" -> current.copy(leave = "Clear Leave")
+                else -> when (brushCategory) {
+                    "Shifts" -> current.copy(shift = brush)
+                    "OT" -> current.copy(ot = brush)
+                    else -> current.copy(leave = brush)
+                }
             }
         }
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
 
-    val brushOptions = when (brushCategory) {
-        "Shifts" -> if (wardType == "Normal") {
-            listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Clear Shift")
-        } else {
-            listOf("Day (7-16)", "Custom Shift", "Clear Shift")
+    fun applyEditToDate(date: LocalDate) {
+        val current = stagedEdits[date] ?: StagedEdit()
+        val next = when (brushCategory) {
+            "Shifts" -> current.copy(shift = if (current.shift == selectedBrush) null else selectedBrush)
+            "OT" -> current.copy(ot = if (current.ot == selectedBrush) null else selectedBrush)
+            else -> current.copy(leave = if (current.leave == selectedBrush) null else selectedBrush)
         }
-        "Leaves" -> listOf("CL", "DO", "PH", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "Work DO", "Work PH", "Clear Leave")
-        else -> if (wardType == "Normal") {
-            listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT")
-        } else {
-            listOf("Custom OT", "Clear OT")
-        }
+        if (next.shift == null && next.ot == null && next.leave == null) stagedEdits.remove(date) else stagedEdits[date] = next
     }
 
     Scaffold(
@@ -268,11 +264,8 @@ fun DailyEntryScreen(
                         coroutineScope.launch {
                             delay(150)
                             val file = withContext(Dispatchers.IO) { onGeneratePdfRequest() }
-                            if (file != null) {
-                                previewPdfFile = file
-                            } else {
-                                Toast.makeText(context, "Error generating file", Toast.LENGTH_SHORT).show()
-                            }
+                            if (file != null) previewPdfFile = file
+                            else Toast.makeText(context, "Error generating file", Toast.LENGTH_SHORT).show()
                             isGeneratingPdf = false
                         }
                     }) {
@@ -283,42 +276,19 @@ fun DailyEntryScreen(
             )
         },
         bottomBar = {
-            Surface(
-                modifier = Modifier.navigationBarsPadding(),
-                shadowElevation = 24.dp,
-                color = Color.White
-            ) {
-                Column(
-                    Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(9.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            Modifier.weight(1f),
-                            shape = RoundedCornerShape(18.dp),
-                            color = DailyBlueSoft
-                        ) {
+            Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = Color.White) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(18.dp), color = DailyBlueSoft) {
                             Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                 Text("PERIOD PROGRESS", color = DailyCyan, fontSize = 8.sp, fontWeight = FontWeight.Black)
                                 Text("$completedCount / ${allDates.size} days", color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                         Surface(shape = RoundedCornerShape(18.dp), color = DailyMintSoft) {
-                            Column(
-                                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalAlignment = Alignment.End
-                            ) {
+                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.End) {
                                 Text("TOTAL", color = Color(0xFF0E9F73), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                Text(
-                                    String.format(Locale.US, "%.1fh • %.1fh OT", animatedNormalHrs, animatedOtHrs),
-                                    color = DailyInk,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
+                                Text(String.format(Locale.US, "%.1fh • %.1fh OT", animatedNormalHrs, animatedOtHrs), color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                     }
@@ -350,78 +320,45 @@ fun DailyEntryScreen(
                                         fun getLeaveHrs(): Float = if (wardType == "Normal") 6f else if (isWknd) 6f else 8f
                                         val isShortDay = isWknd || edit.leave == "PH" || edit.leave == "Work PH" || (edit.leave == null && isP)
 
-                                        if (edit.shift != null) {
-                                            when (edit.shift) {
-                                                "Morn (7-13)" -> { nIn = "07.00"; nOut = "13.00"; nHrs = 6f; isL = false; lType = null }
-                                                "Eve (13-19)" -> { nIn = "13.00"; nOut = "19.00"; nHrs = 6f; isL = false; lType = null }
-                                                "Night (19-7)" -> { nIn = "19.00"; nOut = "07.00"; nHrs = 12f; isL = false; lType = null }
-                                                "Day (7-16)" -> { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
-                                                "Custom Shift" -> { nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }
-                                                "Clear Shift" -> { nIn = ""; nOut = ""; nHrs = 0f; isL = false; lType = null }
-                                            }
-                                        } else if (isAutoFillMode && nIn.isEmpty() && edit.leave == null && !isL) {
-                                            nIn = "07.00"
-                                            nOut = if (isShortDay) "13.00" else "16.00"
-                                            nHrs = if (isShortDay) 6f else 9f
-                                            isL = false
-                                            lType = null
-                                        }
-
-                                        if (edit.leave != null) {
-                                            when (edit.leave) {
-                                                "CL", "VL", "sL", "DL" -> {
-                                                    isL = true; lType = edit.leave.replace("sL", "Special Leave")
-                                                    nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false
-                                                    oIn = ""; oOut = ""; oHrs = 0f
-                                                }
-                                                "DO" -> {
-                                                    isL = true; lType = "DO"; isD = true; isP = false
-                                                    nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f
-                                                }
-                                                "PH" -> {
-                                                    isL = true; lType = "PH"; isP = true; isD = false
-                                                    nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f
-                                                }
-                                                "SD" -> {
-                                                    isL = true; lType = "SD"; isD = false; isP = false
-                                                    nIn = ""; nOut = ""; nHrs = 0f
-                                                }
-                                                "AB" -> {
-                                                    isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f
-                                                    oIn = ""; oOut = ""; oHrs = 0f
-                                                }
-                                                "CL/2" -> {
-                                                    isL = false; lType = "Half Casual Leave"; nIn = customIn; nOut = customOut; nHrs = getLeaveHrs()
-                                                }
-                                                "SL (Short)" -> {
-                                                    isL = false; lType = "Short Leave"; nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f
-                                                }
-                                                "Work DO" -> {
-                                                    isD = true; isL = false; lType = null
-                                                    if (wardType == "Special" && nIn.isEmpty()) {
-                                                        nIn = "07.00"; nOut = if (isWknd) "13.00" else "16.00"; nHrs = if (isWknd) 6f else 9f
-                                                    }
-                                                }
-                                                "Work PH" -> {
-                                                    isP = true; isL = false; lType = null
-                                                    if (wardType == "Special" && nIn.isEmpty()) {
-                                                        nIn = "07.00"; nOut = "13.00"; nHrs = 6f
-                                                    }
-                                                }
-                                                "Clear Leave", "Clear Exceptions" -> {
-                                                    isD = false; isP = false; isL = false; lType = null
-                                                }
+                                        when (edit.shift) {
+                                            "Morn (7-13)" -> { nIn = "07.00"; nOut = "13.00"; nHrs = 6f; isL = false; lType = null }
+                                            "Eve (13-19)" -> { nIn = "13.00"; nOut = "19.00"; nHrs = 6f; isL = false; lType = null }
+                                            "Night (19-7)" -> { nIn = "19.00"; nOut = "07.00"; nHrs = 12f; isL = false; lType = null }
+                                            "Day (7-16)" -> { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
+                                            "Custom Shift" -> { nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }
+                                            "Clear Shift" -> { nIn = ""; nOut = ""; nHrs = 0f; isL = false; lType = null }
+                                            null -> if (isAutoFillMode && nIn.isEmpty() && edit.leave == null && !isL) {
+                                                nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null
                                             }
                                         }
 
-                                        if (edit.ot != null) {
-                                            when (edit.ot) {
-                                                "Morn OT" -> { oIn = "07.00"; oOut = "13.00"; oHrs = 6f }
-                                                "Eve OT" -> { oIn = "13.00"; oOut = "19.00"; oHrs = 6f }
-                                                "Night OT" -> { oIn = "19.00"; oOut = "07.00"; oHrs = 12f }
-                                                "Custom OT" -> { oIn = customIn; oOut = customOut; oHrs = customHrs.toFloatOrNull() ?: 0f }
-                                                "Clear OT" -> { oIn = ""; oOut = ""; oHrs = 0f }
+                                        when (edit.leave) {
+                                            "CL", "VL", "sL", "DL" -> {
+                                                isL = true; lType = edit.leave.replace("sL", "Special Leave"); nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false; oIn = ""; oOut = ""; oHrs = 0f
                                             }
+                                            "DO" -> {
+                                                isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f
+                                            }
+                                            "PH" -> {
+                                                isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f
+                                            }
+                                            "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }
+                                            "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
+                                            "CL/2" -> { isL = false; lType = "Half Casual Leave"; nIn = customIn; nOut = customOut; nHrs = getLeaveHrs() }
+                                            "SL (Short)" -> { isL = false; lType = "Short Leave"; nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f }
+                                            "Work DO" -> { isD = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = if (isWknd) "13.00" else "16.00"; nHrs = if (isWknd) 6f else 9f } }
+                                            "Work PH" -> { isP = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = "13.00"; nHrs = 6f } }
+                                            "Clear Leave", "Clear Exceptions" -> { isD = false; isP = false; isL = false; lType = null }
+                                            null -> Unit
+                                        }
+
+                                        when (edit.ot) {
+                                            "Morn OT" -> { oIn = "07.00"; oOut = "13.00"; oHrs = 6f }
+                                            "Eve OT" -> { oIn = "13.00"; oOut = "19.00"; oHrs = 6f }
+                                            "Night OT" -> { oIn = "19.00"; oOut = "07.00"; oHrs = 12f }
+                                            "Custom OT" -> { oIn = customIn; oOut = customOut; oHrs = customHrs.toFloatOrNull() ?: 0f }
+                                            "Clear OT" -> { oIn = ""; oOut = ""; oHrs = 0f }
+                                            null -> Unit
                                         }
 
                                         if (edit.shift != null && edit.leave == null) {
@@ -462,10 +399,7 @@ fun DailyEntryScreen(
                     ) {
                         Icon(if (isSavingBulk) Icons.Default.MoreHoriz else Icons.Default.Save, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (isSavingBulk) "Saving..." else if (isAutoFillMode) "Auto-Fill & Save" else "Save selected days",
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        Text(if (isSavingBulk) "Saving..." else if (isAutoFillMode) "Auto-Fill & Save" else "Save selected days", fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
@@ -483,23 +417,12 @@ fun DailyEntryScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Box(
-                    Modifier.fillMaxWidth().background(DailyHeroGradient, RoundedCornerShape(27.dp)).padding(20.dp)
-                ) {
+                Box(Modifier.fillMaxWidth().background(DailyHeroGradient, RoundedCornerShape(27.dp)).padding(20.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top
-                        ) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                             Column(Modifier.weight(1f)) {
                                 Text("DUTY CALENDAR", color = Color.White.copy(alpha = .75f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                                Text(
-                                    "${startDate.dayOfMonth.toString().padStart(2, '0')} ${startDate.month.name.take(3)} — ${endDate.dayOfMonth.toString().padStart(2, '0')} ${endDate.month.name.take(3)}",
-                                    color = Color.White,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Black
-                                )
+                                Text("${startDate.dayOfMonth.toString().padStart(2, '0')} ${startDate.month.name.take(3)} — ${endDate.dayOfMonth.toString().padStart(2, '0')} ${endDate.month.name.take(3)}", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                                 Text("$wardType • ${allDates.size} days", color = Color.White.copy(alpha = .85f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                             Surface(color = Color.White.copy(alpha = .16f), shape = CircleShape) {
@@ -516,55 +439,10 @@ fun DailyEntryScreen(
                 }
             }
 
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = DailyMintSoft, shape = RoundedCornerShape(12.dp)) {
-                            Icon(Icons.Default.WbSunny, null, tint = Color(0xFF0E9F73), modifier = Modifier.padding(8.dp))
-                        }
-                        Spacer(Modifier.width(9.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Quick Fill", color = DailyInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("Fill repeated duties without reselecting dates", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-                        }
-                    }
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(items = if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)") else listOf("Day (7-16)")) { brush ->
-                            val selected = selectedBrush == brush && brushCategory == "Shifts"
-                            Surface(
-                                Modifier.clickable { setCategory("Shifts"); chooseBrush(brush) },
-                                shape = RoundedCornerShape(14.dp),
-                                color = if (selected) DailyCyan else DailyBlueSoft
-                            ) {
-                                Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(brush.substringBefore(" "), color = if (selected) Color.White else DailyCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                    Text(brush.substringAfter(" ").replace("(", "").replace(")", ""), color = if (selected) Color.White else DailyInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.TouchApp, null, tint = DailyCyan, modifier = Modifier.size(17.dp))
-                        Text("Choose a duty, then long-press a date to fill a run of days.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
-                    }
-                }
-            }
-
             if (wardType == "Special") {
-                Card(
-                    Modifier.fillMaxWidth().clickable { showAutoFillDialog = true },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = DailyPurpleSoft)
-                ) {
+                Card(Modifier.fillMaxWidth().clickable { showAutoFillDialog = true }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = DailyPurpleSoft)) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = Color.White.copy(alpha = .8f), shape = RoundedCornerShape(13.dp)) {
-                            Icon(Icons.Default.AutoAwesome, null, tint = DailyPurple, modifier = Modifier.padding(9.dp))
-                        }
+                        Surface(color = Color.White.copy(alpha = .8f), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Default.AutoAwesome, null, tint = DailyPurple, modifier = Modifier.padding(9.dp)) }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text("Smart Auto-Fill", color = DailyInk, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
@@ -575,78 +453,71 @@ fun DailyEntryScreen(
                 }
             }
 
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = DailyBlueSoft, shape = RoundedCornerShape(12.dp)) {
-                            Icon(Icons.Default.TouchApp, null, tint = DailyCyan, modifier = Modifier.padding(8.dp))
-                        }
+                        Surface(color = DailyBlueSoft, shape = RoundedCornerShape(12.dp)) { Icon(Icons.Default.TouchApp, null, tint = DailyCyan, modifier = Modifier.padding(8.dp)) }
                         Spacer(Modifier.width(9.dp))
                         Column {
-                            Text("Choose what to paint", color = DailyInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("Select a category, then tap dates", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                            Text("Quick Fill", color = DailyInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("Pick a common duty, then tap the dates", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Shifts", "Leaves", "OT").forEach { category ->
-                            val selected = brushCategory == category
-                            Surface(
-                                Modifier.weight(1f).clickable { setCategory(category) },
-                                shape = RoundedCornerShape(14.dp),
-                                color = if (selected) DailyCyan else DailyBlueSoft
-                            ) {
-                                Text(
-                                    category,
-                                    Modifier.padding(vertical = 10.dp),
-                                    textAlign = TextAlign.Center,
-                                    color = if (selected) Color.White else DailyInk,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
+                        val quick = if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)") else listOf("Day (7-16)")
+                        quick.forEach { brush ->
+                            Surface(Modifier.weight(1f).clickable { setCategory("Shifts"); chooseBrush(brush) }, shape = RoundedCornerShape(14.dp), color = if (selectedBrush == brush && brushCategory == "Shifts") DailyCyan else DailyBlueSoft) {
+                                Text(brush.substringBefore(" "), Modifier.padding(vertical = 10.dp), textAlign = TextAlign.Center, color = if (selectedBrush == brush && brushCategory == "Shifts") Color.White else DailyInk, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.TouchApp, null, tint = DailyCyan, modifier = Modifier.size(17.dp))
+                        Text("Tap a date to apply • double-tap a date to clear", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
+                    }
+                }
+            }
+
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(color = DailyBlueSoft, shape = RoundedCornerShape(12.dp)) { Icon(Icons.Default.TouchApp, null, tint = DailyCyan, modifier = Modifier.padding(8.dp)) }
+                        Spacer(Modifier.width(9.dp))
+                        Column {
+                            Text("Choose what to paint", color = DailyInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("Select a category, then choose a detailed tool", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Shifts", "Leaves", "OT").forEach { cat ->
+                            val selected = brushCategory == cat
+                            Surface(Modifier.weight(1f).clickable { setCategory(cat) }, shape = RoundedCornerShape(14.dp), color = if (selected) DailyCyan else DailyBlueSoft) {
+                                Text(cat, Modifier.padding(vertical = 10.dp), textAlign = TextAlign.Center, color = if (selected) Color.White else DailyInk, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                     }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(items = brushOptions) { brush ->
+                        items(
+                            items = when (brushCategory) {
+                                "Shifts" -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
+                                "Leaves" -> listOf("CL", "DO", "PH", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "Work DO", "Work PH", "Clear Leave")
+                                else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
+                            }
+                        ) { brush ->
                             val selected = selectedBrush == brush
-                            Surface(
-                                Modifier.clickable { chooseBrush(brush) },
-                                shape = RoundedCornerShape(13.dp),
-                                color = if (selected) DailyCyan else MaterialTheme.colorScheme.surfaceVariant
-                            ) {
-                                Text(
-                                    brush,
-                                    Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                                    color = if (selected) Color.White else DailyInk,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
+                            Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) DailyCyan else MaterialTheme.colorScheme.surfaceVariant) {
+                                Text(brush, Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             }
                         }
                     }
                 }
             }
 
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                 Column(Modifier.padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(
-                                "${startDate.month.name.lowercase().replaceFirstChar { it.uppercase() }} calendar",
-                                color = DailyInk,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            Text("${startDate.month.name.lowercase().replaceFirstChar { it.uppercase() }} calendar", color = DailyInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                             Text("Tap = select • double-tap = clear", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                         }
                         Surface(color = DailyBlueSoft, shape = RoundedCornerShape(50.dp)) {
@@ -654,7 +525,7 @@ fun DailyEntryScreen(
                         }
                     }
                     Spacer(Modifier.height(10.dp))
-                    val firstDayOfWeek = allDates.first().dayOfWeek.value
+                    val firstDayOfWeek = allDates.firstOrNull()?.dayOfWeek?.value ?: 7
                     val emptyDaysBefore = if (firstDayOfWeek == 7) 0 else firstDayOfWeek
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(7),
@@ -679,6 +550,7 @@ fun DailyEntryScreen(
                             val oIn = existing?.otTimeIn ?: ""
                             val oOut = existing?.otTimeOut ?: ""
                             val oHrs = existing?.otHours ?: 0f
+
                             val dbLeave = when {
                                 isL && isD -> "DO"
                                 isL && isP -> "PH"
@@ -729,20 +601,12 @@ fun DailyEntryScreen(
                                 staged?.shift == "Custom Shift" -> "Cus"
                                 staged?.shift == "Clear Shift" -> ""
                                 renderLeave in listOf("DO", "PH", "CL", "VL", "sL", "DL", "AB", "SD") -> ""
-                                staged?.leave == "CL/2" -> "${customIn.substringBefore('.')}-${customOut.substringBefore('.') }"
-                                staged?.leave == "SL (Short)" -> "${customIn.substringBefore('.')}-${customOut.substringBefore('.') }"
+                                staged?.leave == "CL/2" || staged?.leave == "SL (Short)" -> "${customIn.substringBefore(".")}-${customOut.substringBefore(".")}"
                                 staged?.leave == "Work DO" && wardType == "Special" && dbShift.isEmpty() -> if (isWknd) "7-13" else "7-16"
                                 staged?.leave == "Work PH" && wardType == "Special" && dbShift.isEmpty() -> "7-13"
                                 else -> dbShift
                             }
-                            val shortShift = when (renderShift) {
-                                "7-13" -> "M"
-                                "13-19" -> "E"
-                                "19-7" -> "N"
-                                "7-16" -> "D"
-                                "Cus" -> "C"
-                                else -> renderShift.take(1)
-                            }
+                            val shortShift = when (renderShift) { "7-13" -> "M"; "13-19" -> "E"; "19-7" -> "N"; "7-16" -> "D"; "Cus" -> "C"; else -> renderShift.take(1) }
                             val shortOt = when {
                                 staged?.ot == "Morn OT" -> "M"
                                 staged?.ot == "Eve OT" -> "E"
@@ -779,22 +643,19 @@ fun DailyEntryScreen(
                             }
                             val animatedTopLeftColor by animateColorAsState(targetTopLeftColor, tween(500, easing = FastOutSlowInEasing), label = "topLeftAnim")
                             val animatedBottomRightColor by animateColorAsState(targetBottomRightColor, tween(500, easing = FastOutSlowInEasing), label = "bottomRightAnim")
-                            val splitBrush = Brush.linearGradient(
-                                0f to animatedTopLeftColor,
-                                .5f to animatedTopLeftColor,
-                                .5f to animatedBottomRightColor,
-                                1f to animatedBottomRightColor
-                            )
-                            val borderColor by animateColorAsState(if (staged != null) DailyCyan else Color.LightGray, label = "cellBorder")
+                            val splitBrush = Brush.linearGradient(0f to animatedTopLeftColor, .5f to animatedTopLeftColor, .5f to animatedBottomRightColor, 1f to animatedBottomRightColor)
+                            val borderColor by animateColorAsState(if (staged != null) DailyCyan else Color.LightGray, label = "border")
                             val borderWidth = if (staged != null) 2.dp else 1.dp
                             var isClearedAnim by remember { mutableStateOf(false) }
                             val scalePop by animateFloatAsState(if (isClearedAnim) .8f else 1f, tween(150), label = "clearScale")
+
                             LaunchedEffect(isClearedAnim) {
                                 if (isClearedAnim) {
                                     delay(150)
                                     isClearedAnim = false
                                 }
                             }
+
                             Box(
                                 Modifier
                                     .aspectRatio(1f)
@@ -804,21 +665,7 @@ fun DailyEntryScreen(
                                     .border(borderWidth, borderColor, RoundedCornerShape(11.dp))
                                     .pointerInput(brushCategory, selectedBrush, existing) {
                                         detectTapGestures(
-                                            onTap = {
-                                                val current = stagedEdits[date] ?: StagedEdit()
-                                                val next = when (brushCategory) {
-                                                    "Shifts" -> current.copy(shift = if (current.shift == selectedBrush) null else selectedBrush)
-                                                    "OT" -> current.copy(ot = if (current.ot == selectedBrush) null else selectedBrush)
-                                                    else -> current.copy(leave = if (current.leave == selectedBrush) null else selectedBrush)
-                                                }
-                                                if (next.shift == null && next.ot == null && next.leave == null) stagedEdits.remove(date) else stagedEdits[date] = next
-                                            },
-                                            onLongPress = {
-                                                val end = minOf(allDates.indexOf(date) + 6, allDates.lastIndex)
-                                                if (end >= allDates.indexOf(date)) {
-                                                    stageDates(allDates.subList(allDates.indexOf(date), end + 1), selectedBrush)
-                                                }
-                                            },
+                                            onTap = { applyEditToDate(date) },
                                             onDoubleTap = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 isClearedAnim = true
@@ -827,23 +674,7 @@ fun DailyEntryScreen(
                                                 if (eId != 0L) {
                                                     coroutineScope.launch {
                                                         withContext(Dispatchers.IO) {
-                                                            viewModel.saveDailyEntry(
-                                                                id = eId,
-                                                                claimPeriodId = claimPeriodId,
-                                                                date = date,
-                                                                isPH = false,
-                                                                isDO = false,
-                                                                isLeave = false,
-                                                                leaveType = null,
-                                                                normalTimeIn = "",
-                                                                normalTimeOut = "",
-                                                                normalHours = 0f,
-                                                                otTimeIn = "",
-                                                                otTimeOut = "",
-                                                                otHours = 0f,
-                                                                wardOverride = "",
-                                                                reason = "Need for service"
-                                                            )
+                                                            viewModel.saveDailyEntry(id = eId, claimPeriodId = claimPeriodId, date = date, isPH = false, isDO = false, isLeave = false, leaveType = null, normalTimeIn = "", normalTimeOut = "", normalHours = 0f, otTimeIn = "", otTimeOut = "", otHours = 0f, wardOverride = "", reason = "Need for service")
                                                         }
                                                         delay(100)
                                                         viewModel.loadEntriesForClaim(claimPeriodId)
@@ -853,13 +684,7 @@ fun DailyEntryScreen(
                                         )
                                     }
                             ) {
-                                Text(
-                                    date.dayOfMonth.toString(),
-                                    Modifier.align(Alignment.Center),
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 15.sp,
-                                    color = if (hasLeaveAnim && renderLeave !in listOf("PH", "DO")) Color.White else DailyInk
-                                )
+                                Text(date.dayOfMonth.toString(), Modifier.align(Alignment.Center), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = if (hasLeaveAnim && renderLeave !in listOf("PH", "DO")) Color.White else DailyInk)
                                 if (shortShift.isNotEmpty() && renderLeave !in listOf("DO", "PH", "CL", "VL", "sL", "DL", "AB", "SD")) {
                                     Text(shortShift, Modifier.align(Alignment.TopStart).padding(start = 4.dp, top = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color(0xFF1B5E20))
                                 }
@@ -878,12 +703,7 @@ fun DailyEntryScreen(
                 }
             }
 
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("Calendar key", color = DailyInk, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -937,15 +757,9 @@ fun DailyEntryScreen(
                 title = { Text("Smart Auto-Fill", fontWeight = FontWeight.ExtraBold) },
                 text = { Text("Would you like to mark your Leaves, DOs, and PHs first?\n\nAfter marking them, the app will automatically fill the rest of the month with weekday and weekend duty patterns.") },
                 confirmButton = {
-                    Button(
-                        enabled = !isSavingBulk,
-                        onClick = {
-                            showAutoFillDialog = false
-                            stagedEdits.clear()
-                            isAutoFillMode = true
-                            setCategory("Leaves")
-                        }
-                    ) { Text("Yes, plan exceptions") }
+                    Button(enabled = !isSavingBulk, onClick = { showAutoFillDialog = false; stagedEdits.clear(); isAutoFillMode = true; setCategory("Leaves") }) {
+                        Text("Yes, plan exceptions")
+                    }
                 },
                 dismissButton = {
                     TextButton(enabled = !isSavingBulk, onClick = { showAutoFillDialog = false }) { Text("Cancel") }
@@ -954,18 +768,14 @@ fun DailyEntryScreen(
         }
 
         if (previewPdfFile != null) {
-            PdfPreviewDialog(
-                pdfFile = previewPdfFile!!,
-                onDismiss = { previewPdfFile = null },
-                onConfirm = {
-                    onSaveAndSharePdf(previewPdfFile!!)
-                    previewPdfFile = null
-                }
-            )
+            PdfPreviewDialog(pdfFile = previewPdfFile!!, onDismiss = { previewPdfFile = null }, onConfirm = {
+                onSaveAndSharePdf(previewPdfFile!!)
+                previewPdfFile = null
+            })
         }
 
         if (isGeneratingPdf) {
-            Dialog(onDismissRequest = {}) {
+            Dialog(onDismissRequest = { }) {
                 Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
                     Row(Modifier.padding(24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         CircularProgressIndicator(color = DailyCyan)
@@ -1021,11 +831,7 @@ fun PdfPreviewDialog(pdfFile: File, onDismiss: () -> Unit, onConfirm: () -> Unit
                 } else {
                     for (i in 0 until renderer.pageCount) {
                         val page = renderer.openPage(i)
-                        val bmp = Bitmap.createBitmap(
-                            (page.width * 1.5).toInt(),
-                            (page.height * 1.5).toInt(),
-                            Bitmap.Config.ARGB_8888
-                        )
+                        val bmp = Bitmap.createBitmap((page.width * 1.5).toInt(), (page.height * 1.5).toInt(), Bitmap.Config.ARGB_8888)
                         bmp.eraseColor(android.graphics.Color.WHITE)
                         page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         pages.add(bmp.asImageBitmap())
@@ -1046,47 +852,25 @@ fun PdfPreviewDialog(pdfFile: File, onDismiss: () -> Unit, onConfirm: () -> Unit
         Surface(Modifier.fillMaxSize().padding(16.dp), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.fillMaxSize()) {
                 Text("PDF Preview", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
-                if (errorMessage != null) {
-                    Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                when {
+                    errorMessage != null -> Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
-                } else if (bitmaps.isEmpty()) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .clipToBounds()
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    scale = (scale * zoom).coerceIn(1f, 4f)
-                                    if (scale > 1f) {
-                                        val maxX = size.width * scale
-                                        val maxY = (size.height * scale) * 2
-                                        offset = Offset(
-                                            x = (offset.x + pan.x).coerceIn(-maxX, maxX),
-                                            y = (offset.y + pan.y).coerceIn(-maxY, maxY)
-                                        )
-                                    } else {
-                                        offset = Offset.Zero
-                                    }
-                                }
+                    bitmaps.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    else -> Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 4f)
+                            if (scale > 1f) {
+                                val maxX = size.width * scale
+                                val maxY = size.height * scale * 2
+                                offset = Offset((offset.x + pan.x).coerceIn(-maxX, maxX), (offset.y + pan.y).coerceIn(-maxY, maxY))
+                            } else {
+                                offset = Offset.Zero
                             }
-                    ) {
-                        Column(
-                            Modifier
-                                .fillMaxSize()
-                                .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            bitmaps.forEach { bmp ->
-                                Image(bitmap = bmp, contentDescription = "PDF Page", modifier = Modifier.fillMaxWidth().border(1.dp, Color.LightGray))
-                            }
+                        }
+                    }) {
+                        Column(Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            bitmaps.forEach { bmp -> Image(bitmap = bmp, contentDescription = "PDF Page", modifier = Modifier.fillMaxWidth().border(1.dp, Color.LightGray)) }
                         }
                     }
                 }
