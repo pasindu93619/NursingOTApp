@@ -86,10 +86,18 @@ fun IcuClinicalWorkspaceScreen(onNavigateBack: () -> Unit) {
             )
         },
         containerColor = IcuBg
-    ) { _ ->
-        AnimatedContent(targetState = selectedTool, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "icu_workspace_transition") { tool ->
-            if (tool == null) IcuWorkspaceHome(tools) { selectedTool = it }
-            else IcuWorkspaceDetail(tool) { selectedDrug = it }
+    ) { innerPadding ->
+        // Scaffold owns the app-bar/window-inset space. Pass it into the scrollable
+        // workspace so the first card can scroll completely clear of the top bar.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            AnimatedContent(targetState = selectedTool, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "icu_workspace_transition") { tool ->
+                if (tool == null) IcuWorkspaceHome(tools) { selectedTool = it }
+                else IcuWorkspaceDetail(tool) { selectedDrug = it }
+            }
         }
     }
     selectedDrug?.let { drug -> DrugIntelligenceDialog(drugName = drug, onDismiss = { selectedDrug = null }) }
