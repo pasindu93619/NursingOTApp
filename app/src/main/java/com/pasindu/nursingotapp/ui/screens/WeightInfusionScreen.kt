@@ -1,236 +1,232 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.delay
+import kotlin.math.round
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val WeightBg = Color(0xFFF8FAFC)
+private val WeightInk = Color(0xFF12204A)
+private val WeightSlate = Color(0xFF64748B)
+private val WeightBlue = Color(0xFF1769E8)
+private val WeightPurple = Color(0xFF7B5CEB)
+private val WeightBlueSoft = Color(0xFFEAF6FF)
+private val WeightMintSoft = Color(0xFFEAFBF5)
+private val WeightAmberSoft = Color(0xFFFFF6E7)
+private val WeightHeroGradient = Brush.horizontalGradient(
+    listOf(Color(0xFF1769E8), Color(0xFF149FE3), Color(0xFF4B78F2), Color(0xFF7B5CEB))
+)
+
+private enum class WeightMode(val title: String, val shortTitle: String, val emoji: String) {
+    SIMPLE("Simple dose", "Dose", "⚖️"),
+    INFUSION("Continuous IV", "Infusion", "💧")
+}
+
 @Composable
 fun WeightInfusionScreen() {
     val haptic = LocalHapticFeedback.current
-    var isVisible by remember { mutableStateOf(false) }
-    var showGuideDialog by remember { mutableStateOf(false) }
-    var isInfusionMode by remember { mutableStateOf(false) } // False = Simple Dose, True = Infusion
+    var mode by remember { mutableStateOf(WeightMode.SIMPLE) }
+    var showGuide by remember { mutableStateOf(false) }
 
-    // Inputs
     var weightKg by remember { mutableStateOf("") }
-
-    // Simple Dose Inputs
     var doseMgKg by remember { mutableStateOf("") }
     var availableMg by remember { mutableStateOf("") }
     var availableMl by remember { mutableStateOf("") }
-
-    // Infusion Inputs
     var doseMcgKgMin by remember { mutableStateOf("") }
     var drugTotalMg by remember { mutableStateOf("") }
     var ivBagTotalMl by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { delay(100); isVisible = true }
-
-    // Math Engine: Simple Dose
     val simpleTargetMg = remember(weightKg, doseMgKg) {
         val w = weightKg.toFloatOrNull() ?: 0f
         val d = doseMgKg.toFloatOrNull() ?: 0f
-        Math.round((w * d) * 100.0) / 100.0
+        round(w * d * 100f) / 100f
     }
 
     val simpleDrawMl = remember(simpleTargetMg, availableMg, availableMl) {
         val have = availableMg.toFloatOrNull() ?: 0f
         val vol = availableMl.toFloatOrNull() ?: 0f
-        if (have > 0f) Math.round((simpleTargetMg / have) * vol * 100.0) / 100.0 else 0.0
+        if (have > 0f) round((simpleTargetMg / have) * vol * 100f) / 100f else 0f
     }
 
-    // Math Engine: Infusion Rate (mcg/kg/min -> mL/hr)
     val infusionRateMlHr = remember(weightKg, doseMcgKgMin, drugTotalMg, ivBagTotalMl) {
         val w = weightKg.toFloatOrNull() ?: 0f
         val dose = doseMcgKgMin.toFloatOrNull() ?: 0f
         val drugMg = drugTotalMg.toFloatOrNull() ?: 0f
         val bagMl = ivBagTotalMl.toFloatOrNull() ?: 0f
-
         if (drugMg > 0f && bagMl > 0f) {
             val mcgPerMin = w * dose
-            val mgPerHr = (mcgPerMin * 60) / 1000
+            val mgPerHr = (mcgPerMin * 60f) / 1000f
             val concentrationMgMl = drugMg / bagMl
-            Math.round((mgPerHr / concentrationMgMl) * 10.0) / 10.0 // Round to 1 decimal for pump
-        } else 0.0
+            if (concentrationMgMl > 0f) round((mgPerHr / concentrationMgMl) * 10f) / 10f else 0f
+        } else 0f
     }
 
-    LaunchedEffect(simpleDrawMl, infusionRateMlHr) {
-        if (simpleDrawMl > 0 || infusionRateMlHr > 0) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-    }
+    if (showGuide) WeightGuideDialog(mode, onDismiss = { showGuide = false })
 
-    if (showGuideDialog) WeightClinicalGuideDialog(onDismiss = { showGuideDialog = false })
-
-    val bgGradient = Brush.verticalGradient(listOf(Color(0xFFB2DFDB).copy(alpha = 0.3f), MaterialTheme.colorScheme.surface))
-
-    Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
-        Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // HEADER
-            AnimatedVisibility(visible = isVisible, enter = slideInVertically { -50 } + fadeIn()) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(48.dp).background(Color(0xFF00796B), CircleShape).shadow(8.dp, CircleShape), contentAlignment = Alignment.Center) { Text("⚖️", fontSize = 24.sp) }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("Weight & Infusions", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF00796B))
-                            Text("Paediatrics & ICU Rates", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Box(modifier = Modifier.size(42.dp).background(Color(0xFF00796B).copy(alpha = 0.2f), CircleShape).clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showGuideDialog = true }, contentAlignment = Alignment.Center) { Text("❓", fontSize = 18.sp) }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(WeightBg)
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            Modifier.fillMaxWidth().background(WeightHeroGradient, RoundedCornerShape(26.dp)).padding(20.dp)
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text("CLINICAL TOOL", color = Color.White.copy(alpha = 0.74f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Weight & Infusions", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Weight-based doses and continuous IV rates in one workspace.", color = Color.White.copy(alpha = 0.88f), fontSize = 11.sp, lineHeight = 16.sp)
+                }
+                Surface(color = Color.White.copy(alpha = 0.15f), shape = RoundedCornerShape(16.dp)) {
+                    Text("⚖️", fontSize = 25.sp, modifier = Modifier.padding(10.dp))
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+        }
 
-            // MODE TOGGLE
-            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp)).padding(4.dp)) {
-                Box(modifier = Modifier.weight(1f).height(40.dp).background(if (!isInfusionMode) Color(0xFF00796B) else Color.Transparent, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { isInfusionMode = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("Simple Dose", color = if (!isInfusionMode) Color.White else Color.Gray, fontWeight = FontWeight.Bold)
-                }
-                Box(modifier = Modifier.weight(1f).height(40.dp).background(if (isInfusionMode) Color(0xFF00796B) else Color.Transparent, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { isInfusionMode = true }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("Continuous IV", color = if (isInfusionMode) Color.White else Color.Gray, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // GLOWING IV PUMP DISPLAY (Only for Infusion Mode)
-            AnimatedVisibility(visible = isVisible && isInfusionMode, enter = scaleIn() + fadeIn()) {
-                Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFF38BDF8), RoundedCornerShape(16.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("IV PUMP RATE TARGET", color = Color(0xFF38BDF8), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            val alpha by rememberInfiniteTransition("").animateFloat(0.5f, 1f, infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "")
-                            Text(if (infusionRateMlHr > 0) infusionRateMlHr.toString() else "0.0", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0EA5E9).copy(alpha = if (infusionRateMlHr > 0) alpha else 1f))
-                            Text(" mL/hr", fontSize = 24.sp, color = Color(0xFF38BDF8), modifier = Modifier.padding(bottom = 10.dp, start = 8.dp))
-                        }
+        Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(22.dp)).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WeightMode.values().forEach { item ->
+                val selected = mode == item
+                Surface(
+                    Modifier.weight(1f).height(48.dp).clickable { mode = item; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (selected) WeightBlue else WeightBg
+                ) {
+                    Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Text(item.emoji, fontSize = 17.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(item.shortTitle, color = if (selected) Color.White else WeightSlate, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
+        }
 
-            AnimatedVisibility(visible = isVisible && !isInfusionMode, enter = scaleIn() + fadeIn()) {
-                Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF00796B), Color(0xFF26A69A))), RoundedCornerShape(16.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("TOTAL TARGET DOSE", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(if (simpleTargetMg > 0) simpleTargetMg.toString() else "0.0", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                            Text(" mg", fontSize = 24.sp, color = Color.White, modifier = Modifier.padding(bottom = 10.dp, start = 8.dp))
+        Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Patient weight", color = WeightInk, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text("Enter kilograms used by the prescription", color = WeightSlate, fontSize = 11.sp)
+                    }
+                    IconButton(onClick = { showGuide = true }) { Icon(Icons.Default.Info, contentDescription = "Calculation guide", tint = WeightBlue) }
+                }
+                WeightInput("Weight (kg)", weightKg, { weightKg = it })
+            }
+        }
+
+        when (mode) {
+            WeightMode.SIMPLE -> {
+                Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Simple weight-based dose", color = WeightInk, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text("Calculate the target dose, then optionally convert it to a draw volume.", color = WeightSlate, fontSize = 11.sp, lineHeight = 16.sp)
+                        WeightInput("Prescribed dose (mg/kg)", doseMgKg, { doseMgKg = it })
+                    }
+                }
+                WeightResultCard("TARGET DOSE", formatWeight(simpleTargetMg), "mg", WeightMintSoft, Color(0xFF087F5B))
+                Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Optional draw-volume conversion", color = WeightInk, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text("Enter the available strength and supplied volume.", color = WeightSlate, fontSize = 11.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            WeightInput("Available dose (mg)", availableMg, { availableMg = it }, Modifier.weight(1f))
+                            WeightInput("Volume (mL)", availableMl, { availableMl = it }, Modifier.weight(1f))
                         }
                     }
                 }
+                if (simpleDrawMl > 0f) WeightResultCard("DRAW THIS VOLUME", formatWeight(simpleDrawMl), "mL", WeightBlueSoft, WeightBlue)
             }
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // INPUT FIELDS
-            Card(modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-
-                    // Universal Weight Input
-                    OutlinedTextField(value = weightKg, onValueChange = { weightKg = it }, label = { Text("Patient Weight (kg)") }, leadingIcon = { Text("⚖️") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF00796B)))
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
-
-                    if (!isInfusionMode) {
-                        OutlinedTextField(value = doseMgKg, onValueChange = { doseMgKg = it }, label = { Text("Prescribed Dose (mg/kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(value = availableMg, onValueChange = { availableMg = it }, label = { Text("Have Dose (mg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
-                            OutlinedTextField(value = availableMl, onValueChange = { availableMl = it }, label = { Text("Volume (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
-                        }
-                    } else {
-                        OutlinedTextField(value = doseMcgKgMin, onValueChange = { doseMcgKgMin = it }, label = { Text("Rate (mcg/kg/min)") }, leadingIcon = { Text("⏱️") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(value = drugTotalMg, onValueChange = { drugTotalMg = it }, label = { Text("Drug in Bag (mg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
-                            OutlinedTextField(value = ivBagTotalMl, onValueChange = { ivBagTotalMl = it }, label = { Text("Bag Vol (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp))
+            WeightMode.INFUSION -> {
+                Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Continuous IV rate", color = WeightInk, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text("Convert a prescribed mcg/kg/min dose into the pump setting.", color = WeightSlate, fontSize = 11.sp, lineHeight = 16.sp)
+                        WeightInput("Dose / rate (mcg/kg/min)", doseMcgKgMin, { doseMcgKgMin = it })
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            WeightInput("Drug in bag (mg)", drugTotalMg, { drugTotalMg = it }, Modifier.weight(1f))
+                            WeightInput("Bag volume (mL)", ivBagTotalMl, { ivBagTotalMl = it }, Modifier.weight(1f))
                         }
                     }
                 }
+                WeightResultCard("PUMP RATE TARGET", formatWeight(infusionRateMlHr), "mL/hr", WeightBlueSoft, WeightBlue)
             }
-            Spacer(modifier = Modifier.height(32.dp))
+        }
 
-            // RESULTS FOR SIMPLE DOSE
-            if (!isInfusionMode && simpleDrawMl > 0) {
-                Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF26A69A), RoundedCornerShape(20.dp)).padding(2.dp)) {
-                    Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("AMOUNT TO DRAW UP", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text(simpleDrawMl.toString(), fontSize = 42.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF00796B))
-                                Text(" mL", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF26A69A), modifier = Modifier.padding(bottom = 6.dp))
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(60.dp))
+        Surface(color = WeightAmberSoft, shape = RoundedCornerShape(18.dp)) {
+            Text("Safety check: verify patient weight, units, prescribed dose/rate, preparation concentration and applicable local protocol before administration.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 11.sp, fontWeight = FontWeight.Bold, lineHeight = 17.sp)
         }
     }
 }
 
-// --- EDUCATIONAL DIALOG ---
 @Composable
-fun WeightClinicalGuideDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.9f), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("⚖️", fontSize = 32.sp)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("Clinical Guide", fontSize = 14.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text("Weight & Infusions", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = Color(0xFF00796B))
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
+private fun WeightInput(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    OutlinedTextField(value = value, onValueChange = onValueChange, modifier = modifier.fillMaxWidth(), label = { Text(label) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, shape = RoundedCornerShape(16.dp))
+}
 
-                Text("Example 1: Simple Dose", fontWeight = FontWeight.Bold, color = Color.DarkGray)
-                Text("Child 20kg needs gentamicin 5mg/kg.\nTotal Dose = 5mg/kg × 20kg = 100mg.\n\nIf vial is 40mg/mL:\nVolume = (100mg / 40mg) × 1mL = 2.5mL.", fontSize = 14.sp, color = Color(0xFF00796B), lineHeight = 20.sp)
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text("Example 2: Infusion Rate", fontWeight = FontWeight.Bold, color = Color.DarkGray)
-                Text("Order adrenaline 5µg/kg/min for 70kg patient.\n\n1. Calculate mcg/min:\n5 × 70 = 350 µg/min\n\n2. Convert to mg/hr:\n(350 × 60) ÷ 1000 = 21 mg/hr\n\n3. Calculate mL/hr (If conc is 1mg/mL):\nRate = 21 mL/hr.", fontSize = 14.sp, color = Color(0xFF1E88E5), lineHeight = 20.sp)
-
-                Spacer(modifier = Modifier.height(24.dp))
-                Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFEBEE), RoundedCornerShape(16.dp)).border(2.dp, Color(0xFFEF5350), RoundedCornerShape(16.dp)).padding(20.dp)) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(32.dp).background(Color(0xFFEF5350), CircleShape), contentAlignment = Alignment.Center) { Text("⚠️", fontSize = 16.sp, color = Color.White) }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Pitfalls & Safety Checks", fontWeight = FontWeight.ExtraBold, color = Color(0xFFC62828), fontSize = 16.sp)
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("• Always confirm weight units (KG vs LBS).\n• Red flag extreme weights. Ensure decimal points are visible to avoid 2.0 becoming 20.0.\n• Watch that mg/kg doses don't exceed adult maximums.\n• Adjusted/Ideal Body Weight (IBW): Avoid using IBW for normal patients. Check institutional guidance if using IBW or AdjBW (often for aminoglycosides).", fontSize = 13.sp, color = Color(0xFFB71C1C), lineHeight = 20.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00796B))) { Text("Understood", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+@Composable
+private fun WeightResultCard(title: String, value: String, unit: String, background: Color, accent: Color) {
+    Surface(color = background, shape = RoundedCornerShape(22.dp)) {
+        Column(Modifier.fillMaxWidth().padding(19.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(3.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(value, color = WeightInk, fontSize = 44.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.width(7.dp))
+                Text(unit, color = accent, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 7.dp))
             }
         }
     }
+}
+
+@Composable
+private fun WeightGuideDialog(mode: WeightMode, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Card(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.72f), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("${mode.emoji} ${mode.title}", color = WeightInk, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                if (mode == WeightMode.SIMPLE) {
+                    Text("Dose workflow", color = WeightBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    Text("Weight × prescribed mg/kg = target dose (mg).\n\nTarget dose ÷ available dose × supplied volume = draw volume.", color = WeightSlate, fontSize = 14.sp, lineHeight = 20.sp)
+                } else {
+                    Text("Infusion workflow", color = WeightBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    Text("Weight × mcg/kg/min gives mcg/min. Convert to mg/hr, then divide by prepared concentration (mg/mL) to obtain mL/hr.", color = WeightSlate, fontSize = 14.sp, lineHeight = 20.sp)
+                }
+                Surface(color = WeightAmberSoft, shape = RoundedCornerShape(16.dp)) {
+                    Text("Always independently verify the prescription, concentration and local protocol.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) { Text("Close", fontWeight = FontWeight.ExtraBold) }
+            }
+        }
+    }
+}
+
+private fun formatWeight(value: Float): String = when {
+    value == 0f -> "0"
+    value % 1f == 0f -> value.toInt().toString()
+    else -> value.toString()
 }
