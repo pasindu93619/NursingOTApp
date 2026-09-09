@@ -59,23 +59,10 @@ fun AppNavigation() {
         composable("bsa_calc") { BsaCalculatorScreen() }
         composable("pediatric_rules") { PediatricRulesScreen() }
         composable("unit_conversions") { UnitConversionsScreen() }
-        composable("special_calcs") {
-            HighAlertClinicalWorkspaceScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onOpenCalculator = { mode -> navController.navigate("special_calcs/${mode.name}") }
-            )
-        }
-        composable(
-            route = "special_calcs/{mode}",
-            arguments = listOf(navArgument("mode") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val mode = backStackEntry.arguments?.getString("mode")
-                ?.let { runCatching { SpecialMode.valueOf(it) }.getOrNull() }
-                ?: SpecialMode.INSULIN
-            HighAlertCalculatorWorkspaceScreen(
-                initialMode = mode,
-                onNavigateBack = { navController.popBackStack() }
-            )
+        composable("special_calcs") { HighAlertClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }, onOpenCalculator = { mode -> navController.navigate("special_calcs/${mode.name}") }) }
+        composable("special_calcs/{mode}", arguments = listOf(navArgument("mode") { type = NavType.StringType })) { backStackEntry ->
+            val mode = backStackEntry.arguments?.getString("mode")?.let { runCatching { SpecialMode.valueOf(it) }.getOrNull() } ?: SpecialMode.INSULIN
+            HighAlertCleanCalculatorScreen(initialMode = mode, onNavigateBack = { navController.popBackStack() })
         }
         composable("emergency_calcs") { EmergencyCalculatorsScreen(onNavigateBack = { navController.popBackStack() }) }
         composable("icu_calculators") { IcuClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() }) }
