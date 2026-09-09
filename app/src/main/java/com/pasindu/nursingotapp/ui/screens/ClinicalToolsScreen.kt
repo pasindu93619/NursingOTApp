@@ -6,8 +6,10 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -40,6 +42,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -49,12 +52,12 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.TravelExplore
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -62,14 +65,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -287,10 +291,64 @@ fun ClinicalToolsScreen(
                             }
                         }
                     }
-                    if (!searchBarFocused && searchQuery.isNotBlank() && bestMatchTool != null) {
-                        Spacer(Modifier.height(2.dp))
-                        GlowingIntentBadge(bestMatchTool) { executeSearch() }
-                    }
+                    if (!searchBarFocused && searchQuery.isNotBlank() && bestMatchTool != null) { Spacer(Modifier.height(2.dp)); @Composable
+                    private fun GlowingIntentBadge(
+                        tool: ClinicalToolModule,
+                        onLaunch: () -> Unit
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onLaunch),
+                            shape = RoundedCornerShape(16.dp),
+                            color = ToolsBlueSoft
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(tool.colorStart.copy(alpha = .12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        tool.emoji,
+                                        fontSize = 18.sp
+                                    )
+                                }
+
+                                Spacer(Modifier.width(10.dp))
+
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "Best match",
+                                        color = ToolsSlateLight,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Text(
+                                        text = tool.title,
+                                        color = ToolsInk,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+
+                                Text(
+                                    text = "OPEN",
+                                    color = ToolsBlue,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+                    } { executeSearch() } }
                 }
             }
 
@@ -384,31 +442,12 @@ private fun ClinicalToolCard(visible: Boolean, tool: ClinicalToolModule) {
 
 @Composable
 private fun GlowingIntentBadge(tool: ClinicalToolModule, onLaunch: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onLaunch),
-        shape = RoundedCornerShape(16.dp),
-        color = ToolsBlueSoft
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(tool.colorStart.copy(alpha = .12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(tool.emoji, fontSize = 18.sp)
-            }
+    val pulse by rememberInfiniteTransition(label = "intent_pulse").animateFloat(0.97f, 1f, infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "intent_scale")
+    Surface(Modifier.fillMaxWidth().graphicsLayer { scaleX = pulse; scaleY = pulse }.clickable(onClick = onLaunch), shape = RoundedCornerShape(16.dp), color = ToolsBlueSoft) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(38.dp).clip(CircleShape).background(tool.colorStart.copy(alpha = .12f)), contentAlignment = Alignment.Center) { Text(tool.emoji, fontSize = 18.sp) }
             Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Best match", color = ToolsSlateLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                Text(tool.title, color = ToolsInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-            }
+            Column(Modifier.weight(1f)) { Text("Best match", color = ToolsSlateLight, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(tool.title, color = ToolsInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold) }
             Text("OPEN", color = ToolsBlue, fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
     }
