@@ -29,7 +29,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
@@ -42,9 +41,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -113,9 +112,10 @@ fun ClinicalToolsRefinedScreen(
         if (cleaned.isBlank()) return
         saveHistory(context, cleaned)
         history = loadHistory(context)
-        val best = filtered.firstOrNull()
-        selectedCategory = best?.id
-        best?.open?.invoke()
+        filtered.firstOrNull()?.let { tool ->
+            selectedCategory = tool.id
+            tool.open()
+        }
     }
 
     Column(
@@ -144,12 +144,19 @@ fun ClinicalToolsRefinedScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().imePadding(),
-            contentPadding = PaddingValues(horizontal = 16.dp, bottom = 28.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 0.dp,
+                end = 16.dp,
+                bottom = 28.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
                 Box(
-                    Modifier.fillMaxWidth().background(ClinicalToolDesignTokens.hero, RoundedCornerShape(28.dp)).padding(22.dp)
+                    Modifier.fillMaxWidth()
+                        .background(ClinicalToolDesignTokens.hero, RoundedCornerShape(28.dp))
+                        .padding(22.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Row(verticalAlignment = Alignment.Top) {
@@ -223,7 +230,7 @@ fun ClinicalToolsRefinedScreen(
             } else {
                 items(filtered, key = { it.id }) { tool ->
                     RefinedToolCard(
-                        tool,
+                        tool = tool,
                         expanded = selectedCategory == tool.id,
                         onOpen = { tool.open() },
                         onToggle = { selectedCategory = if (selectedCategory == tool.id) null else tool.id }
@@ -300,29 +307,14 @@ private fun ClinicalSearchCard(
                 ),
                 textStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = ClinicalToolDesignTokens.ink)
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                listOf("IV drip", "Dosage", "ICU", "Emergency").forEach { chip ->
-                    Surface(
-                        Modifier.clickable { onHistoryClick(chip) },
-                        shape = RoundedCornerShape(50.dp),
-                        color = ClinicalToolDesignTokens.softBlue
+            if (!focused && history.isNotEmpty() && query.isBlank()) {
+                Text("Recent searches", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                history.take(5).forEach { pastQuery ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onHistoryClick(pastQuery) }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(chip, Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalToolDesignTokens.blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            if (focused && query.isBlank() && history.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Recent searches", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    history.forEach { pastQuery ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable { onHistoryClick(pastQuery) }.padding(vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.History, contentDescription = null, tint = ClinicalToolDesignTokens.slate, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(pastQuery, color = ClinicalToolDesignTokens.ink, fontSize = 12.sp)
-                        }
+                        Text(pastQuery, color = ClinicalToolDesignTokens.ink, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -338,14 +330,20 @@ private fun RefinedToolCard(
     onToggle: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
+        Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Box(Modifier.size(56.dp).background(tool.accent.copy(alpha = .10f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier.size(56.dp).background(tool.accent.copy(alpha = .11f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(tool.icon, fontSize = 25.sp)
                 }
                 Spacer(Modifier.width(13.dp))
@@ -353,33 +351,37 @@ private fun RefinedToolCard(
                     Text(tool.title, color = ClinicalToolDesignTokens.ink, fontSize = 17.sp, fontWeight = FontWeight.Black)
                     Text(tool.subtitle, color = tool.accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                Surface(color = tool.accent, shape = CircleShape, modifier = Modifier.clickable(onClick = onToggle)) {
-                    Icon(Icons.Default.Calculate, contentDescription = "Open ${tool.title}", tint = Color.White, modifier = Modifier.padding(10.dp).size(18.dp))
+                Box(
+                    Modifier.size(40.dp).background(tool.accent, CircleShape).clickable(onClick = onToggle),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(if (expanded) "−" else "+", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                 }
             }
             if (expanded) {
-                Spacer(Modifier.height(8.dp))
-                Text("Tap the card to open this clinical workflow.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp)
+                Surface(color = ClinicalToolDesignTokens.softBlue, shape = RoundedCornerShape(0.dp)) {
+                    Text(
+                        "Tap the card to open this clinical workflow.",
+                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
+                        color = ClinicalToolDesignTokens.slate,
+                        fontSize = 10.sp
+                    )
+                }
             }
         }
     }
 }
 
 private fun loadHistory(context: Context): List<String> {
-    return context.getSharedPreferences(REFINED_PREFS, Context.MODE_PRIVATE)
-        .getString(REFINED_HISTORY, "")
-        .orEmpty()
-        .split("|::|")
-        .filter(String::isNotBlank)
-        .take(5)
+    val raw = context.getSharedPreferences(REFINED_PREFS, Context.MODE_PRIVATE).getString(REFINED_HISTORY, "") ?: ""
+    return raw.split("|::|").filter { it.isNotBlank() }
 }
 
-private fun saveHistory(context: Context, query: String) {
-    val cleaned = query.trim()
-    if (cleaned.isBlank()) return
+private fun saveHistory(context: Context, value: String) {
+    if (value.isBlank()) return
     val current = loadHistory(context).toMutableList()
-    current.remove(cleaned)
-    current.add(0, cleaned)
+    current.remove(value)
+    current.add(0, value)
     context.getSharedPreferences(REFINED_PREFS, Context.MODE_PRIVATE)
         .edit()
         .putString(REFINED_HISTORY, current.take(5).joinToString("|::|"))
