@@ -2,230 +2,162 @@ package com.pasindu.nursingotapp.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import kotlin.math.round
+import java.util.Locale
 
-private val DosageBg = Color(0xFFF6F9FD)
-private val DosageInk = Color(0xFF12204A)
-private val DosageSlate = Color(0xFF64748B)
-private val DosageBlue = Color(0xFF1769E8)
-private val DosageCyan = Color(0xFF149FE3)
-private val DosagePurple = Color(0xFF7B5CEB)
-private val DosageBlueSoft = Color(0xFFEAF6FF)
-private val DosagePurpleSoft = Color(0xFFF3EEFF)
-private val DosageMintSoft = Color(0xFFEAFBF5)
-private val DosageAmberSoft = Color(0xFFFFF6E7)
-private val DosageHeroGradient = Brush.linearGradient(
-    listOf(Color(0xFF1769E8), Color(0xFF149FE3), Color(0xFF4B78F2), Color(0xFF7B5CEB))
-)
+private val DoseBg = Color(0xFFF6F9FD)
+private val DoseInk = Color(0xFF12204A)
+private val DoseSlate = Color(0xFF64748B)
+private val DoseBlue = Color(0xFF1769E8)
+private val DoseCyan = Color(0xFF149FE3)
+private val DosePurple = Color(0xFF7B5CEB)
+private val DoseGreen = Color(0xFF0A9B72)
+private val DoseAmber = Color(0xFFE58A00)
+private val DoseRed = Color(0xFFD92D4F)
+private val DoseSoftBlue = Color(0xFFEAF6FF)
+private val DoseSoftGreen = Color(0xFFEAFBF5)
+private val DoseSoftAmber = Color(0xFFFFF6E7)
+private val DoseSoftRed = Color(0xFFFFEEF1)
+private val DoseHero = Brush.linearGradient(listOf(DoseBlue, DoseCyan, Color(0xFF4B78F2), DosePurple))
 
-enum class CalcMode(val title: String, val emoji: String, val shortTitle: String) {
-    STANDARD("Standard dose", "💊", "Standard"),
-    WEIGHT("Weight-based", "⚖️", "Mg/kg"),
-    PERCENTAGE("Percentage solution", "💧", "% → mg"),
-    DILUTION("Dilution", "🧪", "Dilute"),
-    RECONSTITUTE("Reconstitution", "🫙", "Powder")
+enum class CalcMode(val title: String, val shortTitle: String) {
+    STANDARD("Standard dose", "Standard"),
+    WEIGHT("Weight-based dose", "mg/kg"),
+    PERCENTAGE("Percentage solution", "%"),
+    DILUTION("Dilution", "Dilution"),
+    RECONSTITUTE("Reconstitution", "Vial")
 }
 
 @Composable
 fun DosageCalculatorScreen() {
-    val haptic = LocalHapticFeedback.current
-    var currentMode by remember { mutableStateOf(CalcMode.STANDARD) }
-    var showGuideDialog by remember { mutableStateOf(false) }
+    var mode by remember { mutableStateOf(CalcMode.STANDARD) }
+    var showInfo by remember { mutableStateOf(false) }
 
-    var orderedDose by remember { mutableStateOf("") }
-    var availableDose by remember { mutableStateOf("") }
-    var availableVolume by remember { mutableStateOf("") }
-    var patientWeight by remember { mutableStateOf("") }
+    var desired by remember { mutableStateOf("") }
+    var available by remember { mutableStateOf("") }
+    var suppliedVolume by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
     var dosePerKg by remember { mutableStateOf("") }
-    var targetConc by remember { mutableStateOf("") }
-    var targetVol by remember { mutableStateOf("") }
-    var stockConc by remember { mutableStateOf("") }
-    var percentValue by remember { mutableStateOf("") }
-    var percentTotalVol by remember { mutableStateOf("") }
-    var vialPowderMg by remember { mutableStateOf("") }
-    var diluentAddedMl by remember { mutableStateOf("") }
-    var reconOrderedDose by remember { mutableStateOf("") }
+    var percent by remember { mutableStateOf("") }
+    var percentVolume by remember { mutableStateOf("") }
+    var stockConcentration by remember { mutableStateOf("") }
+    var targetConcentration by remember { mutableStateOf("") }
+    var finalVolume by remember { mutableStateOf("") }
+    var vialDrugAmount by remember { mutableStateOf("") }
+    var reconstitutedFinalVolume by remember { mutableStateOf("") }
+    var reconstitutionDose by remember { mutableStateOf("") }
 
-    val calculatedMedVolume = remember(currentMode, orderedDose, availableDose, availableVolume, patientWeight, dosePerKg) {
-        val have = availableDose.toFloatOrNull() ?: 0f
-        val vol = availableVolume.toFloatOrNull() ?: 0f
-        var desired = orderedDose.toFloatOrNull() ?: 0f
-        if (currentMode == CalcMode.WEIGHT) desired = (patientWeight.toFloatOrNull() ?: 0f) * (dosePerKg.toFloatOrNull() ?: 0f)
-        if (have > 0f && (currentMode == CalcMode.STANDARD || currentMode == CalcMode.WEIGHT)) round((desired / have) * vol * 100.0) / 100.0 else 0.0
+    val standardResult = calculateStandard(desired, available, suppliedVolume)
+    val weightDose = calculateWeightDose(weight, dosePerKg)
+    val weightDraw = calculateStandard(weightDose, available, suppliedVolume)
+    val percentMgMl = calculatePercentageMgMl(percent)
+    val percentGrams = calculatePercentageTotalGrams(percentMgMl, percentVolume)
+    val dilutionStockDraw = calculateDilutionDraw(stockConcentration, targetConcentration, finalVolume)
+    val dilutionSolvent = if (dilutionStockDraw != null) {
+        val total = finalVolume.toDoubleOrNull()
+        total?.let { it - dilutionStockDraw }
+    } else null
+    val reconstitutionConcentration = calculateReconstitutionConcentration(vialDrugAmount, reconstitutedFinalVolume)
+    val reconstitutionDraw = calculateReconstitutionDraw(reconstitutionDose, reconstitutionConcentration)
+
+    if (showInfo) {
+        DosageInfoDialog(mode) { showInfo = false }
     }
-
-    val calculatedTargetDoseMg = remember(currentMode, patientWeight, dosePerKg) {
-        if (currentMode == CalcMode.WEIGHT) {
-            val weight = patientWeight.toFloatOrNull() ?: 0f
-            val mgKg = dosePerKg.toFloatOrNull() ?: 0f
-            round((weight * mgKg) * 100.0) / 100.0
-        } else 0.0
-    }
-
-    val percentMgPerMl = remember(percentValue, currentMode) {
-        if (currentMode == CalcMode.PERCENTAGE) {
-            val p = percentValue.toFloatOrNull() ?: 0f
-            round((p * 10f) * 100.0) / 100.0
-        } else 0.0
-    }
-
-    val percentTotalGrams = remember(percentMgPerMl, percentTotalVol) {
-        val vol = percentTotalVol.toFloatOrNull() ?: 0f
-        if (vol > 0f) round((percentMgPerMl * vol / 1000f) * 100.0) / 100.0 else 0.0
-    }
-
-    var stockVolToDraw by remember { mutableFloatStateOf(0f) }
-    var diluentVolToAdd by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(currentMode, targetConc, targetVol, stockConc) {
-        if (currentMode == CalcMode.DILUTION) {
-            val c2 = targetConc.toFloatOrNull() ?: 0f
-            val v2 = targetVol.toFloatOrNull() ?: 0f
-            val c1 = stockConc.toFloatOrNull() ?: 0f
-            if (c1 > 0f && c1 >= c2) {
-                stockVolToDraw = (round(((c2 * v2) / c1) * 100.0) / 100.0).toFloat()
-                diluentVolToAdd = (round((v2 - stockVolToDraw) * 100.0) / 100.0).toFloat()
-            } else {
-                stockVolToDraw = 0f
-                diluentVolToAdd = 0f
-            }
-        }
-    }
-
-    var reconConcMgMl by remember { mutableFloatStateOf(0f) }
-    var reconDrawMl by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(currentMode, vialPowderMg, diluentAddedMl, reconOrderedDose) {
-        if (currentMode == CalcMode.RECONSTITUTE) {
-            val powder = vialPowderMg.toFloatOrNull() ?: 0f
-            val diluent = diluentAddedMl.toFloatOrNull() ?: 0f
-            val ordered = reconOrderedDose.toFloatOrNull() ?: 0f
-            if (diluent > 0f) {
-                reconConcMgMl = (round((powder / diluent) * 100.0) / 100.0).toFloat()
-                reconDrawMl = if (reconConcMgMl > 0f) (round((ordered / reconConcMgMl) * 100.0) / 100.0).toFloat() else 0f
-            } else {
-                reconConcMgMl = 0f
-                reconDrawMl = 0f
-            }
-        }
-    }
-
-    if (showGuideDialog) DosageGuideDialog(currentMode) { showGuideDialog = false }
 
     Column(
         Modifier
             .fillMaxSize()
-            .background(DosageBg)
+            .background(DoseBg)
             .verticalScroll(rememberScrollState())
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        DosageHero(currentMode)
-        ModeSelector(currentMode) {
-            currentMode = it
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        DoseHero(mode, onInfo = { showInfo = true })
+        ModeRail(mode) { mode = it }
+        WorkflowLabel(mode)
+
+        when (mode) {
+            CalcMode.STANDARD -> StandardWorkspace(desired, { desired = it }, available, { available = it }, suppliedVolume, { suppliedVolume = it }, standardResult)
+            CalcMode.WEIGHT -> WeightWorkspace(weight, { weight = it }, dosePerKg, { dosePerKg = it }, weightDose, available, { available = it }, suppliedVolume, { suppliedVolume = it }, weightDraw)
+            CalcMode.PERCENTAGE -> PercentageWorkspace(percent, { percent = it }, percentVolume, { percentVolume = it }, percentMgMl, percentGrams)
+            CalcMode.DILUTION -> DilutionWorkspace(stockConcentration, { stockConcentration = it }, targetConcentration, { targetConcentration = it }, finalVolume, { finalVolume = it }, dilutionStockDraw, dilutionSolvent)
+            CalcMode.RECONSTITUTE -> ReconstitutionWorkspace(vialDrugAmount, { vialDrugAmount = it }, reconstitutedFinalVolume, { reconstitutedFinalVolume = it }, reconstitutionDose, { reconstitutionDose = it }, reconstitutionConcentration, reconstitutionDraw)
         }
 
-        SectionHeader(
-            eyebrow = "WORKSPACE",
-            title = modeWorkspaceTitle(currentMode),
-            subtitle = modeWorkspaceSubtitle(currentMode)
-        )
-
-        when (currentMode) {
-            CalcMode.STANDARD -> StandardDosePanel(orderedDose, { orderedDose = it }, availableDose, { availableDose = it }, availableVolume, { availableVolume = it }, calculatedMedVolume, { showGuideDialog = true })
-            CalcMode.WEIGHT -> WeightDosePanel(patientWeight, { patientWeight = it }, dosePerKg, { dosePerKg = it }, calculatedTargetDoseMg, availableDose, { availableDose = it }, availableVolume, { availableVolume = it }, calculatedMedVolume, { showGuideDialog = true })
-            CalcMode.PERCENTAGE -> PercentagePanel(percentValue, { percentValue = it }, percentTotalVol, { percentTotalVol = it }, percentMgPerMl, percentTotalGrams)
-            CalcMode.DILUTION -> DilutionPanel(targetConc, { targetConc = it }, targetVol, { targetVol = it }, stockConc, { stockConc = it }, stockVolToDraw, diluentVolToAdd)
-            CalcMode.RECONSTITUTE -> ReconstitutionPanel(vialPowderMg, { vialPowderMg = it }, diluentAddedMl, { diluentAddedMl = it }, reconOrderedDose, { reconOrderedDose = it }, reconConcMgMl, reconDrawMl)
-        }
-
-        DosageSafetyBanner()
-        Spacer(Modifier.navigationBarsPadding())
+        SafetyPanel(mode)
+        Spacer(Modifier.height(8.dp))
     }
 }
 
 @Composable
-private fun DosageHero(mode: CalcMode) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .background(DosageHeroGradient, RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp, topStart = 26.dp, topEnd = 26.dp))
-            .padding(horizontal = 20.dp, vertical = 18.dp)
+private fun DoseHero(mode: CalcMode, onInfo: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(3.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("CLINICAL TOOL", color = Color.White.copy(alpha = 0.72f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(50.dp)) {
-                        Text("LIVE CALC", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                    }
+        Box(Modifier.fillMaxWidth().background(DoseHero, RoundedCornerShape(28.dp)).padding(20.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text("MEDICATION CALCULATION", color = Color.White.copy(.72f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                    Spacer(Modifier.height(5.dp))
+                    Text("Advanced Dosage", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black, lineHeight = 32.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text("${mode.title} · calculate first, verify before administration", color = Color.White.copy(.88f), fontSize = 11.sp, lineHeight = 16.sp)
                 }
-                Spacer(Modifier.height(5.dp))
-                Text("Advanced Dosage", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp)
-                Spacer(Modifier.height(4.dp))
-                Text("${mode.shortTitle} workflow · clear math · fewer taps", color = Color.White.copy(alpha = 0.88f), fontSize = 11.sp, lineHeight = 15.sp)
-            }
-            Surface(color = Color.White.copy(alpha = 0.14f), shape = CircleShape) {
-                Icon(Icons.Default.Medication, contentDescription = null, tint = Color.White, modifier = Modifier.padding(12.dp).size(26.dp))
+                IconButton(onClick = onInfo, modifier = Modifier.background(Color.White.copy(.14f), RoundedCornerShape(14.dp))) {
+                    Icon(Icons.Default.Info, contentDescription = "Dosage information", tint = Color.White)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ModeSelector(selected: CalcMode, onSelected: (CalcMode) -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(0.dp)) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun ModeRail(selected: CalcMode, onSelected: (CalcMode) -> Unit) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(0.dp)) {
+        Column(Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Tune, contentDescription = null, tint = DosageBlue, modifier = Modifier.size(17.dp))
+                Icon(Icons.Default.Calculate, null, tint = DoseBlue, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("Calculation mode", color = DosageInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text("Choose calculation", color = DoseInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
-            val rows = CalcMode.values().toList().chunked(3)
-            rows.forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { mode ->
-                        val active = mode == selected
-                        Surface(
-                            Modifier.weight(1f).height(54.dp).clickable { onSelected(mode) },
-                            shape = RoundedCornerShape(15.dp),
-                            color = if (active) DosageBlue else DosageBg
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                Text(mode.emoji, fontSize = 17.sp)
-                                Spacer(Modifier.height(1.dp))
-                                Text(mode.shortTitle, color = if (active) Color.White else DosageSlate, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
-                            }
+            Spacer(Modifier.height(9.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                CalcMode.values().forEach { item ->
+                    val active = item == selected
+                    Surface(
+                        Modifier.width(94.dp).height(56.dp).clickable { onSelected(item) },
+                        color = if (active) DoseBlue else DoseBg,
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text(modeSymbol(item), fontSize = 18.sp)
+                            Text(item.shortTitle, color = if (active) Color.White else DoseSlate, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                         }
                     }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -233,210 +165,253 @@ private fun ModeSelector(selected: CalcMode, onSelected: (CalcMode) -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(eyebrow: String, title: String, subtitle: String) {
+private fun WorkflowLabel(mode: CalcMode) {
     Column(Modifier.padding(horizontal = 2.dp)) {
-        Text(eyebrow, color = DosageBlue, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
-        Spacer(Modifier.height(2.dp))
-        Text(title, color = DosageInk, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 25.sp)
-        Text(subtitle, color = DosageSlate, fontSize = 11.sp, lineHeight = 16.sp)
+        Text("STEP-BY-STEP WORKSPACE", color = DoseBlue, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
+        Text(mode.title, color = DoseInk, fontSize = 21.sp, fontWeight = FontWeight.Black)
+        Text(workflowHint(mode), color = DoseSlate, fontSize = 11.sp, lineHeight = 16.sp)
     }
 }
 
 @Composable
-private fun StandardDosePanel(ordered: String, onOrdered: (String) -> Unit, available: String, onAvailable: (String) -> Unit, volume: String, onVolume: (String) -> Unit, result: Double, onGuide: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionCard("Enter prescribed values", "Desired ÷ available × supplied volume") {
-            InputField("Desired dose (D)", ordered, onOrdered)
-            InputField("Available dose (H)", available, onAvailable)
-            InputField("Available volume (Q)", volume, onVolume)
+private fun StandardWorkspace(desired: String, onDesired: (String) -> Unit, available: String, onAvailable: (String) -> Unit, volume: String, onVolume: (String) -> Unit, result: Double?) {
+    StepCard("01", "Prescription", "Keep desired and available dose in the same unit") {
+        DoseInput("Desired dose", desired, onDesired, "dose unit", "e.g. 500")
+        DoseInput("Available dose", available, onAvailable, "same unit", "e.g. 250")
+        DoseInput("Supplied volume", volume, onVolume, "mL", "e.g. 5")
+    }
+    ResultPanel("DRAW VOLUME", result, "mL", DoseSoftBlue, DoseBlue)
+    FormulaPanel("Formula", "(Desired dose ÷ Available dose) × Supplied volume")
+}
+
+@Composable
+private fun WeightWorkspace(weight: String, onWeight: (String) -> Unit, dose: String, onDose: (String) -> Unit, calculatedDose: Double?, available: String, onAvailable: (String) -> Unit, volume: String, onVolume: (String) -> Unit, draw: Double?) {
+    StepCard("01", "Patient-specific dose", "Calculate the ordered dose from validated weight") {
+        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            DoseInput("Weight", weight, onWeight, "kg", "e.g. 20", Modifier.weight(1f))
+            DoseInput("Dose", dose, onDose, "mg/kg", "e.g. 10", Modifier.weight(1f))
         }
-        ResultCard("DRAW VOLUME", formatNumber(result), "mL", DosageBlueSoft, DosageBlue, valid = result > 0)
-        GuideButton(onGuide)
     }
+    ResultPanel("CALCULATED DOSE", calculatedDose, "mg", DoseSoftGreen, DoseGreen)
+    StepCard("02", "Draw conversion", "Use the actual medication concentration on the label") {
+        DoseInput("Available dose", available, onAvailable, "mg", "e.g. 100")
+        DoseInput("Supplied volume", volume, onVolume, "mL", "e.g. 2")
+    }
+    ResultPanel("DRAW VOLUME", draw, "mL", DoseSoftBlue, DoseBlue)
 }
 
 @Composable
-private fun WeightDosePanel(weight: String, onWeight: (String) -> Unit, dose: String, onDose: (String) -> Unit, targetDose: Double, availableDose: String, onAvailableDose: (String) -> Unit, availableVolume: String, onAvailableVolume: (String) -> Unit, medVolume: Double, onGuide: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionCard("Step 01 · Patient & dose", "Calculate the required dose from weight first") {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InputField("Weight (kg)", weight, onWeight, Modifier.weight(1f))
-                InputField("Dose (mg/kg)", dose, onDose, Modifier.weight(1f))
+private fun PercentageWorkspace(percent: String, onPercent: (String) -> Unit, volume: String, onVolume: (String) -> Unit, mgMl: Double?, grams: Double?) {
+    StepCard("01", "Percentage concentration", "This conversion assumes a % w/v solution") {
+        DoseInput("Concentration", percent, onPercent, "% w/v", "e.g. 5")
+        DoseInput("Total volume", volume, onVolume, "mL", "e.g. 100")
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        ResultPanel("CONCENTRATION", mgMl, "mg/mL", DoseSoftBlue, DoseBlue, Modifier.weight(1f))
+        ResultPanel("TOTAL DRUG", grams, "g", DoseSoftGreen, DoseGreen, Modifier.weight(1f))
+    }
+    FormulaPanel("Conversion", "1% w/v = 10 mg/mL")
+}
+
+@Composable
+private fun DilutionWorkspace(stock: String, onStock: (String) -> Unit, target: String, onTarget: (String) -> Unit, volume: String, onVolume: (String) -> Unit, draw: Double?, solvent: Double?) {
+    StepCard("01", "Dilution setup", "C1V1 = C2V2 · target concentration must not exceed stock") {
+        DoseInput("Stock concentration", stock, onStock, "same unit", "e.g. 10")
+        DoseInput("Target concentration", target, onTarget, "same unit", "e.g. 2")
+        DoseInput("Final volume", volume, onVolume, "mL", "e.g. 100")
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        ResultPanel("STOCK TO DRAW", draw, "mL", DoseSoftBlue, DoseBlue, Modifier.weight(1f))
+        ResultPanel("DILUENT", solvent, "mL", DoseSoftGreen, DoseGreen, Modifier.weight(1f))
+    }
+    FormulaPanel("Formula", "Stock volume = (Target concentration × Final volume) ÷ Stock concentration")
+}
+
+@Composable
+private fun ReconstitutionWorkspace(vialAmount: String, onVialAmount: (String) -> Unit, finalVolume: String, onFinalVolume: (String) -> Unit, ordered: String, onOrdered: (String) -> Unit, concentration: Double?, draw: Double?) {
+    StepCard("01", "Manufacturer-defined final volume", "Use the final volume stated for the actual product after reconstitution") {
+        DoseInput("Drug in vial", vialAmount, onVialAmount, "mg", "e.g. 1000")
+        DoseInput("Final volume", finalVolume, onFinalVolume, "mL", "e.g. 10")
+        DoseInput("Ordered dose", ordered, onOrdered, "mg", "e.g. 250")
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        ResultPanel("FINAL CONCENTRATION", concentration, "mg/mL", DoseSoftBlue, DoseBlue, Modifier.weight(1f))
+        ResultPanel("DRAW VOLUME", draw, "mL", DoseSoftGreen, DoseGreen, Modifier.weight(1f))
+    }
+    FormulaPanel("Formula", "Final concentration = vial drug amount ÷ final volume; draw = ordered dose ÷ concentration")
+}
+
+@Composable
+private fun StepCard(step: String, title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(1.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = DoseBlue, shape = RoundedCornerShape(10.dp)) {
+                    Text(step, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = DoseInk, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(subtitle, color = DoseSlate, fontSize = 10.sp, lineHeight = 14.sp)
+                }
             }
-        }
-        ResultCard("CALCULATED DOSE", formatNumber(targetDose), "mg", DosageMintSoft, Color(0xFF087F5B), valid = targetDose > 0)
-        SectionCard("Step 02 · Optional draw conversion", "Available strength + supplied volume") {
-            InputField("Available dose (mg)", availableDose, onAvailableDose)
-            InputField("Available volume (mL)", availableVolume, onAvailableVolume)
-        }
-        ResultCard("DRAW VOLUME", formatNumber(medVolume), "mL", DosageBlueSoft, DosageBlue, valid = medVolume > 0)
-        GuideButton(onGuide)
-    }
-}
-
-@Composable
-private fun PercentagePanel(percent: String, onPercent: (String) -> Unit, totalVolume: String, onTotalVolume: (String) -> Unit, mgPerMl: Double, totalGrams: Double) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionCard("Percentage solution", "% w/v → mg/mL and total grams") {
-            InputField("Concentration (%)", percent, onPercent)
-            InputField("Total volume (mL)", totalVolume, onTotalVolume)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ResultCard("STRENGTH", formatNumber(mgPerMl), "mg/mL", DosageBlueSoft, DosageBlue, Modifier.weight(1f), valid = mgPerMl > 0)
-            ResultCard("TOTAL DRUG", formatNumber(totalGrams), "g", DosagePurpleSoft, DosagePurple, Modifier.weight(1f), valid = totalGrams > 0)
-        }
-    }
-}
-
-@Composable
-private fun DilutionPanel(target: String, onTarget: (String) -> Unit, targetVolume: String, onTargetVolume: (String) -> Unit, stock: String, onStock: (String) -> Unit, stockDraw: Float, diluent: Float) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionCard("Dilution", "C₁V₁ = C₂V₂") {
-            InputField("Target concentration (C₂)", target, onTarget)
-            InputField("Target volume (V₂, mL)", targetVolume, onTargetVolume)
-            InputField("Stock concentration (C₁)", stock, onStock)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ResultCard("DRAW STOCK", formatNumber(stockDraw.toDouble()), "mL", DosageBlueSoft, DosageBlue, Modifier.weight(1f), valid = stockDraw > 0f)
-            ResultCard("ADD DILUENT", formatNumber(diluent.toDouble()), "mL", DosageMintSoft, Color(0xFF087F5B), Modifier.weight(1f), valid = diluent > 0f)
-        }
-        Surface(color = DosagePurpleSoft, shape = RoundedCornerShape(18.dp)) { Text("Mixed-active alligation calculations are intentionally not included.", Modifier.padding(14.dp), color = Color(0xFF5B42B5), fontSize = 11.sp, fontWeight = FontWeight.Bold, lineHeight = 17.sp) }
-    }
-}
-
-@Composable
-private fun ReconstitutionPanel(powder: String, onPowder: (String) -> Unit, diluent: String, onDiluent: (String) -> Unit, orderedDose: String, onOrderedDose: (String) -> Unit, concentration: Float, drawVolume: Float) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionCard("Powder reconstitution", "Find concentration, then draw volume") {
-            InputField("Vial powder (mg)", powder, onPowder)
-            InputField("Diluent added (mL)", diluent, onDiluent)
-            InputField("Ordered dose (mg)", orderedDose, onOrderedDose)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ResultCard("RECONSTITUTED", formatNumber(concentration.toDouble()), "mg/mL", DosageBlueSoft, DosageBlue, Modifier.weight(1f), valid = concentration > 0f)
-            ResultCard("DRAW VOLUME", formatNumber(drawVolume.toDouble()), "mL", DosageMintSoft, Color(0xFF087F5B), Modifier.weight(1f), valid = drawVolume > 0f)
-        }
-    }
-}
-
-@Composable
-private fun SectionCard(title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(23.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(0.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-            Text(title, color = DosageInk, fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = DosageSlate, fontSize = 11.sp, lineHeight = 16.sp)
             content()
         }
     }
 }
 
 @Composable
-private fun InputField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun DoseInput(label: String, value: String, onValueChange: (String) -> Unit, suffix: String, placeholder: String, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        onValueChange = { text -> if (text.length <= 12 && text.matches(Regex("^\\d*\\.?\\d*$"))) onValueChange(text) },
         modifier = modifier.fillMaxWidth(),
+        label = { Text(label) },
+        placeholder = { Text(placeholder, color = DoseSlate.copy(.55f)) },
+        suffix = { Text(suffix, color = DoseBlue, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
         singleLine = true,
-        shape = RoundedCornerShape(16.dp)
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        shape = RoundedCornerShape(15.dp)
     )
 }
 
 @Composable
-private fun ResultCard(title: String, value: String, unit: String, background: Color, accent: Color, modifier: Modifier = Modifier, valid: Boolean = false) {
-    Surface(Modifier.fillMaxWidth().then(modifier), color = background, shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 17.dp, horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, textAlign = TextAlign.Center)
-                if (valid) {
-                    Spacer(Modifier.width(5.dp))
-                    Icon(Icons.Default.CheckCircle, contentDescription = "Calculated", tint = accent, modifier = Modifier.size(14.dp))
-                }
-            }
-            Spacer(Modifier.height(3.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, color = DosageInk, fontSize = 38.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.width(6.dp))
-                Text(unit, color = accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 6.dp))
-            }
-            if (valid) {
-                Text("RESULT READY", color = accent.copy(alpha = 0.82f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+private fun ResultPanel(title: String, value: Double?, unit: String, background: Color, accent: Color, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier.fillMaxWidth(), color = background, shape = RoundedCornerShape(20.dp)) {
+        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = .9.sp)
+            if (value == null || !value.isFinite()) {
+                Text("—", color = DoseSlate, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Text("Enter valid values", color = DoseSlate, fontSize = 9.sp)
+            } else {
+                Text(formatNumber(value), color = DoseInk, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text(unit, color = accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
     }
 }
 
 @Composable
-private fun GuideButton(onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = DosageBlue)) {
-        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(17.dp))
-        Spacer(Modifier.width(7.dp))
-        Text("How this calculation works", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun DosageSafetyBanner() {
-    Surface(color = DosageAmberSoft, shape = RoundedCornerShape(18.dp)) {
-        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.Top) {
-            Text("⚠️", fontSize = 18.sp)
+private fun FormulaPanel(title: String, text: String) {
+    Surface(color = Color.White, shape = RoundedCornerShape(18.dp)) {
+        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
+            Icon(Icons.Default.Calculate, null, tint = DosePurple, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
-            Column {
-                Text("SAFETY CHECK", color = Color(0xFF7A4A00), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
-                Spacer(Modifier.height(2.dp))
-                Text("Arithmetic support only. Confirm the prescription, units, preparation details and local protocol before administration.", color = Color(0xFF7A4A00), fontSize = 11.sp, fontWeight = FontWeight.Bold, lineHeight = 17.sp)
+            Column(Modifier.weight(1f)) {
+                Text(title, color = DoseInk, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text(text, color = DoseSlate, fontSize = 10.sp, lineHeight = 15.sp)
             }
         }
     }
 }
 
 @Composable
-private fun DosageGuideDialog(mode: CalcMode, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.8f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("${mode.emoji} ${mode.title}", fontSize = 23.sp, fontWeight = FontWeight.Black, color = DosageInk)
-                when (mode) {
-                    CalcMode.STANDARD -> GuideText("Formula", "Desired ÷ Available × Volume")
-                    CalcMode.WEIGHT -> GuideText("Workflow", "Weight × prescribed mg/kg gives the required dose. Available strength and volume can then convert that dose to a draw volume.")
-                    CalcMode.PERCENTAGE -> GuideText("Conversion", "The current calculator converts percentage strength to mg/mL and total grams using the existing deterministic calculation.")
-                    CalcMode.DILUTION -> GuideText("Formula", "C₁V₁ = C₂V₂ using the entered stock, target concentration and target volume.")
-                    CalcMode.RECONSTITUTE -> GuideText("Workflow", "Powder ÷ diluent volume gives reconstituted mg/mL; ordered dose ÷ concentration gives the draw volume.")
-                }
-                Surface(color = DosageAmberSoft, shape = RoundedCornerShape(16.dp)) {
-                    Text("Verify the prescription, preparation instructions, units and local protocol independently before administration.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
-                }
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) { Text("Close", fontWeight = FontWeight.ExtraBold) }
+private fun SafetyPanel(mode: CalcMode) {
+    Surface(color = DoseSoftAmber, shape = RoundedCornerShape(19.dp)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
+            Icon(Icons.Default.WarningAmber, null, tint = DoseAmber, modifier = Modifier.size(21.dp))
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text("VERIFY BEFORE ADMINISTRATION", color = DoseInk, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text(safetyText(mode), color = Color(0xFF765000), fontSize = 10.sp, lineHeight = 15.sp)
             }
         }
     }
 }
 
 @Composable
-private fun GuideText(title: String, body: String) {
-    Text(title, color = DosageBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
-    Text(body, color = DosageSlate, fontSize = 14.sp, lineHeight = 20.sp)
+private fun DosageInfoDialog(mode: CalcMode, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = DoseBlue, fontWeight = FontWeight.Bold) } },
+        icon = { Icon(Icons.Default.Medication, null, tint = DoseBlue) },
+        title = { Text(mode.title, color = DoseInk, fontWeight = FontWeight.Black) },
+        text = { Text(infoText(mode), color = DoseSlate, fontSize = 12.sp, lineHeight = 18.sp) },
+        containerColor = Color.White
+    )
 }
 
-private fun modeWorkspaceTitle(mode: CalcMode): String = when (mode) {
-    CalcMode.STANDARD -> "Standard dose workspace"
-    CalcMode.WEIGHT -> "Weight-based workspace"
-    CalcMode.PERCENTAGE -> "Percentage solution workspace"
-    CalcMode.DILUTION -> "Dilution workspace"
-    CalcMode.RECONSTITUTE -> "Reconstitution workspace"
+private fun calculateStandard(desired: String, available: String, volume: String): Double? {
+    val d = desired.toDoubleOrNull() ?: return null
+    val a = available.toDoubleOrNull() ?: return null
+    val v = volume.toDoubleOrNull() ?: return null
+    if (d <= 0 || a <= 0 || v <= 0) return null
+    return (d / a) * v
 }
 
-private fun modeWorkspaceSubtitle(mode: CalcMode): String = when (mode) {
-    CalcMode.STANDARD -> "Enter the three values used by the dose formula."
-    CalcMode.WEIGHT -> "Calculate the target dose first, then convert to volume."
-    CalcMode.PERCENTAGE -> "Translate concentration into a usable clinical quantity."
-    CalcMode.DILUTION -> "Use the stock strength, target strength and final volume."
-    CalcMode.RECONSTITUTE -> "Build the reconstituted concentration, then calculate draw volume."
+private fun calculateWeightDose(weight: String, dosePerKg: String): Double? {
+    val w = weight.toDoubleOrNull() ?: return null
+    val d = dosePerKg.toDoubleOrNull() ?: return null
+    if (w <= 0 || d <= 0) return null
+    return w * d
 }
 
-private fun formatNumber(value: Double): String = when {
-    value == 0.0 -> "0"
-    value % 1.0 == 0.0 -> value.toInt().toString()
-    else -> value.toString()
+private fun calculatePercentageMgMl(percent: String): Double? {
+    val p = percent.toDoubleOrNull() ?: return null
+    if (p <= 0) return null
+    return p * 10.0
+}
+
+private fun calculatePercentageTotalGrams(mgMl: Double?, volume: String): Double? {
+    val concentration = mgMl ?: return null
+    val v = volume.toDoubleOrNull() ?: return null
+    if (v <= 0) return null
+    return concentration * v / 1000.0
+}
+
+private fun calculateDilutionDraw(stock: String, target: String, finalVolume: String): Double? {
+    val c1 = stock.toDoubleOrNull() ?: return null
+    val c2 = target.toDoubleOrNull() ?: return null
+    val v2 = finalVolume.toDoubleOrNull() ?: return null
+    if (c1 <= 0 || c2 <= 0 || v2 <= 0 || c2 > c1) return null
+    return (c2 * v2) / c1
+}
+
+private fun calculateReconstitutionConcentration(amount: String, finalVolume: String): Double? {
+    val drug = amount.toDoubleOrNull() ?: return null
+    val volume = finalVolume.toDoubleOrNull() ?: return null
+    if (drug <= 0 || volume <= 0) return null
+    return drug / volume
+}
+
+private fun calculateReconstitutionDraw(ordered: String, concentration: Double?): Double? {
+    val dose = ordered.toDoubleOrNull() ?: return null
+    if (dose <= 0 || concentration == null || concentration <= 0) return null
+    return dose / concentration
+}
+
+private fun formatNumber(value: Double): String {
+    return String.format(Locale.US, "%.2f", value).trimEnd('0').trimEnd('.')
+}
+
+private fun modeSymbol(mode: CalcMode): String = when (mode) {
+    CalcMode.STANDARD -> "💊"
+    CalcMode.WEIGHT -> "⚖️"
+    CalcMode.PERCENTAGE -> "💧"
+    CalcMode.DILUTION -> "🧪"
+    CalcMode.RECONSTITUTE -> "🫙"
+}
+
+private fun workflowHint(mode: CalcMode): String = when (mode) {
+    CalcMode.STANDARD -> "Convert the prescription into a measurable volume."
+    CalcMode.WEIGHT -> "Weight → dose → medication volume."
+    CalcMode.PERCENTAGE -> "Convert % w/v into mg/mL and total drug."
+    CalcMode.DILUTION -> "Prepare a target concentration from a stronger stock."
+    CalcMode.RECONSTITUTE -> "Use the manufacturer's final volume, then calculate the draw."
+}
+
+private fun safetyText(mode: CalcMode): String = when (mode) {
+    CalcMode.STANDARD -> "Confirm medication, prescribed dose, available strength, units and supplied volume."
+    CalcMode.WEIGHT -> "Use a validated current weight. Confirm dose units and maximum dose from the applicable protocol."
+    CalcMode.PERCENTAGE -> "Confirm that the product is expressed as % w/v before using this conversion."
+    CalcMode.DILUTION -> "Confirm compatible diluent, stock concentration, target concentration and final volume."
+    CalcMode.RECONSTITUTE -> "Use the product manufacturer's stated reconstitution instructions and final volume."
+}
+
+private fun infoText(mode: CalcMode): String = when (mode) {
+    CalcMode.STANDARD -> "Standard dose: (desired dose ÷ available dose) × supplied volume. Desired and available dose must use the same unit."
+    CalcMode.WEIGHT -> "Weight-based dose: weight × prescribed dose per kg. The resulting dose can then be converted to a medication volume."
+    CalcMode.PERCENTAGE -> "For % w/v solutions, 1% equals 1 g/100 mL, which is 10 mg/mL."
+    CalcMode.DILUTION -> "Dilution uses C1V1 = C2V2. The target concentration must not exceed the stock concentration."
+    CalcMode.RECONSTITUTE -> "Reconstitution uses the manufacturer's final volume: concentration = drug amount ÷ final volume; draw volume = ordered dose ÷ concentration."
 }
