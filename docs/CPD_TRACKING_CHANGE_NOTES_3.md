@@ -1,1 +1,0 @@
-Local verification required: compileDebugKotlin, test, and manual CPD screen checks. Do not mark the checklist item complete until verified.
