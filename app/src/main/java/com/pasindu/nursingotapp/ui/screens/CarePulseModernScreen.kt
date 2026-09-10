@@ -3,9 +3,11 @@ package com.pasindu.nursingotapp.ui.screens
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,25 +82,46 @@ fun CarePulseModernScreen(
     val scrollState = rememberScrollState()
     var selectedAction by remember { mutableIntStateOf(-1) }
 
-    Column(Modifier.fillMaxSize().background(CpBackground)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(CpBackground)
+            .statusBarsPadding()
+    ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = CpInk, modifier = Modifier.size(28.dp))
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = "Back",
+                    tint = CpInk,
+                    modifier = Modifier.size(28.dp)
+                )
             }
             Column(Modifier.weight(1f)) {
                 Text(text = "CarePulse", color = CpInk, fontSize = 23.sp, fontWeight = FontWeight.Bold)
                 Text(text = "Your nursing shift, at a glance", color = CpMuted, fontSize = 12.sp)
             }
             Surface(color = CpPurple.copy(alpha = 0.10f), shape = RoundedCornerShape(50)) {
-                Text(text = "CARE", color = CpPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp))
+                Text(
+                    text = "CARE",
+                    color = CpPurple,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp)
+                )
             }
         }
 
         Column(
-            Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 18.dp),
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Spacer(Modifier.height(2.dp))
@@ -109,7 +134,7 @@ fun CarePulseModernScreen(
             }
             CpSection("WORKLOAD THIS WEEK", "A simple view of your working hours", "View details")
             CpWorkload()
-            CpSection("QUICK ACTIONS", "Jump to important nursing tools")
+            CpSection("QUICK ACTIONS", "Your most-used nursing tools")
             CpQuickGrid(selectedAction) { index, route ->
                 selectedAction = index
                 onNavigate(route)
@@ -123,20 +148,37 @@ fun CarePulseModernScreen(
 @Composable
 private fun CpHero() {
     val transition = rememberInfiniteTransition(label = "carePulseHero")
-    val pulse by transition.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse")
+    val pulse by transition.animateFloat(
+        0.96f,
+        1.04f,
+        infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse"
+    )
     Card(
-        Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(28.dp), spotColor = CpBlue.copy(alpha = 0.20f)),
-        RoundedCornerShape(28.dp), CardDefaults.cardColors(Color.Transparent)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(18.dp, RoundedCornerShape(28.dp), spotColor = CpBlue.copy(alpha = 0.20f)),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(Brush.linearGradient(listOf(Color(0xFF087ED8), CpBlue, CpPurple))).padding(20.dp)
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF087ED8), CpBlue, CpPurple)))
+                .padding(20.dp)
         ) {
             Canvas(Modifier.matchParentSize()) {
                 val y = size.height * 0.70f
                 val path = Path().apply {
-                    moveTo(0f, y); lineTo(size.width * .18f, y); lineTo(size.width * .24f, y - 8f)
-                    lineTo(size.width * .29f, y + 6f); lineTo(size.width * .35f, y - 30f)
-                    lineTo(size.width * .42f, y + 3f); lineTo(size.width * .49f, y); lineTo(size.width, y)
+                    moveTo(0f, y)
+                    lineTo(size.width * .18f, y)
+                    lineTo(size.width * .24f, y - 8f)
+                    lineTo(size.width * .29f, y + 6f)
+                    lineTo(size.width * .35f, y - 30f)
+                    lineTo(size.width * .42f, y + 3f)
+                    lineTo(size.width * .49f, y)
+                    lineTo(size.width, y)
                 }
                 drawPath(path, Color.White.copy(alpha = .22f), style = Stroke(2.5f, cap = StrokeCap.Round))
             }
@@ -144,14 +186,27 @@ private fun CpHero() {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
                     Column(Modifier.weight(1f)) {
                         Surface(color = Color.White.copy(alpha = .14f), shape = RoundedCornerShape(50)) {
-                            Text(text = "NURSING OFFICER MODE", color = Color.White.copy(alpha = .92f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
+                            Text(
+                                text = "NURSING OFFICER MODE",
+                                color = Color.White.copy(alpha = .92f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp)
+                            )
                         }
                         Spacer(Modifier.height(14.dp))
                         Text(text = "Stay ahead of\nthe shift.", color = Color.White, fontSize = 28.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         Text(text = "Workload, tasks, claims and wellness — all in one place.", color = Color.White.copy(alpha = .86f), fontSize = 12.sp, lineHeight = 18.sp)
                     }
-                    Box(Modifier.size(64.dp * pulse).clip(CircleShape).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .size(64.dp * pulse)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = .14f)),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = Color.White, modifier = Modifier.size(34.dp))
                     }
                 }
@@ -197,9 +252,16 @@ private fun CpSection(title: String, subtitle: String, trailing: String? = null)
 
 @Composable
 private fun CpSnapshot(modifier: Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, title: String, value: String, detail: String) {
-    Card(modifier, RoundedCornerShape(20.dp), CardDefaults.cardColors(Color.White), border = androidx.compose.foundation.BorderStroke(1.dp, CpLine)) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, CpLine)
+    ) {
         Column(Modifier.padding(12.dp)) {
-            Box(Modifier.size(38.dp).clip(CircleShape).background(tint.copy(alpha = .10f)), contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp)) }
+            Box(Modifier.size(38.dp).clip(CircleShape).background(tint.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            }
             Spacer(Modifier.height(10.dp))
             Text(text = title, color = CpMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(3.dp))
@@ -211,7 +273,12 @@ private fun CpSnapshot(modifier: Modifier, icon: androidx.compose.ui.graphics.ve
 
 @Composable
 private fun CpWorkload() {
-    Card(Modifier.fillMaxWidth(), RoundedCornerShape(22.dp), CardDefaults.cardColors(Color.White), border = androidx.compose.foundation.BorderStroke(1.dp, CpLine)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, CpLine)
+    ) {
         Column(Modifier.padding(18.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Column {
@@ -231,39 +298,175 @@ private fun CpWorkload() {
 
 @Composable
 private fun CpQuickGrid(selectedAction: Int, onAction: (Int, String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(10.dp)) {
-            CpQuick(0, "Clinical Tools", "Calculators & references", Icons.Default.MedicalServices, CpPurple, selectedAction, Modifier.weight(1f)) { onAction(0, "clinical_calculators") }
-            CpQuick(1, "Shift Planner", "Plan your next shifts", Icons.Default.CalendarMonth, CpGreen, selectedAction, Modifier.weight(1f)) { onAction(1, "analytics") }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        CpQuickWide(
+            index = 0,
+            title = "Clinical Tools",
+            subtitle = "Calculators, references & bedside helpers",
+            tag = "CLINICAL",
+            icon = Icons.Default.MedicalServices,
+            accent = CpPurple,
+            selectedAction = selectedAction,
+            modifier = Modifier.fillMaxWidth()
+        ) { onAction(0, "clinical_calculators") }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CpQuickCompact(
+                index = 1,
+                title = "Shift Planner",
+                subtitle = "Plan shifts",
+                icon = Icons.Default.CalendarMonth,
+                accent = CpGreen,
+                selectedAction = selectedAction,
+                modifier = Modifier.weight(1f)
+            ) { onAction(1, "analytics") }
+            CpQuickCompact(
+                index = 2,
+                title = "OT & Claims",
+                subtitle = "Track overtime",
+                icon = Icons.Default.AccountBalanceWallet,
+                accent = CpBlue,
+                selectedAction = selectedAction,
+                modifier = Modifier.weight(1f)
+            ) { onAction(2, "analytics") }
         }
-        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(10.dp)) {
-            CpQuick(2, "OT & Claims", "Track overtime & claims", Icons.Default.AccountBalanceWallet, CpBlue, selectedAction, Modifier.weight(1f)) { onAction(2, "analytics") }
-            CpQuick(3, "Wellness", "Rest, recover & stay well", Icons.Default.Favorite, CpAmber, selectedAction, Modifier.weight(1f)) { onAction(3, "care_pulse") }
+
+        CpQuickWide(
+            index = 3,
+            title = "Wellness",
+            subtitle = "Recovery, balance & personal wellbeing",
+            tag = "WELLBEING",
+            icon = Icons.Default.Favorite,
+            accent = CpAmber,
+            selectedAction = selectedAction,
+            modifier = Modifier.fillMaxWidth()
+        ) { onAction(3, "care_pulse") }
+    }
+}
+
+@Composable
+private fun CpQuickWide(
+    index: Int,
+    title: String,
+    subtitle: String,
+    tag: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    selectedAction: Int,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    val selected = selectedAction == index
+    val scale by animateFloatAsState(if (selected) 0.985f else 1f, tween(180), label = "quickWideScale")
+
+    Card(
+        modifier = modifier
+            .scale(scale)
+            .height(112.dp)
+            .clickable(onClick = onClick)
+            .shadow(if (selected) 10.dp else 3.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, accent.copy(alpha = if (selected) .35f else .12f))
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .size(150.dp)
+                    .align(Alignment.CenterEnd)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = .045f))
+            )
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(17.dp))
+                        .background(Brush.linearGradient(listOf(accent.copy(alpha = .18f), accent.copy(alpha = .07f)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(27.dp))
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Surface(color = accent.copy(alpha = .09f), shape = RoundedCornerShape(50)) {
+                        Text(text = tag, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Text(text = title, color = CpInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(text = subtitle, color = CpMuted, fontSize = 10.sp)
+                }
+                Surface(color = accent.copy(alpha = .10f), shape = CircleShape) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = accent, modifier = Modifier.padding(9.dp).size(18.dp))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun CpQuick(index: Int, title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, selectedAction: Int, modifier: Modifier, onClick: () -> Unit) {
+private fun CpQuickCompact(
+    index: Int,
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    selectedAction: Int,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
     val selected = selectedAction == index
-    Card(modifier.height(142.dp).clickable(onClick = onClick).shadow(if (selected) 8.dp else 2.dp, RoundedCornerShape(20.dp)), RoundedCornerShape(20.dp), CardDefaults.cardColors(accent.copy(alpha = if (selected) .13f else .07f))) {
-        Column(Modifier.fillMaxSize().padding(15.dp)) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(Color.White.copy(alpha = .78f)), contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(21.dp)) }
+    val scale by animateFloatAsState(if (selected) 0.975f else 1f, tween(180), label = "quickCompactScale")
+
+    Card(
+        modifier = modifier
+            .scale(scale)
+            .height(132.dp)
+            .clickable(onClick = onClick)
+            .shadow(if (selected) 9.dp else 2.dp, RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = .055f)),
+        border = BorderStroke(1.dp, accent.copy(alpha = .14f))
+    ) {
+        Column(Modifier.fillMaxSize().padding(14.dp)) {
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
+                Box(
+                    Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = .11f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(23.dp))
+                }
+                Text(text = "0${index + 1}", color = accent.copy(alpha = .45f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(12.dp))
             Text(text = title, color = CpInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Text(text = subtitle, color = CpMuted, fontSize = 10.sp, lineHeight = 14.sp)
-            Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp).align(Alignment.End))
+            Spacer(Modifier.height(3.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = subtitle, color = CpMuted, fontSize = 9.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ArrowForward, contentDescription = null, tint = accent, modifier = Modifier.size(17.dp))
+            }
         }
     }
 }
 
 @Composable
 private fun CpEncouragement() {
-    Card(Modifier.fillMaxWidth(), RoundedCornerShape(22.dp), CardDefaults.cardColors(CpGreen.copy(alpha = .10f)), border = androidx.compose.foundation.BorderStroke(1.dp, CpGreen.copy(alpha = .10f))) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CpGreen.copy(alpha = .10f)),
+        border = BorderStroke(1.dp, CpGreen.copy(alpha = .10f))
+    ) {
         Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(CpGreen.copy(alpha = .13f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Spa, contentDescription = null, tint = CpGreen, modifier = Modifier.size(25.dp)) }
+            Box(Modifier.size(48.dp).clip(CircleShape).background(CpGreen.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Spa, contentDescription = null, tint = CpGreen, modifier = Modifier.size(25.dp))
+            }
             Spacer(Modifier.width(13.dp))
             Column(Modifier.weight(1f)) {
                 Text(text = "You're doing well today", color = CpInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
