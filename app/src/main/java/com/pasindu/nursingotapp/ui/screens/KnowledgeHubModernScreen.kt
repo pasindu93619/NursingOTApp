@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalLibrary
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.School
@@ -68,6 +70,7 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     var showAdd by remember { mutableStateOf(false) }
     var selectedCategory by rememberSaveable { mutableStateOf("All") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val total = cpdLogs.sumOf { it.earnedPoints }
     val target = 30
     val progress = (total.toFloat() / target).coerceIn(0f, 1f)
@@ -126,7 +129,9 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
                     CircularsModern(
                         circulars = circulars,
                         selectedCategory = selectedCategory,
-                        onCategorySelected = { selectedCategory = it }
+                        searchQuery = searchQuery,
+                        onCategorySelected = { selectedCategory = it },
+                        onSearchQueryChanged = { searchQuery = it }
                     )
                 }
                 1 -> item { CpdModern(cpdLogs, total, target, progress) }
@@ -276,7 +281,9 @@ private fun KnowledgeTabs(selected: Int, onSelected: (Int) -> Unit) {
 private fun CircularsModern(
     circulars: List<CircularItem>,
     selectedCategory: String,
-    onCategorySelected: (String) -> Unit
+    searchQuery: String,
+    onCategorySelected: (String) -> Unit,
+    onSearchQueryChanged: (String) -> Unit
 ) {
     val categories = remember(circulars) {
         listOf("All") + circulars
@@ -294,21 +301,57 @@ private fun CircularsModern(
         }
     }
 
-    val filteredCirculars = remember(circulars, selectedCategory) {
-        if (selectedCategory == "All") {
-            circulars
-        } else {
-            circulars.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+    val normalizedQuery = searchQuery.trim()
+
+    val filteredCirculars = remember(circulars, selectedCategory, normalizedQuery) {
+        circulars.filter { item ->
+            val matchesCategory = selectedCategory == "All" ||
+                item.category.equals(selectedCategory, ignoreCase = true)
+            val matchesSearch = normalizedQuery.isBlank() ||
+                item.title.contains(normalizedQuery, ignoreCase = true) ||
+                item.category.contains(normalizedQuery, ignoreCase = true) ||
+                item.summary.contains(normalizedQuery, ignoreCase = true) ||
+                item.id.contains(normalizedQuery, ignoreCase = true)
+            matchesCategory && matchesSearch
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionHeading(
             "Ministry updates",
-            "Filter professional notices by category.",
+            "Search and filter professional notices.",
             Icons.Default.Newspaper,
             KHSoftBlue,
             KHBlue
+        )
+
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChanged,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = { Text("Search Ministry updates…") },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = "Search")
+            },
+            trailingIcon = if (searchQuery.isNotBlank()) {
+                {
+                    IconButton(onClick = { onSearchQueryChanged("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    }
+                }
+            } else {
+                null
+            },
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = KHBlue,
+                unfocusedBorderColor = Color(0xFFD7E1EE),
+                focusedLeadingIconColor = KHBlue,
+                unfocusedLeadingIconColor = KHSlate,
+                focusedTrailingIconColor = KHBlue,
+                unfocusedTrailingIconColor = KHSlate
+            )
         )
 
         Row(
@@ -345,12 +388,17 @@ private fun CircularsModern(
         }
 
         if (filteredCirculars.isEmpty()) {
+            val hasSearch = normalizedQuery.isNotBlank()
             EmptyLearning(
-                if (selectedCategory == "All") "No circulars available" else "No circulars in this category",
-                if (selectedCategory == "All") {
-                    "Saved Ministry updates will appear here."
-                } else {
-                    "Choose another category to view available Ministry updates."
+                when {
+                    hasSearch -> "No matching circulars"
+                    selectedCategory == "All" -> "No circulars available"
+                    else -> "No circulars in this category"
+                },
+                when {
+                    hasSearch -> "Try a different search term or category."
+                    selectedCategory == "All" -> "Saved Ministry updates will appear here."
+                    else -> "Choose another category to view available Ministry updates."
                 },
                 Icons.Default.Newspaper
             )
