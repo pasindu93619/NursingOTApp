@@ -312,7 +312,6 @@ fun AnalyticsScreen(
     val (dayCount, eveCount, nightCount) = shiftCounts
     val totalCurrentShifts = dayCount + eveCount + nightCount
     val averageClaimOt = monthlyData
-        .filter { it.second > 0f }
         .map { it.second }
         .average()
         .takeIf { !it.isNaN() }
@@ -357,7 +356,7 @@ fun AnalyticsScreen(
                     IconButton(onClick = { guideBar = !guideBar }) {
                         Icon(
                             Icons.Default.Info,
-                            contentDescription = "Analytics information",
+                            contentDescription = "How Smart Insights are calculated",
                             tint = TextSecondary
                         )
                     }
@@ -424,31 +423,7 @@ fun AnalyticsScreen(
                 enter = fadeIn(tween(180)) + slideInVertically(tween(180)) { -12 },
                 exit = fadeOut(tween(150)) + slideOutVertically(tween(150)) { -12 }
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = NursingShapes.large,
-                    color = OtModernBlueSoft
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = ClinicalPrimaryColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(9.dp))
-                        Text(
-                            "Analytics are filtered only by the selected duty category. Chart animation changes presentation, not the underlying values.",
-                            color = md_theme_light_onPrimaryContainer,
-                            fontSize = 10.sp,
-                            lineHeight = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
+                SmartInsightsGuideCard()
             }
 
             AnalyticsSectionTitle(
@@ -560,9 +535,9 @@ private fun SmartInsightsHero(
                     modifier = Modifier.weight(1f)
                 )
                 InsightsGlassTile(
-                    label = "AVG OT",
+                    label = "AVG OT / CLAIM",
                     value = "${averageOtHours.toInt()}h",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1.15f)
                 )
                 InsightsGlassTile(
                     label = "MONTH",
@@ -596,9 +571,10 @@ private fun InsightsGlassTile(
             Text(
                 label,
                 color = SurfaceWhite.copy(alpha = 0.70f),
-                fontSize = 8.sp,
+                fontSize = 7.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = 0.8.sp,
+                maxLines = 1
             )
             Text(
                 value,
@@ -606,6 +582,110 @@ private fun InsightsGlassTile(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
                 maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun SmartInsightsGuideCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = NursingShapes.large,
+        color = OtModernBlueSoft
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(ClinicalPrimaryColor.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = ClinicalPrimaryColor,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+                Spacer(Modifier.width(9.dp))
+                Column {
+                    Text(
+                        "How to read these numbers",
+                        color = md_theme_light_onPrimaryContainer,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        "All values come from your saved claim data.",
+                        color = md_theme_light_onPrimaryContainer.copy(alpha = 0.72f),
+                        fontSize = 9.sp
+                    )
+                }
+            }
+
+            InsightDefinitionRow(
+                icon = Icons.Default.AccessTime,
+                title = "SHIFTS",
+                body = "Number of recorded duty entries in the selected analytics period. Changing Full Month to a week changes this count."
+            )
+            InsightDefinitionRow(
+                icon = Icons.Default.ArrowDropDown,
+                title = "AVG OT / CLAIM",
+                body = "Total OT hours across the displayed claim periods ÷ number of displayed claims. Claims with 0 OT are included, so the average is not artificially increased."
+            )
+            InsightDefinitionRow(
+                icon = Icons.Default.CalendarMonth,
+                title = "MONTH",
+                body = "The month currently selected for Shift Distribution. Use the month and week filters below to inspect a specific period."
+            )
+        }
+    }
+}
+
+@Composable
+private fun InsightDefinitionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    body: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .background(SurfaceWhite.copy(alpha = 0.70f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = ClinicalPrimaryColor,
+                modifier = Modifier.size(15.dp)
+            )
+        }
+        Spacer(Modifier.width(9.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                color = md_theme_light_onPrimaryContainer,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.7.sp
+            )
+            Text(
+                body,
+                color = md_theme_light_onPrimaryContainer.copy(alpha = 0.78f),
+                fontSize = 9.sp,
+                lineHeight = 13.sp
             )
         }
     }
