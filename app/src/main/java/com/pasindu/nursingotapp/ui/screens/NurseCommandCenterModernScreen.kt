@@ -22,10 +22,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lightbulb
@@ -121,7 +121,7 @@ fun NurseCommandCenterModernScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = TextPrimary) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground)
             )
@@ -152,20 +152,52 @@ fun NurseCommandCenterModernScreen(
 private fun CommandHero(state: NurseCommandCenterState, onNavigate: (String) -> Unit) {
     val score = state.wellnessScore.coerceIn(0, 100)
     val label = when { score >= 80 -> "Balanced workload"; score >= 60 -> "Watch workload"; else -> "Workload needs attention" }
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF16243F), Color(0xFF24548D), Color(0xFF0EA5E9))), RoundedCornerShape(28.dp)).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("NURSINGOS", color = Color.White.copy(alpha = 0.70f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color(0xFF0B4F8A),
+                            ClinicalPrimaryColor,
+                            Color(0xFF38BDF8)
+                        )
+                    ),
+                    RoundedCornerShape(28.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 96.dp)
+            ) {
+                Text("NURSINGOS", color = Color.White.copy(alpha = 0.76f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
                 Spacer(Modifier.height(4.dp))
-                Text(label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                Text("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT", color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp)
-                TextButton(onClick = { onNavigate(state.insightRoute) }, contentPadding = PaddingValues(horizontal = 0.dp)) { Text("Open today's insight  ›", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                Text(label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT", color = Color.White.copy(alpha = 0.82f), fontSize = 11.sp)
+                TextButton(onClick = { onNavigate(state.insightRoute) }, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                    Text("Open today's insight  ›", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
             }
-            Card(modifier = Modifier.size(78.dp), shape = CircleShape, colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.13f)), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-                Box(contentAlignment = Alignment.Center) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(78.dp),
+                shape = CircleShape,
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.16f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("$score", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text("/100", color = Color.White.copy(alpha = 0.65f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("$score", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                        Text("/100", color = Color.White.copy(alpha = 0.72f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
