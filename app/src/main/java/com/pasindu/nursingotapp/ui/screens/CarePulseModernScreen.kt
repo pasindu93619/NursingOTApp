@@ -38,7 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -81,6 +81,10 @@ fun CarePulseModernScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AppBackground)
+            // CarePulse is a custom edge-to-edge screen rather than a Scaffold.
+            // Protect both the notification/status area and the bottom navigation area
+            // so the hero/header never sits under system UI and the final card remains reachable.
+            .safeDrawingPadding()
     ) {
         Row(
             modifier = Modifier
@@ -172,7 +176,7 @@ fun CarePulseModernScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(18.dp))
         }
     }
 }
