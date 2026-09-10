@@ -48,6 +48,9 @@ import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import com.pasindu.nursingotapp.ui.CircularItem
 import com.pasindu.nursingotapp.ui.FlashcardItem
 import com.pasindu.nursingotapp.ui.KnowledgeHubViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val KHBackground = Color(0xFFF5F8FC)
 private val KHInk = Color(0xFF10233F)
@@ -218,18 +221,8 @@ private fun HeroMetric(label: String, value: String, modifier: Modifier) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
-            Text(
-                label,
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                value,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 7.sp, fontWeight = FontWeight.Black)
+            Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
@@ -241,40 +234,22 @@ private fun KnowledgeTabs(selected: Int, onSelected: (Int) -> Unit) {
         "CPD" to Icons.Default.MenuBook,
         "Study" to Icons.Default.AutoAwesome
     )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         tabs.forEachIndexed { index, tabItem ->
             val active = index == selected
             Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onSelected(index) },
+                modifier = Modifier.weight(1f).clickable { onSelected(index) },
                 color = if (active) KHBlue else Color.White,
                 shape = RoundedCornerShape(17.dp),
                 shadowElevation = if (active) 0.dp else 1.dp
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(vertical = 11.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(vertical = 11.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        tabItem.second,
-                        contentDescription = null,
-                        tint = if (active) Color.White else KHSlate,
-                        modifier = Modifier.size(19.dp)
-                    )
+                    Icon(tabItem.second, contentDescription = null, tint = if (active) Color.White else KHSlate, modifier = Modifier.size(19.dp))
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        tabItem.first,
-                        color = if (active) Color.White else KHInk,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    Text(tabItem.first, color = if (active) Color.White else KHInk, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -293,27 +268,15 @@ private fun CircularsModern(
     onBookmarkToggle: (String) -> Unit
 ) {
     val categories = remember(circulars) {
-        listOf("All") + circulars
-            .asSequence()
-            .map { it.category.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-            .toList()
+        listOf("All") + circulars.asSequence().map { it.category.trim() }.filter { it.isNotBlank() }.distinct().sorted().toList()
     }
-
     LaunchedEffect(categories) {
-        if (selectedCategory !in categories) {
-            onCategorySelected("All")
-        }
+        if (selectedCategory !in categories) onCategorySelected("All")
     }
-
     val normalizedQuery = searchQuery.trim()
-
     val filteredCirculars = remember(circulars, selectedCategory, normalizedQuery) {
         circulars.filter { item ->
-            val matchesCategory = selectedCategory == "All" ||
-                item.category.equals(selectedCategory, ignoreCase = true)
+            val matchesCategory = selectedCategory == "All" || item.category.equals(selectedCategory, ignoreCase = true)
             val matchesSearch = normalizedQuery.isBlank() ||
                 item.title.contains(normalizedQuery, ignoreCase = true) ||
                 item.category.contains(normalizedQuery, ignoreCase = true) ||
@@ -322,34 +285,18 @@ private fun CircularsModern(
             matchesCategory && matchesSearch
         }
     }
-
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionHeading(
-            "Ministry updates",
-            "Search and filter professional notices.",
-            Icons.Default.Newspaper,
-            KHSoftBlue,
-            KHBlue
-        )
-
+        SectionHeading("Ministry updates", "Search and filter professional notices.", Icons.Default.Newspaper, KHSoftBlue, KHBlue)
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChanged,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             placeholder = { Text("Search Ministry updates…") },
-            leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = "Search")
-            },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
             trailingIcon = if (searchQuery.isNotBlank()) {
-                {
-                    IconButton(onClick = { onSearchQueryChanged("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
-                    }
-                }
-            } else {
-                null
-            },
+                { IconButton(onClick = { onSearchQueryChanged("") }) { Icon(Icons.Default.Clear, contentDescription = "Clear search") } }
+            } else null,
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = KHBlue,
@@ -360,128 +307,46 @@ private fun CircularsModern(
                 unfocusedTrailingIconColor = KHSlate
             )
         )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             categories.forEach { category ->
                 FilterChip(
                     selected = category == selectedCategory,
                     onClick = { onCategorySelected(category) },
-                    label = {
-                        Text(
-                            category,
-                            fontSize = 11.sp,
-                            fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
+                    label = { Text(category, fontSize = 11.sp, fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium) },
                     shape = RoundedCornerShape(14.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = KHBlue,
-                        selectedLabelColor = Color.White,
-                        containerColor = Color.White,
-                        labelColor = KHInk
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = category == selectedCategory,
-                        borderColor = if (category == selectedCategory) KHBlue else Color(0xFFD7E1EE)
-                    )
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = KHBlue, selectedLabelColor = Color.White, containerColor = Color.White, labelColor = KHInk),
+                    border = FilterChipDefaults.filterChipBorder(enabled = true, selected = category == selectedCategory, borderColor = if (category == selectedCategory) KHBlue else Color(0xFFD7E1EE))
                 )
             }
         }
-
         if (filteredCirculars.isEmpty()) {
             val hasSearch = normalizedQuery.isNotBlank()
             EmptyLearning(
-                when {
-                    hasSearch -> "No matching circulars"
-                    selectedCategory == "All" -> "No circulars available"
-                    else -> "No circulars in this category"
-                },
-                when {
-                    hasSearch -> "Try a different search term or category."
-                    selectedCategory == "All" -> "Saved Ministry updates will appear here."
-                    else -> "Choose another category to view available Ministry updates."
-                },
+                when { hasSearch -> "No matching circulars"; selectedCategory == "All" -> "No circulars available"; else -> "No circulars in this category" },
+                when { hasSearch -> "Try a different search term or category."; selectedCategory == "All" -> "Saved Ministry updates will appear here."; else -> "Choose another category to view available Ministry updates." },
                 Icons.Default.Newspaper
             )
         } else {
             filteredCirculars.forEach { item ->
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                color = KHSoftBlue,
-                                shape = RoundedCornerShape(9.dp)
-                            ) {
-                                Text(
-                                    item.category,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                    color = KHBlue,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black
-                                )
+                            Surface(color = KHSoftBlue, shape = RoundedCornerShape(9.dp)) {
+                                Text(item.category, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = KHBlue, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             }
                             Spacer(Modifier.weight(1f))
                             Text(item.date, color = KHSlate, fontSize = 9.sp)
                             val bookmarked = item.id in bookmarkedCircularIds
-                            IconButton(
-                                onClick = { onBookmarkToggle(item.id) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (bookmarked) {
-                                        Icons.Default.Bookmark
-                                    } else {
-                                        Icons.Default.BookmarkBorder
-                                    },
-                                    contentDescription = if (bookmarked) {
-                                        "Remove bookmark"
-                                    } else {
-                                        "Bookmark circular"
-                                    },
-                                    tint = if (bookmarked) KHPurple else KHSlate
-                                )
+                            IconButton(onClick = { onBookmarkToggle(item.id) }, modifier = Modifier.size(36.dp)) {
+                                Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, contentDescription = if (bookmarked) "Remove bookmark" else "Bookmark circular", tint = if (bookmarked) KHPurple else KHSlate)
                             }
                         }
-                        Text(
-                            item.title,
-                            color = KHInk,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black,
-                            lineHeight = 20.sp
-                        )
-                        Text(
-                            item.summary,
-                            color = KHSlate,
-                            fontSize = 11.sp,
-                            lineHeight = 17.sp
-                        )
+                        Text(item.title, color = KHInk, fontSize = 15.sp, fontWeight = FontWeight.Black, lineHeight = 20.sp)
+                        Text(item.summary, color = KHSlate, fontSize = 11.sp, lineHeight = 17.sp)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.LocalLibrary,
-                                contentDescription = null,
-                                tint = KHPurple,
-                                modifier = Modifier.size(15.dp)
-                            )
+                            Icon(Icons.Default.LocalLibrary, contentDescription = null, tint = KHPurple, modifier = Modifier.size(15.dp))
                             Spacer(Modifier.width(5.dp))
-                            Text(
-                                "Reference ${item.id}",
-                                color = KHPurple,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text("Reference ${item.id}", color = KHPurple, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -492,150 +357,59 @@ private fun CircularsModern(
 
 @Composable
 private fun CpdModern(logs: List<CpdLogEntity>, total: Int, target: Int, progress: Float) {
+    val remainingPoints = (target - total).coerceAtLeast(0)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+        Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(
-                            progress = { 1f },
-                            modifier = Modifier.size(78.dp),
-                            strokeWidth = 8.dp,
-                            color = Color(0xFFE8EEF7)
-                        )
-                        CircularProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.size(78.dp),
-                            strokeWidth = 8.dp,
-                            color = KHBlue
-                        )
-                        Text(
-                            "${progressPercent(progress)}%",
-                            color = KHInk,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                        CircularProgressIndicator(progress = { 1f }, modifier = Modifier.size(78.dp), strokeWidth = 8.dp, color = Color(0xFFE8EEF7))
+                        CircularProgressIndicator(progress = { progress }, modifier = Modifier.size(78.dp), strokeWidth = 8.dp, color = KHBlue)
+                        Text("${progressPercent(progress)}%", color = KHInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Annual CPD progress",
-                            color = KHInk,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            "$total of $target points recorded",
-                            color = KHSlate,
-                            fontSize = 11.sp
-                        )
+                        Text("Annual CPD progress", color = KHInk, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text("$total of $target points recorded", color = KHSlate, fontSize = 11.sp)
                         Spacer(Modifier.height(7.dp))
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(7.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-                            color = KHMint,
-                            trackColor = Color(0xFFE8F3F0)
-                        )
+                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(10.dp)), color = KHMint, trackColor = Color(0xFFE8F3F0))
                     }
                 }
-
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CpdMini(
-                        "ACTIVITIES",
-                        logs.size.toString(),
-                        Icons.Default.CalendarMonth,
-                        KHSoftBlue,
-                        KHBlue,
-                        Modifier.weight(1f)
-                    )
-                    CpdMini(
-                        "POINTS",
-                        total.toString(),
-                        Icons.Default.EmojiEvents,
-                        KHSoftPurple,
-                        KHPurple,
-                        Modifier.weight(1f)
-                    )
+                    CpdMini("ACTIVITIES", logs.size.toString(), Icons.Default.CalendarMonth, KHSoftBlue, KHBlue, Modifier.weight(1f))
+                    CpdMini("POINTS", total.toString(), Icons.Default.EmojiEvents, KHSoftPurple, KHPurple, Modifier.weight(1f))
+                }
+                Surface(color = if (total >= target) KHSoftMint else KHSoftBlue, shape = RoundedCornerShape(15.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (total >= target) Icons.Default.CheckCircle else Icons.Default.EmojiEvents, contentDescription = null, tint = if (total >= target) KHMint else KHBlue, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(if (total >= target) "Annual CPD target reached" else "$remainingPoints points remaining", color = KHInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            Text(if (total >= target) "You have recorded at least $target CPD points." else "Keep logging your professional learning activities.", color = KHSlate, fontSize = 9.sp)
+                        }
+                    }
                 }
             }
         }
-
         if (logs.isEmpty()) {
-            EmptyLearning(
-                "Start your CPD record",
-                "Log seminars, workshops and learning activities as you complete them.",
-                Icons.Default.School
-            )
+            EmptyLearning("Start your CPD record", "Log seminars, workshops and learning activities as you complete them.", Icons.Default.School)
         } else {
-            Text(
-                "Learning timeline",
-                color = KHInk,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black
-            )
+            Text("Learning timeline", color = KHInk, fontSize = 16.sp, fontWeight = FontWeight.Black)
             logs.forEach { log ->
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(15.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
+                Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+                    Row(modifier = Modifier.padding(15.dp), verticalAlignment = Alignment.Top) {
                         Surface(color = KHSoftMint, shape = CircleShape) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = KHMint,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(17.dp)
-                            )
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = KHMint, modifier = Modifier.padding(8.dp).size(17.dp))
                         }
                         Spacer(Modifier.width(11.dp))
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.Top) {
-                                Text(
-                                    log.seminarTitle,
-                                    color = KHInk,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    "+${log.earnedPoints}",
-                                    color = KHMint,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Black
-                                )
+                                Text(log.seminarTitle, color = KHInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                                Text("+${log.earnedPoints}", color = KHMint, fontSize = 13.sp, fontWeight = FontWeight.Black)
                             }
-                            Text(
-                                log.speakerOrInstitution,
-                                color = KHSlate,
-                                fontSize = 10.sp
-                            )
-                            if (log.notes.isNotBlank()) {
-                                Text(
-                                    log.notes,
-                                    color = KHSlate,
-                                    fontSize = 10.sp,
-                                    lineHeight = 15.sp
-                                )
-                            }
+                            Text(log.speakerOrInstitution, color = KHSlate, fontSize = 10.sp)
+                            Text(formatCpdDate(log.date), color = KHSlate, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                            if (log.notes.isNotBlank()) Text(log.notes, color = KHSlate, fontSize = 10.sp, lineHeight = 15.sp)
                         }
                     }
                 }
@@ -644,24 +418,12 @@ private fun CpdModern(logs: List<CpdLogEntity>, total: Int, target: Int, progres
     }
 }
 
+private fun formatCpdDate(timestamp: Long): String = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(timestamp))
+
 @Composable
-private fun CpdMini(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    bg: Color,
-    tint: Color,
-    modifier: Modifier
-) {
-    Surface(
-        modifier = modifier,
-        color = bg,
-        shape = RoundedCornerShape(15.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+private fun CpdMini(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, bg: Color, tint: Color, modifier: Modifier) {
+    Surface(modifier = modifier, color = bg, shape = RoundedCornerShape(15.dp)) {
+        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(7.dp))
             Column {
@@ -675,70 +437,19 @@ private fun CpdMini(
 @Composable
 private fun FlashcardsModern(cards: List<FlashcardItem>) {
     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-        SectionHeading(
-            "Focused revision",
-            "Tap a card to reveal the answer.",
-            Icons.Default.AutoAwesome,
-            KHSoftPurple,
-            KHPurple
-        )
+        SectionHeading("Focused revision", "Tap a card to reveal the answer.", Icons.Default.AutoAwesome, KHSoftPurple, KHPurple)
         if (cards.isEmpty()) {
-            EmptyLearning(
-                "No study cards yet",
-                "Available learning cards will appear here.",
-                Icons.Default.AutoAwesome
-            )
+            EmptyLearning("No study cards yet", "Available learning cards will appear here.", Icons.Default.AutoAwesome)
         } else {
             cards.forEach { card ->
                 var flipped by remember(card.question) { mutableStateOf(false) }
-                Card(
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (flipped) KHSoftBlue else Color.White
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 150.dp)
-                        .clickable { flipped = !flipped }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(22.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AnimatedContent(
-                            targetState = flipped,
-                            transitionSpec = {
-                                fadeIn(tween(220)) togetherWith fadeOut(tween(180))
-                            },
-                            label = "knowledge_card"
-                        ) { answer ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text(
-                                    if (answer) "ANSWER" else "QUESTION",
-                                    color = if (answer) KHBlue else KHPurple,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 1.2.sp
-                                )
-                                Text(
-                                    if (answer) card.answer else card.question,
-                                    color = KHInk,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Black,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 22.sp
-                                )
-                                Text(
-                                    if (answer) "Tap to see question" else "Tap to reveal",
-                                    color = KHSlate,
-                                    fontSize = 9.sp
-                                )
+                Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = if (flipped) KHSoftBlue else Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).clickable { flipped = !flipped }) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(22.dp), contentAlignment = Alignment.Center) {
+                        AnimatedContent(targetState = flipped, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) }, label = "knowledge_card") { answer ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(if (answer) "ANSWER" else "QUESTION", color = if (answer) KHBlue else KHPurple, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                                Text(if (answer) card.answer else card.question, color = KHInk, fontSize = 15.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, lineHeight = 22.sp)
+                                Text(if (answer) "Tap to see question" else "Tap to reveal", color = KHSlate, fontSize = 9.sp)
                             }
                         }
                     }
@@ -749,140 +460,51 @@ private fun FlashcardsModern(cards: List<FlashcardItem>) {
 }
 
 @Composable
-private fun SectionHeading(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    bg: Color,
-    tint: Color
-) {
+private fun SectionHeading(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, bg: Color, tint: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = KHInk, fontSize = 18.sp, fontWeight = FontWeight.Black)
             Text(subtitle, color = KHSlate, fontSize = 10.sp)
         }
-        Surface(color = bg, shape = RoundedCornerShape(12.dp)) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
+        Surface(color = bg, shape = RoundedCornerShape(12.dp)) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.padding(8.dp)) }
     }
 }
 
 @Composable
-private fun EmptyLearning(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(20.dp),
-        shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            Surface(color = KHSoftBlue, shape = CircleShape) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = KHBlue,
-                    modifier = Modifier.padding(12.dp)
-                )
-            }
+private fun EmptyLearning(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Surface(color = Color.White, shape = RoundedCornerShape(20.dp), shadowElevation = 1.dp, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Surface(color = KHSoftBlue, shape = CircleShape) { Icon(icon, contentDescription = null, tint = KHBlue, modifier = Modifier.padding(12.dp)) }
             Text(title, color = KHInk, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(
-                subtitle,
-                color = KHSlate,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 15.sp
-            )
+            Text(subtitle, color = KHSlate, fontSize = 10.sp, textAlign = TextAlign.Center, lineHeight = 15.sp)
         }
     }
 }
 
 @Composable
-private fun AddCpdModernDialog(
-    onDismiss: () -> Unit,
-    onSave: (String, Int, String, String) -> Unit
-) {
+private fun AddCpdModernDialog(onDismiss: () -> Unit, onSave: (String, Int, String, String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var points by remember { mutableStateOf("") }
     var institution by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(26.dp),
-        title = {
-            Text("Log learning activity", color = KHInk, fontWeight = FontWeight.Black)
-        },
+        title = { Text("Log learning activity", color = KHInk, fontWeight = FontWeight.Black) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(9.dp)
-            ) {
-                Text(
-                    "Keep your professional learning record visible and organised.",
-                    color = KHSlate,
-                    fontSize = 11.sp
-                )
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Seminar / Workshop") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = points,
-                    onValueChange = { points = it },
-                    label = { Text("CPD points") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = institution,
-                    onValueChange = { institution = it },
-                    label = { Text("Speaker / Institution") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    label = { Text("Key learning / Notes") },
-                    minLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("Keep your professional learning record visible and organised.", color = KHSlate, fontSize = 11.sp)
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Seminar / Workshop") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = points, onValueChange = { points = it }, label = { Text("CPD points") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = institution, onValueChange = { institution = it }, label = { Text("Speaker / Institution") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Key learning / Notes") }, minLines = 3, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val value = points.toIntOrNull() ?: 0
-                    if (title.isNotBlank() && value > 0) {
-                        onSave(title, value, institution, notes)
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = KHBlue)
-            ) {
+            Button(onClick = { val value = points.toIntOrNull() ?: 0; if (title.isNotBlank() && value > 0) onSave(title, value, institution, notes) }, colors = ButtonDefaults.buttonColors(containerColor = KHBlue)) {
                 Text("Save activity", fontWeight = FontWeight.Bold)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
