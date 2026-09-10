@@ -90,7 +90,7 @@ fun CarePulseModernScreen(
                 Text("CarePulse", color = CpInk, fontSize = 23.sp, fontWeight = FontWeight.Bold)
                 Text("Your nursing shift, at a glance", color = CpMuted, fontSize = 12.sp)
             }
-            Surface(CpPurple.copy(alpha = 0.10f), RoundedCornerShape(50)) {
+            Surface(color = CpPurple.copy(alpha = 0.10f), shape = RoundedCornerShape(50)) {
                 Text("CARE", color = CpPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp))
             }
         }
@@ -143,7 +143,7 @@ private fun CpHero() {
             Column {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Surface(Color.White.copy(alpha = .14f), RoundedCornerShape(50)) {
+                        Surface(color = Color.White.copy(alpha = .14f), shape = RoundedCornerShape(50)) {
                             Text("NURSING OFFICER MODE", Color.White.copy(alpha = .92f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                         }
                         Spacer(Modifier.height(14.dp))
@@ -168,7 +168,7 @@ private fun CpHero() {
 
 @Composable
 private fun CpHeroMetric(value: String, label: String, modifier: Modifier) {
-    Surface(modifier, Color.White.copy(alpha = .15f), RoundedCornerShape(16.dp)) {
+    Surface(modifier = modifier, color = Color.White.copy(alpha = .15f), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(horizontal = 10.dp, vertical = 11.dp)) {
             Text(value, Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Text(label, Color.White.copy(alpha = .72f), fontSize = 9.sp)
@@ -185,7 +185,7 @@ private fun CpSection(title: String, subtitle: String, trailing: String? = null)
             Text(subtitle, CpMuted, fontSize = 11.sp)
         }
         if (trailing != null) {
-            Surface(CpBlue.copy(alpha = .09f), RoundedCornerShape(50)) {
+            Surface(color = CpBlue.copy(alpha = .09f), shape = RoundedCornerShape(50)) {
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(trailing, CpBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Icon(Icons.Default.ArrowForward, null, tint = CpBlue, modifier = Modifier.size(14.dp))
@@ -270,7 +270,7 @@ private fun CpEncouragement() {
                 Spacer(Modifier.height(3.dp))
                 Text("Workload is moderate. Stay balanced.", CpMuted, fontSize = 10.sp, lineHeight = 14.sp)
             }
-            Surface(CpGreen.copy(alpha = .12f), RoundedCornerShape(50)) {
+            Surface(color = CpGreen.copy(alpha = .12f), shape = RoundedCornerShape(50)) {
                 Text("Stay balanced", CpGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp))
             }
         }
