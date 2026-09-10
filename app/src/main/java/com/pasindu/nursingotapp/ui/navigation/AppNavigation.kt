@@ -88,7 +88,7 @@ fun AppNavigation() {
             )
         }
         composable("claim_period") {
-            ClaimPeriodScreen(
+            ClaimPeriodModernScreen(
                 onNavigateToDailyEntry = { claimPeriodId, start, end, wardType ->
                     navController.navigate("daily_entry/$claimPeriodId/$start/$end/$wardType")
                 },
