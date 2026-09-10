@@ -1,1 +1,0 @@
-CPD tracking improvement: additive UI only. Preserves existing CpdLogEntity and Room persistence, existing 30-point target, Log CPD flow, circular search/category filtering/bookmarks. Adds remaining-points/target-reached status and recorded CPD activity dates. No new dependency or database migration. Local Gradle and manual verification required before checklist completion.
