@@ -39,7 +39,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -106,7 +105,7 @@ fun CarePulseModernScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CareHero(state, score, scoreColor, onNavigate)
+            CareHero(state, score, onNavigate)
             SectionLabel("LIVE SNAPSHOT", "Your existing NursingOS data")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Metric("Duty", "${state.dutyHoursThisMonth.toInt()}h", Icons.Default.Schedule, ClinicalPrimaryColor, CareBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
@@ -130,9 +129,9 @@ fun CarePulseModernScreen(
                         }
                         Text("$score/100", color = scoreColor, fontSize = 17.sp, fontWeight = FontWeight.Black)
                     }
-                    LinearProgressIndicator(
+                    androidx.compose.material3.LinearProgressIndicator(
                         progress = { score / 100f },
-                        modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(50.dp)),
+                        modifier = Modifier.fillMaxWidth().height(7.dp),
                         color = scoreColor,
                         trackColor = scoreColor.copy(alpha = 0.10f)
                     )
@@ -176,7 +175,7 @@ fun CarePulseModernScreen(
 }
 
 @Composable
-private fun CareHero(state: NurseCommandCenterState, score: Int, scoreColor: Color, onNavigate: (String) -> Unit) {
+private fun CareHero(state: NurseCommandCenterState, score: Int, onNavigate: (String) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(27.dp),
@@ -186,7 +185,10 @@ private fun CareHero(state: NurseCommandCenterState, score: Int, scoreColor: Col
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.horizontalGradient(listOf(Color(0xFF075985), ClinicalPrimaryColor, Color(0xFF38BDF8))), RoundedCornerShape(27.dp))
+                .background(
+                    Brush.horizontalGradient(listOf(Color(0xFF075985), ClinicalPrimaryColor, Color(0xFF38BDF8))),
+                    RoundedCornerShape(27.dp)
+                )
                 .padding(19.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -223,7 +225,12 @@ private fun SectionLabel(eyebrow: String, title: String) {
 
 @Composable
 private fun Metric(title: String, value: String, icon: ImageVector, accent: Color, surface: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
         Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
             Text(title, color = TextSecondary, fontSize = 9.sp)
@@ -234,9 +241,14 @@ private fun Metric(title: String, value: String, icon: ImageVector, accent: Colo
 
 @Composable
 private fun Action(title: String, subtitle: String, icon: ImageVector, accent: Color, surface: Color, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(19.dp),
+        colors = CardDefaults.cardColors(containerColor = surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.78f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).background(Color.White.copy(alpha = 0.78f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(10.dp))
