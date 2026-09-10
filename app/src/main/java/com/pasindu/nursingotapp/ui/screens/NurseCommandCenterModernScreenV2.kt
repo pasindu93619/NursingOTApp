@@ -616,7 +616,7 @@ private fun Insight(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onNavigate(state.insightRoute) },
+            .clickable { onNavigate("analytics") },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = HeroPurpleSoft),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
