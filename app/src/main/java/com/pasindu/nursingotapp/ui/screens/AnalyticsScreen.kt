@@ -67,6 +67,7 @@ import com.pasindu.nursingotapp.ui.theme.md_theme_light_onTertiaryContainer
 import com.pasindu.nursingotapp.ui.theme.md_theme_light_primaryContainer
 import com.pasindu.nursingotapp.ui.theme.md_theme_light_secondaryContainer
 import com.pasindu.nursingotapp.ui.theme.md_theme_light_tertiaryContainer
+import com.pasindu.nursingotapp.ui.theme.pill
 import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 import java.time.LocalDate
