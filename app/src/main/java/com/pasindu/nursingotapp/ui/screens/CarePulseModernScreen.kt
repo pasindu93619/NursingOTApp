@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -81,9 +82,6 @@ fun CarePulseModernScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AppBackground)
-            // CarePulse is a custom edge-to-edge screen rather than a Scaffold.
-            // Protect both the notification/status area and the bottom navigation area
-            // so the hero/header never sits under system UI and the final card remains reachable.
             .safeDrawingPadding()
     ) {
         Row(
