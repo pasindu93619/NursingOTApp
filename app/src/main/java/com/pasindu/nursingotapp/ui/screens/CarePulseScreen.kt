@@ -203,10 +203,18 @@ private fun CarePulseHero() {
                     lineTo(size.width * 0.27f, y + 7f); lineTo(size.width * 0.33f, y - 32f)
                     lineTo(size.width * 0.40f, y + 3f); lineTo(size.width * 0.47f, y); lineTo(size.width, y)
                 }
-                drawPath(path, Color.White.copy(alpha = 0.20f), Stroke(3f, cap = StrokeCap.Round))
+                drawPath(
+                    path = path,
+                    color = Color.White.copy(alpha = 0.20f),
+                    style = Stroke(width = 3f, cap = StrokeCap.Round)
+                )
             }
             Column {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
                     Column(Modifier.weight(1f)) {
                         Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(50)) {
                             Text("NURSING OFFICER MODE", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
@@ -222,7 +230,11 @@ private fun CarePulseHero() {
                 }
                 Spacer(Modifier.height(20.dp))
                 Surface(color = Color.White.copy(alpha = 0.10f), shape = RoundedCornerShape(20.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(14.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         SmallHeroStat("6", "active tools")
                         SmallHeroStat("24h", "shift view")
                         SmallHeroStat("98%", "task readiness")
@@ -273,7 +285,10 @@ private fun GlassActionCard(title: String, subtitle: String, icon: androidx.comp
     ) {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.size(115.dp).align(Alignment.TopEnd).background(Brush.radialGradient(listOf(accent.copy(alpha = 0.14f + drift * 0.05f), Color.Transparent))))
-            Row(Modifier.fillMaxSize().padding(18.dp), Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(17.dp)).background(accent.copy(alpha = 0.10f)), Alignment.Center) {
                     Icon(icon, null, tint = accent, modifier = Modifier.size(27.dp))
                 }
@@ -293,7 +308,10 @@ private fun GlassActionCard(title: String, subtitle: String, icon: androidx.comp
 private fun ActionRow(label: String, selected: Boolean, accent: Color, onClick: () -> Unit) {
     AnimatedVisibility(visible = true, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
         Surface(Modifier.fillMaxWidth().clickable(onClick = onClick), RoundedCornerShape(18.dp), if (selected) accent.copy(alpha = 0.10f) else Color.White, tonalElevation = 1.dp) {
-            Row(Modifier.padding(14.dp), Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
                 Spacer(Modifier.width(10.dp))
                 Text(label, Modifier.weight(1f), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
