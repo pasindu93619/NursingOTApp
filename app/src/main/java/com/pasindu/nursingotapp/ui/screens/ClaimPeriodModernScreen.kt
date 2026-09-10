@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.ui.ClaimPeriodViewModel
@@ -136,7 +137,8 @@ private fun OtRangeCalendar(
     selectedPeriod: OtPeriodSuggestion,
     onSelectStart: (LocalDate) -> Unit
 ) {
-    var visibleMonth by remember(selectedPeriod.startDate) {
+    // Independent month state: swipe and date selection won't unexpectedly reset navigation
+    var visibleMonth by remember {
         mutableStateOf(YearMonth.from(selectedPeriod.startDate))
     }
 
@@ -150,9 +152,7 @@ private fun OtRangeCalendar(
 
     /*
      * Sunday-first calendar.
-     *
-     * Column order:
-     * Sunday → Monday → Tuesday → Wednesday → Thursday → Friday → Saturday
+     * Column order: Sunday → Monday → Tuesday → Wednesday → Thursday → Friday → Saturday
      */
     val labels = listOf(
         "S",
@@ -165,9 +165,7 @@ private fun OtRangeCalendar(
     )
 
     /*
-     * Java DayOfWeek:
-     * Monday = 1 ... Saturday = 6, Sunday = 7
-     *
+     * Java DayOfWeek: Monday = 1 ... Saturday = 6, Sunday = 7
      * Modulo 7 converts Sunday to offset 0.
      */
     val firstOffset =
@@ -203,8 +201,8 @@ private fun OtRangeCalendar(
                         ClinicalAiGradient,
                         NursingShapes.extraLarge
                     )
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     "OT FORM PERIOD",
@@ -217,7 +215,7 @@ private fun OtRangeCalendar(
                 Text(
                     "Pick your OT week",
                     color = SurfaceWhite,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Black
                 )
 
@@ -225,10 +223,10 @@ private fun OtRangeCalendar(
                     "Choose a valid Sunday start. The complete Sunday–Saturday range stays within its OT form month.",
                     color = SurfaceWhite.copy(.84f),
                     fontSize = 10.sp,
-                    lineHeight = 14.sp
+                    lineHeight = 13.sp
                 )
 
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(4.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -257,11 +255,7 @@ private fun OtRangeCalendar(
 
         /*
          * CALENDAR
-         *
-         * Horizontal finger swipe changes the visible month.
-         *
-         * Swipe right → previous month
-         * Swipe left  → next month
+         * Horizontal swipe changes visible month.
          */
         Surface(
             modifier = Modifier
@@ -277,16 +271,12 @@ private fun OtRangeCalendar(
                         onDragEnd = {
                             when {
                                 totalDrag > 80f -> {
-                                    visibleMonth =
-                                        visibleMonth.minusMonths(1)
+                                    visibleMonth = visibleMonth.minusMonths(1)
                                 }
-
                                 totalDrag < -80f -> {
-                                    visibleMonth =
-                                        visibleMonth.plusMonths(1)
+                                    visibleMonth = visibleMonth.plusMonths(1)
                                 }
                             }
-
                             totalDrag = 0f
                         },
                         onDragCancel = {
@@ -300,10 +290,10 @@ private fun OtRangeCalendar(
         ) {
             Column(
                 modifier = Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 12.dp
+                    horizontal = 10.dp,
+                    vertical = 10.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
 
                 /*
@@ -318,52 +308,42 @@ private fun OtRangeCalendar(
                         Text(
                             "OT FORM CALENDAR",
                             color = TextSecondary,
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.4.sp
+                            letterSpacing = 1.2.sp
                         )
 
                         Text(
                             monthFormatter.format(visibleMonth),
                             color = TextPrimary,
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
 
-                    /*
-                     * Previous month
-                     */
                     OtMonthNavButton(
                         icon = Icons.Default.ArrowBackIosNew,
                         contentDescription = "Previous month",
                         containerColor = md_theme_light_primaryContainer,
                         tint = MedicalBlue
                     ) {
-                        visibleMonth =
-                            visibleMonth.minusMonths(1)
+                        visibleMonth = visibleMonth.minusMonths(1)
                     }
 
                     Spacer(Modifier.width(6.dp))
 
-                    /*
-                     * Next month
-                     */
                     OtMonthNavButton(
                         icon = Icons.Default.ArrowForward,
                         contentDescription = "Next month",
                         containerColor = md_theme_light_tertiaryContainer,
                         tint = Purple
                     ) {
-                        visibleMonth =
-                            visibleMonth.plusMonths(1)
+                        visibleMonth = visibleMonth.plusMonths(1)
                     }
                 }
 
                 /*
                  * WEEKDAY HEADER
-                 *
-                 * Sunday is now the FIRST column.
                  */
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -374,14 +354,12 @@ private fun OtRangeCalendar(
                             text = label,
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center,
-                            color = if (
-                                index == 0 || index == 6
-                            ) {
+                            color = if (index == 0 || index == 6) {
                                 MedicalBlue
                             } else {
                                 TextSecondary
                             },
-                            fontSize = 10.sp,
+                            fontSize = 9.5.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -389,9 +367,6 @@ private fun OtRangeCalendar(
 
                 /*
                  * CALENDAR GRID
-                 *
-                 * No internal vertical scroll.
-                 * The calendar remains compact.
                  */
                 Column(
                     modifier = Modifier
@@ -421,7 +396,7 @@ private fun OtRangeCalendar(
                     Row(
                         modifier = Modifier.padding(
                             horizontal = 10.dp,
-                            vertical = 7.dp
+                            vertical = 6.dp
                         ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -430,13 +405,13 @@ private fun OtRangeCalendar(
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = null,
                             tint = md_theme_light_onTertiaryContainer,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
 
                         Text(
                             "Sunday starts only",
                             color = md_theme_light_onTertiaryContainer,
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f)
                         )
@@ -460,10 +435,6 @@ private fun OtCalendarWeek(
     selectedPeriod: OtPeriodSuggestion,
     onSelectStart: (LocalDate) -> Unit
 ) {
-    /*
-     * Determine which cells in this week belong to
-     * the selected OT range.
-     */
     val selectedIndices =
         week.mapIndexedNotNull { index, date ->
             if (
@@ -480,129 +451,76 @@ private fun OtCalendarWeek(
     val first = selectedIndices.firstOrNull()
     val last = selectedIndices.lastOrNull()
 
-    /*
-     * Compact week row.
-     */
+    // Compact week row: 30dp
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(34.dp),
+            .height(30.dp),
         contentAlignment = Alignment.Center
     ) {
-
-        /*
-         * Continuous selected-range background.
-         *
-         * This prevents the jagged/disconnected appearance
-         * that individual selected pills created.
-         */
+        // Continuous selected-range canvas: 26dp
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(30.dp)
+                .height(26.dp)
         ) {
             if (first != null && last != null) {
+                val cellWidth = size.width / 7f
+                val left = first * cellWidth
+                val right = (last + 1) * cellWidth
+                val radius = 13.dp.toPx()
+                val top = 1.dp.toPx()
+                val bottom = size.height - 1.dp.toPx()
 
-                val cellWidth =
-                    size.width / 7f
-
-                val left =
-                    first * cellWidth
-
-                val right =
-                    (last + 1) * cellWidth
-
-                val radius =
-                    15.dp.toPx()
-
-                val top =
-                    1.dp.toPx()
-
-                val bottom =
-                    size.height - 1.dp.toPx()
-
-                /*
-                 * Only the actual global start and end
-                 * receive rounded outer corners.
-                 */
-                val roundLeft =
-                    week[first] == selectedPeriod.startDate
-
-                val roundRight =
-                    week[last] == selectedPeriod.endDate
+                val roundLeft = week[first] == selectedPeriod.startDate
+                val roundRight = week[last] == selectedPeriod.endDate
 
                 val path = Path().apply {
-
                     moveTo(
-                        left +
-                                if (roundLeft) radius else 0f,
+                        left + if (roundLeft) radius else 0f,
                         top
                     )
 
                     lineTo(
-                        right -
-                                if (roundRight) radius else 0f,
+                        right - if (roundRight) radius else 0f,
                         top
                     )
 
                     if (roundRight) {
-                        quadraticTo(
-                            right,
-                            top,
-                            right,
-                            top + radius
-                        )
+                        quadraticTo(right, top, right, top + radius)
                     } else {
                         lineTo(right, top)
                     }
 
                     lineTo(
                         right,
-                        bottom -
-                                if (roundRight) radius else 0f
+                        bottom - if (roundRight) radius else 0f
                     )
 
                     if (roundRight) {
-                        quadraticTo(
-                            right,
-                            bottom,
-                            right - radius,
-                            bottom
-                        )
+                        quadraticTo(right, bottom, right - radius, bottom)
                     } else {
                         lineTo(right, bottom)
                     }
 
                     lineTo(
-                        left +
-                                if (roundLeft) radius else 0f,
+                        left + if (roundLeft) radius else 0f,
                         bottom
                     )
 
                     if (roundLeft) {
-                        quadraticTo(
-                            left,
-                            bottom,
-                            left,
-                            bottom - radius
-                        )
+                        quadraticTo(left, bottom, left, bottom - radius)
                     } else {
                         lineTo(left, bottom)
                     }
 
                     lineTo(
                         left,
-                        top +
-                                if (roundLeft) radius else 0f
+                        top + if (roundLeft) radius else 0f
                     )
 
                     if (roundLeft) {
-                        quadraticTo(
-                            left,
-                            top,
-                            left + radius,
-                            top
-                        )
+                        quadraticTo(left, top, left + radius, top)
                     } else {
                         lineTo(left, top)
                     }
@@ -610,16 +528,10 @@ private fun OtCalendarWeek(
                     close()
                 }
 
-                drawPath(
-                    path,
-                    ClinicalAiGradient
-                )
+                drawPath(path, ClinicalAiGradient)
             }
         }
 
-        /*
-         * Day numbers sit above the continuous range.
-         */
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -653,15 +565,15 @@ private fun OtGlassStatTile(
     ) {
         Column(
             modifier = Modifier.padding(
-                horizontal = 9.dp,
-                vertical = 7.dp
+                horizontal = 8.dp,
+                vertical = 6.dp
             ),
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Text(
                 label,
                 color = SurfaceWhite.copy(.72f),
-                fontSize = 8.sp,
+                fontSize = 7.5.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.1.sp
             )
@@ -669,7 +581,7 @@ private fun OtGlassStatTile(
             Text(
                 value,
                 color = SurfaceWhite,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
                 maxLines = 1
             )
@@ -685,9 +597,10 @@ private fun OtMonthNavButton(
     tint: Color,
     onClick: () -> Unit
 ) {
+    // Month navigation button: 34dp
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(38.dp),
+        modifier = Modifier.size(34.dp),
         shape = CircleShape,
         color = containerColor
     ) {
@@ -698,7 +611,7 @@ private fun OtMonthNavButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = tint,
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier.size(13.dp)
             )
         }
     }
@@ -711,13 +624,8 @@ private fun OtCalendarDay(
     onSelectStart: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    /*
-     * Empty calendar cell.
-     */
     if (date == null) {
-        Spacer(
-            modifier.height(34.dp)
-        )
+        Spacer(modifier.height(30.dp))
         return
     }
 
@@ -725,32 +633,21 @@ private fun OtCalendarDay(
         !date.isBefore(selectedPeriod.startDate) &&
                 !date.isAfter(selectedPeriod.endDate)
 
-    val start =
-        date == selectedPeriod.startDate
+    val start = date == selectedPeriod.startDate
+    val end = date == selectedPeriod.endDate
+    val valid = isValidOtStartDate(date)
 
-    val end =
-        date == selectedPeriod.endDate
-
-    val valid =
-        isValidOtStartDate(date)
-
+    // Compact day cell: 30dp height
     Box(
-        modifier = modifier.height(34.dp),
+        modifier = modifier.height(30.dp),
         contentAlignment = Alignment.Center
     ) {
-
-        /*
-         * Start/end marker.
-         *
-         * Purple ring makes the true OT boundaries
-         * immediately visible.
-         */
         if (start || end) {
             Box(
                 Modifier
-                    .size(32.dp)
+                    .size(28.dp)
                     .shadow(
-                        6.dp,
+                        4.dp,
                         CircleShape,
                         ambientColor = Purple.copy(.24f),
                         spotColor = Purple.copy(.24f)
@@ -763,14 +660,10 @@ private fun OtCalendarDay(
             )
         }
 
-        /*
-         * Day number.
-         *
-         * Only valid OT Sunday starts are clickable.
-         */
+        // Day circle: 26dp size
         Box(
             Modifier
-                .size(28.dp)
+                .size(26.dp)
                 .then(
                     if (valid) {
                         Modifier.clickable {
@@ -784,21 +677,19 @@ private fun OtCalendarDay(
         ) {
             Text(
                 date.dayOfMonth.toString(),
-                color =
-                    if (selected) {
-                        SurfaceWhite
-                    } else if (!valid) {
-                        TextSecondary.copy(.42f)
-                    } else {
-                        TextPrimary
-                    },
-                fontSize = 11.sp,
-                fontWeight =
-                    if (selected || valid) {
-                        FontWeight.Black
-                    } else {
-                        FontWeight.Medium
-                    }
+                color = if (selected) {
+                    SurfaceWhite
+                } else if (!valid) {
+                    TextSecondary.copy(.42f)
+                } else {
+                    TextPrimary
+                },
+                fontSize = 10.5.sp,
+                fontWeight = if (selected || valid) {
+                    FontWeight.Black
+                } else {
+                    FontWeight.Medium
+                }
             )
         }
     }
@@ -899,8 +790,7 @@ fun ClaimPeriodModernScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor =
-                        MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
@@ -910,16 +800,13 @@ fun ClaimPeriodModernScreen(
             Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(
-                    rememberScrollState()
-                )
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(
                     horizontal = 16.dp,
                     vertical = 10.dp
                 ),
-            verticalArrangement =
-                Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
             /*
@@ -931,8 +818,7 @@ fun ClaimPeriodModernScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = Color.Transparent
                 ),
-                elevation =
-                    CardDefaults.cardElevation(3.dp)
+                elevation = CardDefaults.cardElevation(3.dp)
             ) {
                 Row(
                     Modifier
@@ -942,13 +828,11 @@ fun ClaimPeriodModernScreen(
                             RoundedCornerShape(28.dp)
                         )
                         .padding(20.dp),
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(
                         Modifier.weight(1f),
-                        verticalArrangement =
-                            Arrangement.spacedBy(5.dp)
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
                             "NURSINGOS • DUTY",
@@ -979,16 +863,13 @@ fun ClaimPeriodModernScreen(
                         color = SurfaceWhite.copy(.16f)
                     ) {
                         Box(
-                            contentAlignment =
-                                Alignment.Center
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector =
-                                    Icons.Default.EditCalendar,
+                                imageVector = Icons.Default.EditCalendar,
                                 contentDescription = null,
                                 tint = SurfaceWhite,
-                                modifier =
-                                    Modifier.size(24.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
@@ -1004,39 +885,29 @@ fun ClaimPeriodModernScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = SurfaceWhite
                 ),
-                elevation =
-                    CardDefaults.cardElevation(1.dp)
+                elevation = CardDefaults.cardElevation(1.dp)
             ) {
                 Column(
                     Modifier.padding(17.dp),
-                    verticalArrangement =
-                        Arrangement.spacedBy(13.dp)
+                    verticalArrangement = Arrangement.spacedBy(13.dp)
                 ) {
 
                     Row(
-                        verticalAlignment =
-                            Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            modifier =
-                                Modifier.size(42.dp),
-                            shape =
-                                RoundedCornerShape(13.dp),
-                            color =
-                                OtModernBlueSoft
+                            modifier = Modifier.size(42.dp),
+                            shape = RoundedCornerShape(13.dp),
+                            color = OtModernBlueSoft
                         ) {
                             Box(
-                                contentAlignment =
-                                    Alignment.Center
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector =
-                                        Icons.Default.CalendarMonth,
+                                    imageVector = Icons.Default.CalendarMonth,
                                     contentDescription = null,
-                                    tint =
-                                        ClinicalPrimaryColor,
-                                    modifier =
-                                        Modifier.size(22.dp)
+                                    tint = ClinicalPrimaryColor,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -1050,8 +921,7 @@ fun ClaimPeriodModernScreen(
                                 "New claim period",
                                 color = OtModernInk,
                                 fontSize = 18.sp,
-                                fontWeight =
-                                    FontWeight.ExtraBold
+                                fontWeight = FontWeight.ExtraBold
                             )
 
                             Text(
@@ -1071,36 +941,26 @@ fun ClaimPeriodModernScreen(
                             .clickable {
                                 showStartPicker = true
                             },
-                        shape =
-                            RoundedCornerShape(18.dp),
-                        color =
-                            OtModernBlueSoft
+                        shape = RoundedCornerShape(18.dp),
+                        color = OtModernBlueSoft
                     ) {
                         Row(
                             Modifier.padding(14.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                modifier =
-                                    Modifier.size(44.dp),
-                                shape =
-                                    CircleShape,
-                                color =
-                                    SurfaceWhite
+                                modifier = Modifier.size(44.dp),
+                                shape = CircleShape,
+                                color = SurfaceWhite
                             ) {
                                 Box(
-                                    contentAlignment =
-                                        Alignment.Center
+                                    contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector =
-                                            Icons.Default.EditCalendar,
+                                        imageVector = Icons.Default.EditCalendar,
                                         contentDescription = null,
-                                        tint =
-                                            ClinicalPrimaryColor,
-                                        modifier =
-                                            Modifier.size(22.dp)
+                                        tint = ClinicalPrimaryColor,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -1109,42 +969,34 @@ fun ClaimPeriodModernScreen(
 
                             Column(
                                 Modifier.weight(1f),
-                                verticalArrangement =
-                                    Arrangement.spacedBy(3.dp)
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
                                 Text(
                                     "OT form start",
                                     color = TextSecondary,
                                     fontSize = 10.sp,
-                                    fontWeight =
-                                        FontWeight.Bold
+                                    fontWeight = FontWeight.Bold
                                 )
 
                                 Text(
-                                    selectedSuggestion.startDate
-                                        .format(displayFormatter),
+                                    selectedSuggestion.startDate.format(displayFormatter),
                                     color = OtModernInk,
                                     fontSize = 17.sp,
-                                    fontWeight =
-                                        FontWeight.Black
+                                    fontWeight = FontWeight.Black
                                 )
 
                                 Text(
                                     "Tap to choose a valid Sunday",
-                                    color =
-                                        ClinicalPrimaryColor,
+                                    color = ClinicalPrimaryColor,
                                     fontSize = 10.sp,
-                                    fontWeight =
-                                        FontWeight.Bold
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
 
                             Icon(
-                                imageVector =
-                                    Icons.Default.ArrowForward,
+                                imageVector = Icons.Default.ArrowForward,
                                 contentDescription = null,
-                                tint =
-                                    ClinicalPrimaryColor
+                                tint = ClinicalPrimaryColor
                             )
                         }
                     }
@@ -1153,25 +1005,19 @@ fun ClaimPeriodModernScreen(
                      * SUGGESTED RANGE
                      */
                     Surface(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        shape =
-                            RoundedCornerShape(18.dp),
-                        color =
-                            OtModernMintSoft
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        color = OtModernMintSoft
                     ) {
                         Row(
                             Modifier.padding(14.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector =
-                                    Icons.Default.CheckCircle,
+                                imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = Emerald,
-                                modifier =
-                                    Modifier.size(22.dp)
+                                modifier = Modifier.size(22.dp)
                             )
 
                             Spacer(Modifier.width(10.dp))
@@ -1183,24 +1029,21 @@ fun ClaimPeriodModernScreen(
                                     "Suggested complete range",
                                     color = TextSecondary,
                                     fontSize = 10.sp,
-                                    fontWeight =
-                                        FontWeight.Bold
+                                    fontWeight = FontWeight.Bold
                                 )
 
                                 Text(
                                     "${selectedSuggestion.startDate.format(displayFormatter)} → ${selectedSuggestion.endDate.format(displayFormatter)}",
                                     color = OtModernInk,
                                     fontSize = 15.sp,
-                                    fontWeight =
-                                        FontWeight.Black
+                                    fontWeight = FontWeight.Black
                                 )
 
                                 Text(
                                     "${selectedSuggestion.weeks} full week(s) • ${selectedSuggestion.days} calendar days",
                                     color = Emerald,
                                     fontSize = 10.sp,
-                                    fontWeight =
-                                        FontWeight.ExtraBold
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                         }
@@ -1210,88 +1053,68 @@ fun ClaimPeriodModernScreen(
                      * INCLUDED WEEKS
                      */
                     Column(
-                        verticalArrangement =
-                            Arrangement.spacedBy(7.dp)
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         Text(
                             "Included OT weeks",
                             color = OtModernInk,
                             fontSize = 13.sp,
-                            fontWeight =
-                                FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold
                         )
 
-                        weekRanges(
-                            selectedSuggestion
-                        ).forEachIndexed { index, range ->
-
+                        weekRanges(selectedSuggestion).forEachIndexed { index, range ->
                             Surface(
-                                modifier =
-                                    Modifier.fillMaxWidth(),
-                                shape =
-                                    RoundedCornerShape(14.dp),
-                                color =
-                                    Color(0xFFF8FAFC)
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xFFF8FAFC)
                             ) {
                                 Row(
                                     Modifier.padding(
                                         horizontal = 11.dp,
                                         vertical = 9.dp
                                     ),
-                                    verticalAlignment =
-                                        Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Surface(
-                                        modifier =
-                                            Modifier.size(27.dp),
-                                        shape =
-                                            CircleShape,
-                                        color =
-                                            if (index == 0) {
-                                                OtModernBlueSoft
-                                            } else {
-                                                OtModernPurpleSoft
-                                            }
+                                        modifier = Modifier.size(27.dp),
+                                        shape = CircleShape,
+                                        color = if (index == 0) {
+                                            OtModernBlueSoft
+                                        } else {
+                                            OtModernPurpleSoft
+                                        }
                                     ) {
                                         Box(
-                                            contentAlignment =
-                                                Alignment.Center
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 "${index + 1}",
-                                                color =
-                                                    if (index == 0) {
-                                                        ClinicalPrimaryColor
-                                                    } else {
-                                                        Purple
-                                                    },
+                                                color = if (index == 0) {
+                                                    ClinicalPrimaryColor
+                                                } else {
+                                                    Purple
+                                                },
                                                 fontSize = 10.sp,
-                                                fontWeight =
-                                                    FontWeight.Black
+                                                fontWeight = FontWeight.Black
                                             )
                                         }
                                     }
 
-                                    Spacer(
-                                        Modifier.width(9.dp)
-                                    )
+                                    Spacer(Modifier.width(9.dp))
 
                                     Text(
                                         "${range.first.format(compactFormatter)} → ${range.second.format(compactFormatter)}",
                                         color = OtModernInk,
                                         fontSize = 11.sp,
-                                        fontWeight =
-                                            FontWeight.Bold,
-                                        modifier =
-                                            Modifier.weight(1f)
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
                                     )
 
                                     Text(
                                         "SUN–SAT",
                                         color = TextSecondary,
                                         fontSize = 8.sp,
-                                        fontWeight =
-                                            FontWeight.Bold
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
@@ -1302,38 +1125,29 @@ fun ClaimPeriodModernScreen(
                      * OT MONTH RULE
                      */
                     Surface(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        shape =
-                            RoundedCornerShape(16.dp),
-                        color =
-                            OtModernAmberSoft
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = OtModernAmberSoft
                     ) {
                         Row(
                             Modifier.padding(12.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector =
-                                    Icons.Default.Info,
+                                imageVector = Icons.Default.Info,
                                 contentDescription = null,
                                 tint = Amber,
-                                modifier =
-                                    Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp)
                             )
 
-                            Spacer(
-                                Modifier.width(9.dp)
-                            )
+                            Spacer(Modifier.width(9.dp))
 
                             Text(
                                 "If a Sunday’s Saturday would enter the next month, that Sunday belongs to the next month’s form.",
                                 color = OtModernInk,
                                 fontSize = 10.sp,
                                 lineHeight = 14.sp,
-                                fontWeight =
-                                    FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -1342,8 +1156,7 @@ fun ClaimPeriodModernScreen(
                         "Duty pattern",
                         color = OtModernInk,
                         fontSize = 13.sp,
-                        fontWeight =
-                            FontWeight.ExtraBold
+                        fontWeight = FontWeight.ExtraBold
                     )
 
                     /*
@@ -1353,25 +1166,17 @@ fun ClaimPeriodModernScreen(
                         Modifier.fillMaxWidth()
                     ) {
                         SegmentedButton(
-                            selected =
-                                wardType == "Normal",
+                            selected = wardType == "Normal",
                             onClick = {
                                 wardType = "Normal"
                             },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    0,
-                                    2
-                                ),
-                            modifier =
-                                Modifier.weight(1f),
+                            shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            modifier = Modifier.weight(1f),
                             icon = {
                                 Icon(
-                                    imageVector =
-                                        Icons.Default.AccessTime,
+                                    imageVector = Icons.Default.AccessTime,
                                     contentDescription = null,
-                                    modifier =
-                                        Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         ) {
@@ -1379,25 +1184,17 @@ fun ClaimPeriodModernScreen(
                         }
 
                         SegmentedButton(
-                            selected =
-                                wardType == "Special",
+                            selected = wardType == "Special",
                             onClick = {
                                 wardType = "Special"
                             },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    1,
-                                    2
-                                ),
-                            modifier =
-                                Modifier.weight(1f),
+                            shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            modifier = Modifier.weight(1f),
                             icon = {
                                 Icon(
-                                    imageVector =
-                                        Icons.Default.LocalHospital,
+                                    imageVector = Icons.Default.LocalHospital,
                                     contentDescription = null,
-                                    modifier =
-                                        Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         ) {
@@ -1409,43 +1206,34 @@ fun ClaimPeriodModernScreen(
                      * DUTY PATTERN INFORMATION
                      */
                     Surface(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        shape =
-                            RoundedCornerShape(17.dp),
-                        color =
-                            if (wardType == "Normal") {
-                                OtModernBlueSoft
-                            } else {
-                                OtModernPurpleSoft
-                            }
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(17.dp),
+                        color = if (wardType == "Normal") {
+                            OtModernBlueSoft
+                        } else {
+                            OtModernPurpleSoft
+                        }
                     ) {
                         Row(
                             Modifier.padding(13.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector =
-                                    if (wardType == "Normal") {
-                                        Icons.Default.AccessTime
-                                    } else {
-                                        Icons.Default.LocalHospital
-                                    },
+                                imageVector = if (wardType == "Normal") {
+                                    Icons.Default.AccessTime
+                                } else {
+                                    Icons.Default.LocalHospital
+                                },
                                 contentDescription = null,
-                                tint =
-                                    if (wardType == "Normal") {
-                                        ClinicalPrimaryColor
-                                    } else {
-                                        Purple
-                                    },
-                                modifier =
-                                    Modifier.size(20.dp)
+                                tint = if (wardType == "Normal") {
+                                    ClinicalPrimaryColor
+                                } else {
+                                    Purple
+                                },
+                                modifier = Modifier.size(20.dp)
                             )
 
-                            Spacer(
-                                Modifier.width(10.dp)
-                            )
+                            Spacer(Modifier.width(10.dp))
 
                             Column(
                                 Modifier.weight(1f)
@@ -1457,8 +1245,7 @@ fun ClaimPeriodModernScreen(
                                         "Special unit calendar"
                                     },
                                     color = OtModernInk,
-                                    fontWeight =
-                                        FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.ExtraBold,
                                     fontSize = 12.sp
                                 )
 
@@ -1481,10 +1268,8 @@ fun ClaimPeriodModernScreen(
                     Button(
                         onClick = {
                             viewModel.createClaimPeriod(
-                                startDate =
-                                    selectedSuggestion.startDate,
-                                endDate =
-                                    selectedSuggestion.endDate,
+                                startDate = selectedSuggestion.startDate,
+                                endDate = selectedSuggestion.endDate,
                                 wardType = wardType,
                                 onCreated = { id ->
                                     onNavigateToDailyEntry(
@@ -1500,40 +1285,29 @@ fun ClaimPeriodModernScreen(
                             .fillMaxWidth()
                             .height(54.dp),
                         shape = NursingShapes.pill,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor =
-                                    ClinicalPrimaryColor
-                            )
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ClinicalPrimaryColor
+                        )
                     ) {
                         Icon(
-                            imageVector =
-                                Icons.Default.CalendarMonth,
+                            imageVector = Icons.Default.CalendarMonth,
                             contentDescription = null,
-                            modifier =
-                                Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp)
                         )
 
-                        Spacer(
-                            Modifier.width(8.dp)
-                        )
+                        Spacer(Modifier.width(8.dp))
 
                         Text(
                             "Open duty calendar",
-                            fontWeight =
-                                FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold
                         )
 
-                        Spacer(
-                            Modifier.weight(1f)
-                        )
+                        Spacer(Modifier.weight(1f))
 
                         Icon(
-                            imageVector =
-                                Icons.Default.ArrowForward,
+                            imageVector = Icons.Default.ArrowForward,
                             contentDescription = null,
-                            modifier =
-                                Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -1544,8 +1318,7 @@ fun ClaimPeriodModernScreen(
              */
             Row(
                 Modifier.fillMaxWidth(),
-                verticalAlignment =
-                    Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
                     Modifier.weight(1f)
@@ -1554,8 +1327,7 @@ fun ClaimPeriodModernScreen(
                         "Saved periods",
                         color = OtModernInk,
                         fontSize = 19.sp,
-                        fontWeight =
-                            FontWeight.ExtraBold
+                        fontWeight = FontWeight.ExtraBold
                     )
 
                     Text(
@@ -1572,12 +1344,9 @@ fun ClaimPeriodModernScreen(
                         }
                     ) {
                         Icon(
-                            imageVector =
-                                Icons.Default.DeleteOutline,
-                            contentDescription =
-                                "Delete all",
-                            tint =
-                                MaterialTheme.colorScheme.error
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete all",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -1587,41 +1356,29 @@ fun ClaimPeriodModernScreen(
              * EMPTY SAVED PERIODS
              */
             if (periods.isEmpty()) {
-
                 Surface(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    shape =
-                        RoundedCornerShape(22.dp),
-                    color =
-                        SurfaceWhite
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = SurfaceWhite
                 ) {
                     Column(
                         Modifier.padding(26.dp),
-                        horizontalAlignment =
-                            Alignment.CenterHorizontally,
-                        verticalArrangement =
-                            Arrangement.spacedBy(8.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
-                            modifier =
-                                Modifier.size(52.dp),
-                            shape =
-                                CircleShape,
-                            color =
-                                OtModernPurpleSoft
+                            modifier = Modifier.size(52.dp),
+                            shape = CircleShape,
+                            color = OtModernPurpleSoft
                         ) {
                             Box(
-                                contentAlignment =
-                                    Alignment.Center
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector =
-                                        Icons.Default.History,
+                                    imageVector = Icons.Default.History,
                                     contentDescription = null,
                                     tint = Purple,
-                                    modifier =
-                                        Modifier.size(25.dp)
+                                    modifier = Modifier.size(25.dp)
                                 )
                             }
                         }
@@ -1629,8 +1386,7 @@ fun ClaimPeriodModernScreen(
                         Text(
                             "No saved claim periods",
                             color = OtModernInk,
-                            fontWeight =
-                                FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold
                         )
 
                         Text(
@@ -1640,15 +1396,10 @@ fun ClaimPeriodModernScreen(
                         )
                     }
                 }
-
             } else {
-
                 periods
-                    .sortedByDescending {
-                        it.createdAt
-                    }
+                    .sortedByDescending { it.createdAt }
                     .forEach { period ->
-
                         ModernSavedPeriodCard(
                             period = period,
                             onOpen = {
@@ -1666,34 +1417,32 @@ fun ClaimPeriodModernScreen(
                     }
             }
 
-            Spacer(
-                Modifier.height(10.dp)
-            )
+            Spacer(Modifier.height(10.dp))
         }
     }
 
     /*
-     * OT FORM PERIOD PICKER
+     * OT FORM PERIOD PICKER DIALOG
+     * Uses 96% width and bypasses platform default width for full calendar visibility.
      */
     if (showStartPicker) {
         AlertDialog(
             onDismissRequest = {
                 showStartPicker = false
             },
+            modifier = Modifier.fillMaxWidth(0.96f),
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            ),
             containerColor = AppBackground,
             title = null,
             text = {
                 OtRangeCalendar(
                     selectedPeriod = selectedSuggestion
                 ) { date ->
-                    /*
-                     * IMPORTANT:
-                     * Keep the existing deterministic OT logic.
-                     */
-                    selectedSuggestion =
-                        otPeriodForMonth(
-                            formMonthForStart(date)
-                        )
+                    selectedSuggestion = otPeriodForMonth(
+                        formMonthForStart(date)
+                    )
                 }
             },
             confirmButton = {
@@ -1701,12 +1450,9 @@ fun ClaimPeriodModernScreen(
                     onClick = {
                         showStartPicker = false
                     },
-                    modifier =
-                        Modifier.height(48.dp),
-                    shape =
-                        NursingShapes.pill,
-                    color =
-                        Color.Transparent
+                    modifier = Modifier.height(48.dp),
+                    shape = NursingShapes.pill,
+                    color = Color.Transparent
                 ) {
                     Box(
                         Modifier
@@ -1715,17 +1461,13 @@ fun ClaimPeriodModernScreen(
                                 ClinicalAiGradient,
                                 NursingShapes.pill
                             )
-                            .padding(
-                                horizontal = 20.dp
-                            ),
-                        contentAlignment =
-                            Alignment.Center
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             "Use this range",
                             color = SurfaceWhite,
-                            fontWeight =
-                                FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 }
@@ -1739,8 +1481,7 @@ fun ClaimPeriodModernScreen(
                     Text(
                         "Cancel",
                         color = MedicalBlue,
-                        fontWeight =
-                            FontWeight.Bold
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -1758,8 +1499,7 @@ fun ClaimPeriodModernScreen(
             title = {
                 Text(
                     "Delete claim period?",
-                    fontWeight =
-                        FontWeight.ExtraBold
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
@@ -1770,23 +1510,13 @@ fun ClaimPeriodModernScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val period =
-                            periodToDelete
-                                ?: return@Button
-
+                        val period = periodToDelete ?: return@Button
                         periodToDelete = null
-
-                        viewModel.deleteClaimPeriod(
-                            period
-                        )
+                        viewModel.deleteClaimPeriod(period)
                     },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor =
-                                MaterialTheme
-                                    .colorScheme
-                                    .error
-                        )
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text("Delete")
                 }
@@ -1814,10 +1544,8 @@ fun ClaimPeriodModernScreen(
             title = {
                 Text(
                     "Delete all history?",
-                    color =
-                        MaterialTheme.colorScheme.error,
-                    fontWeight =
-                        FontWeight.ExtraBold
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.ExtraBold
                 )
             },
             text = {
@@ -1831,13 +1559,9 @@ fun ClaimPeriodModernScreen(
                         showDeleteAll = false
                         viewModel.deleteAll()
                     },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor =
-                                MaterialTheme
-                                    .colorScheme
-                                    .error
-                        )
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text("Delete everything")
                 }
@@ -1874,67 +1598,46 @@ private fun ModernSavedPeriodCard(
             period.endDate
         ).toInt() + 1
 
-    val special =
-        period.wardType == "Special"
-
-    val accent =
-        if (special) Purple
-        else ClinicalPrimaryColor
-
-    val surface =
-        if (special) OtModernPurpleSoft
-        else OtModernBlueSoft
+    val special = period.wardType == "Special"
+    val accent = if (special) Purple else ClinicalPrimaryColor
+    val surface = if (special) OtModernPurpleSoft else OtModernBlueSoft
 
     Card(
         Modifier
             .fillMaxWidth()
-            .clickable(
-                onClick = onOpen
-            ),
+            .clickable(onClick = onOpen),
         RoundedCornerShape(21.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = surface
-            ),
-        elevation =
-            CardDefaults.cardElevation(0.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = surface
+        ),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             Modifier.padding(14.dp),
-            verticalAlignment =
-                Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier =
-                    Modifier.size(46.dp),
-                shape =
-                    CircleShape,
-                color =
-                    SurfaceWhite.copy(.82f)
+                modifier = Modifier.size(46.dp),
+                shape = CircleShape,
+                color = SurfaceWhite.copy(.82f)
             ) {
                 Box(
-                    contentAlignment =
-                        Alignment.Center
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector =
-                            Icons.Default.CalendarMonth,
+                        imageVector = Icons.Default.CalendarMonth,
                         contentDescription = null,
                         tint = accent,
-                        modifier =
-                            Modifier.size(23.dp)
+                        modifier = Modifier.size(23.dp)
                     )
                 }
             }
 
-            Spacer(
-                Modifier.width(11.dp)
-            )
+            Spacer(Modifier.width(11.dp))
 
             Column(
                 Modifier.weight(1f),
-                verticalArrangement =
-                    Arrangement.spacedBy(3.dp)
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
                     if (special) {
@@ -1944,8 +1647,7 @@ private fun ModernSavedPeriodCard(
                     },
                     color = OtModernInk,
                     fontSize = 13.sp,
-                    fontWeight =
-                        FontWeight.ExtraBold
+                    fontWeight = FontWeight.ExtraBold
                 )
 
                 Text(
@@ -1958,8 +1660,7 @@ private fun ModernSavedPeriodCard(
                     "$days day(s) • tap to continue",
                     color = accent,
                     fontSize = 9.sp,
-                    fontWeight =
-                        FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -1967,14 +1668,9 @@ private fun ModernSavedPeriodCard(
                 onClick = onDelete
             ) {
                 Icon(
-                    imageVector =
-                        Icons.Default.DeleteOutline,
-                    contentDescription =
-                        "Delete",
-                    tint =
-                        MaterialTheme
-                            .colorScheme
-                            .error
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         }
