@@ -1,11 +1,10 @@
 package com.pasindu.nursingotapp.ui.screens
 
+import androidx.compose.runtime.Composable
+
 /**
- * Compatibility entry point for the ICU clinical workspace.
- *
- * The active ICU implementation is IcuCalculatorScreen. Keeping this small
- * wrapper prevents duplicate calculator implementations and ensures any older
- * navigation reference still opens the current ICU workspace.
+ * Compatibility entry point for the active ICU clinical workspace.
+ * The calculator implementation remains in IcuCalculatorScreen.
  */
 @Composable
 fun IcuClinicalWorkspaceScreen(onNavigateBack: () -> Unit) {
