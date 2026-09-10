@@ -1,1 +1,0 @@
-CPD tracking improvement: additive UI only. Existing CPD Room data and Log CPD flow are preserved. Added remaining-points/target-reached status and recorded CPD activity dates. No dependency or database migration.
