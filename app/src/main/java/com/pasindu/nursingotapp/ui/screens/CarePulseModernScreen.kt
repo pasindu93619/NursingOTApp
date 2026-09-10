@@ -91,11 +91,7 @@ fun CarePulseModernScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = TextPrimary
-                )
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text("CarePulse", color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
@@ -190,10 +186,7 @@ private fun CareHero(state: NurseCommandCenterState, score: Int, scoreColor: Col
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(listOf(Color(0xFF075985), ClinicalPrimaryColor, Color(0xFF38BDF8))),
-                    RoundedCornerShape(27.dp)
-                )
+                .background(Brush.horizontalGradient(listOf(Color(0xFF075985), ClinicalPrimaryColor, Color(0xFF38BDF8))), RoundedCornerShape(27.dp))
                 .padding(19.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -230,12 +223,7 @@ private fun SectionLabel(eyebrow: String, title: String) {
 
 @Composable
 private fun Metric(title: String, value: String, icon: ImageVector, accent: Color, surface: Color, modifier: Modifier, onClick: () -> Unit) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
+    Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
             Text(title, color = TextSecondary, fontSize = 9.sp)
@@ -246,12 +234,7 @@ private fun Metric(title: String, value: String, icon: ImageVector, accent: Colo
 
 @Composable
 private fun Action(title: String, subtitle: String, icon: ImageVector, accent: Color, surface: Color, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(19.dp),
-        colors = CardDefaults.cardColors(containerColor = surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = surface), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.78f)), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
