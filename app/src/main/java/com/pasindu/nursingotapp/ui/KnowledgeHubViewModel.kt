@@ -1,11 +1,13 @@
 package com.pasindu.nursingotapp.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import com.pasindu.nursingotapp.domain.usecase.AddCpdLogUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveCpdLogsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,7 +32,8 @@ data class FlashcardItem(
 @HiltViewModel
 class KnowledgeHubViewModel @Inject constructor(
     observeCpdLogsUseCase: ObserveCpdLogsUseCase,
-    private val addCpdLogUseCase: AddCpdLogUseCase
+    private val addCpdLogUseCase: AddCpdLogUseCase,
+    @ApplicationContext context: Context
 ) : ViewModel() {
 
     val cpdLogs: StateFlow<List<CpdLogEntity>> = observeCpdLogsUseCase()
@@ -45,6 +48,13 @@ class KnowledgeHubViewModel @Inject constructor(
 
     private val _flashcards = MutableStateFlow<List<FlashcardItem>>(emptyList())
     val flashcards: StateFlow<List<FlashcardItem>> = _flashcards.asStateFlow()
+
+    private val bookmarkStore = KnowledgeHubBookmarkStore(context)
+
+    private val _bookmarkedCircularIds =
+        MutableStateFlow(bookmarkStore.getBookmarkedIds())
+    val bookmarkedCircularIds: StateFlow<Set<String>> =
+        _bookmarkedCircularIds.asStateFlow()
 
     init {
         loadMockCirculars()
@@ -62,6 +72,20 @@ class KnowledgeHubViewModel @Inject constructor(
                 addCpdLogUseCase(title, earnedPoints, institution, notes)
             }
         }
+    }
+
+    fun toggleCircularBookmark(id: String) {
+        val currentlyBookmarked = id in _bookmarkedCircularIds.value
+        val next = _bookmarkedCircularIds.value.toMutableSet().apply {
+            if (currentlyBookmarked) {
+                remove(id)
+            } else {
+                add(id)
+            }
+        }.toSet()
+
+        bookmarkStore.setBookmarked(id, bookmarked = !currentlyBookmarked)
+        _bookmarkedCircularIds.value = next
     }
 
     private fun loadMockCirculars() {
