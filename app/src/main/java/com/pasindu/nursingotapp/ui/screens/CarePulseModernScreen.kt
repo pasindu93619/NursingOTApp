@@ -186,7 +186,9 @@ private fun CpSection(title: String, subtitle: String, trailing: String? = null)
 private fun CpSnapshot(modifier: Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, title: String, value: String, detail: String) {
     Card(modifier, RoundedCornerShape(20.dp), CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, CpLine)) {
         Column(Modifier.padding(12.dp)) {
-            Box(Modifier.size(38.dp).clip(CircleShape).background(tint.copy(alpha = .10f)), contentAlignment = Alignment.Center) { Icon(icon, null, tint, Modifier.size(20.dp)) }
+            Box(Modifier.size(38.dp).clip(CircleShape).background(tint.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            }
             Spacer(Modifier.height(10.dp)); Text(title, color = CpMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(3.dp)); Text(value, color = CpInk, fontSize = 17.sp, fontWeight = FontWeight.Bold); Text(detail, color = CpMuted, fontSize = 9.sp)
         }
@@ -230,7 +232,7 @@ private fun CpQuickWide(index: Int, title: String, subtitle: String, tag: String
             Box(Modifier.size(155.dp).align(Alignment.CenterEnd).clip(CircleShape).background(accent.copy(alpha = .045f)))
             Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Brush.linearGradient(listOf(accent.copy(alpha = .18f), accent.copy(alpha = .07f)))), contentAlignment = Alignment.Center) {
-                    Icon(icon, null, accent, Modifier.size(27.dp))
+                    Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(27.dp))
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
@@ -239,7 +241,9 @@ private fun CpQuickWide(index: Int, title: String, subtitle: String, tag: String
                     }
                     Spacer(Modifier.height(5.dp)); Text(title, color = CpInk, fontSize = 16.sp, fontWeight = FontWeight.Bold); Text(subtitle, color = CpMuted, fontSize = 10.sp)
                 }
-                Surface(color = accent.copy(alpha = .10f), shape = CircleShape) { Icon(Icons.Default.ChevronRight, null, accent, Modifier.padding(9.dp).size(18.dp)) }
+                Surface(color = accent.copy(alpha = .10f), shape = CircleShape) {
+                    Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = accent, modifier = Modifier.padding(9.dp).size(18.dp))
+                }
             }
         }
     }
@@ -249,7 +253,9 @@ private fun CpQuickWide(index: Int, title: String, subtitle: String, tag: String
 private fun CpEncouragement() {
     Card(Modifier.fillMaxWidth(), RoundedCornerShape(22.dp), CardDefaults.cardColors(containerColor = CpGreen.copy(alpha = .10f)), border = BorderStroke(1.dp, CpGreen.copy(alpha = .10f))) {
         Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(CpGreen.copy(alpha = .13f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Spa, null, CpGreen, Modifier.size(25.dp)) }
+            Box(Modifier.size(48.dp).clip(CircleShape).background(CpGreen.copy(alpha = .13f)), contentAlignment = Alignment.Center) {
+                Icon(imageVector = Icons.Default.Spa, contentDescription = null, tint = CpGreen, modifier = Modifier.size(25.dp))
+            }
             Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f)) { Text("You're doing well today", color = CpInk, fontSize = 15.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(3.dp)); Text("Workload is moderate. Stay balanced.", color = CpMuted, fontSize = 10.sp, lineHeight = 14.sp) }
             Surface(color = CpGreen.copy(alpha = .12f), shape = RoundedCornerShape(50)) { Text("Stay balanced", color = CpGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) }
         }
