@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -36,10 +37,13 @@ fun BurnoutMeterCard(
     suggestionText: String,
     modifier: Modifier = Modifier
 ) {
-    val safeColor = Color(0xFF4CAF50)    // 0-40 hours
-    val cautionColor = Color(0xFFFFC107) // 41-48 hours
-    val dangerColor = Color(0xFFF44336)  // 49+ hours
-    val trackColor = Color(0xFFE0E0E0)
+    // Existing thresholds are intentionally unchanged. This step is UI-only.
+    val safeColor = Color(0xFF10B981)    // 0-40 hours
+    val cautionColor = Color(0xFFF59E0B) // 41-48 hours
+    val dangerColor = Color(0xFFEF4444)  // 49+ hours
+    val trackColor = Color(0xFFE2E8F0)
+    val inkColor = Color(0xFF1E293B)
+    val mutedColor = Color(0xFF64748B)
 
     val gaugeColor = when {
         avgWeeklyHours <= 40f -> safeColor
@@ -53,10 +57,16 @@ fun BurnoutMeterCard(
         else -> "Danger: Burnout Risk"
     }
 
+    val statusLabel = when {
+        avgWeeklyHours <= 40f -> "WITHIN TARGET"
+        avgWeeklyHours <= 48f -> "WATCH RECOVERY"
+        else -> "HIGH LOAD"
+    }
+
     val animatedProgress by animateFloatAsState(
         targetValue = (avgWeeklyHours / 60f).coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 1500),
-        label = "GaugeAnimation"
+        animationSpec = tween(durationMillis = 1200),
+        label = "BurnoutGaugeAnimation"
     )
 
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -64,132 +74,269 @@ fun BurnoutMeterCard(
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
-            title = { Text("Burnout Risk Standards", fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Burnout Risk Standards",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Text(
-                    "These metrics are based on the American Nurses Association (ANA) and NIOSH guidelines:\n\n" +
-                            "• Safe Zone (0-40h): Optimal for patient safety and nurse recovery.\n" +
-                            "• Caution (41-48h): Fatigue begins to impair decision making.\n" +
-                            "• Danger (49h+): Drastically increased risk of medical errors and severe burnout.\n\n" +
-                            "Night Shifts: Working more than 3 consecutive 12-hour night shifts requires a mandatory 2-day rest period to reset circadian rhythms."
+                    text = "These metrics use the existing NursingOTApp thresholds:\n\n" +
+                            "• Safe Zone (0-40h): Optimal / Safe\n" +
+                            "• Caution (41-48h): Caution: High OT\n" +
+                            "• Danger (49h+): Danger: Burnout Risk\n\n" +
+                            "Night-shift tracking is shown separately so the workload signal remains easy to read."
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showInfoDialog = false }) { Text("Understood") }
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("Understood")
+                }
             }
         )
     }
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Header with Info Button and Dates
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(9.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(gaugeColor)
+                        )
+                        Text(
+                            text = "RECOVERY & BURNOUT",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.1.sp,
+                            color = mutedColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(5.dp))
+
                     Text(
-                        text = "Avg Weekly Burnout Risk",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+                        text = "Weekly workload",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = inkColor
                     )
+
                     Text(
-                        text = "${startDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.primary)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Semi-Circle Gauge Chart
-            Box(
-                modifier = Modifier.size(200.dp, 100.dp),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 24.dp.toPx()
-                    val size = Size(size.width, size.height * 2)
-
-                    drawArc(
-                        color = trackColor, startAngle = 180f, sweepAngle = 180f,
-                        useCenter = false, topLeft = Offset(0f, 0f), size = size,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                    )
-
-                    drawArc(
-                        color = gaugeColor, startAngle = 180f, sweepAngle = 180f * animatedProgress,
-                        useCenter = false, topLeft = Offset(0f, 0f), size = size,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                        text = "${startDate.format(DateTimeFormatter.ofPattern("MMM dd"))} – ${endDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = mutedColor
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${avgWeeklyHours.toInt()}h",
-                        fontSize = 32.sp, fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = statusText, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = gaugeColor
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Night Shift Tracker
-            val isNightShiftCritical = consecutiveNightShifts > 3
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Consecutive Night Shifts (19:00 - 07:00)",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    for (i in 1..4) {
-                        val isActive = i <= consecutiveNightShifts
-                        val circleColor = if (isActive) {
-                            if (isNightShiftCritical) dangerColor else MaterialTheme.colorScheme.primary
-                        } else trackColor
-                        Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(circleColor))
+                Surface(
+                    modifier = Modifier.size(38.dp),
+                    shape = CircleShape,
+                    color = gaugeColor.copy(alpha = 0.10f)
+                ) {
+                    IconButton(onClick = { showInfoDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Burnout risk information",
+                            tint = gaugeColor
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // AI Suggestion Box
+            // Main gauge panel
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
                     .background(
-                        if (avgWeeklyHours > 40f) dangerColor.copy(alpha = 0.1f) else safeColor.copy(alpha = 0.1f),
-                        RoundedCornerShape(12.dp)
+                        Brush.verticalGradient(
+                            listOf(
+                                gaugeColor.copy(alpha = 0.10f),
+                                Color.White
+                            )
+                        )
                     )
-                    .padding(16.dp)
+                    .padding(horizontal = 12.dp, vertical = 18.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier.size(220.dp, 122.dp),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val strokeWidth = 22.dp.toPx()
+                            val arcSize = Size(size.width - strokeWidth, (size.height * 2f) - strokeWidth)
+                            val arcOffset = Offset(strokeWidth / 2f, strokeWidth / 2f)
+
+                            drawArc(
+                                color = trackColor,
+                                startAngle = 180f,
+                                sweepAngle = 180f,
+                                useCenter = false,
+                                topLeft = arcOffset,
+                                size = arcSize,
+                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                            )
+
+                            drawArc(
+                                color = gaugeColor,
+                                startAngle = 180f,
+                                sweepAngle = 180f * animatedProgress,
+                                useCenter = false,
+                                topLeft = arcOffset,
+                                size = arcSize,
+                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                            )
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(bottom = 3.dp)
+                        ) {
+                            Text(
+                                text = "${avgWeeklyHours.toInt()}h",
+                                fontSize = 38.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = inkColor
+                            )
+                            Text(
+                                text = "of weekly workload",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = mutedColor
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = gaugeColor.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = statusLabel,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.8.sp,
+                            color = gaugeColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(7.dp))
+
+                    Text(
+                        text = statusText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = gaugeColor
+                    )
+                }
+            }
+
+            // Night-shift signal
+            val safeNightShiftCount = consecutiveNightShifts.coerceAtLeast(0)
+            val isNightShiftCritical = safeNightShiftCount > 3
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = if (isNightShiftCritical) dangerColor.copy(alpha = 0.08f) else Color(0xFFF8FAFC)
+            ) {
+                Column(modifier = Modifier.padding(15.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Night-shift streak",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = inkColor
+                            )
+                            Text(
+                                text = "19:00 – 07:00",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = mutedColor
+                            )
+                        }
+
+                        Text(
+                            text = "$safeNightShiftCount / 4",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isNightShiftCritical) dangerColor else inkColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(11.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        for (i in 1..4) {
+                            val isActive = i <= safeNightShiftCount
+                            val segmentColor = when {
+                                !isActive -> trackColor
+                                isNightShiftCritical -> dangerColor
+                                else -> MaterialTheme.colorScheme.primary
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(segmentColor)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Existing suggestion text — presentation only
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = gaugeColor.copy(alpha = 0.08f)
             ) {
                 Text(
                     text = suggestionText,
+                    modifier = Modifier.padding(15.dp),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 18.sp,
-                    textAlign = TextAlign.Center,
+                    color = inkColor,
+                    lineHeight = 19.sp,
+                    textAlign = TextAlign.Start,
                     fontWeight = FontWeight.Medium
                 )
             }
