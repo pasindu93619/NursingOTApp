@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -67,6 +69,7 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
     val circulars by viewModel.circulars.collectAsState()
     val flashcards by viewModel.flashcards.collectAsState()
     val cpdLogs by viewModel.cpdLogs.collectAsState()
+    val bookmarkedCircularIds by viewModel.bookmarkedCircularIds.collectAsState()
     var tab by remember { mutableIntStateOf(0) }
     var showAdd by remember { mutableStateOf(false) }
     var selectedCategory by rememberSaveable { mutableStateOf("All") }
@@ -130,8 +133,10 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
                         circulars = circulars,
                         selectedCategory = selectedCategory,
                         searchQuery = searchQuery,
+                        bookmarkedCircularIds = bookmarkedCircularIds,
                         onCategorySelected = { selectedCategory = it },
-                        onSearchQueryChanged = { searchQuery = it }
+                        onSearchQueryChanged = { searchQuery = it },
+                        onBookmarkToggle = viewModel::toggleCircularBookmark
                     )
                 }
                 1 -> item { CpdModern(cpdLogs, total, target, progress) }
@@ -282,8 +287,10 @@ private fun CircularsModern(
     circulars: List<CircularItem>,
     selectedCategory: String,
     searchQuery: String,
+    bookmarkedCircularIds: Set<String>,
     onCategorySelected: (String) -> Unit,
-    onSearchQueryChanged: (String) -> Unit
+    onSearchQueryChanged: (String) -> Unit,
+    onBookmarkToggle: (String) -> Unit
 ) {
     val categories = remember(circulars) {
         listOf("All") + circulars
@@ -428,6 +435,25 @@ private fun CircularsModern(
                             }
                             Spacer(Modifier.weight(1f))
                             Text(item.date, color = KHSlate, fontSize = 9.sp)
+                            val bookmarked = item.id in bookmarkedCircularIds
+                            IconButton(
+                                onClick = { onBookmarkToggle(item.id) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (bookmarked) {
+                                        Icons.Default.Bookmark
+                                    } else {
+                                        Icons.Default.BookmarkBorder
+                                    },
+                                    contentDescription = if (bookmarked) {
+                                        "Remove bookmark"
+                                    } else {
+                                        "Bookmark circular"
+                                    },
+                                    tint = if (bookmarked) KHPurple else KHSlate
+                                )
+                            }
                         }
                         Text(
                             item.title,
