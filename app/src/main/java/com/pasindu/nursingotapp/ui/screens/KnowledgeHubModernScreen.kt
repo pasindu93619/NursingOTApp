@@ -7,11 +7,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +67,7 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
     val cpdLogs by viewModel.cpdLogs.collectAsState()
     var tab by remember { mutableIntStateOf(0) }
     var showAdd by remember { mutableStateOf(false) }
+    var selectedCategory by rememberSaveable { mutableStateOf("All") }
     val total = cpdLogs.sumOf { it.earnedPoints }
     val target = 30
     val progress = (total.toFloat() / target).coerceIn(0f, 1f)
@@ -119,7 +122,13 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
             item { KnowledgeHeroModern(total, target, progress) }
             item { KnowledgeTabs(tab) { tab = it } }
             when (tab) {
-                0 -> item { CircularsModern(circulars) }
+                0 -> item {
+                    CircularsModern(
+                        circulars = circulars,
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { selectedCategory = it }
+                    )
+                }
                 1 -> item { CpdModern(cpdLogs, total, target, progress) }
                 2 -> item { FlashcardsModern(flashcards) }
             }
@@ -262,24 +271,91 @@ private fun KnowledgeTabs(selected: Int, onSelected: (Int) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CircularsModern(circulars: List<CircularItem>) {
+private fun CircularsModern(
+    circulars: List<CircularItem>,
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit
+) {
+    val categories = remember(circulars) {
+        listOf("All") + circulars
+            .asSequence()
+            .map { it.category.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+            .toList()
+    }
+
+    LaunchedEffect(categories) {
+        if (selectedCategory !in categories) {
+            onCategorySelected("All")
+        }
+    }
+
+    val filteredCirculars = remember(circulars, selectedCategory) {
+        if (selectedCategory == "All") {
+            circulars
+        } else {
+            circulars.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionHeading(
             "Ministry updates",
-            "Keep important professional notices close at hand.",
+            "Filter professional notices by category.",
             Icons.Default.Newspaper,
             KHSoftBlue,
             KHBlue
         )
-        if (circulars.isEmpty()) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            categories.forEach { category ->
+                FilterChip(
+                    selected = category == selectedCategory,
+                    onClick = { onCategorySelected(category) },
+                    label = {
+                        Text(
+                            category,
+                            fontSize = 11.sp,
+                            fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = KHBlue,
+                        selectedLabelColor = Color.White,
+                        containerColor = Color.White,
+                        labelColor = KHInk
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = category == selectedCategory,
+                        borderColor = if (category == selectedCategory) KHBlue else Color(0xFFD7E1EE)
+                    )
+                )
+            }
+        }
+
+        if (filteredCirculars.isEmpty()) {
             EmptyLearning(
-                "No circulars available",
-                "Saved Ministry updates will appear here.",
+                if (selectedCategory == "All") "No circulars available" else "No circulars in this category",
+                if (selectedCategory == "All") {
+                    "Saved Ministry updates will appear here."
+                } else {
+                    "Choose another category to view available Ministry updates."
+                },
                 Icons.Default.Newspaper
             )
         } else {
-            circulars.forEach { item ->
+            filteredCirculars.forEach { item ->
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
