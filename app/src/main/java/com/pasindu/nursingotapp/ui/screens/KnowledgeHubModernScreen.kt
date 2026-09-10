@@ -313,12 +313,12 @@ private fun CircularsModern(
     val filteredCirculars = remember(circulars, selectedCategory, normalizedQuery) {
         circulars.filter { item ->
             val matchesCategory = selectedCategory == "All" ||
-                item.category.equals(selectedCategory, ignoreCase = true)
+                    item.category.equals(selectedCategory, ignoreCase = true)
             val matchesSearch = normalizedQuery.isBlank() ||
-                item.title.contains(normalizedQuery, ignoreCase = true) ||
-                item.category.contains(normalizedQuery, ignoreCase = true) ||
-                item.summary.contains(normalizedQuery, ignoreCase = true) ||
-                item.id.contains(normalizedQuery, ignoreCase = true)
+                    item.title.contains(normalizedQuery, ignoreCase = true) ||
+                    item.category.contains(normalizedQuery, ignoreCase = true) ||
+                    item.summary.contains(normalizedQuery, ignoreCase = true) ||
+                    item.id.contains(normalizedQuery, ignoreCase = true)
             matchesCategory && matchesSearch
         }
     }
@@ -545,6 +545,17 @@ private fun CpdModern(logs: List<CpdLogEntity>, total: Int, target: Int, progres
                                 .clip(RoundedCornerShape(10.dp)),
                             color = KHMint,
                             trackColor = Color(0xFFE8F3F0)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            if (total >= target) {
+                                "Annual CPD target reached"
+                            } else {
+                                "${(target - total).coerceAtLeast(0)} points remaining"
+                            },
+                            color = if (total >= target) KHMint else KHSlate,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
