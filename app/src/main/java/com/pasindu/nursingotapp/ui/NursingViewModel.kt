@@ -20,6 +20,8 @@ import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileSettingsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
 import com.pasindu.nursingotapp.ui.model.DailyEntryUiModel
+import com.pasindu.nursingotapp.ui.state.ViewModelOperationState
+import com.pasindu.nursingotapp.ui.state.launchOperation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +62,9 @@ class NursingViewModel @Inject constructor(
     private val _dailyLogs = MutableStateFlow<List<DailyEntryUiModel>>(emptyList())
     val dailyLogs: StateFlow<List<DailyEntryUiModel>> = _dailyLogs.asStateFlow()
 
+    private val _operationState = MutableStateFlow<ViewModelOperationState>(ViewModelOperationState.Idle)
+    val operationState: StateFlow<ViewModelOperationState> = _operationState.asStateFlow()
+
     init {
         viewModelScope.launch {
             observeProfile().collect { profile -> _userProfile.value = profile }
@@ -74,14 +79,16 @@ class NursingViewModel @Inject constructor(
         }
     }
 
-    fun saveProfile(profile: ProfileEntity) = viewModelScope.launch { saveProfileUseCase(profile) }
+    fun saveProfile(profile: ProfileEntity) = launchOperation(_operationState::set) {
+        saveProfileUseCase(profile)
+    }
 
     fun saveProfileCompensation(
         riskAllowance: Double,
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double
-    ) = viewModelScope.launch {
+    ) = launchOperation(_operationState::set) {
         saveProfileCompensationUseCase(
             riskAllowance,
             claAllowance,
@@ -90,7 +97,9 @@ class NursingViewModel @Inject constructor(
         )
     }
 
-    fun saveOtRate(value: Double) = viewModelScope.launch { saveOtRateUseCase(value) }
+    fun saveOtRate(value: Double) = launchOperation(_operationState::set) {
+        saveOtRateUseCase(value)
+    }
 
     fun saveProfileAndContinue(
         profile: ProfileEntity,
@@ -101,7 +110,7 @@ class NursingViewModel @Inject constructor(
         otRate: Double,
         matched2027Basic: Double?,
         onSaved: () -> Unit
-    ) = viewModelScope.launch {
+    ) = launchOperation(_operationState::set) {
         saveProfileSettingsUseCase(
             profile = profile,
             riskAllowance = riskAllowance,
@@ -114,11 +123,11 @@ class NursingViewModel @Inject constructor(
         onSaved()
     }
 
-    fun applyMatched2027DayRate() = viewModelScope.launch {
+    fun applyMatched2027DayRate() = launchOperation(_operationState::set) {
         _matchedSalary2027.value?.basicSalary2027?.let { applyMatched2027DayRateUseCase(it) }
     }
 
-    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = viewModelScope.launch {
+    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = launchOperation(_operationState::set) {
         _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
     }
 
@@ -144,7 +153,7 @@ class NursingViewModel @Inject constructor(
         otHours: Float,
         wardOverride: String,
         reason: String
-    ) = viewModelScope.launch {
+    ) = launchOperation(_operationState::set) {
         saveDailyEntryUseCase(
             DailyEntryEntity(
                 id = id,
