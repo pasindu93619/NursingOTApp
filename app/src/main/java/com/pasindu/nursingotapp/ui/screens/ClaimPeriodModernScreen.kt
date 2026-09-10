@@ -23,9 +23,11 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
@@ -33,12 +35,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -46,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,17 +73,94 @@ import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.Locale
 
 private val OtModernInk = Color(0xFF12204A)
 private val OtModernBlueSoft = Color(0xFFEAF6FF)
 private val OtModernPurpleSoft = Color(0xFFF3EEFF)
 private val OtModernMintSoft = Color(0xFFEAFBF5)
+private val OtModernAmberSoft = Color(0xFFFFF7E6)
 private val OtModernHero = Brush.horizontalGradient(
     listOf(Color(0xFF075985), ClinicalPrimaryColor, Color(0xFF4B78F2), Purple)
 )
+
+private const val MillisPerDay = 86_400_000L
+
+private data class OtPeriodSuggestion(
+    val startDate: LocalDate,
+    val endDate: LocalDate
+) {
+    val days: Int
+        get() = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
+
+    val weeks: Int
+        get() = days / 7
+}
+
+/**
+ * Returns the Sunday that starts the first Sunday-Saturday week allocated to [month].
+ * If the month starts Monday-Saturday, that week's Sunday belongs to the previous month.
+ */
+private fun firstOtSundayOfMonth(month: YearMonth): LocalDate {
+    val firstDay = month.atDay(1)
+    return firstDay.minusDays(firstDay.dayOfWeek.value.toLong() % 7L)
+}
+
+/** Returns the final Saturday whose date is still inside [month]. */
+private fun lastOtSaturdayOfMonth(month: YearMonth): LocalDate {
+    val lastDay = month.atEndOfMonth()
+    val daysAfterSaturday = (lastDay.dayOfWeek.value - DayOfWeek.SATURDAY.value + 7) % 7
+    return lastDay.minusDays(daysAfterSaturday.toLong())
+}
+
+/**
+ * One monthly OT form is anchored to the month containing the Saturdays of its weeks.
+ * Therefore its first Sunday may be in the previous calendar month, but its final
+ * Saturday never crosses into the following month.
+ */
+private fun otPeriodForMonth(month: YearMonth): OtPeriodSuggestion =
+    OtPeriodSuggestion(
+        startDate = firstOtSundayOfMonth(month),
+        endDate = lastOtSaturdayOfMonth(month)
+    )
+
+/** Finds the form-month represented by a valid Sunday start. */
+private fun formMonthForStart(startDate: LocalDate): YearMonth =
+    YearMonth.from(startDate.plusDays(6))
+
+/** Only the canonical Sunday starting a monthly OT form is selectable. */
+private fun isValidOtStartDate(date: LocalDate): Boolean {
+    if (date.dayOfWeek != DayOfWeek.SUNDAY) return false
+    return date == otPeriodForMonth(formMonthForStart(date)).startDate
+}
+
+/** Finds the current OT form even during the spillover Sunday(s) at month-end. */
+private fun formMonthForDate(date: LocalDate): YearMonth {
+    val currentMonth = YearMonth.from(date)
+    return if (date.isAfter(lastOtSaturdayOfMonth(currentMonth))) {
+        currentMonth.plusMonths(1)
+    } else {
+        currentMonth
+    }
+}
+
+private fun localDateToPickerMillis(date: LocalDate): Long =
+    date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun pickerMillisToLocalDate(millis: Long): LocalDate =
+    Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+
+private fun weekRanges(period: OtPeriodSuggestion): List<Pair<LocalDate, LocalDate>> =
+    (0 until period.weeks).map { index ->
+        val start = period.startDate.plusWeeks(index.toLong())
+        start to start.plusDays(6)
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,20 +172,27 @@ fun ClaimPeriodModernScreen(
 ) {
     val periods by viewModel.claimPeriods.collectAsState()
     val today = remember { LocalDate.now() }
-    val defaultStart = remember(today) { today.withDayOfMonth(1) }
-    val defaultEnd = remember(today) { today.withDayOfMonth(today.lengthOfMonth()) }
+    val defaultSuggestion = remember(today) { otPeriodForMonth(formMonthForDate(today)) }
+    val displayFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.US) }
+    val compactFormatter = remember { DateTimeFormatter.ofPattern("MMM dd", Locale.US) }
 
-    var startText by remember { mutableStateOf(defaultStart.toString()) }
-    var endText by remember { mutableStateOf(defaultEnd.toString()) }
+    var selectedSuggestion by remember { mutableStateOf(defaultSuggestion) }
     var wardType by remember { mutableStateOf("Normal") }
-    var startDateError by remember { mutableStateOf(false) }
-    var endDateError by remember { mutableStateOf(false) }
     var periodToDelete by remember { mutableStateOf<ClaimPeriodEntity?>(null) }
     var showDeleteAll by remember { mutableStateOf(false) }
+    var showStartPicker by remember { mutableStateOf(false) }
 
-    val startDate = remember(startText) { parseIsoDate(startText) }
-    val endDate = remember(endText) { parseIsoDate(endText) }
-    val validRange = startDate != null && endDate != null && !endDate.isBefore(startDate)
+    val startDate = selectedSuggestion.startDate
+    val endDate = selectedSuggestion.endDate
+    val validRange = selectedSuggestion.weeks == 4 || selectedSuggestion.weeks == 5
+
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = localDateToPickerMillis(startDate),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                isValidOtStartDate(pickerMillisToLocalDate(utcTimeMillis))
+        }
+    )
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -151,7 +241,7 @@ fun ClaimPeriodModernScreen(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("NURSINGOS • DUTY", color = Color.White.copy(alpha = .72f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
                         Text("Your OT workspace", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                        Text("Choose the duty pattern once, then go directly into the calendar.", color = Color.White.copy(alpha = .86f), fontSize = 11.sp, lineHeight = 16.sp)
+                        Text("Select the form start once, confirm the calculated weeks, then open your duty calendar.", color = Color.White.copy(alpha = .86f), fontSize = 11.sp, lineHeight = 16.sp)
                     }
                     Surface(color = Color.White.copy(alpha = .16f), shape = CircleShape) {
                         Icon(Icons.Default.EditCalendar, contentDescription = null, tint = Color.White, modifier = Modifier.padding(13.dp))
@@ -175,27 +265,103 @@ fun ClaimPeriodModernScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text("New claim period", color = OtModernInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("Use ISO date format: YYYY-MM-DD", color = TextSecondary, fontSize = 10.sp)
+                            Text("Sunday → Saturday • complete weeks only", color = TextSecondary, fontSize = 10.sp)
                         }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = startText,
-                            onValueChange = { startText = it; startDateError = false },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Start") },
-                            singleLine = true,
-                            isError = startDateError
-                        )
-                        OutlinedTextField(
-                            value = endText,
-                            onValueChange = { endText = it; endDateError = false },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("End") },
-                            singleLine = true,
-                            isError = endDateError
-                        )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showStartPicker = true },
+                        shape = RoundedCornerShape(19.dp),
+                        color = OtModernBlueSoft
+                    ) {
+                        Row(
+                            Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(Modifier.size(44.dp), CircleShape, Color.White) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.EditCalendar, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(22.dp))
+                                }
+                            }
+                            Spacer(Modifier.width(11.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("OT form start", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(startDate.format(displayFormatter), color = OtModernInk, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Tap to choose a valid Sunday start", color = ClinicalPrimaryColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text("Change", color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+
+                    Surface(
+                        Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(19.dp),
+                        color = OtModernMintSoft
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CheckCircle, null, tint = Emerald, modifier = Modifier.size(21.dp))
+                                Spacer(Modifier.width(9.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Suggested OT form range", color = OtModernInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        "${startDate.format(displayFormatter)} → ${endDate.format(displayFormatter)}",
+                                        color = OtModernInk,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                                Surface(color = Color.White.copy(alpha = .72f), shape = RoundedCornerShape(12.dp)) {
+                                    Text("${selectedSuggestion.weeks} WEEKS", color = Emerald, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
+                                }
+                            }
+                            Text(
+                                "${selectedSuggestion.days} calendar days • every week is a complete Sunday–Saturday block • final Saturday stays inside the form month.",
+                                color = TextSecondary,
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+
+                    Text("Full weeks included", color = OtModernInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                    weekRanges(selectedSuggestion).forEachIndexed { index, range ->
+                        Surface(
+                            Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(13.dp),
+                            color = if (index == 0) OtModernPurpleSoft else Color(0xFFF7F9FC)
+                        ) {
+                            Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Surface(Modifier.size(28.dp), CircleShape, Color.White) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("${index + 1}", color = Purple, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                                Spacer(Modifier.width(9.dp))
+                                Text("${range.first.format(compactFormatter)} → ${range.second.format(compactFormatter)}", color = OtModernInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.weight(1f))
+                                Text("SAT", color = TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+
+                    Surface(
+                        Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = OtModernAmberSoft
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, null, tint = Color(0xFFB26A00), modifier = Modifier.size(19.dp))
+                            Spacer(Modifier.width(9.dp))
+                            Text(
+                                "A week whose Saturday would enter the next month is moved to that next month's OT form. The next form can therefore begin in the previous month.",
+                                color = OtModernInk,
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
                     }
 
                     Text("Duty pattern", color = OtModernInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
@@ -236,25 +402,18 @@ fun ClaimPeriodModernScreen(
                         }
                     }
 
-                    if (startDate != null && endDate != null) {
-                        val days = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
+                    if (validRange) {
                         Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = OtModernMintSoft) {
                             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.History, null, tint = Emerald, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(9.dp))
-                                Text("${days.coerceAtLeast(0)} calendar day(s) in this period", color = OtModernInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Ready: ${selectedSuggestion.weeks} complete week(s) • ${selectedSuggestion.days} day(s)", color = OtModernInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
 
-                    if (!validRange) {
-                        Text("Enter a valid start and end date. End date must not be before start date.", color = MaterialTheme.colorScheme.error, fontSize = 10.sp)
-                    }
-
                     Button(
                         onClick = {
-                            startDateError = startDate == null
-                            endDateError = endDate == null
                             if (!validRange) return@Button
                             viewModel.createClaimPeriod(
                                 startDate = startDate,
@@ -272,7 +431,7 @@ fun ClaimPeriodModernScreen(
                     ) {
                         Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Open duty calendar", fontWeight = FontWeight.ExtraBold)
+                        Text("Confirm & open duty calendar", fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.weight(1f))
                         Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(20.dp))
                     }
@@ -314,6 +473,36 @@ fun ClaimPeriodModernScreen(
             }
 
             Spacer(Modifier.height(10.dp))
+        }
+    }
+
+    if (showStartPicker) {
+        DatePickerDialog(
+            onDismissRequest = { showStartPicker = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val millis = pickerState.selectedDateMillis
+                        if (millis != null) {
+                            val chosenStart = pickerMillisToLocalDate(millis)
+                            if (isValidOtStartDate(chosenStart)) {
+                                selectedSuggestion = otPeriodForMonth(formMonthForStart(chosenStart))
+                            }
+                        }
+                        showStartPicker = false
+                    }
+                ) { Text("Use this range") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showStartPicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(
+                state = pickerState,
+                showModeToggle = false,
+                title = { Text("Choose OT form start") },
+                headline = { Text("Valid starts are Sundays") }
+            )
         }
     }
 
@@ -387,5 +576,3 @@ private fun ModernSavedPeriodCard(period: ClaimPeriodEntity, onOpen: () -> Unit,
         }
     }
 }
-
-private fun parseIsoDate(value: String): LocalDate? = runCatching { LocalDate.parse(value) }.getOrNull()
