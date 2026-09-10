@@ -65,6 +65,10 @@ class NursingViewModel @Inject constructor(
     private val _operationState = MutableStateFlow<ViewModelOperationState>(ViewModelOperationState.Idle)
     val operationState: StateFlow<ViewModelOperationState> = _operationState.asStateFlow()
 
+    private val setOperationState: (ViewModelOperationState) -> Unit = { state ->
+        _operationState.value = state
+    }
+
     init {
         viewModelScope.launch {
             observeProfile().collect { profile -> _userProfile.value = profile }
@@ -79,7 +83,7 @@ class NursingViewModel @Inject constructor(
         }
     }
 
-    fun saveProfile(profile: ProfileEntity) = launchOperation(_operationState::set) {
+    fun saveProfile(profile: ProfileEntity) = launchOperation(setOperationState) {
         saveProfileUseCase(profile)
     }
 
@@ -88,7 +92,7 @@ class NursingViewModel @Inject constructor(
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double
-    ) = launchOperation(_operationState::set) {
+    ) = launchOperation(setOperationState) {
         saveProfileCompensationUseCase(
             riskAllowance,
             claAllowance,
@@ -97,7 +101,7 @@ class NursingViewModel @Inject constructor(
         )
     }
 
-    fun saveOtRate(value: Double) = launchOperation(_operationState::set) {
+    fun saveOtRate(value: Double) = launchOperation(setOperationState) {
         saveOtRateUseCase(value)
     }
 
@@ -110,7 +114,7 @@ class NursingViewModel @Inject constructor(
         otRate: Double,
         matched2027Basic: Double?,
         onSaved: () -> Unit
-    ) = launchOperation(_operationState::set) {
+    ) = launchOperation(setOperationState) {
         saveProfileSettingsUseCase(
             profile = profile,
             riskAllowance = riskAllowance,
@@ -123,11 +127,11 @@ class NursingViewModel @Inject constructor(
         onSaved()
     }
 
-    fun applyMatched2027DayRate() = launchOperation(_operationState::set) {
+    fun applyMatched2027DayRate() = launchOperation(setOperationState) {
         _matchedSalary2027.value?.basicSalary2027?.let { applyMatched2027DayRateUseCase(it) }
     }
 
-    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = launchOperation(_operationState::set) {
+    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = launchOperation(setOperationState) {
         _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
     }
 
@@ -153,7 +157,7 @@ class NursingViewModel @Inject constructor(
         otHours: Float,
         wardOverride: String,
         reason: String
-    ) = launchOperation(_operationState::set) {
+    ) = launchOperation(setOperationState) {
         saveDailyEntryUseCase(
             DailyEntryEntity(
                 id = id,
