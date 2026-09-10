@@ -178,7 +178,7 @@ private fun Metrics(state: NurseCommandCenterState, onNavigate: (String) -> Unit
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Metric("Duty", "${state.dutyHoursThisMonth.toInt()}h", Icons.Default.Schedule, ClinicalPrimaryColor, CommandBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
         Metric("OT", "${state.otHoursThisMonth.toInt()}h", Icons.Default.MoreTime, Amber, CommandAmberSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
-        Metric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, CommandMintSoft, Modifier.weight(1f)) { onNavigate("advanced_finance_hub") }
+        Metric("Net", formatMoneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, CommandMintSoft, Modifier.weight(1f)) { onNavigate("advanced_finance_hub") }
     }
 }
 
