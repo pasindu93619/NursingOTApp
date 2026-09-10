@@ -93,427 +93,139 @@ fun CarePulseScreen(
             .fillMaxSize()
             .background(CareBg)
     ) {
-
-        // =====================================================
-        // STABLE CUSTOM HEADER
-        // No TopAppBar / No ExperimentalMaterial3Api
-        // =====================================================
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(CareBg)
-                .padding(
-                    horizontal = 12.dp,
-                    vertical = 10.dp
-                ),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            IconButton(
-                onClick = onBack
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ChevronLeft,
-                    contentDescription = "Back",
-                    tint = Indigo
-                )
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = Indigo)
             }
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "CarePulse",
-                    color = Ink,
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Black
-                )
-
-                Text(
-                    text = "Your nursing shift, at a glance",
-                    color = Muted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Text("CarePulse", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text("Your nursing shift, at a glance", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
-
-            Surface(
-                color = Indigo.copy(alpha = 0.10f),
-                shape = RoundedCornerShape(50)
-            ) {
-                Text(
-                    text = "CARE",
-                    modifier = Modifier.padding(
-                        horizontal = 10.dp,
-                        vertical = 6.dp
-                    ),
-                    color = Indigo,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Black
-                )
+            Surface(color = Indigo.copy(alpha = 0.10f), shape = RoundedCornerShape(50)) {
+                Text("CARE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Indigo, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
         }
-
-        // =====================================================
-        // MAIN CONTENT
-        // =====================================================
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(
-                    horizontal = 18.dp,
-                    vertical = 10.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             CarePulseHero()
 
             SectionTitle(
                 eyebrow = "LIVE SNAPSHOT",
-                title = "Everything important. One glance."
+                title = "Your shift at a glance"
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.spacedBy(10.dp)
-            ) {
-
-                PulseMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "OT Hours",
-                    value = "24.0 h",
-                    icon = Icons.Default.Schedule,
-                    accent = Violet
-                )
-
-                PulseMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Tasks",
-                    value = "7",
-                    icon = Icons.Default.HealthAndSafety,
-                    accent = Teal
-                )
-
-                PulseMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Risk",
-                    value = "Low",
-                    icon = Icons.Default.WarningAmber,
-                    accent = Green
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PulseMetricCard(Modifier.weight(1f), "OT Hours", "24.0 h", Icons.Default.Schedule, Violet)
+                PulseMetricCard(Modifier.weight(1f), "Tasks", "7", Icons.Default.HealthAndSafety, Teal)
+                PulseMetricCard(Modifier.weight(1f), "Risk", "Low", Icons.Default.WarningAmber, Green)
             }
 
             GlassActionCard(
                 title = "Clinical Command Center",
-                subtitle =
-                    "Jump into calculators, monitoring and high-priority nursing tools.",
+                subtitle = "Jump into calculators, monitoring and high-priority nursing tools.",
                 icon = Icons.Default.MedicalServices,
                 accent = Indigo,
                 effect = 0,
-                onClick = {
-                    onNavigate("clinical_calculators")
-                }
+                onClick = { onNavigate("clinical_calculators") }
             )
-
             GlassActionCard(
                 title = "Shift Intelligence",
-                subtitle =
-                    "Review workload, claims, trends and your monthly financial picture.",
+                subtitle = "Review workload, claims, trends and your monthly financial picture.",
                 icon = Icons.Default.Analytics,
                 accent = Cyan,
                 effect = 1,
-                onClick = {
-                    onNavigate("analytics")
-                }
+                onClick = { onNavigate("analytics") }
             )
-
-            // =================================================
-            // ADVANCED FINANCE
-            // =================================================
-
             GlassActionCard(
                 title = "Advanced Finance",
-                subtitle =
-                    "Salary projections, OT, deductions and smart financial planning.",
+                subtitle = "Salary projections, OT, deductions and smart financial planning.",
                 icon = Icons.Default.AccountBalance,
                 accent = Orange,
                 effect = 2,
-                onClick = {
-                    onNavigate("advanced_finance_hub")
-                }
+                onClick = { onNavigate("advanced_finance_hub") }
             )
 
-            SectionTitle(
-                eyebrow = "NURSE MODE",
-                title = "Fast actions for the ward"
-            )
-
+            SectionTitle("NURSE MODE", "Fast actions for the ward")
             val actions = listOf(
                 "ISBAR Handover" to "clinical_planning",
                 "Knowledge Hub" to "knowledge_hub",
                 "Emergency Calculators" to "emergency_calcs",
                 "Vasoactive Infusions" to "vasoactive_infusions"
             )
-
             actions.forEachIndexed { index, action ->
-
-                val label = action.first
-                val route = action.second
-
                 ActionRow(
-                    label = label,
+                    label = action.first,
                     selected = selectedIndex == index,
-                    accent = listOf(
-                        Indigo,
-                        Violet,
-                        Red,
-                        Cyan
-                    )[index],
-                    onClick = {
-                        selectedIndex = index
-                        onNavigate(action.second)
-                    }
+                    accent = listOf(Indigo, Violet, Red, Cyan)[index],
+                    onClick = { selectedIndex = index; onNavigate(action.second) }
                 )
             }
-
-            Spacer(
-                modifier = Modifier.height(26.dp)
-            )
+            Spacer(Modifier.height(26.dp))
         }
     }
 }
+
 @Composable
 private fun CarePulseHero() {
-
-    val transition =
-        rememberInfiniteTransition(
-            label = "carePulseHero"
-        )
-
+    val transition = rememberInfiniteTransition(label = "carePulseHero")
     val pulse by transition.animateFloat(
         initialValue = 0.92f,
         targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1500,
-                easing = FastOutSlowInEasing
-            ),
-            repeatMode = RepeatMode.Reverse
-        ),
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "heroPulse"
     )
-
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 20.dp,
-                shape = RoundedCornerShape(30.dp),
-                spotColor = Indigo.copy(alpha = 0.18f)
-            ),
+        modifier = Modifier.fillMaxWidth().shadow(20.dp, RoundedCornerShape(30.dp), spotColor = Indigo.copy(alpha = 0.18f)),
         shape = RoundedCornerShape(30.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        )
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(
-                    RoundedCornerShape(30.dp)
-                )
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF101B4D),
-                            Indigo,
-                            Violet
-                        )
-                    )
-                )
-                .padding(22.dp)
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(
+                Brush.linearGradient(listOf(Color(0xFF101B4D), Indigo, Violet))
+            ).padding(22.dp)
         ) {
-
-            Canvas(
-                modifier = Modifier.matchParentSize()
-            ) {
-
-                val y =
-                    size.height * 0.72f
-
-                val path =
-                    Path().apply {
-                        moveTo(0f, y)
-                        lineTo(
-                            size.width * 0.16f,
-                            y
-                        )
-                        lineTo(
-                            size.width * 0.22f,
-                            y - 10f
-                        )
-                        lineTo(
-                            size.width * 0.27f,
-                            y + 7f
-                        )
-                        lineTo(
-                            size.width * 0.33f,
-                            y - 32f
-                        )
-                        lineTo(
-                            size.width * 0.40f,
-                            y + 3f
-                        )
-                        lineTo(
-                            size.width * 0.47f,
-                            y
-                        )
-                        lineTo(
-                            size.width,
-                            y
-                        )
-                    }
-
-                drawPath(
-                    path = path,
-                    color = Color.White.copy(
-                        alpha = 0.20f
-                    ),
-                    style = Stroke(
-                        width = 3f,
-                        cap = StrokeCap.Round
-                    )
-                )
+            Canvas(Modifier.matchParentSize()) {
+                val y = size.height * 0.72f
+                val path = Path().apply {
+                    moveTo(0f, y); lineTo(size.width * 0.16f, y); lineTo(size.width * 0.22f, y - 10f)
+                    lineTo(size.width * 0.27f, y + 7f); lineTo(size.width * 0.33f, y - 32f)
+                    lineTo(size.width * 0.40f, y + 3f); lineTo(size.width * 0.47f, y); lineTo(size.width, y)
+                }
+                drawPath(path, Color.White.copy(alpha = 0.20f), Stroke(3f, cap = StrokeCap.Round))
             }
-
             Column {
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement =
-                        Arrangement.SpaceBetween,
-                    verticalAlignment =
-                        Alignment.Top
-                ) {
-
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-
-                        Surface(
-                            color = Color.White.copy(
-                                alpha = 0.14f
-                            ),
-                            shape = RoundedCornerShape(50)
-                        ) {
-                            Text(
-                                text = "NURSING OFFICER MODE",
-                                color = Color.White.copy(
-                                    alpha = 0.85f
-                                ),
-                                fontSize = 10.sp,
-                                fontWeight =
-                                    FontWeight.Black,
-                                letterSpacing = 1.sp,
-                                modifier = Modifier.padding(
-                                    horizontal = 10.dp,
-                                    vertical = 6.dp
-                                )
-                            )
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
+                    Column(Modifier.weight(1f)) {
+                        Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(50)) {
+                            Text("NURSING OFFICER MODE", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                         }
-
-                        Spacer(
-                            modifier = Modifier.height(12.dp)
-                        )
-
-                        Text(
-                            text = "Stay ahead of the shift.",
-                            color = Color.White,
-                            fontSize = 27.sp,
-                            fontWeight =
-                                FontWeight.Black,
-                            lineHeight = 30.sp
-                        )
-
-                        Spacer(
-                            modifier = Modifier.height(6.dp)
-                        )
-
-                        Text(
-                            text = "Clinical tools, workload signals and finance — brought into one fast command center.",
-                            color = Color.White.copy(
-                                alpha = 0.78f
-                            ),
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp
-                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text("Stay ahead of the shift.", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black, lineHeight = 30.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Text("Clinical tools, workload signals and finance — brought into one fast command center.", color = Color.White.copy(alpha = 0.78f), fontSize = 12.sp, lineHeight = 18.sp)
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .size(
-                                62.dp * pulse
-                            )
-                            .clip(CircleShape)
-                            .background(
-                                Color.White.copy(
-                                    alpha = 0.12f
-                                )
-                            ),
-                        contentAlignment =
-                            Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector =
-                                Icons.Default.MonitorHeart,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(30.dp)
-                        )
+                    Box(Modifier.size(62.dp * pulse).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), Alignment.Center) {
+                        Icon(Icons.Default.MonitorHeart, null, tint = Color.White, modifier = Modifier.size(30.dp))
                     }
                 }
-
-                Spacer(
-                    modifier = Modifier.height(20.dp)
-                )
-
-                Surface(
-                    color = Color.White.copy(
-                        alpha = 0.10f
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween,
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        SmallHeroStat(
-                            value = "6",
-                            label = "active tools"
-                        )
-
-                        SmallHeroStat(
-                            value = "24h",
-                            label = "shift view"
-                        )
-
-                        SmallHeroStat(
-                            value = "98%",
-                            label = "task readiness"
-                        )
+                Spacer(Modifier.height(20.dp))
+                Surface(color = Color.White.copy(alpha = 0.10f), shape = RoundedCornerShape(20.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        SmallHeroStat("6", "active tools")
+                        SmallHeroStat("24h", "shift view")
+                        SmallHeroStat("98%", "task readiness")
                     }
                 }
             }
@@ -522,315 +234,70 @@ private fun CarePulseHero() {
 }
 
 @Composable
-private fun SmallHeroStat(
-    value: String,
-    label: String
-) {
+private fun SmallHeroStat(value: String, label: String) {
     Column {
-        Text(
-            text = value,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Black
-        )
-
-        Text(
-            text = label,
-            color = Color.White.copy(
-                alpha = 0.62f
-            ),
-            fontSize = 9.sp
-        )
+        Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Text(label, color = Color.White.copy(alpha = 0.62f), fontSize = 9.sp)
     }
 }
 
 @Composable
-private fun SectionTitle(
-    eyebrow: String,
-    title: String
-) {
+private fun SectionTitle(eyebrow: String, title: String) {
     Column {
-
-        Text(
-            text = eyebrow,
-            color = Indigo,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.2.sp
-        )
-
-        Spacer(
-            modifier = Modifier.height(3.dp)
-        )
-
-        Text(
-            text = title,
-            color = Ink,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Black
-        )
+        Text(eyebrow, color = Indigo, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+        Spacer(Modifier.height(3.dp))
+        Text(title, color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Black)
     }
 }
 
 @Composable
-private fun PulseMetricCard(
-    modifier: Modifier,
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = Line
-        )
-    ) {
-
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement =
-                Arrangement.spacedBy(6.dp)
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(
-                        accent.copy(alpha = 0.10f)
-                    ),
-                contentAlignment =
-                    Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp)
-                )
+private fun PulseMetricCard(modifier: Modifier, title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color) {
+    Card(modifier = modifier, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
+        Column(Modifier.padding(12.dp), Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(accent.copy(alpha = 0.10f)), Alignment.Center) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
             }
-
-            Text(
-                text = title,
-                color = Muted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = value,
-                color = Ink,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black
-            )
+            Text(title, color = Muted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(value, color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
         }
     }
 }
 
 @Composable
-private fun GlassActionCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    effect: Int,
-    onClick: () -> Unit
-) {
-
-    val transition =
-        rememberInfiniteTransition(
-            label = "action-$title"
-        )
-
-    val drift by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 3600 +
-                        (effect * 500),
-                easing = FastOutSlowInEasing
-            ),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "drift"
-    )
-
+private fun GlassActionCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, effect: Int, onClick: () -> Unit) {
+    val transition = rememberInfiniteTransition(label = "action-$title")
+    val drift by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(3600 + effect * 500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "drift")
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(128.dp)
-            .shadow(
-                elevation = 14.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor =
-                    accent.copy(alpha = 0.16f)
-            )
-            .clickable(
-                onClick = onClick
-            ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
+        modifier = Modifier.fillMaxWidth().height(128.dp).shadow(14.dp, RoundedCornerShape(24.dp), spotColor = accent.copy(alpha = 0.16f)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .size(115.dp)
-                    .align(Alignment.TopEnd)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                accent.copy(
-                                    alpha =
-                                        0.14f +
-                                                drift * 0.05f
-                                ),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(18.dp),
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(
-                            RoundedCornerShape(17.dp)
-                        )
-                        .background(
-                            accent.copy(
-                                alpha = 0.10f
-                            )
-                        ),
-                    contentAlignment =
-                        Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(27.dp)
-                    )
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.size(115.dp).align(Alignment.TopEnd).background(Brush.radialGradient(listOf(accent.copy(alpha = 0.14f + drift * 0.05f), Color.Transparent))))
+            Row(Modifier.fillMaxSize().padding(18.dp), Alignment.CenterVertically) {
+                Box(Modifier.size(52.dp).clip(RoundedCornerShape(17.dp)).background(accent.copy(alpha = 0.10f)), Alignment.Center) {
+                    Icon(icon, null, tint = accent, modifier = Modifier.size(27.dp))
                 }
-
-                Spacer(
-                    modifier = Modifier.width(14.dp)
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-
-                    Text(
-                        text = title,
-                        color = Ink,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
-                    )
-
-                    Text(
-                        text = subtitle,
-                        color = Muted,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp
-                    )
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(4.dp))
+                    Text(subtitle, color = Muted, fontSize = 11.sp, lineHeight = 15.sp)
                 }
-
-                Icon(
-                    imageVector =
-                        Icons.Default.ChevronRight,
-                    contentDescription = "Open",
-                    tint = accent,
-                    modifier = Modifier.size(22.dp)
-                )
+                Icon(Icons.Default.ChevronRight, "Open", tint = accent, modifier = Modifier.size(22.dp))
             }
         }
     }
 }
 
 @Composable
-private fun ActionRow(
-    label: String,
-    selected: Boolean,
-    accent: Color,
-    onClick: () -> Unit
-) {
-
-    AnimatedVisibility(
-        visible = true,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut()
-    ) {
-
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(18.dp),
-            color = if (selected) {
-                accent.copy(alpha = 0.10f)
-            } else {
-                Color.White
-            },
-            tonalElevation = 1.dp
-        ) {
-
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(accent)
-                )
-
-                Spacer(
-                    modifier = Modifier.width(10.dp)
-                )
-
-                Text(
-                    text = label,
-                    modifier = Modifier.weight(1f),
-                    color = Ink,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Icon(
-                    imageVector =
-                        Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp)
-                )
+private fun ActionRow(label: String, selected: Boolean, accent: Color, onClick: () -> Unit) {
+    AnimatedVisibility(visible = true, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
+        Surface(Modifier.fillMaxWidth().clickable(onClick = onClick), RoundedCornerShape(18.dp), if (selected) accent.copy(alpha = 0.10f) else Color.White, tonalElevation = 1.dp) {
+            Row(Modifier.padding(14.dp), Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
+                Spacer(Modifier.width(10.dp))
+                Text(label, Modifier.weight(1f), color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.ChevronRight, null, tint = accent, modifier = Modifier.size(18.dp))
             }
         }
     }
