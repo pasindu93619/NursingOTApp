@@ -14,13 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -40,9 +38,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pasindu.nursingotapp.ai.NursingAiContext
-import com.pasindu.nursingotapp.ai.nursingAiContextForRoute
-import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
@@ -58,37 +53,22 @@ private data class GuideContent(val title: String, val subtitle: String, val sec
 @Composable
 fun NursingGuideFab(route: String?) {
     var showGuide by remember(route) { mutableStateOf(false) }
-    var showAi by remember(route) { mutableStateOf(false) }
     val content = guideForRoute(route) ?: return
-    val aiContext = nursingAiContextForRoute(route)
 
-    if (showGuide) {
-        NursingGuideDialog(
-            content = content,
-            aiContext = aiContext,
-            onAskAi = { showGuide = false; showAi = true },
-            onDismiss = { showGuide = false }
-        )
-    }
-    if (showAi && aiContext != null) NursingAiDialog(aiContext) { showAi = false }
+    if (showGuide) NursingGuideDialog(content = content, onDismiss = { showGuide = false })
 
     SmallFloatingActionButton(
         onClick = { showGuide = true },
         containerColor = Color.White,
         contentColor = ClinicalPrimaryColor,
-        modifier = Modifier.semantics { contentDescription = "Explain this screen and how its data works" }
+        modifier = Modifier.semantics { contentDescription = "Open NursingOS Guide for this screen" }
     ) {
-        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(21.dp))
     }
 }
 
 @Composable
-private fun NursingGuideDialog(
-    content: GuideContent,
-    aiContext: NursingAiContext?,
-    onAskAi: () -> Unit,
-    onDismiss: () -> Unit
-) {
+private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
@@ -99,56 +79,27 @@ private fun NursingGuideDialog(
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(11.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(22.dp)).padding(16.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(7.dp))
-                                    Text("NURSINGOS GUIDE", color = Color.White.copy(.72f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
-                                }
-                                Spacer(Modifier.height(5.dp))
-                                Text(content.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 25.sp)
-                                Spacer(Modifier.height(3.dp))
-                                Text(content.subtitle, color = Color.White.copy(.84f), fontSize = 10.sp, lineHeight = 14.sp)
-                            }
-                        }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close guide", tint = TextSecondary) }
-                    }
-
-                    if (aiContext != null) {
-                        Button(onClick = onAskAi, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(17.dp))
-                            Spacer(Modifier.width(7.dp))
-                            Text("Ask NursingOS AI")
+                    GuideHeader(content, onDismiss)
+                    GuideIntroStrip()
+                    content.sections.forEachIndexed { index, section -> GuideSectionCard(index, section) }
+                    content.safety?.let { GuideSafetyCard(it) }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF))
+                    ) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(9.dp))
+                            Text(
+                                "Tip: use this Guide to understand the screen, then open the underlying workspace when you need to edit the source data.",
+                                color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
+                            )
                         }
                     }
-
-                    content.sections.forEach { GuideSectionCard(it) }
-
-                    content.safety?.let { safety ->
-                        Card(Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF6E7))) {
-                            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
-                                Icon(Icons.Default.Shield, null, tint = Color(0xFFE58A00), modifier = Modifier.size(19.dp))
-                                Spacer(Modifier.width(9.dp))
-                                Column {
-                                    Text("Use with care", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(safety, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp)
-                                }
-                            }
-                        }
-                    }
-                    Text("The Guide explains the current UI and deterministic logic; AI adds contextual explanation but does not create a second calculation engine.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                 }
             }
         },
@@ -157,17 +108,99 @@ private fun NursingGuideDialog(
 }
 
 @Composable
-private fun GuideSectionCard(section: GuideSection) {
-    Card(Modifier.fillMaxWidth(), RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = SurfaceWhite), elevation = CardDefaults.cardElevation(1.dp)) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
-            Card(Modifier.size(34.dp), RoundedCornerShape(11.dp), colors = CardDefaults.cardColors(containerColor = section.accent.copy(.10f))) {
-                Icon(Icons.Default.CheckCircle, null, tint = section.accent, modifier = Modifier.padding(8.dp))
+private fun GuideHeader(content: GuideContent, onDismiss: () -> Unit) {
+    Row(verticalAlignment = Alignment.Top) {
+        Card(
+            modifier = Modifier.weight(1f), shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(22.dp))
+                    .padding(horizontal = 17.dp, vertical = 15.dp)
+            ) {
+                Text("NURSINGOS GUIDE  •  SCREEN HELP", color = Color.White.copy(alpha = .78f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Spacer(Modifier.height(5.dp))
+                Text(content.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 25.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(content.subtitle, color = Color.White.copy(alpha = .88f), fontSize = 10.sp, lineHeight = 14.sp)
+            }
+        }
+        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close guide", tint = TextSecondary) }
+    }
+}
+
+@Composable
+private fun GuideIntroStrip() {
+    Card(
+        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Card(
+                modifier = Modifier.size(32.dp), shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = ClinicalPrimaryColor.copy(alpha = .10f))
+            ) {
+                Icon(Icons.Default.CheckCircle, null, tint = ClinicalPrimaryColor, modifier = Modifier.padding(7.dp))
+            }
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Quick, verified explanation", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "Meaning → how it works → what to check next. The Guide reflects the app's deterministic logic and does not invent values.",
+                    color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideSectionCard(index: Int, section: GuideSection) {
+    val labels = listOf("MEANING", "HOW IT WORKS", "WHAT TO CHECK", "PRACTICAL TIP")
+    val label = labels.getOrElse(index) { "DETAIL" }
+    Card(
+        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(19.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Card(
+                    modifier = Modifier.size(35.dp), shape = RoundedCornerShape(11.dp),
+                    colors = CardDefaults.cardColors(containerColor = section.accent.copy(alpha = .10f))
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, tint = section.accent, modifier = Modifier.padding(8.dp))
+                }
+                if (index < 3) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("${index + 1}", color = section.accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                }
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
+                Text(label, color = section.accent, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
+                Spacer(Modifier.height(2.dp))
                 Text(section.title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(3.dp))
                 Text(section.body, color = TextSecondary, fontSize = 10.sp, lineHeight = 15.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideSafetyCard(safety: String) {
+    Card(Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF6E7))) {
+        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
+            Icon(Icons.Default.Shield, null, tint = Color(0xFFE58A00), modifier = Modifier.size(19.dp))
+            Spacer(Modifier.width(9.dp))
+            Column {
+                Text("USE WITH CARE", color = Color(0xFFE58A00), fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
+                Spacer(Modifier.height(2.dp))
+                Text("Safety & verification", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(3.dp))
+                Text(safety, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp)
             }
         }
     }
@@ -207,7 +240,7 @@ private fun guideForRoute(route: String?): GuideContent? = when (route) {
     "nurse_command_center" -> GuideContent("Nurse Command Center", "Decision-support that organizes existing workload and wellness signals into useful next actions.", listOf(
         GuideSection("What it reads", "It can surface existing duty, workload, wellness and app-state information without requiring duplicate entry."),
         GuideSection("What a score means", "Scores are signals derived from available app data. They are not diagnoses, performance ratings or clinical risk diagnoses."),
-        GuideSection("Why suggestions change", "As source data changes, prioritized cards and suggested actions can change. This is routing and interpretation, not a replacement for deterministic logic.", AiAccentColor),
+        GuideSection("Why suggestions change", "As source data changes, prioritized cards and suggested actions can change. This is routing and interpretation, not a replacement for deterministic logic.", ClinicalPrimaryColor),
         GuideSection("Next action", "Use a suggestion as a shortcut into the relevant workspace, then inspect the underlying data.")
     ), "Command Center suggestions are supportive guidance and must not override validated clinical rules, official policy or professional judgement.")
     "care_pulse" -> GuideContent("Care Pulse explained", "A wellness-oriented summary of the signals available to NursingOS.", listOf(
