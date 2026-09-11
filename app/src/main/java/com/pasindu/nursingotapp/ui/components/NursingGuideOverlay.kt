@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DialogProperties
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SmallFloatingActionButton
@@ -71,36 +74,21 @@ fun NursingGuideFab(route: String?) {
 private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        containerColor = Color.Transparent,
         text = {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = AppBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(11.dp)
-                ) {
-                    GuideHeader(content, onDismiss)
-                    GuideIntroStrip()
-                    content.sections.forEachIndexed { index, section -> GuideSectionCard(index, section) }
-                    content.safety?.let { GuideSafetyCard(it) }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF))
-                    ) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(9.dp))
-                            Text(
-                                "Tip: use this Guide to understand the screen, then open the underlying workspace when you need to edit the source data.",
-                                color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
-                            )
-                        }
-                    }
-                }
+                GuideHero(content, onDismiss)
+                GuideIntroStrip(content.sections.size)
+                content.sections.forEachIndexed { index, section -> GuideSectionCard(index, section) }
+                content.safety?.let { GuideSafetyCard(it) }
+                GuideFooterTip()
             }
         },
         confirmButton = {}
@@ -108,46 +96,135 @@ private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun GuideHeader(content: GuideContent, onDismiss: () -> Unit) {
-    Row(verticalAlignment = Alignment.Top) {
-        Card(
-            modifier = Modifier.weight(1f), shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+private fun GuideHero(content: GuideContent, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(ClinicalAiGradient, RoundedCornerShape(28.dp))
+                .padding(start = 18.dp, top = 17.dp, end = 12.dp, bottom = 17.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(22.dp))
-                    .padding(horizontal = 17.dp, vertical = 15.dp)
-            ) {
-                Text("NURSINGOS GUIDE  •  SCREEN HELP", color = Color.White.copy(alpha = .78f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                Spacer(Modifier.height(5.dp))
-                Text(content.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 25.sp)
-                Spacer(Modifier.height(4.dp))
-                Text(content.subtitle, color = Color.White.copy(alpha = .88f), fontSize = 10.sp, lineHeight = 14.sp)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "NURSINGOS GUIDE  •  SCREEN HELP",
+                        color = Color.White.copy(alpha = .78f),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        content.title,
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 26.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        content.subtitle,
+                        color = Color.White.copy(alpha = .88f),
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp
+                    )
+                }
+                GuideCloseButton(onDismiss)
             }
+            Spacer(Modifier.height(13.dp))
+            GlassGuideStat(content.sections.size)
         }
-        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close guide", tint = TextSecondary) }
     }
 }
 
 @Composable
-private fun GuideIntroStrip() {
+private fun GlassGuideStat(sectionCount: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Color.White.copy(alpha = .15f),
+                RoundedCornerShape(16.dp)
+            )
+            .border(1.dp, Color.White.copy(alpha = .20f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Card(
+            modifier = Modifier.size(28.dp),
+            shape = RoundedCornerShape(9.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .15f))
+        ) {
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.padding(6.dp)
+            )
+        }
+        Spacer(Modifier.width(9.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                "GUIDANCE SECTIONS",
+                color = Color.White.copy(alpha = .70f),
+                fontSize = 7.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.0.sp
+            )
+            Text(
+                "$sectionCount clear steps to understand this screen",
+                color = Color.White,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun GuideCloseButton(onDismiss: () -> Unit) {
+    IconButton(
+        onClick = onDismiss,
+        modifier = Modifier
+            .size(38.dp)
+            .background(Color.White.copy(alpha = .12f), CircleShape)
+            .border(1.dp, Color.White.copy(alpha = .20f), CircleShape)
+            .semantics { contentDescription = "Close guide" }
+    ) {
+        Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(19.dp))
+    }
+}
+
+@Composable
+private fun GuideIntroStrip(sectionCount: Int) {
     Card(
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(19.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Card(
-                modifier = Modifier.size(32.dp), shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.size(33.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(containerColor = ClinicalPrimaryColor.copy(alpha = .10f))
             ) {
                 Icon(Icons.Default.CheckCircle, null, tint = ClinicalPrimaryColor, modifier = Modifier.padding(7.dp))
             }
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
-                Text("Quick, verified explanation", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text("QUICK, VERIFIED EXPLANATION", color = ClinicalPrimaryColor, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    "Meaning → how it works → what to check next. The Guide reflects the app's deterministic logic and does not invent values.",
+                    "Meaning → how it works → what to check next. This guide contains $sectionCount guidance sections and reflects the app's deterministic logic.",
                     color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
                 )
             }
@@ -159,16 +236,19 @@ private fun GuideIntroStrip() {
 private fun GuideSectionCard(index: Int, section: GuideSection) {
     val labels = listOf("MEANING", "HOW IT WORKS", "WHAT TO CHECK", "PRACTICAL TIP")
     val label = labels.getOrElse(index) { "DETAIL" }
+    val tint = section.accent.copy(alpha = .08f)
     Card(
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(19.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(19.dp),
+        colors = CardDefaults.cardColors(containerColor = tint),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Card(
-                    modifier = Modifier.size(35.dp), shape = RoundedCornerShape(11.dp),
-                    colors = CardDefaults.cardColors(containerColor = section.accent.copy(alpha = .10f))
+                    modifier = Modifier.size(36.dp),
+                    shape = RoundedCornerShape(11.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .72f))
                 ) {
                     Icon(Icons.Default.CheckCircle, null, tint = section.accent, modifier = Modifier.padding(8.dp))
                 }
@@ -191,17 +271,46 @@ private fun GuideSectionCard(index: Int, section: GuideSection) {
 
 @Composable
 private fun GuideSafetyCard(safety: String) {
-    Card(Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF6E7))) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(19.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF6E7)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Default.Shield, null, tint = Color(0xFFE58A00), modifier = Modifier.size(19.dp))
-            Spacer(Modifier.width(9.dp))
-            Column {
+            Card(
+                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(11.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .68f))
+            ) {
+                Icon(Icons.Default.Shield, null, tint = Color(0xFFE58A00), modifier = Modifier.padding(8.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
                 Text("USE WITH CARE", color = Color(0xFFE58A00), fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
                 Spacer(Modifier.height(2.dp))
                 Text("Safety & verification", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(3.dp))
                 Text(safety, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp)
             }
+        }
+    }
+}
+
+@Composable
+private fun GuideFooterTip() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF))
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(9.dp))
+            Text(
+                "Tip: use this Guide to understand the screen, then open the underlying workspace when you need to edit the source data.",
+                color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
+            )
         }
     }
 }
