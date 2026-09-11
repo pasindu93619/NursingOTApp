@@ -62,7 +62,14 @@ fun NursingGuideFab(route: String?) {
     val content = guideForRoute(route) ?: return
     val aiContext = nursingAiContextForRoute(route)
 
-    if (showGuide) NursingGuideDialog(content, aiContext) { showGuide = false }
+    if (showGuide) {
+        NursingGuideDialog(
+            content = content,
+            aiContext = aiContext,
+            onAskAi = { showGuide = false; showAi = true },
+            onDismiss = { showGuide = false }
+        )
+    }
     if (showAi && aiContext != null) NursingAiDialog(aiContext) { showAi = false }
 
     SmallFloatingActionButton(
@@ -76,7 +83,12 @@ fun NursingGuideFab(route: String?) {
 }
 
 @Composable
-private fun NursingGuideDialog(content: GuideContent, aiContext: NursingAiContext?, onDismiss: () -> Unit) {
+private fun NursingGuideDialog(
+    content: GuideContent,
+    aiContext: NursingAiContext?,
+    onAskAi: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
@@ -114,7 +126,7 @@ private fun NursingGuideDialog(content: GuideContent, aiContext: NursingAiContex
                     }
 
                     if (aiContext != null) {
-                        Button(onClick = { onDismiss(); showAiFromGuide(aiContext) }, modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = onAskAi, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(7.dp))
                             Text("Ask NursingOS AI")
@@ -142,11 +154,6 @@ private fun NursingGuideDialog(content: GuideContent, aiContext: NursingAiContex
         },
         confirmButton = {}
     )
-}
-
-private fun showAiFromGuide(context: NursingAiContext) {
-    // The AI dialog is launched by NursingGuideFab's state. This function exists only as a
-    // semantic hook for the Guide action; the actual state transition is kept at the FAB owner.
 }
 
 @Composable
