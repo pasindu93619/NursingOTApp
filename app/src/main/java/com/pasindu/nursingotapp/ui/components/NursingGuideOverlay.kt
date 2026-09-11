@@ -86,10 +86,7 @@ private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
                     .padding(horizontal = 8.dp),
                 shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = AppBackground),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    BorderMuted.copy(alpha = .70f)
-                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderMuted.copy(alpha = .70f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
@@ -137,28 +134,11 @@ private fun GuideHero(content: GuideContent, onDismiss: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        "NURSINGOS GUIDE  •  SCREEN HELP",
-                        color = Color.White.copy(alpha = .78f),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.2.sp
-                    )
+                    Text("NURSINGOS GUIDE  •  SCREEN HELP", color = Color.White.copy(alpha = .78f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
                     Spacer(Modifier.height(5.dp))
-                    Text(
-                        content.title,
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        lineHeight = 26.sp
-                    )
+                    Text(content.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black, lineHeight = 26.sp)
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        content.subtitle,
-                        color = Color.White.copy(alpha = .88f),
-                        fontSize = 10.sp,
-                        lineHeight = 14.sp
-                    )
+                    Text(content.subtitle, color = Color.White.copy(alpha = .88f), fontSize = 10.sp, lineHeight = 14.sp)
                 }
                 GuideCloseButton(onDismiss)
             }
@@ -183,28 +163,12 @@ private fun GlassGuideStat(sectionCount: Int) {
             shape = RoundedCornerShape(9.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .15f))
         ) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.padding(6.dp)
-            )
+            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.padding(6.dp))
         }
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                "GUIDANCE SECTIONS",
-                color = Color.White.copy(alpha = .70f),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.0.sp
-            )
-            Text(
-                "$sectionCount clear steps to understand this screen",
-                color = Color.White,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("GUIDANCE SECTIONS", color = Color.White.copy(alpha = .70f), fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
+            Text("$sectionCount clear steps to understand this screen", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -231,10 +195,7 @@ private fun GuideIntroStrip(sectionCount: Int) {
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             Card(
                 modifier = Modifier.size(33.dp),
                 shape = RoundedCornerShape(10.dp),
@@ -246,10 +207,7 @@ private fun GuideIntroStrip(sectionCount: Int) {
             Column(Modifier.weight(1f)) {
                 Text("QUICK, VERIFIED EXPLANATION", color = ClinicalPrimaryColor, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
                 Spacer(Modifier.height(2.dp))
-                Text(
-                    "Meaning → how it works → what to check next. This guide contains $sectionCount guidance sections and reflects the app's deterministic logic.",
-                    color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
-                )
+                Text("Meaning → how it works → what to check next. This guide contains $sectionCount guidance sections and reflects the app's deterministic logic.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp)
             }
         }
     }
@@ -259,33 +217,60 @@ private fun GuideIntroStrip(sectionCount: Int) {
 private fun GuideSectionCard(index: Int, section: GuideSection) {
     val labels = listOf("MEANING", "HOW IT WORKS", "WHAT TO CHECK", "PRACTICAL TIP")
     val label = labels.getOrElse(index) { "DETAIL" }
-    val tint = section.accent.copy(alpha = .08f)
+    val shape = RoundedCornerShape(21.dp)
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(19.dp),
-        colors = CardDefaults.cardColors(containerColor = tint),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, section.accent.copy(alpha = .18f), shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(section.accent.copy(alpha = .045f), shape)
+                .padding(13.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Card(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(70.dp),
+                shape = RoundedCornerShape(50.dp),
+                colors = CardDefaults.cardColors(containerColor = section.accent.copy(alpha = .75f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {}
+
+            Spacer(Modifier.width(10.dp))
+
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Card(
-                    modifier = Modifier.size(36.dp),
-                    shape = RoundedCornerShape(11.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .72f))
+                    modifier = Modifier.size(38.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = section.accent.copy(alpha = .11f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = section.accent, modifier = Modifier.padding(8.dp))
+                    Icon(Icons.Default.CheckCircle, null, tint = section.accent, modifier = Modifier.padding(9.dp))
                 }
-                if (index < 3) {
-                    Spacer(Modifier.height(4.dp))
-                    Text("${index + 1}", color = section.accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(5.dp))
+                Card(
+                    shape = RoundedCornerShape(50.dp),
+                    colors = CardDefaults.cardColors(containerColor = section.accent.copy(alpha = .10f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Text("${index + 1}", modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = section.accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
             }
-            Spacer(Modifier.width(10.dp))
+
+            Spacer(Modifier.width(11.dp))
+
             Column(Modifier.weight(1f)) {
-                Text(label, color = section.accent, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.0.sp)
-                Spacer(Modifier.height(2.dp))
-                Text(section.title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(label, color = section.accent, fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
                 Spacer(Modifier.height(3.dp))
+                Text(section.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Black, lineHeight = 17.sp)
+                Spacer(Modifier.height(4.dp))
                 Text(section.body, color = TextSecondary, fontSize = 10.sp, lineHeight = 15.sp)
             }
         }
@@ -330,10 +315,7 @@ private fun GuideFooterTip() {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
-            Text(
-                "Tip: use this Guide to understand the screen, then open the underlying workspace when you need to edit the source data.",
-                color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
-            )
+            Text("Tip: use this Guide to understand the screen, then open the underlying workspace when you need to edit the source data.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp)
         }
     }
 }
