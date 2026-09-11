@@ -9,6 +9,7 @@ import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimPeriodsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -23,6 +24,12 @@ class ClaimPeriodViewModel @Inject constructor(
 ) : ViewModel() {
 
     val claimPeriods = observeClaimPeriods()
+        .map { periods ->
+            periods.sortedWith(
+                compareByDescending<ClaimPeriodEntity> { it.startDate }
+                    .thenByDescending { it.endDate }
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun createClaimPeriod(
