@@ -42,7 +42,6 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
-import com.pasindu.nursingotapp.ui.state.ViewModelOperationState
 
 private val Background = Color(0xFFF4F7FC)
 private val Navy = Color(0xFF102A56)
@@ -62,7 +61,6 @@ fun ProfileScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     val matchedSalary2027 by viewModel.matchedSalary2027.collectAsState()
     val compensation by viewModel.profileCompensation.collectAsState()
-    val operationState by viewModel.operationState.collectAsState()
 
     var fullName by remember { mutableStateOf("") }
     var serviceNo by remember { mutableStateOf("") }
@@ -113,7 +111,7 @@ fun ProfileScreen(
     val matched2027DayRate = matched2027Basic?.div(30.0)
     val detectedStep = matchedSalary2027?.salaryStep
     val selectedOtRate = NursingOtRatePolicy.rateForGrade(grade)
-    val saveInProgress = operationState is ViewModelOperationState.Loading
+    var saveInProgress by rememberSaveable { mutableStateOf(false) }
 
     val initial = fullName.firstOrNull()?.uppercase() ?: "N"
     val displayFullName = fullName.takeIf { it.isNotBlank() } ?: "New User"
@@ -400,24 +398,10 @@ fun ProfileScreen(
             }
         }
 
-        if (operationState is ViewModelOperationState.Error) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFFFFF1F2),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(
-                    text = "Profile could not be saved. Please try again.",
-                    modifier = Modifier.padding(14.dp),
-                    color = Color(0xFFBE123C),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
         Button(
             onClick = {
+                if (saveInProgress) return@Button
+                saveInProgress = true
                 val basic = parsedMoney(basicSalary)
                 val profile = ProfileEntity(
                     1,
@@ -440,6 +424,7 @@ fun ProfileScreen(
                     otRate = selectedOtRate ?: 0.0,
                     matched2027Basic = matched2027Basic,
                     onSaved = {
+                        saveInProgress = false
                         onNavigateToClaimPeriod(true, "")
                     }
                 )
@@ -451,8 +436,10 @@ fun ProfileScreen(
         ) {
             if (saveInProgress) {
                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                Spacer(Modifier.width(10.dp))
+                Text("SAVING…", fontSize = 15.sp, fontWeight = FontWeight.Black)
             } else {
-                Text("SAVE PROFILE & CONTINUE", fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text("SAVE PROFILE & CONTINUE", fontSize = 15.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.width(10.dp))
                 Icon(Icons.Default.ArrowForward, null)
             }
