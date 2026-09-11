@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
+import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
 
@@ -125,61 +126,11 @@ fun ProfileScreen(
     )
 
     if (showGradeSheet) {
-        ModalBottomSheet(onDismissRequest = { showGradeSheet = false }) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("CURRENT NURSING GRADE", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                Text(
-                    "Choose your grade. Your Nursing Service OT rate will be assigned automatically.",
-                    color = Slate,
-                    fontSize = 11.sp
-                )
-                NursingOtRatePolicy.grades.forEach { option ->
-                    val rate = NursingOtRatePolicy.rateForGrade(option) ?: 0.0
-                    val selected = option == grade
-                    Surface(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                grade = option
-                                showGradeSheet = false
-                            },
-                        shape = RoundedCornerShape(18.dp),
-                        color = if (selected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
-                        border = if (selected) BorderStroke(1.5.dp, Blue.copy(alpha = 0.45f)) else null
-                    ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                Modifier.size(42.dp),
-                                CircleShape,
-                                if (selected) Blue.copy(alpha = 0.12f) else Color.White
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = if (selected) Icons.Default.Check else Icons.Default.WorkOutline,
-                                        contentDescription = null,
-                                        tint = if (selected) Blue else Slate
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(option, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("OT Rs. ${formatMoney(rate)} / hour", color = if (selected) Blue else Slate, fontSize = 10.sp)
-                            }
-                            if (selected) {
-                                Text("SELECTED", color = Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        NursingGradeSelectionSheet(
+            selectedGrade = grade,
+            onGradeSelected = { grade = it },
+            onDismiss = { showGradeSheet = false }
+        )
     }
 
     Column(
