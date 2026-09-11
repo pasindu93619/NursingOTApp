@@ -81,18 +81,9 @@ fun AppNavigation() {
     fun navigateTo(route: String) {
         if (currentRoute == route) return
 
-        if (rootDestinations.any { it.route == route }) {
-            navController.navigate(route) {
-                popUpTo("home") {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
-        } else {
-            navController.navigate(route) {
-                launchSingleTop = true
-            }
+        navController.navigate(route) {
+            launchSingleTop = true
+            restoreState = false
         }
     }
 
@@ -190,7 +181,9 @@ fun AppNavigation() {
             composable("profile") {
                 ProfileScreen(
                     viewModel = viewModel,
-                    onNavigateToClaimPeriod = { _, _ -> navigateTo("claim_period") }
+                    onNavigateToClaimPeriod = { _, _ ->
+                        navController.popBackStack("claim_period", inclusive = false)
+                    }
                 )
             }
             composable("claim_period") {
