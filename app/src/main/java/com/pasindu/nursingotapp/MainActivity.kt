@@ -1,6 +1,7 @@
 // com/pasindu/nursingotapp/MainActivity.kt
 package com.pasindu.nursingotapp
 
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,7 +25,14 @@ class MainActivity : ComponentActivity() {
         // content/inset behavior consistently across modern Android devices.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 
+        // NursingOS uses a true edge-to-edge window so the root background can
+        // flow continuously behind the system bars instead of creating white
+        // seams above or below individual screens.
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = AndroidColor.TRANSPARENT
+        window.navigationBarColor = AndroidColor.TRANSPARENT
+        window.isNavigationBarContrastEnforced = false
+
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
