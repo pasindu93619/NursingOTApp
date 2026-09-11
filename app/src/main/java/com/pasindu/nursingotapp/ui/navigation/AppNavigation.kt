@@ -26,9 +26,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.FileProvider
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -44,13 +43,13 @@ import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
+import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
-import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
 import java.io.File
 import java.time.LocalDate
@@ -103,6 +102,9 @@ fun AppNavigation() {
     Scaffold(
         containerColor = AppBackground,
         contentColor = Color.Unspecified,
+        floatingActionButton = {
+            NursingGuideFab(route = currentRoute)
+        },
         bottomBar = {
             if (showRootNavigation) {
                 NavigationBar(
