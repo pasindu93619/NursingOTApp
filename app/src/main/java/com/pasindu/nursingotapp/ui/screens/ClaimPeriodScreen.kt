@@ -280,15 +280,21 @@ fun ClaimPeriodScreen(
                     enter = slideInVertically(initialOffsetY = { 80 }, animationSpec = tween(450, easing = FastOutSlowInEasing)) + fadeIn(tween(450))
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pastPeriods.sortedByDescending { it.createdAt }.forEach { period ->
-                            SavedPeriodCard(
-                                period = period,
-                                onOpen = {
-                                    onNavigateToDailyEntry(period.id, period.startDate.toString(), period.endDate.toString(), period.wardType)
-                                },
-                                onDelete = { periodToDelete = period }
+                        pastPeriods
+                            .sortedWith(
+                                compareByDescending<ClaimPeriodEntity> { it.startDate }
+                                    .thenByDescending { it.endDate }
+                                    .thenByDescending { it.createdAt }
                             )
-                        }
+                            .forEach { period ->
+                                SavedPeriodCard(
+                                    period = period,
+                                    onOpen = {
+                                        onNavigateToDailyEntry(period.id, period.startDate.toString(), period.endDate.toString(), period.wardType)
+                                    },
+                                    onDelete = { periodToDelete = period }
+                                )
+                            }
                     }
                 }
             }
