@@ -16,6 +16,7 @@ appcompat = "1.7.1"
 print = "1.1.0"
 hilt = "2.57"
 hiltNavigationCompose = "1.2.0"
+mlKitGenAiPrompt = "1.0.0-beta4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,6 +44,7 @@ androidx-print = { group = "androidx.print", name = "print", version.ref = "prin
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+ml-kit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "mlKitGenAiPrompt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
