@@ -42,6 +42,7 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
+import com.pasindu.nursingotapp.ui.state.ViewModelOperationState
 
 private val Background = Color(0xFFF4F7FC)
 private val Navy = Color(0xFF102A56)
@@ -61,6 +62,7 @@ fun ProfileScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     val matchedSalary2027 by viewModel.matchedSalary2027.collectAsState()
     val compensation by viewModel.profileCompensation.collectAsState()
+    val operationState by viewModel.operationState.collectAsState()
 
     var fullName by remember { mutableStateOf("") }
     var serviceNo by remember { mutableStateOf("") }
@@ -111,6 +113,7 @@ fun ProfileScreen(
     val matched2027DayRate = matched2027Basic?.div(30.0)
     val detectedStep = matchedSalary2027?.salaryStep
     val selectedOtRate = NursingOtRatePolicy.rateForGrade(grade)
+    val saveInProgress = operationState is ViewModelOperationState.Loading
 
     val initial = fullName.firstOrNull()?.uppercase() ?: "N"
     val displayFullName = fullName.takeIf { it.isNotBlank() } ?: "New User"
@@ -397,6 +400,22 @@ fun ProfileScreen(
             }
         }
 
+        if (operationState is ViewModelOperationState.Error) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFFFFF1F2),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    text = "Profile could not be saved. Please try again.",
+                    modifier = Modifier.padding(14.dp),
+                    color = Color(0xFFBE123C),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
         Button(
             onClick = {
                 val basic = parsedMoney(basicSalary)
@@ -426,13 +445,17 @@ fun ProfileScreen(
                 )
             },
             Modifier.fillMaxWidth().height(60.dp),
-            enabled = selectedOtRate != null && fullName.isNotBlank() && serviceNo.isNotBlank() && grade.isNotBlank() && basicSalary.isNotBlank(),
+            enabled = !saveInProgress && selectedOtRate != null && fullName.isNotBlank() && serviceNo.isNotBlank() && grade.isNotBlank() && basicSalary.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = Blue),
             shape = RoundedCornerShape(18.dp)
         ) {
-            Text("SAVE PROFILE & CONTINUE", fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.width(10.dp))
-            Icon(Icons.Default.ArrowForward, null)
+            if (saveInProgress) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+            } else {
+                Text("SAVE PROFILE & CONTINUE", fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.width(10.dp))
+                Icon(Icons.Default.ArrowForward, null)
+            }
         }
 
         Spacer(Modifier.height(34.dp))
