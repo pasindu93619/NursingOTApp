@@ -25,10 +25,19 @@ class ClaimPeriodViewModel @Inject constructor(
 
     val claimPeriods = observeClaimPeriods()
         .map { periods ->
-            periods.sortedWith(
+            val sorted = periods.sortedWith(
                 compareByDescending<ClaimPeriodEntity> { it.startDate }
                     .thenByDescending { it.endDate }
             )
+
+            android.util.Log.d(
+                "ClaimPeriodOrder",
+                sorted.joinToString(" | ") {
+                    "${it.id}:${it.startDate}->${it.endDate}"
+                }
+            )
+
+            sorted
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
