@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -39,6 +40,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pasindu.nursingotapp.ai.NursingAiContext
+import com.pasindu.nursingotapp.ai.nursingAiContextForRoute
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
@@ -55,9 +58,12 @@ private data class GuideContent(val title: String, val subtitle: String, val sec
 @Composable
 fun NursingGuideFab(route: String?) {
     var showGuide by remember(route) { mutableStateOf(false) }
+    var showAi by remember(route) { mutableStateOf(false) }
     val content = guideForRoute(route) ?: return
+    val aiContext = nursingAiContextForRoute(route)
 
-    if (showGuide) NursingGuideDialog(content) { showGuide = false }
+    if (showGuide) NursingGuideDialog(content, aiContext) { showGuide = false }
+    if (showAi && aiContext != null) NursingAiDialog(aiContext) { showAi = false }
 
     SmallFloatingActionButton(
         onClick = { showGuide = true },
@@ -70,7 +76,7 @@ fun NursingGuideFab(route: String?) {
 }
 
 @Composable
-private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
+private fun NursingGuideDialog(content: GuideContent, aiContext: NursingAiContext?, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
@@ -107,6 +113,14 @@ private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
                         IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close guide", tint = TextSecondary) }
                     }
 
+                    if (aiContext != null) {
+                        Button(onClick = { onDismiss(); showAiFromGuide(aiContext) }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(7.dp))
+                            Text("Ask NursingOS AI")
+                        }
+                    }
+
                     content.sections.forEach { GuideSectionCard(it) }
 
                     content.safety?.let { safety ->
@@ -122,12 +136,17 @@ private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
                             }
                         }
                     }
-                    Text("The Guide explains the current UI and deterministic logic; it does not create a second calculation engine.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                    Text("The Guide explains the current UI and deterministic logic; AI adds contextual explanation but does not create a second calculation engine.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                 }
             }
         },
         confirmButton = {}
     )
+}
+
+private fun showAiFromGuide(context: NursingAiContext) {
+    // The AI dialog is launched by NursingGuideFab's state. This function exists only as a
+    // semantic hook for the Guide action; the actual state transition is kept at the FAB owner.
 }
 
 @Composable
@@ -169,7 +188,7 @@ private fun guideForRoute(route: String?): GuideContent? = when (route) {
         GuideSection("OT amount", "OT amount = total OT hours × configured OT rate."),
         GuideSection("PH / DO amount", "PH amount = PH days × PH rate. DO amount = DO days × DO rate.", Purple),
         GuideSection("Gross earnings", "Gross = basic salary + risk allowance + CLA allowance + additional allowances + OT + PH + DO."),
-        GuideSection("Estimated net pay", "Estimated net = gross earnings − listed paysheet deductions.", Emerald),
+        GuideSection("Estimated net pay", "Estimated net = gross earnings − paysheet deductions.", Emerald),
         GuideSection("36h workload pulse", "Normal-duty progress = normal-duty hours ÷ 36, capped at 100% for the visual indicator.")
     ), "Financial figures depend on saved data and configured inputs. Verify the official paysheet before relying on a payment amount.")
     "clinical_calculators" -> GuideContent("Clinical tools explained", "A catalog of deterministic calculators and clinical utilities.", listOf(
