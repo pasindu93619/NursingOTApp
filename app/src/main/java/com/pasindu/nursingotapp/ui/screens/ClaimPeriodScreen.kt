@@ -1,3 +1,4 @@
+// com/pasindu/nursingotapp/ui/screens/ClaimPeriodScreen.kt
 package com.pasindu.nursingotapp.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
@@ -117,7 +118,6 @@ fun ClaimPeriodScreen(
     var endYear by remember { mutableStateOf(initialDates.second.year.toString()) }
     var endMonth by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDates.second.monthValue)) }
     var endDay by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDates.second.dayOfMonth)) }
-
     var startDate by remember { mutableStateOf<LocalDate?>(null) }
     var endDate by remember { mutableStateOf<LocalDate?>(null) }
     var showWardSelectionForNew by remember { mutableStateOf(false) }
@@ -280,7 +280,7 @@ fun ClaimPeriodScreen(
                     enter = slideInVertically(initialOffsetY = { 80 }, animationSpec = tween(450, easing = FastOutSlowInEasing)) + fadeIn(tween(450))
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pastPeriods.sortedByDescending { it.createdAt }.forEach { period ->
+                        pastPeriods.forEach { period ->
                             SavedPeriodCard(
                                 period = period,
                                 onOpen = {

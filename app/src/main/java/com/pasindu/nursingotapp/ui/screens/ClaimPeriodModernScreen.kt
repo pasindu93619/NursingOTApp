@@ -1,5 +1,5 @@
 package com.pasindu.nursingotapp.ui.screens
-
+import androidx.compose.runtime.key
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -1033,7 +1033,11 @@ fun ClaimPeriodModernScreen(
                                 )
 
                                 Text(
-                                    "${selectedSuggestion.startDate.format(displayFormatter)} → ${selectedSuggestion.endDate.format(displayFormatter)}",
+                                    "${selectedSuggestion.startDate.format(displayFormatter)} → ${
+                                        selectedSuggestion.endDate.format(
+                                            displayFormatter
+                                        )
+                                    }",
                                     color = OtModernInk,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Black
@@ -1103,7 +1107,11 @@ fun ClaimPeriodModernScreen(
                                     Spacer(Modifier.width(9.dp))
 
                                     Text(
-                                        "${range.first.format(compactFormatter)} → ${range.second.format(compactFormatter)}",
+                                        "${range.first.format(compactFormatter)} → ${
+                                            range.second.format(
+                                                compactFormatter
+                                            )
+                                        }",
                                         color = OtModernInk,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
@@ -1399,280 +1407,280 @@ fun ClaimPeriodModernScreen(
             } else {
                 periods
                     .sortedByDescending { it.createdAt }
-                    .forEach { period ->
-                        ModernSavedPeriodCard(
-                            period = period,
-                            onOpen = {
-                                onNavigateToDailyEntry(
-                                    period.id,
-                                    period.startDate.toString(),
-                                    period.endDate.toString(),
-                                    period.wardType
-                                )
-                            },
-                            onDelete = {
-                                periodToDelete = period
-                            }
-                        )
-                    }
+                periods.forEach { period ->
+                    ModernSavedPeriodCard(
+                        period = period,
+                        onOpen = {
+                            onNavigateToDailyEntry(
+                                period.id,
+                                period.startDate.toString(),
+                                period.endDate.toString(),
+                                period.wardType
+                            )
+                        },
+                        onDelete = {
+                            periodToDelete = period
+                        }
+                    )
+                }
+                }
+
+                Spacer(Modifier.height(10.dp))
             }
-
-            Spacer(Modifier.height(10.dp))
         }
-    }
 
-    /*
+        /*
      * OT FORM PERIOD PICKER DIALOG
      * Uses 96% width and bypasses platform default width for full calendar visibility.
      */
-    if (showStartPicker) {
-        AlertDialog(
-            onDismissRequest = {
-                showStartPicker = false
-            },
-            modifier = Modifier.fillMaxWidth(0.96f),
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false
-            ),
-            containerColor = AppBackground,
-            title = null,
-            text = {
-                OtRangeCalendar(
-                    selectedPeriod = selectedSuggestion
-                ) { date ->
-                    selectedSuggestion = otPeriodForMonth(
-                        formMonthForStart(date)
-                    )
-                }
-            },
-            confirmButton = {
-                Surface(
-                    onClick = {
-                        showStartPicker = false
-                    },
-                    modifier = Modifier.height(48.dp),
-                    shape = NursingShapes.pill,
-                    color = Color.Transparent
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .background(
-                                ClinicalAiGradient,
-                                NursingShapes.pill
+        if (showStartPicker) {
+            AlertDialog(
+                onDismissRequest = {
+                    showStartPicker = false
+                },
+                modifier = Modifier.fillMaxWidth(0.96f),
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false
+                ),
+                containerColor = AppBackground,
+                title = null,
+                text = {
+                    OtRangeCalendar(
+                        selectedPeriod = selectedSuggestion
+                    ) { date ->
+                        selectedSuggestion = otPeriodForMonth(
+                            formMonthForStart(date)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Surface(
+                        onClick = {
+                            showStartPicker = false
+                        },
+                        modifier = Modifier.height(48.dp),
+                        shape = NursingShapes.pill,
+                        color = Color.Transparent
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(
+                                    ClinicalAiGradient,
+                                    NursingShapes.pill
+                                )
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Use this range",
+                                color = SurfaceWhite,
+                                fontWeight = FontWeight.ExtraBold
                             )
-                            .padding(horizontal = 20.dp),
-                        contentAlignment = Alignment.Center
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showStartPicker = false
+                        }
                     ) {
                         Text(
-                            "Use this range",
-                            color = SurfaceWhite,
-                            fontWeight = FontWeight.ExtraBold
+                            "Cancel",
+                            color = MedicalBlue,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showStartPicker = false
+            )
+        }
+
+        /*
+     * DELETE ONE PERIOD
+     */
+        if (periodToDelete != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    periodToDelete = null
+                },
+                title = {
+                    Text(
+                        "Delete claim period?",
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                },
+                text = {
+                    Text(
+                        "This permanently removes the selected calendar and its saved shifts from the phone."
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val period = periodToDelete ?: return@Button
+                            periodToDelete = null
+                            viewModel.deleteClaimPeriod(period)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete")
                     }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = {
+                            periodToDelete = null
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        /*
+     * DELETE ALL PERIODS
+     */
+        if (showDeleteAll) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteAll = false
+                },
+                title = {
+                    Text(
+                        "Delete all history?",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                },
+                text = {
+                    Text(
+                        "This permanently erases all saved claim calendars and shifts from the phone."
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteAll = false
+                            viewModel.deleteAll()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete everything")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = {
+                            showDeleteAll = false
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+    }
+
+    @Composable
+    private fun ModernSavedPeriodCard(
+        period: ClaimPeriodEntity,
+        onOpen: () -> Unit,
+        onDelete: () -> Unit
+    ) {
+        val formatter = remember {
+            DateTimeFormatter.ofPattern(
+                "MMM dd, yyyy",
+                Locale.US
+            )
+        }
+
+        val days =
+            ChronoUnit.DAYS.between(
+                period.startDate,
+                period.endDate
+            ).toInt() + 1
+
+        val special = period.wardType == "Special"
+        val accent = if (special) Purple else ClinicalPrimaryColor
+        val surface = if (special) OtModernPurpleSoft else OtModernBlueSoft
+
+        Card(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpen),
+            RoundedCornerShape(21.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = surface
+            ),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Row(
+                Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(46.dp),
+                    shape = CircleShape,
+                    color = SurfaceWhite.copy(.82f)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(11.dp))
+
+                Column(
+                    Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        "Cancel",
-                        color = MedicalBlue,
+                        if (special) {
+                            "Special unit"
+                        } else {
+                            "Normal ward"
+                        },
+                        color = OtModernInk,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+
+                    Text(
+                        "${period.startDate.format(formatter)} → ${period.endDate.format(formatter)}",
+                        color = TextSecondary,
+                        fontSize = 10.sp
+                    )
+
+                    Text(
+                        "$days day(s) • tap to continue",
+                        color = accent,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
-        )
-    }
 
-    /*
-     * DELETE ONE PERIOD
-     */
-    if (periodToDelete != null) {
-        AlertDialog(
-            onDismissRequest = {
-                periodToDelete = null
-            },
-            title = {
-                Text(
-                    "Delete claim period?",
-                    fontWeight = FontWeight.ExtraBold
-                )
-            },
-            text = {
-                Text(
-                    "This permanently removes the selected calendar and its saved shifts from the phone."
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val period = periodToDelete ?: return@Button
-                        periodToDelete = null
-                        viewModel.deleteClaimPeriod(period)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = {
-                        periodToDelete = null
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    /*
-     * DELETE ALL PERIODS
-     */
-    if (showDeleteAll) {
-        AlertDialog(
-            onDismissRequest = {
-                showDeleteAll = false
-            },
-            title = {
-                Text(
-                    "Delete all history?",
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            },
-            text = {
-                Text(
-                    "This permanently erases all saved claim calendars and shifts from the phone."
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteAll = false
-                        viewModel.deleteAll()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Delete everything")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = {
-                        showDeleteAll = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun ModernSavedPeriodCard(
-    period: ClaimPeriodEntity,
-    onOpen: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val formatter = remember {
-        DateTimeFormatter.ofPattern(
-            "MMM dd, yyyy",
-            Locale.US
-        )
-    }
-
-    val days =
-        ChronoUnit.DAYS.between(
-            period.startDate,
-            period.endDate
-        ).toInt() + 1
-
-    val special = period.wardType == "Special"
-    val accent = if (special) Purple else ClinicalPrimaryColor
-    val surface = if (special) OtModernPurpleSoft else OtModernBlueSoft
-
-    Card(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpen),
-        RoundedCornerShape(21.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = surface
-        ),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Row(
-            Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(46.dp),
-                shape = CircleShape,
-                color = SurfaceWhite.copy(.82f)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
+                IconButton(
+                    onClick = onDelete
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(23.dp)
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
-            }
-
-            Spacer(Modifier.width(11.dp))
-
-            Column(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Text(
-                    if (special) {
-                        "Special unit"
-                    } else {
-                        "Normal ward"
-                    },
-                    color = OtModernInk,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-
-                Text(
-                    "${period.startDate.format(formatter)} → ${period.endDate.format(formatter)}",
-                    color = TextSecondary,
-                    fontSize = 10.sp
-                )
-
-                Text(
-                    "$days day(s) • tap to continue",
-                    color = accent,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            IconButton(
-                onClick = onDelete
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
-                )
             }
         }
     }
-}
