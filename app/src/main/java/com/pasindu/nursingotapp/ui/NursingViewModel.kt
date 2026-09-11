@@ -114,17 +114,29 @@ class NursingViewModel @Inject constructor(
         otRate: Double,
         matched2027Basic: Double?,
         onSaved: () -> Unit
-    ) = launchOperation(setOperationState) {
-        saveProfileSettingsUseCase(
-            profile = profile,
-            riskAllowance = riskAllowance,
-            claAllowance = claAllowance,
-            additionalAllowancesTotal = additionalAllowancesTotal,
-            totalDeductions = totalDeductions,
-            otRate = otRate,
-            matched2027Basic = matched2027Basic
-        )
-        onSaved()
+    ) = viewModelScope.launch {
+        setOperationState(ViewModelOperationState.Loading)
+        try {
+            saveProfileSettingsUseCase(
+                profile = profile,
+                riskAllowance = riskAllowance,
+                claAllowance = claAllowance,
+                additionalAllowancesTotal = additionalAllowancesTotal,
+                totalDeductions = totalDeductions,
+                otRate = otRate,
+                matched2027Basic = matched2027Basic
+            )
+            setOperationState(ViewModelOperationState.Success)
+            onSaved()
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            setOperationState(
+                ViewModelOperationState.Error(
+                    error.message?.takeIf { it.isNotBlank() } ?: "Profile save failed"
+                )
+            )
+        }
     }
 
     fun applyMatched2027DayRate() = launchOperation(setOperationState) {

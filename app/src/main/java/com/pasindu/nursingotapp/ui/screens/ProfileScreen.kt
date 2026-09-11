@@ -10,6 +10,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,9 +21,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +39,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
+import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
+import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
 
 private val Background = Color(0xFFF4F7FC)
@@ -44,6 +52,7 @@ private val Orange = Color(0xFFF97316)
 private val Ink = Color(0xFF0F172A)
 private val Slate = Color(0xFF64748B)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: NursingViewModel,
@@ -51,7 +60,6 @@ fun ProfileScreen(
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     val matchedSalary2027 by viewModel.matchedSalary2027.collectAsState()
-    val configuredOtRate by viewModel.configuredOtRate.collectAsState()
     val compensation by viewModel.profileCompensation.collectAsState()
 
     var fullName by remember { mutableStateOf("") }
@@ -65,9 +73,9 @@ fun ProfileScreen(
     var hasAdditionalAllowances by remember { mutableStateOf(false) }
     var additionalAllowances by remember { mutableStateOf(listOf<AllowanceRow>()) }
     var totalDeductions by remember { mutableStateOf("") }
-    var otRate by remember { mutableStateOf("") }
+    var showGradeSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(userProfile, compensation, configuredOtRate) {
+    LaunchedEffect(userProfile, compensation) {
         userProfile?.let {
             fullName = it.fullName
             serviceNo = it.serviceNo
@@ -81,7 +89,6 @@ fun ProfileScreen(
             claAllowance = cleanNumber(it.claAllowance)
             totalDeductions = cleanNumber(it.totalDeductions)
         }
-        if (configuredOtRate > 0.0) otRate = cleanNumber(configuredOtRate)
     }
 
     LaunchedEffect(grade, basicSalary) {
@@ -96,7 +103,6 @@ fun ProfileScreen(
     val parsedCla = parsedMoney(claAllowance)
     val parsedAdditional = additionalAllowances.sumOf { parsedMoney(it.amount) }
     val deductions = parsedMoney(totalDeductions)
-    val parsedOtRate = parsedMoney(otRate)
     val additionalTotal = if (hasAdditionalAllowances) parsedAdditional else 0.0
     val grossPay = parsedBasic + parsedRisk + parsedCla + additionalTotal
     val netPay = grossPay - deductions
@@ -104,7 +110,7 @@ fun ProfileScreen(
     val matched2027Basic = matchedSalary2027?.basicSalary2027
     val matched2027DayRate = matched2027Basic?.div(30.0)
     val detectedStep = matchedSalary2027?.salaryStep
-
+    val selectedOtRate = NursingOtRatePolicy.rateForGrade(grade)
     val initial = fullName.firstOrNull()?.uppercase() ?: "N"
     val displayFullName = fullName.takeIf { it.isNotBlank() } ?: "New User"
     val transition = rememberInfiniteTransition(label = "profileGlow")
@@ -118,6 +124,14 @@ fun ProfileScreen(
         label = "profileGlowScale"
     )
 
+    if (showGradeSheet) {
+        NursingGradeSelectionSheet(
+            selectedGrade = grade,
+            onGradeSelected = { grade = it },
+            onDismiss = { showGradeSheet = false }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -126,7 +140,7 @@ fun ProfileScreen(
             .padding(horizontal = 18.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(30.dp)),
@@ -134,27 +148,36 @@ fun ProfileScreen(
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Box(
-                modifier = Modifier
+                Modifier
                     .fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(Color.White, Blue.copy(alpha = 0.035f), Purple.copy(alpha = 0.035f))))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color.White, Blue.copy(alpha = 0.035f), Purple.copy(alpha = 0.035f))
+                        )
+                    )
                     .padding(22.dp)
             ) {
-                Box(modifier = Modifier.size(120.dp * glow).align(Alignment.TopEnd).background(Purple.copy(alpha = 0.05f), CircleShape))
+                Box(
+                    Modifier
+                        .size(120.dp * glow)
+                        .align(Alignment.TopEnd)
+                        .background(Purple.copy(alpha = 0.05f), CircleShape)
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(70.dp).background(Brush.linearGradient(listOf(Blue, Purple)), CircleShape),
+                        Modifier.size(70.dp).background(Brush.linearGradient(listOf(Blue, Purple)), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(initial, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
                         Text("MASTER PROFILE", color = Slate, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                        Spacer(modifier = Modifier.height(3.dp))
+                        Spacer(Modifier.height(3.dp))
                         Text(displayFullName, color = Ink, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            if (grade.isBlank()) "Complete your nursing profile" else "Grade $grade • Unit $unit",
+                            if (grade.isBlank()) "Complete your nursing profile" else "$grade • Unit $unit",
                             color = Slate,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold
@@ -168,11 +191,63 @@ fun ProfileScreen(
             ProfileTextField("Full Name", fullName, { fullName = it })
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProfileTextField("Service No", serviceNo, { serviceNo = it }, Modifier.weight(1f), KeyboardType.Number)
-                ProfileTextField("Grade", grade, { grade = it }, Modifier.weight(1f))
+                Surface(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clickable { showGradeSheet = true },
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    border = BorderStroke(
+                        1.dp,
+                        if (grade.isBlank()) Slate.copy(alpha = 0.45f) else Blue.copy(alpha = 0.45f)
+                    )
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Current Nursing Grade", color = Slate, fontSize = 9.sp)
+                            Text(
+                                grade.ifBlank { "Select grade" },
+                                color = if (grade.isBlank()) Slate else Ink,
+                                fontSize = 13.sp,
+                                fontWeight = if (grade.isBlank()) FontWeight.Medium else FontWeight.Bold
+                            )
+                        }
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Select nursing grade", tint = Blue)
+                    }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProfileTextField("Unit / Ward", unit, { unit = it }, Modifier.weight(1f))
                 ProfileTextField("Pay Sheet No", paySheetNo, { paySheetNo = it }, Modifier.weight(1f), KeyboardType.Number)
+            }
+        }
+
+        AnimatedVisibility(visible = selectedOtRate != null) {
+            Surface(
+                Modifier.fillMaxWidth(),
+                color = Color(0xFFEEF6FF),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(Modifier.size(44.dp), CircleShape, Blue.copy(alpha = 0.10f)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Payments, contentDescription = null, tint = Blue)
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("NURSING SERVICE OT RATE", color = Blue, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                        Text("$grade • automatically assigned", color = Green, fontSize = 10.sp)
+                    }
+                    Icon(Icons.Default.Check, contentDescription = "Automatically assigned", tint = Green)
+                }
             }
         }
 
@@ -204,8 +279,21 @@ fun ProfileScreen(
             Text("Service payment rates", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
             Surface(Modifier.fillMaxWidth(), color = Color(0xFFF5F3FF), shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("OT rate is entered manually because the Health-sector rate depends on grade, not salary.", color = Slate, fontSize = 10.sp)
-                    ProfileTextField("Health-sector OT Rate", otRate, { otRate = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
+                    if (selectedOtRate != null) {
+                        Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(14.dp)) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("NURSING SERVICE OT RATE", color = Blue, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                    Text("Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text("$grade • automatically assigned", color = Green, fontSize = 10.sp)
+                                }
+                                Icon(Icons.Default.Check, contentDescription = "Automatically assigned", tint = Green)
+                            }
+                        }
+                    } else {
+                        Text("Select your current nursing grade to assign the OT rate automatically.", color = Slate, fontSize = 10.sp)
+                    }
+
                     matched2027DayRate?.let { rate ->
                         Surface(Modifier.fillMaxWidth(), color = Color(0xFFECFDF5), shape = RoundedCornerShape(14.dp)) {
                             Column(Modifier.padding(12.dp)) {
@@ -216,7 +304,12 @@ fun ProfileScreen(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text("PH rate: Rs. ${formatMoney(rate)}    •    DO rate: Rs. ${formatMoney(rate)}", color = Green, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                                Text(
+                                    "PH rate: Rs. ${formatMoney(rate)}    •    DO rate: Rs. ${formatMoney(rate)}",
+                                    color = Green,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
                             }
                         }
                     }
@@ -235,7 +328,13 @@ fun ProfileScreen(
                         Text("Additional allowances?", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         Text("Add other paysheet allowances one by one.", color = Slate, fontSize = 10.sp)
                     }
-                    Switch(checked = hasAdditionalAllowances, onCheckedChange = { hasAdditionalAllowances = it; if (!it) additionalAllowances = emptyList() })
+                    Switch(
+                        checked = hasAdditionalAllowances,
+                        onCheckedChange = {
+                            hasAdditionalAllowances = it
+                            if (!it) additionalAllowances = emptyList()
+                        }
+                    )
                 }
             }
 
@@ -250,7 +349,10 @@ fun ProfileScreen(
                         )
                     }
                     OutlinedButton(
-                        onClick = { val nextId = (additionalAllowances.maxOfOrNull { it.id } ?: 0) + 1; additionalAllowances = additionalAllowances + AllowanceRow(nextId, "", "") },
+                        onClick = {
+                            val nextId = (additionalAllowances.maxOfOrNull { it.id } ?: 0) + 1
+                            additionalAllowances = additionalAllowances + AllowanceRow(nextId, "", "")
+                        },
                         Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -297,14 +399,25 @@ fun ProfileScreen(
         Button(
             onClick = {
                 val basic = parsedMoney(basicSalary)
-                val profile = ProfileEntity(1, fullName, serviceNo, unit, paySheetNo, grade, basic, 0.0, System.currentTimeMillis(), detectedStep)
+                val profile = ProfileEntity(
+                    1,
+                    fullName,
+                    serviceNo,
+                    unit,
+                    paySheetNo,
+                    grade,
+                    basic,
+                    selectedOtRate ?: 0.0,
+                    System.currentTimeMillis(),
+                    detectedStep
+                )
                 viewModel.saveProfileAndContinue(
                     profile = profile,
                     riskAllowance = parsedRisk,
                     claAllowance = parsedCla,
                     additionalAllowancesTotal = additionalTotal,
                     totalDeductions = deductions,
-                    otRate = parsedOtRate,
+                    otRate = selectedOtRate ?: 0.0,
                     matched2027Basic = matched2027Basic,
                     onSaved = {
                         onNavigateToClaimPeriod(true, "")
@@ -312,6 +425,7 @@ fun ProfileScreen(
                 )
             },
             Modifier.fillMaxWidth().height(60.dp),
+            enabled = selectedOtRate != null && fullName.isNotBlank() && serviceNo.isNotBlank() && grade.isNotBlank() && basicSalary.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = Blue),
             shape = RoundedCornerShape(18.dp)
         ) {

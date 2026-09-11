@@ -68,9 +68,8 @@ class MatchSalaryStepUseCase(private val salaryDao: SalaryStep2027Dao) {
         if (grade.isBlank() || currentBasicSalary <= 0.0) {
             null
         } else {
-            salaryDao.observeForGrade(grade.trim()).first()
-                .minByOrNull { row -> abs(row.currentBasicSalary2026 - currentBasicSalary) }
-                ?.takeIf { row -> abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
+            salaryDao.findByCurrentBasic(grade.trim(), currentBasicSalary)
+                ?.takeIf { row -> kotlin.math.abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
         }
 }
 

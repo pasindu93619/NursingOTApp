@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SalaryStep2027Dao {
+    @Query("SELECT * FROM salary_steps_2027 ORDER BY grade ASC, salaryStep ASC")
+    fun observeAll(): Flow<List<SalaryStep2027Entity>>
+
     @Query("SELECT * FROM salary_steps_2027 WHERE grade = :grade ORDER BY salaryStep ASC")
     fun observeForGrade(grade: String): Flow<List<SalaryStep2027Entity>>
 

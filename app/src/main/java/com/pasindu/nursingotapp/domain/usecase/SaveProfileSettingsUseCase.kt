@@ -1,14 +1,14 @@
 package com.pasindu.nursingotapp.domain.usecase
 
-import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
-import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
-import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
+import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import kotlinx.coroutines.flow.first
 
-/** Atomically persists the profile-related settings needed by the OT flow. */
+/** Atomically persists profile, compensation, and resolved service rates. */
 class SaveProfileSettingsUseCase(
     private val profileDao: ProfileDao,
     private val compensationDao: ProfileCompensationDao,
@@ -24,6 +24,7 @@ class SaveProfileSettingsUseCase(
         matched2027Basic: Double?
     ) {
         profileDao.upsert(profile)
+
         compensationDao.upsert(
             ProfileCompensationEntity(
                 id = 1,
@@ -45,7 +46,11 @@ class SaveProfileSettingsUseCase(
                 otRate = otRate.coerceAtLeast(0.0),
                 phRate = calculatedDayRate ?: current?.phRate ?: 0.0,
                 doRate = calculatedDayRate ?: current?.doRate ?: 0.0,
-                rateSource = if (calculatedDayRate != null) "2027_BASIC_SALARY_DIV_30" else current?.rateSource ?: "MANUAL",
+                rateSource = if (calculatedDayRate != null) {
+                    "NURSING_GRADE_FIXED_OT_2027_BASIC_SALARY_DIV_30"
+                } else {
+                    current?.rateSource ?: "NURSING_GRADE_FIXED"
+                },
                 basisSalary2027 = basisSalary2027 ?: current?.basisSalary2027,
                 updatedAt = System.currentTimeMillis()
             )
