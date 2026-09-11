@@ -76,8 +76,6 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    implementation(libs.ml.kit.genai.prompt)
-
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
@@ -86,7 +84,7 @@ dependencies {
 
     // Vico 1.13.0 - keep all Vico modules on the same version.
     implementation("com.patrykandpatryk.vico:compose:1.13.0")
-    implementation("com.patrykandpatrick.vico:compose-m3:1.13.0")
+    implementation("com.patrykandpatryk.vico:compose-m3:1.13.0")
     implementation("com.patrykandpatrick.vico:core:1.13.0")
 
     val cameraxVersion = "1.4.0"
