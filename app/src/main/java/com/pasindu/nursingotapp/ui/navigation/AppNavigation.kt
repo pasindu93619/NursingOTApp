@@ -6,6 +6,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -23,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -43,6 +47,7 @@ import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
 import com.pasindu.nursingotapp.ui.theme.Purple
@@ -92,12 +97,19 @@ fun AppNavigation() {
         }
     }
 
+    // The root scaffold owns the system/navigation insets. Keeping one
+    // consistent background here prevents white seams between child screens,
+    // the edge-to-edge window, and the persistent root NavigationBar.
     Scaffold(
+        containerColor = AppBackground,
+        contentColor = Color.Unspecified,
         bottomBar = {
             if (showRootNavigation) {
                 NavigationBar(
-                    containerColor = androidx.compose.ui.graphics.Color.White,
-                    contentColor = Slate
+                    containerColor = AppBackground,
+                    contentColor = Slate,
+                    tonalElevation = 0.dp,
+                    windowInsets = NavigationBarDefaults.windowInsets
                 ) {
                     rootDestinations.forEach { destination ->
                         val selected = currentRoute == destination.route
@@ -131,7 +143,8 @@ fun AppNavigation() {
             startDestination = "home",
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldPadding),
+                .padding(scaffoldPadding)
+                .consumeWindowInsets(scaffoldPadding),
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Left,
