@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -38,7 +39,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
@@ -71,59 +71,63 @@ fun NursingGuideFab(route: String?) {
 
 @Composable
 private fun NursingGuideDialog(content: GuideContent, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = AppBackground),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        text = {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = AppBackground),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(22.dp)).padding(16.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(7.dp))
-                                Text("NURSINGOS GUIDE", color = Color.White.copy(.72f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
-                            }
-                            Spacer(Modifier.height(5.dp))
-                            Text(content.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 25.sp)
-                            Spacer(Modifier.height(3.dp))
-                            Text(content.subtitle, color = Color.White.copy(.84f), fontSize = 10.sp, lineHeight = 14.sp)
-                        }
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close guide", tint = TextSecondary) }
-                }
-
-                content.sections.forEach { GuideSectionCard(it) }
-
-                content.safety?.let { safety ->
-                    Card(Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF6E7))) {
-                        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.Shield, null, tint = Color(0xFFE58A00), modifier = Modifier.size(19.dp))
-                            Spacer(Modifier.width(9.dp))
-                            Column {
-                                Text("Use with care", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                                Spacer(Modifier.height(2.dp))
-                                Text(safety, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp)
+                            Column(
+                                modifier = Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(22.dp)).padding(16.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(7.dp))
+                                    Text("NURSINGOS GUIDE", color = Color.White.copy(.72f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
+                                }
+                                Spacer(Modifier.height(5.dp))
+                                Text(content.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 25.sp)
+                                Spacer(Modifier.height(3.dp))
+                                Text(content.subtitle, color = Color.White.copy(.84f), fontSize = 10.sp, lineHeight = 14.sp)
                             }
                         }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close guide", tint = TextSecondary) }
                     }
+
+                    content.sections.forEach { GuideSectionCard(it) }
+
+                    content.safety?.let { safety ->
+                        Card(Modifier.fillMaxWidth(), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF6E7))) {
+                            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
+                                Icon(Icons.Default.Shield, null, tint = Color(0xFFE58A00), modifier = Modifier.size(19.dp))
+                                Spacer(Modifier.width(9.dp))
+                                Column {
+                                    Text("Use with care", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(safety, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp)
+                                }
+                            }
+                        }
+                    }
+                    Text("The Guide explains the current UI and deterministic logic; it does not create a second calculation engine.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                 }
-                Text("The Guide explains the current UI and deterministic logic; it does not create a second calculation engine.", color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
             }
-        }
-    }
+        },
+        confirmButton = {}
+    )
 }
 
 @Composable
