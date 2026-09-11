@@ -111,8 +111,6 @@ fun ProfileScreen(
     val matched2027DayRate = matched2027Basic?.div(30.0)
     val detectedStep = matchedSalary2027?.salaryStep
     val selectedOtRate = NursingOtRatePolicy.rateForGrade(grade)
-    var saveInProgress by remember { mutableStateOf(false) }
-
     val initial = fullName.firstOrNull()?.uppercase() ?: "N"
     val displayFullName = fullName.takeIf { it.isNotBlank() } ?: "New User"
     val transition = rememberInfiniteTransition(label = "profileGlow")
