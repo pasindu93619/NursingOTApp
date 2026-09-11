@@ -14,7 +14,7 @@ interface ClaimPeriodDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertClaimPeriod(claimPeriod: ClaimPeriodEntity): Long
 
-    @Query("SELECT * FROM claim_period ORDER BY createdAt DESC")
+    @Query("SELECT * FROM claim_period ORDER BY startDate DESC, endDate DESC")
     fun observeClaimPeriods(): Flow<List<ClaimPeriodEntity>>
 
     @Query("SELECT * FROM claim_period WHERE id = :id LIMIT 1")
