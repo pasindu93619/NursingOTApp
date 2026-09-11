@@ -40,11 +40,6 @@ class SaveProfileSettingsUseCase(
         val basisSalary2027 = matched2027Basic?.takeIf { it > 0.0 }
         val calculatedDayRate = basisSalary2027?.div(30.0)
 
-        /*
-         * OT is now supplied by the fixed Nursing Service grade policy.
-         * PH/DO remain on the existing project rule:
-         * 2027 basic salary / 30.
-         */
         payRateSettingsDao.upsert(
             PayRateSettingsEntity(
                 id = 1,
