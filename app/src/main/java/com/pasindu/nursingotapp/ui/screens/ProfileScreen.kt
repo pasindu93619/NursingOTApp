@@ -400,8 +400,6 @@ fun ProfileScreen(
 
         Button(
             onClick = {
-                if (saveInProgress) return@Button
-                saveInProgress = true
                 val basic = parsedMoney(basicSalary)
                 val profile = ProfileEntity(
                     1,
@@ -424,25 +422,18 @@ fun ProfileScreen(
                     otRate = selectedOtRate ?: 0.0,
                     matched2027Basic = matched2027Basic,
                     onSaved = {
-                        saveInProgress = false
                         onNavigateToClaimPeriod(true, "")
                     }
                 )
             },
             Modifier.fillMaxWidth().height(60.dp),
-            enabled = !saveInProgress && selectedOtRate != null && fullName.isNotBlank() && serviceNo.isNotBlank() && grade.isNotBlank() && basicSalary.isNotBlank(),
+            enabled = selectedOtRate != null && fullName.isNotBlank() && serviceNo.isNotBlank() && grade.isNotBlank() && basicSalary.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = Blue),
             shape = RoundedCornerShape(18.dp)
         ) {
-            if (saveInProgress) {
-                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-                Spacer(Modifier.width(10.dp))
-                Text("SAVING…", fontSize = 15.sp, fontWeight = FontWeight.Black)
-            } else {
-                Text("SAVE PROFILE & CONTINUE", fontSize = 15.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.width(10.dp))
-                Icon(Icons.Default.ArrowForward, null)
-            }
+            Text("SAVE PROFILE & CONTINUE", fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.width(10.dp))
+            Icon(Icons.Default.ArrowForward, null)
         }
 
         Spacer(Modifier.height(34.dp))
