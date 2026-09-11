@@ -105,6 +105,15 @@ fun ClaimPeriodScreen(
 ) {
     val pastPeriods by viewModel.claimPeriods.collectAsState()
 
+    // Final UI-layer guard: the visible list is always ordered by the actual
+    // claim-period dates, never by id or createdAt.
+    val chronologicallyOrderedPeriods = remember(pastPeriods) {
+        pastPeriods.sortedWith(
+            compareByDescending<ClaimPeriodEntity> { it.startDate }
+                .thenByDescending { it.endDate }
+        )
+    }
+
     val initialDates = remember {
         val today = LocalDate.now()
         val firstSunday = today.withDayOfMonth(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
@@ -251,14 +260,14 @@ fun ClaimPeriodScreen(
                     Text("Saved claim periods", color = OtInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                     Text("Tap a period to view or continue", color = TextSecondary, fontSize = 11.sp)
                 }
-                if (pastPeriods.isNotEmpty()) {
+                if (chronologicallyOrderedPeriods.isNotEmpty()) {
                     TextButton(onClick = { showDeleteAllConfirm = true }) {
                         Text("Clear all", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            if (pastPeriods.isEmpty()) {
+            if (chronologicallyOrderedPeriods.isEmpty()) {
                 Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), color = Color.White) {
                     Column(
                         Modifier.fillMaxWidth().padding(28.dp),
@@ -280,7 +289,7 @@ fun ClaimPeriodScreen(
                     enter = slideInVertically(initialOffsetY = { 80 }, animationSpec = tween(450, easing = FastOutSlowInEasing)) + fadeIn(tween(450))
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pastPeriods.forEach { period ->
+                        chronologicallyOrderedPeriods.forEach { period ->
                             SavedPeriodCard(
                                 period = period,
                                 onOpen = {
@@ -337,196 +346,3 @@ fun ClaimPeriodScreen(
                 confirmButton = {}
             )
         }
-
-        if (periodToDelete != null) {
-            AlertDialog(
-                onDismissRequest = { periodToDelete = null },
-                title = { Text("Delete claim period?", fontWeight = FontWeight.ExtraBold) },
-                text = { Text("This will permanently delete this claim period and its saved shifts from the phone.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val period = periodToDelete ?: return@Button
-                            periodToDelete = null
-                            viewModel.deleteClaimPeriod(period)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Delete") }
-                },
-                dismissButton = { TextButton(onClick = { periodToDelete = null }) { Text("Cancel") } }
-            )
-        }
-
-        if (showDeleteAllConfirm) {
-            AlertDialog(
-                onDismissRequest = { showDeleteAllConfirm = false },
-                title = { Text("Delete all history?", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.error) },
-                text = { Text("This permanently erases all saved calendars and shifts from the phone. This cannot be undone.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showDeleteAllConfirm = false
-                            viewModel.deleteAll()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Delete everything") }
-                },
-                dismissButton = { TextButton(onClick = { showDeleteAllConfirm = false }) { Text("Cancel") } }
-            )
-        }
-    }
-}
-
-@Composable
-private fun SavedPeriodCard(period: ClaimPeriodEntity, onOpen: () -> Unit, onDelete: () -> Unit) {
-    val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
-    val days = ChronoUnit.DAYS.between(period.startDate, period.endDate).toInt() + 1
-    val isSpecial = period.wardType == "Special"
-    val accent = if (isSpecial) Purple else ClinicalPrimaryColor
-    val surface = if (isSpecial) OtPurpleSoft else OtBlueSoft
-
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
-        shape = RoundedCornerShape(21.dp),
-        color = surface
-    ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(46.dp), CircleShape, Color.White.copy(alpha = 0.78f)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.CalendarMonth, null, tint = accent, modifier = Modifier.size(23.dp))
-                }
-            }
-            Spacer(Modifier.size(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    "${period.startDate.format(formatter)} – ${period.endDate.format(formatter)}",
-                    color = OtInk,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(50.dp), color = Color.White.copy(alpha = 0.72f)) {
-                        Text(
-                            if (isSpecial) "Special unit" else "Normal ward",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = accent,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Text("$days days", color = TextSecondary, fontSize = 10.sp)
-                }
-            }
-            Icon(Icons.Default.KeyboardArrowRight, "Open", tint = accent, modifier = Modifier.size(22.dp))
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.78f), modifier = Modifier.size(20.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun DutyTypeOption(title: String, subtitle: String, accent: Color, surface: Color, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = surface
-    ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(42.dp), CircleShape, Color.White.copy(alpha = 0.78f)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.WorkHistory, null, tint = accent, modifier = Modifier.size(22.dp))
-                }
-            }
-            Spacer(Modifier.size(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, color = OtInk, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = TextSecondary, fontSize = 11.sp)
-            }
-            Icon(Icons.Default.KeyboardArrowRight, null, tint = accent)
-        }
-    }
-}
-
-@Composable
-fun DateEntryCard(
-    title: String,
-    year: String,
-    onYearChange: (String) -> Unit,
-    month: String,
-    onMonthChange: (String) -> Unit,
-    day: String,
-    onDayChange: (String) -> Unit
-) {
-    Column {
-        Text(title, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = TextSecondary, modifier = Modifier.padding(bottom = 7.dp, start = 2.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            OutlinedTextField(
-                value = year,
-                onValueChange = { if (it.length <= 4) onYearChange(it) },
-                label = { Text("YYYY") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1.2f),
-                singleLine = true,
-                shape = RoundedCornerShape(13.dp)
-            )
-            OutlinedTextField(
-                value = month,
-                onValueChange = { if (it.length <= 2) onMonthChange(it) },
-                label = { Text("MM") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                shape = RoundedCornerShape(13.dp)
-            )
-            OutlinedTextField(
-                value = day,
-                onValueChange = { if (it.length <= 2) onDayChange(it) },
-                label = { Text("DD") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                shape = RoundedCornerShape(13.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun PeriodSummaryCard(start: LocalDate, end: LocalDate) {
-    val firstSunday = start.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
-    val lastSaturday = end.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY))
-    val fullWeeks = if (firstSunday.isAfter(lastSaturday)) 0 else ChronoUnit.WEEKS.between(firstSunday, lastSaturday.plusDays(1)).toInt()
-    val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
-
-    Box(
-        modifier = Modifier.fillMaxWidth()
-            .animateContentSize(spring(stiffness = Spring.StiffnessLow))
-            .clip(RoundedCornerShape(19.dp))
-            .background(OtMintSoft)
-            .padding(16.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            if (fullWeeks > 0) {
-                SummaryRow("First Sunday", firstSunday.format(formatter))
-                SummaryRow("Last Saturday", lastSaturday.format(formatter))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Emerald.copy(alpha = 0.18f))
-                SummaryRow("Full weeks", fullWeeks.toString())
-                SummaryRow("Coverage", "Sunday → Saturday")
-            } else {
-                Text("The selected period does not contain a full Sunday–Saturday week.", fontSize = 11.sp, color = TextSecondary)
-            }
-        }
-    }
-}
-
-@Composable
-fun SummaryRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontWeight = FontWeight.Medium, fontSize = 11.sp, color = TextSecondary)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = OtInk)
-    }
-}
-
-private fun tryParseDate(year: String, month: String, day: String): LocalDate? =
-    runCatching { LocalDate.of(year.toInt(), month.toInt(), day.toInt()) }.getOrNull()
