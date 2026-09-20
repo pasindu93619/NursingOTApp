@@ -42,7 +42,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1242,35 +1244,8 @@ private fun AnimatedOtBar(
     modifier: Modifier
 ) {
     var selectedSegment by remember(animationKey, index) { mutableStateOf<String?>(null) }
+    val hapticFeedback = LocalHapticFeedback.current
 
-    selectedSegment?.let { segment ->
-        val value = if (segment == "duty") dutyOtHours else additionalOtHours
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn(tween(120)),
-            exit = fadeOut(tween(700))
-        ) {
-            Surface(
-                modifier = Modifier
-                    .padding(bottom = 4.dp)
-                    .offset(x = 22.dp),
-                shape = NursingShapes.medium,
-                color = SurfaceWhite.copy(alpha = 0.96f),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (segment == "duty") MedicalBlue.copy(alpha = 0.35f) else Purple.copy(alpha = 0.35f)
-                )
-            ) {
-                Text(
-                    "${value.toInt()}h",
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    color = if (segment == "duty") MedicalBlue else Purple
-                )
-            }
-        }
-    }
     val targetFraction = if (startAnimation && maxHours > 0f) {
         (totalOtHours / maxHours).coerceIn(0f, 1f)
     } else {
@@ -1349,14 +1324,41 @@ private fun AnimatedOtBar(
                         .pointerInput(animationKey, index, "additional") {
                             detectTapGestures(
                                 onPress = {
-                                    selectedSegment = "additional"
                                     tryAwaitRelease()
-                                    delay(900)
                                     selectedSegment = null
+                                },
+                                onLongPress = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    selectedSegment = "additional"
                                 }
                             )
                         }
                 ) {
+                    // Keep the value anchored to the visible purple segment.
+                    if (selectedSegment == "additional") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight((1f - dutyFraction).coerceAtLeast(0.01f))
+                                .align(Alignment.TopCenter),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White.copy(alpha = 0.96f),
+                                shadowElevation = 3.dp
+                            ) {
+                                Text(
+                                    "${additionalOtHours.toInt()}h",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Purple
+                                )
+                            }
+                        }
+                    }
+
                     if (dutyOtHours > 0f) {
                         Box(
                             modifier = Modifier
@@ -1367,14 +1369,33 @@ private fun AnimatedOtBar(
                                 .pointerInput(animationKey, index, "duty") {
                                     detectTapGestures(
                                         onPress = {
-                                            selectedSegment = "duty"
                                             tryAwaitRelease()
-                                            delay(900)
                                             selectedSegment = null
+                                        },
+                                        onLongPress = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            selectedSegment = "duty"
                                         }
                                     )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selectedSegment == "duty") {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White.copy(alpha = 0.96f),
+                                    shadowElevation = 3.dp
+                                ) {
+                                    Text(
+                                        "${dutyOtHours.toInt()}h",
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = MedicalBlue
+                                    )
                                 }
-                        )
+                            }
+                        }
                     }
                 }
             }
