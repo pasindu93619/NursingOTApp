@@ -479,6 +479,12 @@ fun AnalyticsScreen(
                 monthlyData = monthlyData,
                 maxHours = maxHours,
                 selectedPeriodId = selectedClaimPeriod?.id,
+                selectedClaimPeriod = selectedClaimPeriod,
+                allEntries = allEntries,
+                shiftViewMode = shiftViewMode,
+                selectedClaimPeriodWeeks = selectedClaimPeriodWeeks,
+                selectedWeekIndex = selectedWeekIndex,
+                onWeekSelected = { selectedWeekIndex = it },
                 animationKey = selectedDutyType,
                 startAnimation = startAnimation
             )
@@ -754,6 +760,38 @@ private data class ClaimPeriodOtChartPoint(
     val additionalOtHours: Float
 )
 
+private data class ClaimWeekOtChartPoint(
+    val weekStart: LocalDate,
+    val weekEnd: LocalDate,
+    val totalOtHours: Float,
+    val dutyOtHours: Float,
+    val additionalOtHours: Float
+)
+
+private fun calculateClaimWeekOtBreakdown(
+    period: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity,
+    allEntries: List<com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity>
+): List<ClaimWeekOtChartPoint> {
+    val periodEntries = allEntries.filter { it.claimPeriodId == period.id }
+
+    return WeeklyCalculationEngine.getFullWeeks(period.startDate, period.endDate).map { (weekStart, weekEnd) ->
+        val weekEntries = periodEntries.filter {
+            !it.date.isBefore(weekStart) && !it.date.isAfter(weekEnd)
+        }
+        val dutyHours = weekEntries.sumOf { it.normalHours.toDouble() }.toFloat()
+        val dutyOt = (dutyHours - 36f).coerceAtLeast(0f)
+        val additionalOt = weekEntries.sumOf { it.otHours.toDouble() }.toFloat()
+
+        ClaimWeekOtChartPoint(
+            weekStart = weekStart,
+            weekEnd = weekEnd,
+            totalOtHours = dutyOt + additionalOt,
+            dutyOtHours = dutyOt,
+            additionalOtHours = additionalOt
+        )
+    }
+}
+
 private fun calculateClaimPeriodOtBreakdown(
     period: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity,
     allEntries: List<com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity>
@@ -813,9 +851,26 @@ private fun OtHoursChartCard(
     monthlyData: List<ClaimPeriodOtChartPoint>,
     maxHours: Float,
     selectedPeriodId: Long?,
+    selectedClaimPeriod: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity?,
+    allEntries: List<com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity>,
+    shiftViewMode: ShiftDistributionViewMode,
+    selectedClaimPeriodWeeks: List<Pair<LocalDate, LocalDate>>,
+    selectedWeekIndex: Int,
+    onWeekSelected: (Int) -> Unit,
     animationKey: String,
     startAnimation: Boolean
 ) {
+    val weekData = remember(selectedClaimPeriod, allEntries) {
+        selectedClaimPeriod?.let {
+            calculateClaimWeekOtBreakdown(it, allEntries)
+        }.orEmpty()
+    }
+    val selectedWeekPoint = weekData.getOrNull(selectedWeekIndex)
+    val chartData = if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK) {
+        selectedWeekPoint?.let { listOf(it) }.orEmpty()
+    } else {
+        emptyList()
+    }
     val selectedPoint = monthlyData.lastOrNull { it.periodId == selectedPeriodId }
         ?: monthlyData.lastOrNull()
 
@@ -832,7 +887,112 @@ private fun OtHoursChartCard(
                 .padding(horizontal = 14.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            selectedPoint?.let { point ->
+            Text(
+                if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK) {
+                    "OT Hours — Week by Week"
+                } else {
+                    "OT Hours — Last 6 Claims"
+                },
+                color = TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK) {
+                    "Each week shows OT from duty (>36h) and additional OT"
+                } else {
+                    "Total OT hours per claim • duty OT + additional OT"
+                },
+                color = TextSecondary,
+                fontSize = 10.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK && selectedClaimPeriodWeeks.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    selectedClaimPeriodWeeks.forEachIndexed { index, week ->
+                        val weekPoint = weekData.getOrNull(index)
+                        Surface(
+                            modifier = Modifier
+                                .width(86.dp)
+                                .clickable { onWeekSelected(index) },
+                            shape = NursingShapes.large,
+                            color = if (index == selectedWeekIndex) OtModernBlueSoft else AppBackground,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (index == selectedWeekIndex) MedicalBlue else md_theme_light_primaryContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "W${index + 1}",
+                                    color = if (index == selectedWeekIndex) MedicalBlue else TextSecondary,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    "${week.first.format(DateTimeFormatter.ofPattern("MMM d"))} – ${week.second.format(DateTimeFormatter.ofPattern("MMM d"))}",
+                                    color = TextSecondary,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    "${weekPoint?.totalOtHours?.toInt() ?: 0}h",
+                                    color = TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK && selectedWeekPoint != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = NursingShapes.large,
+                    color = OtModernBlueSoft.copy(alpha = 0.32f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Selected week • ${selectedWeekPoint.weekStart.format(DateTimeFormatter.ofPattern("MMM d"))} – ${selectedWeekPoint.weekEnd.format(DateTimeFormatter.ofPattern("MMM d"))}",
+                                color = ClinicalPrimaryColor,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "${selectedWeekPoint.totalOtHours.toInt()}h",
+                                color = TextPrimary,
+                                fontSize = 25.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            OtBreakdownLegendRow(MedicalBlue, "From Duty (>36h)", selectedWeekPoint.dutyOtHours)
+                            OtBreakdownLegendRow(Purple, "Additional OT", selectedWeekPoint.additionalOtHours)
+                        }
+                    }
+                }
+            }
+
+            if (shiftViewMode == ShiftDistributionViewMode.FULL_PERIOD) selectedPoint?.let { point ->
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = NursingShapes.large,
@@ -921,18 +1081,34 @@ private fun OtHoursChartCard(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        monthlyData.forEachIndexed { index, point ->
-                            AnimatedOtBar(
-                                index = index,
-                                dutyOtHours = point.dutyOtHours,
-                                additionalOtHours = point.additionalOtHours,
-                                totalOtHours = point.totalOtHours,
-                                maxHours = maxHours,
-                                isCurrent = point.periodId == selectedPeriodId,
-                                animationKey = animationKey,
-                                startAnimation = startAnimation,
-                                modifier = Modifier.weight(1f)
-                            )
+                        if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK) {
+                            chartData.forEachIndexed { index, point ->
+                                AnimatedOtBar(
+                                    index = index,
+                                    dutyOtHours = point.dutyOtHours,
+                                    additionalOtHours = point.additionalOtHours,
+                                    totalOtHours = point.totalOtHours,
+                                    maxHours = maxOf(point.totalOtHours, 1f),
+                                    isCurrent = true,
+                                    animationKey = "$animationKey-week-$selectedWeekIndex",
+                                    startAnimation = startAnimation,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        } else {
+                            monthlyData.forEachIndexed { index, point ->
+                                AnimatedOtBar(
+                                    index = index,
+                                    dutyOtHours = point.dutyOtHours,
+                                    additionalOtHours = point.additionalOtHours,
+                                    totalOtHours = point.totalOtHours,
+                                    maxHours = maxHours,
+                                    isCurrent = point.periodId == selectedPeriodId,
+                                    animationKey = animationKey,
+                                    startAnimation = startAnimation,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -941,17 +1117,31 @@ private fun OtHoursChartCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    monthlyData.forEach { point ->
-                        val isCurrent = point.periodId == selectedPeriodId
-                        Text(
-                            point.startDate.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
-                                point.endDate.format(DateTimeFormatter.ofPattern("MMM d")),
-                            fontSize = 10.sp,
-                            color = if (isCurrent) ClinicalPrimaryColor else TextSecondary,
-                            fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f)
-                        )
+                    if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK) {
+                        selectedWeekPoint?.let { point ->
+                            Text(
+                                point.weekStart.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
+                                    point.weekEnd.format(DateTimeFormatter.ofPattern("MMM d")),
+                                fontSize = 10.sp,
+                                color = ClinicalPrimaryColor,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
+                        monthlyData.forEach { point ->
+                            val isCurrent = point.periodId == selectedPeriodId
+                            Text(
+                                point.startDate.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
+                                    point.endDate.format(DateTimeFormatter.ofPattern("MMM d")),
+                                fontSize = 10.sp,
+                                color = if (isCurrent) ClinicalPrimaryColor else TextSecondary,
+                                fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
