@@ -61,6 +61,10 @@ fun BurnoutMeterCard(
     avgWeeklyHours: Float,
     consecutiveNightShifts: Int,
     suggestionText: String,
+    totalHours: Float = 0f,
+    periodDays: Int = 7,
+    weeksEquivalent: Float = 1f,
+    isWeeklyView: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // Keep the existing deterministic thresholds and gauge math unchanged.
@@ -82,15 +86,39 @@ fun BurnoutMeterCard(
     val isNightShiftCritical = consecutiveNightShifts > 3
     var showInfoDialog by remember { mutableStateOf(false) }
 
+    val scopeLabel = if (isWeeklyView) "Selected week" else "Full claim period"
+    val calculationText = if (weeksEquivalent > 0f && periodDays > 0) {
+        (if (isWeeklyView) "Weekly workload" else "Average weekly workload") +
+            " = (${totalHours.toInt()}h ÷ ${periodDays} days) × 7 = ${avgWeeklyHours.toInt()}h/week"
+    } else {
+        "No logged workload in this period."
+    }
+
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
-            title = { Text("Burnout Meter", color = Slate, fontWeight = FontWeight.ExtraBold) },
-            text = {
+            title = {
                 Text(
-                    "This dashboard uses the existing workload thresholds: 0–40 hours is the safe zone, 41–48 hours is the caution zone, and 49+ hours is the danger zone. More than 3 consecutive night shifts is flagged for attention. This is an operational workload indicator, not a medical diagnosis.",
-                    color = TextSecondary
+                    "How the Burnout Meter is calculated",
+                    color = Slate,
+                    fontWeight = FontWeight.ExtraBold
                 )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(scopeLabel, color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                    Text(calculationText, color = Slate, fontWeight = FontWeight.Bold)
+                    Text(
+                        "What the value describes: the logged workload normalized to a 7-day week. " +
+                            "It describes workload pressure in the selected claim or week; it is not a medical diagnosis.",
+                        color = TextSecondary
+                    )
+                    Text(
+                        "Dashboard thresholds: 0–40 h/week = Optimal / Safe, 41–48 h/week = Caution: High OT, " +
+                            "49+ h/week = Danger: Burnout Risk. More than 3 consecutive night shifts is also flagged.",
+                        color = TextSecondary
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = { showInfoDialog = false }) { Text("Close") }
@@ -119,6 +147,12 @@ fun BurnoutMeterCard(
                         color = ClinicalPrimaryColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        scopeLabel,
+                        color = TextSecondary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
                 IconButton(onClick = { showInfoDialog = true }) {
@@ -164,6 +198,34 @@ fun BurnoutMeterCard(
                         Text("${avgWeeklyHours.toInt()}h", color = Slate, fontSize = 30.sp, fontWeight = FontWeight.Black)
                         Text(statusText, color = gaugeColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AppBackground)
+                    .padding(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "How this value is calculated",
+                        color = Slate,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        calculationText,
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                    Text(
+                        "Describes workload pressure for the selected scope, not a medical diagnosis.",
+                        color = TextSecondary,
+                        fontSize = 10.sp
+                    )
                 }
             }
 
