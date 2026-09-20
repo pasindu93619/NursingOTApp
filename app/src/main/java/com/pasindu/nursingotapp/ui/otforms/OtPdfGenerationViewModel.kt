@@ -23,7 +23,9 @@ class OtPdfGenerationViewModel @Inject constructor(
         claimEnd: LocalDate,
         renderer: (UserProfile, List<com.pasindu.nursingotapp.data.model.DailyLog>, Period, PeriodSummary) -> File?
     ): File? {
-        val data = generateOtPdfUseCase(profile, entries, claimStart, claimEnd)
+        val data = kotlinx.coroutines.runBlocking {
+            generateOtPdfUseCase(profile, entries, claimStart, claimEnd)
+        }
         return renderer(data.profile, data.logs, data.period, data.summary)
     }
 }
