@@ -1,5 +1,6 @@
 package com.pasindu.nursingotapp.domain.usecase
 
+import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.DailyLog
@@ -11,8 +12,10 @@ import java.time.LocalDate
  * Prepares the domain models required by the existing PDF renderer.
  * PDF rendering itself stays in the presentation/infrastructure layer.
  */
-class GenerateOtPdfUseCase {
-    operator fun invoke(
+class GenerateOtPdfUseCase(
+    private val salaryStep2027Dao: SalaryStep2027Dao
+) {
+    suspend operator fun invoke(
         profileEntity: ProfileEntity,
         entries: List<DailyEntryEntity>,
         claimStart: LocalDate,
@@ -51,7 +54,13 @@ class GenerateOtPdfUseCase {
         val totalOtHours = logs.sumOf { it.computedOtHours.toDouble().coerceAtLeast(0.0) }.toFloat()
         val phDays = logs.count { it.isPH }
         val doDays = logs.count { it.isDO }
-        val dayRate = profile.basicSalary / 30.0
+        val matchedSalary = salaryStep2027Dao.findByCurrentBasic(
+            grade = profileEntity.grade.trim(),
+            currentBasicSalary = profileEntity.basicSalary
+        ) ?: throw IllegalStateException(
+            "No salary-table match for Grade ${profileEntity.grade} and current basic salary ${profileEntity.basicSalary}."
+        )
+        val dayRate = matchedSalary.basicSalary2027 / 30.0
         val otAmount = totalOtHours * profile.otRate
         val phAmount = phDays * dayRate
         val doAmount = doDays * dayRate
