@@ -277,35 +277,44 @@ fun AnalyticsScreen(
         Triple(avgWeeklyHours, consecutiveNights, suggestion)
     }
 
-    val monthlyData = remember(allEntries, pastPeriods) {
-        val formatter = DateTimeFormatter.ofPattern("MMM")
-        val today = LocalDate.now()
-        if (pastPeriods.isEmpty()) {
-            return@remember (0..5).map {
-                Pair(today.minusMonths((5 - it).toLong()).format(formatter), 0f)
-            }
-        }
+    data class ClaimPeriodOtChartPoint(
+        val periodId: Long,
+        val startDate: LocalDate,
+        val endDate: LocalDate,
+        val otHours: Float
+    )
 
-        pastPeriods.sortedBy { it.endDate }.takeLast(6).map { period ->
-            val monthName = period.endDate.format(formatter)
+    val chartPeriods = remember(pastPeriods) {
+        pastPeriods.sortedWith(compareBy({ it.startDate }, { it.endDate })).takeLast(6)
+    }
+
+    val monthlyData = remember(allEntries, chartPeriods) {
+        chartPeriods.map { period ->
             val periodEntries = allEntries.filter { it.claimPeriodId == period.id }
             var totalOt = periodEntries.sumOf { it.otHours.toDouble() }.toFloat()
             if (period.wardType == "Special") {
                 periodEntries
-                    .groupBy {
-                        it.date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
-                    }
-                    .forEach { (_, weekEntries) ->
+                    .groupBy { it.date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)) }
+                    .forEach { _, weekEntries ->
                         val weeklyNormal = weekEntries.sumOf { it.normalHours.toDouble() }.toFloat()
                         if (weeklyNormal > 36f) totalOt += weeklyNormal - 36f
                     }
             }
-            Pair(monthName, totalOt)
+            ClaimPeriodOtChartPoint(period.id, period.startDate, period.endDate, totalOt)
         }
     }
 
+    val recentChartPeriod = monthlyData.lastOrNull()
+    val showChartYears = monthlyData.flatMap { listOf(it.startDate.year, it.endDate.year) }.toSet().size > 1
+    fun formatChartDateRange(point: ClaimPeriodOtChartPoint): String {
+        val pattern = if (showChartYears) "MMM d, yyyy" else "MMM d"
+        val formatter = DateTimeFormatter.ofPattern(pattern)
+        return point.startDate.format(formatter) + " – " + point.endDate.format(formatter)
+    }
+
+
     val maxHours = monthlyData
-        .maxOfOrNull { it.second }
+        .maxOfOrNull { it.otHours }
         ?.takeIf { it > 0f }
         ?: 100f
 
@@ -430,6 +439,16 @@ fun AnalyticsScreen(
                 title = "OT Hours — Last 6 Claims",
                 subtitle = "Your overtime trend for the selected duty type"
             )
+
+            recentChartPeriod?.let { period ->
+                Text(
+                    text = "Highlighted period • " + formatChartDateRange(period),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ClinicalPrimaryColor,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                )
+            }
 
             OtHoursChartCard(
                 monthlyData = monthlyData,
@@ -755,7 +774,7 @@ private fun OtHoursChartCard(
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    monthlyData.forEachIndexed { index, (_, hours) ->
+                    monthlyData.forEachIndexed { index, point ->
                         AnimatedOtBar(
                             index = index,
                             hours = hours,
@@ -773,11 +792,17 @@ private fun OtHoursChartCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    monthlyData.forEachIndexed { index, (month, hours) ->
-                        val isCurrent = index == monthlyData.lastIndex && hours > 0f
+                    monthlyData.forEachIndexed { index, point ->
+                        val isCurrent = index == monthlyData.lastIndex && point.otHours > 0f
                         Text(
-                            month,
-                            fontSize = 11.sp,
+                            if (showChartYears) {
+                                point.startDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy")) + "\n" +
+                                    point.endDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                            } else {
+                                point.startDate.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
+                                    point.endDate.format(DateTimeFormatter.ofPattern("MMM d"))
+                            },
+                            fontSize = 10.sp,
                             color = if (isCurrent) ClinicalPrimaryColor else TextSecondary,
                             fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold,
                             textAlign = TextAlign.Center,
@@ -800,7 +825,7 @@ private fun AnimatedOtBar(
     modifier: Modifier
 ) {
     val targetFraction = if (startAnimation && maxHours > 0f) {
-        (hours / maxHours).coerceIn(0f, 1f)
+        (point.otHours / maxHours).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -827,7 +852,7 @@ private fun AnimatedOtBar(
         verticalArrangement = Arrangement.Bottom
     ) {
         AnimatedVisibility(
-            visible = startAnimation && hours > 0f,
+            visible = startAnimation && point.otHours > 0f,
             enter = fadeIn(tween(260)) + slideInVertically(tween(260)) { 12 },
             exit = fadeOut(tween(120)) + slideOutVertically(tween(120)) { 8 }
         ) {
@@ -840,7 +865,7 @@ private fun AnimatedOtBar(
                 )
             ) {
                 Text(
-                    "${hours.toInt()}h",
+                    "${point.otHours.toInt()}h",
                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
