@@ -277,13 +277,6 @@ fun AnalyticsScreen(
         Triple(avgWeeklyHours, consecutiveNights, suggestion)
     }
 
-    data class ClaimPeriodOtChartPoint(
-        val periodId: Long,
-        val startDate: LocalDate,
-        val endDate: LocalDate,
-        val otHours: Float
-    )
-
     val chartPeriods = remember(pastPeriods) {
         pastPeriods.sortedWith(compareBy({ it.startDate }, { it.endDate })).takeLast(6)
     }
@@ -453,6 +446,7 @@ fun AnalyticsScreen(
             OtHoursChartCard(
                 monthlyData = monthlyData,
                 maxHours = maxHours,
+                showChartYears = showChartYears,
                 animationKey = selectedDutyType,
                 startAnimation = startAnimation
             )
@@ -710,6 +704,13 @@ private fun InsightDefinitionRow(
     }
 }
 
+private data class ClaimPeriodOtChartPoint(
+    val periodId: Long,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val otHours: Float
+)
+
 @Composable
 private fun AnalyticsSectionTitle(
     title: String,
@@ -738,6 +739,7 @@ private fun AnalyticsSectionTitle(
 private fun OtHoursChartCard(
     monthlyData: List<ClaimPeriodOtChartPoint>,
     maxHours: Float,
+    showChartYears: Boolean,
     animationKey: String,
     startAnimation: Boolean
 ) {
