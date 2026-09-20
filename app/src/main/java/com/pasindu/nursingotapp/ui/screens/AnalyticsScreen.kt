@@ -1240,7 +1240,7 @@ private fun AnimatedOtBar(
         AnimatedVisibility(
             visible = startAnimation && totalOtHours > 0f,
             enter = fadeIn(tween(260)) + slideInVertically(tween(260)) { 12 },
-            exit = fadeOut(tween(120)) + slideInVertically(tween(120)) { 8 }
+            exit = fadeOut(tween(120)) + slideOutVertically(tween(120)) { 8 }
         ) {
             Surface(
                 shape = NursingShapes.medium,
