@@ -77,5 +77,5 @@ object UseCaseModule {
     @Provides fun provideFindPaySheetDocumentUseCase(dao: PaySheetDocumentDao) = FindPaySheetDocumentUseCase(dao)
     @Provides fun provideSavePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = SavePaySheetDocumentUseCase(dao)
     @Provides fun provideDeletePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = DeletePaySheetDocumentUseCase(dao)
-    @Provides fun provideGenerateOtPdfUseCase() = GenerateOtPdfUseCase()
+    @Provides fun provideGenerateOtPdfUseCase(salaryStep2027Dao: SalaryStep2027Dao) = GenerateOtPdfUseCase(salaryStep2027Dao)
 }
