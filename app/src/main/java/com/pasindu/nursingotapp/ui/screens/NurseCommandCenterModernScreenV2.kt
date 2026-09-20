@@ -214,7 +214,8 @@ private fun HeroCard(
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
-                )                Text(
+                )
+                Text(
                     text = buildString {
                         append("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT")
                         if (state.unitName.isNotBlank()) append("  •  ${state.unitName}")
