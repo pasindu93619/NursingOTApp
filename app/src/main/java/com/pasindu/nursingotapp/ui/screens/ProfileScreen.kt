@@ -95,6 +95,9 @@ fun ProfileScreen(
         val currentBasic = parsedMoney(basicSalary)
         if (grade.isNotBlank() && currentBasic > 0.0) {
             viewModel.matchSalaryStep(grade, currentBasic)
+        } else {
+            // Clear stale salary match whenever the inputs stop being valid.
+            viewModel.matchSalaryStep("", 0.0)
         }
     }
 
