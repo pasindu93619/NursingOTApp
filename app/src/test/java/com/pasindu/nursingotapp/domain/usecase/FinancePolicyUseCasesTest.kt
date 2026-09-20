@@ -77,6 +77,7 @@ class FinancePolicyUseCasesTest {
     }
 
     private class FakeSalaryDao(private val rows: List<SalaryStep2027Entity>) : SalaryStep2027Dao {
+        override fun observeAll(): Flow<List<SalaryStep2027Entity>> = flowOf(rows)
         override fun observeForGrade(grade: String): Flow<List<SalaryStep2027Entity>> =
             flowOf(rows.filter { it.grade == grade })
 
