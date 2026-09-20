@@ -87,9 +87,9 @@ fun BurnoutMeterCard(
     var showInfoDialog by remember { mutableStateOf(false) }
 
     val scopeLabel = if (isWeeklyView) "Selected week" else "Full claim period"
-    val calculationText = if (weeksEquivalent > 0f) {
+    val calculationText = if (weeksEquivalent > 0f && periodDays > 0) {
         (if (isWeeklyView) "Weekly workload" else "Average weekly workload") +
-            " = ${totalHours.toInt()}h ÷ (${periodDays} days ÷ 7) = ${avgWeeklyHours.toInt()}h/week"
+            " = (${totalHours.toInt()}h ÷ ${periodDays} days) × 7 = ${avgWeeklyHours.toInt()}h/week"
     } else {
         "No logged workload in this period."
     }
