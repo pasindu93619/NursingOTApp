@@ -77,6 +77,7 @@ class ProfileUseCasesTest {
     private class FakeSalaryStep2027Dao(
         private val rows: List<SalaryStep2027Entity>
     ) : SalaryStep2027Dao {
+        override fun observeAll(): Flow<List<SalaryStep2027Entity>> = flowOf(rows)
         override fun observeForGrade(grade: String): Flow<List<SalaryStep2027Entity>> = flowOf(rows)
         override suspend fun find(grade: String, salaryStep: Int): SalaryStep2027Entity? = null
         override suspend fun findByCurrentBasic(grade: String, currentBasicSalary: Double): SalaryStep2027Entity? =
