@@ -311,9 +311,11 @@ fun AnalyticsScreen(
         )
         val consecutiveNights = WeeklyCalculationEngine.calculateMaxConsecutiveNightShifts(shiftEntries)
         val daysInPeriod = ChronoUnit.DAYS.between(burnoutStartDate, burnoutEndDate) + 1
+        // Normalize any period to a 7-day workload using:
+        // average weekly workload = (total logged hours / number of days) × 7.
         val weeksInPeriod = daysInPeriod / 7.0
-        val avgWeeklyHours = if (weeksInPeriod > 0) {
-            (totalHours / weeksInPeriod).toFloat()
+        val avgWeeklyHours = if (daysInPeriod > 0) {
+            (totalHours / daysInPeriod * 7.0).toFloat()
         } else {
             0f
         }
@@ -1243,46 +1245,31 @@ private fun AnimatedOtBar(
 
     selectedSegment?.let { segment ->
         val value = if (segment == "duty") dutyOtHours else additionalOtHours
-        AlertDialog(
-            onDismissRequest = { selectedSegment = null },
-            title = {
-                Text(
-                    if (segment == "duty") "OT from Duty" else "Additional OT",
-                    fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(700))
+        ) {
+            Surface(
+                modifier = Modifier
+                    .padding(bottom = 4.dp)
+                    .offset(x = 22.dp),
+                shape = NursingShapes.medium,
+                color = SurfaceWhite.copy(alpha = 0.96f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (segment == "duty") MedicalBlue.copy(alpha = 0.35f) else Purple.copy(alpha = 0.35f)
                 )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        "${value.toInt()} hours",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (segment == "duty") MedicalBlue else Purple
-                    )
-                    Text(
-                        if (segment == "duty") {
-                            "Overtime generated after the first 36 normal duty hours in this complete Sunday–Saturday week."
-                        } else {
-                            "OT hours recorded separately from the normal duty-hour threshold."
-                        },
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        "Total OT for this bar: ${totalOtHours.toInt()}h",
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedSegment = null }) {
-                    Text("Close")
-                }
+            ) {
+                Text(
+                    "${value.toInt()}h",
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (segment == "duty") MedicalBlue else Purple
+                )
             }
-        )
+        }
     }
     val targetFraction = if (startAnimation && maxHours > 0f) {
         (totalOtHours / maxHours).coerceIn(0f, 1f)
@@ -1359,10 +1346,16 @@ private fun AnimatedOtBar(
                         .fillMaxHeight(progress.value.coerceAtLeast(0.04f))
                         .clip(NursingShapes.pill)
                         .background(Purple)
-                        .clickable(
-                            onClickLabel = "Show additional OT value",
-                            onClick = { selectedSegment = "additional" }
-                        )
+                        .pointerInput(animationKey, index, "additional") {
+                            detectTapGestures(
+                                onPress = {
+                                    selectedSegment = "additional"
+                                    tryAwaitRelease()
+                                    delay(900)
+                                    selectedSegment = null
+                                }
+                            )
+                        }
                 ) {
                     if (dutyOtHours > 0f) {
                         Box(
@@ -1371,10 +1364,16 @@ private fun AnimatedOtBar(
                                 .fillMaxHeight(dutyFraction)
                                 .align(Alignment.BottomCenter)
                                 .background(MedicalBlue)
-                                .clickable(
-                                    onClickLabel = "Show duty OT value",
-                                    onClick = { selectedSegment = "duty" }
-                                )
+                                .pointerInput(animationKey, index, "duty") {
+                                    detectTapGestures(
+                                        onPress = {
+                                            selectedSegment = "duty"
+                                            tryAwaitRelease()
+                                            delay(900)
+                                            selectedSegment = null
+                                        }
+                                    )
+                                }
                         )
                     }
                 }
