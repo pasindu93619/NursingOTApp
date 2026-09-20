@@ -325,17 +325,7 @@ fun AnalyticsScreen(
 
     val monthlyData = remember(allEntries, chartPeriods) {
         chartPeriods.map { period ->
-            val periodEntries = allEntries.filter { it.claimPeriodId == period.id }
-            var totalOt = periodEntries.sumOf { it.otHours.toDouble() }.toFloat()
-            if (period.wardType == "Special") {
-                periodEntries
-                    .groupBy { it.date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)) }
-                    .forEach { _, weekEntries ->
-                        val weeklyNormal = weekEntries.sumOf { it.normalHours.toDouble() }.toFloat()
-                        if (weeklyNormal > 36f) totalOt += weeklyNormal - 36f
-                    }
-            }
-            ClaimPeriodOtChartPoint(period.id, period.startDate, period.endDate, totalOt)
+            calculateClaimPeriodOtBreakdown(period, allEntries)
         }
     }
 
@@ -349,14 +339,14 @@ fun AnalyticsScreen(
 
 
     val maxHours = monthlyData
-        .maxOfOrNull { it.otHours }
+        .maxOfOrNull { it.totalOtHours }
         ?.takeIf { it > 0f }
         ?: 100f
 
     val (dayCount, eveCount, nightCount) = shiftCounts
     val totalCurrentShifts = dayCount + eveCount + nightCount
     val averageClaimOt = monthlyData
-        .map { it.otHours.toDouble() }
+        .map { it.totalOtHours.toDouble() }
         .average()
         .takeIf { !it.isNaN() }
         ?.toFloat()
@@ -488,7 +478,7 @@ fun AnalyticsScreen(
             OtHoursChartCard(
                 monthlyData = monthlyData,
                 maxHours = maxHours,
-                showChartYears = showChartYears,
+                selectedPeriodId = selectedClaimPeriod?.id,
                 animationKey = selectedDutyType,
                 startAnimation = startAnimation
             )
@@ -699,12 +689,12 @@ private fun SmartInsightsGuideCard() {
             InsightDefinitionRow(
                 icon = Icons.Default.ArrowDropDown,
                 title = "AVG OT / CLAIM",
-                body = "Total OT hours across the displayed claim periods ÷ number of displayed claims. Claims with 0 OT are included, so the average is not artificially increased."
+                body = "Total calculated OT hours across the displayed claim periods ÷ number of displayed claims. Each claim includes OT created after the weekly 36-hour duty threshold plus separately recorded OT."
             )
             InsightDefinitionRow(
                 icon = Icons.Default.CalendarMonth,
-                title = "MONTH",
-                body = "The month currently selected for Shift Distribution. Use the month and week filters below to inspect a specific period."
+                title = "CLAIM",
+                body = "A saved claim period. OT totals use complete Sunday–Saturday weeks inside that claim period, matching the existing 36-hour weekly rule."
             )
         }
     }
@@ -759,8 +749,40 @@ private data class ClaimPeriodOtChartPoint(
     val periodId: Long,
     val startDate: LocalDate,
     val endDate: LocalDate,
-    val otHours: Float
+    val totalOtHours: Float,
+    val dutyOtHours: Float,
+    val additionalOtHours: Float
 )
+
+private fun calculateClaimPeriodOtBreakdown(
+    period: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity,
+    allEntries: List<com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity>
+): ClaimPeriodOtChartPoint {
+    val periodEntries = allEntries.filter { it.claimPeriodId == period.id }
+    val fullWeeks = WeeklyCalculationEngine.getFullWeeks(period.startDate, period.endDate)
+
+    var dutyOtHours = 0f
+    var additionalOtHours = 0f
+
+    fullWeeks.forEach { (weekStart, weekEnd) ->
+        val weekEntries = periodEntries.filter {
+            !it.date.isBefore(weekStart) && !it.date.isAfter(weekEnd)
+        }
+
+        val totalDutyHours = weekEntries.sumOf { it.normalHours.toDouble() }.toFloat()
+        dutyOtHours += (totalDutyHours - 36f).coerceAtLeast(0f)
+        additionalOtHours += weekEntries.sumOf { it.otHours.toDouble() }.toFloat()
+    }
+
+    return ClaimPeriodOtChartPoint(
+        periodId = period.id,
+        startDate = period.startDate,
+        endDate = period.endDate,
+        totalOtHours = dutyOtHours + additionalOtHours,
+        dutyOtHours = dutyOtHours,
+        additionalOtHours = additionalOtHours
+    )
+}
 
 @Composable
 private fun AnalyticsSectionTitle(
@@ -790,10 +812,13 @@ private fun AnalyticsSectionTitle(
 private fun OtHoursChartCard(
     monthlyData: List<ClaimPeriodOtChartPoint>,
     maxHours: Float,
-    showChartYears: Boolean,
+    selectedPeriodId: Long?,
     animationKey: String,
     startAnimation: Boolean
 ) {
+    val selectedPoint = monthlyData.lastOrNull { it.periodId == selectedPeriodId }
+        ?: monthlyData.lastOrNull()
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = NursingShapes.extraLarge,
@@ -801,60 +826,126 @@ private fun OtHoursChartCard(
         tonalElevation = 1.dp,
         shadowElevation = 2.dp
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
-                .padding(horizontal = 14.dp, vertical = 18.dp)
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 28.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                repeat(4) {
-                    HorizontalDivider(
-                        color = TextPrimary.copy(alpha = 0.045f)
-                    )
+            selectedPoint?.let { point ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = NursingShapes.large,
+                    color = OtModernBlueSoft.copy(alpha = 0.32f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Σ",
+                            color = ClinicalPrimaryColor,
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "This Claim • Total OT Hours",
+                                color = TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                "${point.startDate.format(DateTimeFormatter.ofPattern("MMM d"))} – ${point.endDate.format(DateTimeFormatter.ofPattern("MMM d"))}",
+                                color = ClinicalPrimaryColor,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "${point.totalOtHours.toInt()}h",
+                                color = TextPrimary,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            OtBreakdownLegendRow(
+                                color = MedicalBlue,
+                                label = "From Duty (>36h)",
+                                value = point.dutyOtHours
+                            )
+                            OtBreakdownLegendRow(
+                                color = Purple,
+                                label = "Additional OT",
+                                value = point.additionalOtHours
+                            )
+                        }
+                    }
                 }
             }
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                Row(
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+                    .padding(top = 2.dp)
+            ) {
+                Box(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    monthlyData.forEachIndexed { index, point ->
-                        AnimatedOtBar(
-                            index = index,
-                            hours = point.otHours,
-                            maxHours = maxHours,
-                            animationKey = animationKey,
-                            startAnimation = startAnimation,
-                            modifier = Modifier.weight(1f)
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 28.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        repeat(4) {
+                            HorizontalDivider(
+                                color = TextPrimary.copy(alpha = 0.045f)
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 28.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        monthlyData.forEachIndexed { index, point ->
+                            AnimatedOtBar(
+                                index = index,
+                                dutyOtHours = point.dutyOtHours,
+                                additionalOtHours = point.additionalOtHours,
+                                totalOtHours = point.totalOtHours,
+                                maxHours = maxHours,
+                                isCurrent = point.periodId == selectedPeriodId,
+                                animationKey = animationKey,
+                                startAnimation = startAnimation,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
-
-                Spacer(Modifier.height(10.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    monthlyData.forEachIndexed { index, point ->
-                        val isCurrent = index == monthlyData.lastIndex && point.otHours > 0f
+                    monthlyData.forEach { point ->
+                        val isCurrent = point.periodId == selectedPeriodId
                         Text(
-                            if (showChartYears) {
-                                point.startDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy")) + "\n" +
-                                    point.endDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))
-                            } else {
-                                point.startDate.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
-                                    point.endDate.format(DateTimeFormatter.ofPattern("MMM d"))
-                            },
+                            point.startDate.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
+                                point.endDate.format(DateTimeFormatter.ofPattern("MMM d")),
                             fontSize = 10.sp,
                             color = if (isCurrent) ClinicalPrimaryColor else TextSecondary,
                             fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold,
@@ -864,6 +955,55 @@ private fun OtHoursChartCard(
                     }
                 }
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                OtBreakdownLegendRow(
+                    color = MedicalBlue,
+                    label = "OT from Duty (>36h)",
+                    value = null
+                )
+                Spacer(Modifier.width(18.dp))
+                OtBreakdownLegendRow(
+                    color = Purple,
+                    label = "Additional OT",
+                    value = null
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OtBreakdownLegendRow(
+    color: Color,
+    label: String,
+    value: Float?
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(9.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(5.dp))
+        Text(
+            label,
+            fontSize = 10.sp,
+            color = TextSecondary,
+            fontWeight = FontWeight.SemiBold
+        )
+        value?.let {
+            Spacer(Modifier.width(5.dp))
+            Text(
+                "${it.toInt()}h",
+                fontSize = 10.sp,
+                color = TextPrimary,
+                fontWeight = FontWeight.Black
+            )
         }
     }
 }
@@ -871,14 +1011,17 @@ private fun OtHoursChartCard(
 @Composable
 private fun AnimatedOtBar(
     index: Int,
-    hours: Float,
+    dutyOtHours: Float,
+    additionalOtHours: Float,
+    totalOtHours: Float,
     maxHours: Float,
+    isCurrent: Boolean,
     animationKey: String,
     startAnimation: Boolean,
     modifier: Modifier
 ) {
     val targetFraction = if (startAnimation && maxHours > 0f) {
-        (hours / maxHours).coerceIn(0f, 1f)
+        (totalOtHours / maxHours).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -905,9 +1048,9 @@ private fun AnimatedOtBar(
         verticalArrangement = Arrangement.Bottom
     ) {
         AnimatedVisibility(
-            visible = startAnimation && hours > 0f,
+            visible = startAnimation && totalOtHours > 0f,
             enter = fadeIn(tween(260)) + slideInVertically(tween(260)) { 12 },
-            exit = fadeOut(tween(120)) + slideOutVertically(tween(120)) { 8 }
+            exit = fadeOut(tween(120)) + slideInVertically(tween(120)) { 8 }
         ) {
             Surface(
                 shape = NursingShapes.medium,
@@ -918,11 +1061,11 @@ private fun AnimatedOtBar(
                 )
             ) {
                 Text(
-                    "${hours.toInt()}h",
+                    "${totalOtHours.toInt()}h",
                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
-                    color = TextPrimary
+                    color = if (isCurrent) ClinicalPrimaryColor else TextPrimary
                 )
             }
         }
@@ -943,27 +1086,26 @@ private fun AnimatedOtBar(
                     .background(md_theme_light_primaryContainer.copy(alpha = 0.48f))
             )
 
-            if (progress.value > 0f) {
+            if (progress.value > 0f && totalOtHours > 0f) {
+                val dutyFraction = (dutyOtHours / totalOtHours).coerceIn(0f, 1f)
+
                 Box(
                     modifier = Modifier
                         .width(30.dp)
                         .fillMaxHeight(progress.value.coerceAtLeast(0.04f))
-                        .shadow(
-                            elevation = 5.dp,
-                            shape = NursingShapes.pill,
-                            ambientColor = ClinicalPrimaryColor.copy(alpha = 0.18f),
-                            spotColor = Purple.copy(alpha = 0.18f)
-                        )
                         .clip(NursingShapes.pill)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    MedicalBlue,
-                                    Purple
-                                )
-                            )
+                        .background(Purple)
+                ) {
+                    if (dutyOtHours > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(dutyFraction)
+                                .align(Alignment.BottomCenter)
+                                .background(MedicalBlue)
                         )
-                )
+                    }
+                }
             }
         }
     }
