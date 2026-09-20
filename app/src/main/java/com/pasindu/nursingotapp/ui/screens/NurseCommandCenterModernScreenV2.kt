@@ -214,11 +214,15 @@ private fun HeroCard(
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT",
+                )                Text(
+                    text = buildString {
+                        append("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT")
+                        if (state.unitName.isNotBlank()) append("  •  ${state.unitName}")
+                    },
                     color = Color.White.copy(alpha = 0.84f),
-                    fontSize = 11.sp
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
@@ -243,10 +247,11 @@ private fun HeroCard(
                     ) {
                         Text(
                             text = "Open insight  ›",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
