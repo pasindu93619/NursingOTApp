@@ -86,6 +86,22 @@ val day_color = Amber
 val eve_color = Purple
 val night_color = MedicalBlue
 
+fun getClaimPeriodWeeks(startDate: LocalDate, endDate: LocalDate): List<Pair<LocalDate, LocalDate>> {
+    if (startDate.isAfter(endDate)) return emptyList()
+    val weeks = mutableListOf<Pair<LocalDate, LocalDate>>()
+    var weekStart = startDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+    while (!weekStart.isAfter(endDate)) {
+        val weekEnd = weekStart.plusDays(6)
+        val clippedStart = maxOf(weekStart, startDate)
+        val clippedEnd = minOf(weekEnd, endDate)
+        if (!clippedStart.isAfter(clippedEnd)) {
+            weeks += clippedStart to clippedEnd
+        }
+        weekStart = weekStart.plusDays(7)
+    }
+    return weeks
+}
+
 fun getWeeksInMonth(yearMonth: YearMonth): List<Pair<LocalDate, LocalDate>> {
     val weeks = mutableListOf<Pair<LocalDate, LocalDate>>()
     var currentStart = yearMonth.atDay(1)
@@ -137,45 +153,59 @@ fun AnalyticsScreen(
     var guideBar by remember { mutableStateOf(false) }
     var guideDonut by remember { mutableStateOf(false) }
 
-    val availableMonths = remember(allEntries) {
-        allEntries
-            .map { YearMonth.from(it.date) }
-            .distinct()
-            .sortedDescending()
-            .ifEmpty { listOf(YearMonth.now()) }
+    val savedPeriods = remember(pastPeriods) {
+        pastPeriods.sortedWith(
+            compareByDescending<com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity> { it.startDate }
+                .thenByDescending { it.endDate }
+        )
     }
 
-    var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
-    var showMonthDropdown by remember { mutableStateOf(false) }
+    var selectedPeriodId by remember(savedPeriods) {
+        mutableStateOf(savedPeriods.firstOrNull()?.id)
+    }
+    var shiftViewMode by remember { mutableStateOf(ShiftDistributionViewMode.FULL_PERIOD) }
     var selectedWeekIndex by remember { mutableIntStateOf(0) }
-    var showWeekDropdown by remember { mutableStateOf(false) }
     var selectedSlice by remember { mutableStateOf<String?>(null) }
+    var showPeriodDropdown by remember { mutableStateOf(false) }
 
-    val weeksInMonth = remember(selectedMonth) {
-        getWeeksInMonth(selectedMonth)
+    val selectedClaimPeriod = remember(savedPeriods, selectedPeriodId) {
+        savedPeriods.firstOrNull { it.id == selectedPeriodId } ?: savedPeriods.firstOrNull()
     }
 
-    val currentStartDate = remember(selectedMonth, selectedWeekIndex, weeksInMonth) {
-        if (selectedWeekIndex == 0) selectedMonth.atDay(1)
-        else weeksInMonth[selectedWeekIndex - 1].first
+    val selectedClaimPeriodWeeks = remember(selectedClaimPeriod) {
+        selectedClaimPeriod?.let { getClaimPeriodWeeks(it.startDate, it.endDate) }.orEmpty()
     }
 
-    val currentEndDate = remember(selectedMonth, selectedWeekIndex, weeksInMonth) {
-        if (selectedWeekIndex == 0) selectedMonth.atEndOfMonth()
-        else weeksInMonth[selectedWeekIndex - 1].second
+    LaunchedEffect(savedPeriods) {
+        val firstId = savedPeriods.firstOrNull()?.id
+        if (firstId != null && selectedPeriodId !in savedPeriods.map { it.id }) {
+            selectedPeriodId = firstId
+            selectedWeekIndex = 0
+        }
     }
+
+    LaunchedEffect(selectedClaimPeriod, shiftViewMode, selectedClaimPeriodWeeks) {
+        if (shiftViewMode == ShiftDistributionViewMode.FULL_PERIOD) {
+            selectedWeekIndex = 0
+        } else if (selectedWeekIndex !in selectedClaimPeriodWeeks.indices) {
+            selectedWeekIndex = 0
+        }
+    }
+
+    val currentStartDate = selectedClaimPeriod?.let { period ->
+        if (shiftViewMode == ShiftDistributionViewMode.FULL_PERIOD) period.startDate
+        else selectedClaimPeriodWeeks.getOrNull(selectedWeekIndex)?.first ?: period.startDate
+    } ?: LocalDate.now()
+
+    val currentEndDate = selectedClaimPeriod?.let { period ->
+        if (shiftViewMode == ShiftDistributionViewMode.FULL_PERIOD) period.endDate
+        else selectedClaimPeriodWeeks.getOrNull(selectedWeekIndex)?.second ?: period.endDate
+    } ?: LocalDate.now()
 
     LaunchedEffect(selectedSlice) {
         if (selectedSlice != null) {
             delay(3000)
             selectedSlice = null
-        }
-    }
-
-    LaunchedEffect(availableMonths) {
-        if (availableMonths.isNotEmpty() && selectedMonth !in availableMonths) {
-            selectedMonth = availableMonths.first()
-            selectedWeekIndex = 0
         }
     }
 
@@ -381,7 +411,7 @@ fun AnalyticsScreen(
                 selectedDutyType = selectedDutyType,
                 totalShifts = totalCurrentShifts,
                 averageOtHours = averageClaimOt,
-                currentMonth = selectedMonth
+                selectedPeriod = selectedClaimPeriod
             )
 
             SingleChoiceSegmentedButtonRow(
@@ -462,16 +492,19 @@ fun AnalyticsScreen(
 
             ShiftDistributionCard(
                 selectedDutyType = selectedDutyType,
-                selectedMonth = selectedMonth,
+                selectedClaimPeriod = selectedClaimPeriod,
+                savedPeriods = savedPeriods,
+                shiftViewMode = shiftViewMode,
                 selectedWeekIndex = selectedWeekIndex,
-                weeksInMonth = weeksInMonth,
-                availableMonths = availableMonths,
-                showMonthDropdown = showMonthDropdown,
-                showWeekDropdown = showWeekDropdown,
-                onMonthDropdownChange = { showMonthDropdown = it },
-                onWeekDropdownChange = { showWeekDropdown = it },
-                onMonthSelected = {
-                    selectedMonth = it
+                selectedClaimPeriodWeeks = selectedClaimPeriodWeeks,
+                showPeriodDropdown = showPeriodDropdown,
+                onPeriodDropdownChange = { showPeriodDropdown = it },
+                onPeriodSelected = {
+                    selectedPeriodId = it
+                    selectedWeekIndex = 0
+                },
+                onShiftViewModeChanged = {
+                    shiftViewMode = it
                     selectedWeekIndex = 0
                 },
                 onWeekSelected = { selectedWeekIndex = it },
@@ -504,7 +537,7 @@ private fun SmartInsightsHero(
     selectedDutyType: String,
     totalShifts: Int,
     averageOtHours: Float,
-    currentMonth: YearMonth
+    selectedPeriod: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity?
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -553,8 +586,12 @@ private fun SmartInsightsHero(
                     modifier = Modifier.weight(1.15f)
                 )
                 InsightsGlassTile(
-                    label = "MONTH",
-                    value = currentMonth.format(DateTimeFormatter.ofPattern("MMM yyyy")),
+                    label = "CLAIM",
+                    value = selectedPeriod?.let { period ->
+                        "${period.startDate.format(DateTimeFormatter.ofPattern("MMM d"))} – ${
+                            period.endDate.format(DateTimeFormatter.ofPattern("MMM d"))
+                        }"
+                    } ?: "None",
                     modifier = Modifier.weight(1.35f)
                 )
             }
@@ -703,6 +740,8 @@ private fun InsightDefinitionRow(
         }
     }
 }
+
+private enum class ShiftDistributionViewMode { FULL_PERIOD, WEEK_BY_WEEK }
 
 private data class ClaimPeriodOtChartPoint(
     val periodId: Long,
@@ -921,15 +960,15 @@ private fun AnimatedOtBar(
 @Composable
 private fun ShiftDistributionCard(
     selectedDutyType: String,
-    selectedMonth: YearMonth,
+    selectedClaimPeriod: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity?,
+    savedPeriods: List<com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity>,
+    shiftViewMode: ShiftDistributionViewMode,
     selectedWeekIndex: Int,
-    weeksInMonth: List<Pair<LocalDate, LocalDate>>,
-    availableMonths: List<YearMonth>,
-    showMonthDropdown: Boolean,
-    showWeekDropdown: Boolean,
-    onMonthDropdownChange: (Boolean) -> Unit,
-    onWeekDropdownChange: (Boolean) -> Unit,
-    onMonthSelected: (YearMonth) -> Unit,
+    selectedClaimPeriodWeeks: List<Pair<LocalDate, LocalDate>>,
+    showPeriodDropdown: Boolean,
+    onPeriodDropdownChange: (Boolean) -> Unit,
+    onPeriodSelected: (Long) -> Unit,
+    onShiftViewModeChanged: (ShiftDistributionViewMode) -> Unit,
     onWeekSelected: (Int) -> Unit,
     shiftCounts: Triple<Int, Int, Int>,
     specialOtSources: Triple<Float, Float, Float>,
@@ -965,67 +1004,104 @@ private fun ShiftDistributionCard(
                 .padding(horizontal = 18.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
-            ) {
+            if (savedPeriods.isNotEmpty()) {
                 FilterPill(
-                    text = selectedMonth.format(DateTimeFormatter.ofPattern("MMM yyyy")),
+                    text = selectedClaimPeriod?.let { period ->
+                        "${period.startDate.format(DateTimeFormatter.ofPattern("MMM d"))} – ${
+                            period.endDate.format(DateTimeFormatter.ofPattern("MMM d"))
+                        }"
+                    } ?: "Select period",
                     containerColor = OtModernMintSoft,
                     contentColor = md_theme_light_onSecondaryContainer,
                     icon = Icons.Default.CalendarMonth,
-                    onClick = { onMonthDropdownChange(true) }
+                    onClick = { onPeriodDropdownChange(true) }
                 ) {
                     DropdownMenu(
-                        expanded = showMonthDropdown,
-                        onDismissRequest = { onMonthDropdownChange(false) }
+                        expanded = showPeriodDropdown,
+                        onDismissRequest = { onPeriodDropdownChange(false) }
                     ) {
-                        availableMonths.forEach { month ->
+                        savedPeriods.forEach { period ->
                             DropdownMenuItem(
                                 text = {
-                                    Text(month.format(DateTimeFormatter.ofPattern("MMM yyyy")))
+                                    Text(
+                                        "${period.startDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))} – ${
+                                            period.endDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                                        }"
+                                    )
                                 },
                                 onClick = {
-                                    onMonthSelected(month)
-                                    onMonthDropdownChange(false)
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                FilterPill(
-                    text = if (selectedWeekIndex == 0) "Full Month" else "Week $selectedWeekIndex",
-                    containerColor = OtModernBlueSoft,
-                    contentColor = md_theme_light_onPrimaryContainer,
-                    icon = Icons.Default.ArrowDropDown,
-                    onClick = { onWeekDropdownChange(true) }
-                ) {
-                    DropdownMenu(
-                        expanded = showWeekDropdown,
-                        onDismissRequest = { onWeekDropdownChange(false) }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Full Month") },
-                            onClick = {
-                                onWeekSelected(0)
-                                onWeekDropdownChange(false)
-                            }
-                        )
-                        weeksInMonth.forEachIndexed { index, _ ->
-                            DropdownMenuItem(
-                                text = { Text("Week ${index + 1}") },
-                                onClick = {
-                                    onWeekSelected(index + 1)
-                                    onWeekDropdownChange(false)
+                                    onPeriodSelected(period.id)
+                                    onPeriodDropdownChange(false)
                                 }
                             )
                         }
                     }
                 }
             }
+
+            Spacer(Modifier.height(10.dp))
+
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SegmentedButton(
+                    selected = shiftViewMode == ShiftDistributionViewMode.FULL_PERIOD,
+                    onClick = { onShiftViewModeChanged(ShiftDistributionViewMode.FULL_PERIOD) },
+                    shape = SegmentedButtonDefaults.itemShape(0, 2),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Full period")
+                }
+
+                SegmentedButton(
+                    selected = shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK,
+                    onClick = { onShiftViewModeChanged(ShiftDistributionViewMode.WEEK_BY_WEEK) },
+                    shape = SegmentedButtonDefaults.itemShape(1, 2),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Week by week")
+                }
+            }
+
+            if (shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK && selectedClaimPeriodWeeks.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    selectedClaimPeriodWeeks.forEachIndexed { index, week ->
+                        FilterPill(
+                            text = "${week.first.format(DateTimeFormatter.ofPattern("MMM d"))} – ${
+                                week.second.format(DateTimeFormatter.ofPattern("MMM d"))
+                            }",
+                            containerColor = if (index == selectedWeekIndex) OtModernBlueSoft else AppBackground,
+                            contentColor = if (index == selectedWeekIndex) md_theme_light_onPrimaryContainer else TextSecondary,
+                            icon = Icons.Default.CalendarMonth,
+                            onClick = { onWeekSelected(index) }
+                        ) { }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = when {
+                    selectedClaimPeriod == null -> "No saved claim period"
+                    shiftViewMode == ShiftDistributionViewMode.FULL_PERIOD ->
+                        "Selected claim period • ${selectedClaimPeriod.startDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))} – ${selectedClaimPeriod.endDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))}"
+                    else -> {
+                        val week = selectedClaimPeriodWeeks.getOrNull(selectedWeekIndex)
+                        if (week == null) "Select a week"
+                        else "Selected week • ${week.first.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))} – ${week.second.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))}"
+                    }
+                },
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ClinicalPrimaryColor,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Box(
                 modifier = Modifier
