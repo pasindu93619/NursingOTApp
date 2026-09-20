@@ -321,7 +321,7 @@ fun AnalyticsScreen(
     val (dayCount, eveCount, nightCount) = shiftCounts
     val totalCurrentShifts = dayCount + eveCount + nightCount
     val averageClaimOt = monthlyData
-        .map { it.second }
+        .map { it.otHours.toDouble() }
         .average()
         .takeIf { !it.isNaN() }
         ?.toFloat()
@@ -736,7 +736,7 @@ private fun AnalyticsSectionTitle(
 
 @Composable
 private fun OtHoursChartCard(
-    monthlyData: List<Pair<String, Float>>,
+    monthlyData: List<ClaimPeriodOtChartPoint>,
     maxHours: Float,
     animationKey: String,
     startAnimation: Boolean
@@ -777,7 +777,7 @@ private fun OtHoursChartCard(
                     monthlyData.forEachIndexed { index, point ->
                         AnimatedOtBar(
                             index = index,
-                            hours = hours,
+                            hours = point.otHours,
                             maxHours = maxHours,
                             animationKey = animationKey,
                             startAnimation = startAnimation,
@@ -825,7 +825,7 @@ private fun AnimatedOtBar(
     modifier: Modifier
 ) {
     val targetFraction = if (startAnimation && maxHours > 0f) {
-        (point.otHours / maxHours).coerceIn(0f, 1f)
+        (hours / maxHours).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -852,7 +852,7 @@ private fun AnimatedOtBar(
         verticalArrangement = Arrangement.Bottom
     ) {
         AnimatedVisibility(
-            visible = startAnimation && point.otHours > 0f,
+            visible = startAnimation && hours > 0f,
             enter = fadeIn(tween(260)) + slideInVertically(tween(260)) { 12 },
             exit = fadeOut(tween(120)) + slideOutVertically(tween(120)) { 8 }
         ) {
@@ -865,7 +865,7 @@ private fun AnimatedOtBar(
                 )
             ) {
                 Text(
-                    "${point.otHours.toInt()}h",
+                    "${hours.toInt()}h",
                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
