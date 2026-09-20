@@ -61,10 +61,10 @@ fun BurnoutMeterCard(
     avgWeeklyHours: Float,
     consecutiveNightShifts: Int,
     suggestionText: String,
-    totalHours: Float,
-    periodDays: Int,
-    weeksEquivalent: Float,
-    isWeeklyView: Boolean,
+    totalHours: Float = 0f,
+    periodDays: Int = 7,
+    weeksEquivalent: Float = 1f,
+    isWeeklyView: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // Keep the existing deterministic thresholds and gauge math unchanged.
