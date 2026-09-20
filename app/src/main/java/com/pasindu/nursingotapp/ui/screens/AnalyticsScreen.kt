@@ -263,7 +263,18 @@ fun AnalyticsScreen(
         )
     }
 
-    val burnoutData = remember(currentPeriodEntries, currentStartDate, currentEndDate) {
+    // Burnout is a claim-period wellness metric. Week-by-week mode only scopes
+    // the shift-distribution chart; it must not change the burnout gauge.
+    val burnoutStartDate = selectedClaimPeriod?.startDate ?: currentStartDate
+    val burnoutEndDate = selectedClaimPeriod?.endDate ?: currentEndDate
+
+    val burnoutPeriodEntries = remember(allEntries, burnoutStartDate, burnoutEndDate) {
+        allEntries.filter {
+            !it.date.isBefore(burnoutStartDate) && !it.date.isAfter(burnoutEndDate)
+        }
+    }
+
+    val burnoutData = remember(burnoutPeriodEntries, burnoutStartDate, burnoutEndDate) {
         fun parseToLocalTime(timeStr: String?): LocalTime? {
             if (timeStr.isNullOrBlank() || timeStr == "-") return null
             return try {
@@ -274,7 +285,7 @@ fun AnalyticsScreen(
             }
         }
 
-        val shiftEntries = currentPeriodEntries.mapNotNull { entry ->
+        val shiftEntries = burnoutPeriodEntries.mapNotNull { entry ->
             val start = parseToLocalTime(entry.normalTimeIn)
             val end = parseToLocalTime(entry.otTimeOut) ?: parseToLocalTime(entry.normalTimeOut)
             if (start != null && end != null) {
@@ -286,11 +297,11 @@ fun AnalyticsScreen(
 
         val totalHours = WeeklyCalculationEngine.calculateTotalHoursForCalendarPeriod(
             shiftEntries,
-            currentStartDate,
-            currentEndDate
+            burnoutStartDate,
+            burnoutEndDate
         )
         val consecutiveNights = WeeklyCalculationEngine.calculateMaxConsecutiveNightShifts(shiftEntries)
-        val daysInPeriod = ChronoUnit.DAYS.between(currentStartDate, currentEndDate) + 1
+        val daysInPeriod = ChronoUnit.DAYS.between(burnoutStartDate, burnoutEndDate) + 1
         val weeksInPeriod = daysInPeriod / 7.0
         val avgWeeklyHours = if (weeksInPeriod > 0) {
             (totalHours / weeksInPeriod).toFloat()
@@ -518,8 +529,8 @@ fun AnalyticsScreen(
 
             if (selectedDutyType == "Normal") {
                 BurnoutMeterCard(
-                    startDate = currentStartDate,
-                    endDate = currentEndDate,
+                    startDate = burnoutStartDate,
+                    endDate = burnoutEndDate,
                     avgWeeklyHours = burnoutData.first,
                     consecutiveNightShifts = burnoutData.second,
                     suggestionText = burnoutData.third
