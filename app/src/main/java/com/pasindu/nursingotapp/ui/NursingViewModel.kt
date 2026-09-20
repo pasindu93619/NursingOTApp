@@ -143,8 +143,17 @@ class NursingViewModel @Inject constructor(
         _matchedSalary2027.value?.basicSalary2027?.let { applyMatched2027DayRateUseCase(it) }
     }
 
-    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = launchOperation(setOperationState) {
-        _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
+    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = viewModelScope.launch {
+        val normalizedGrade = grade.trim()
+        val normalizedBasic = currentBasicSalary.toInt().toDouble()
+        if (normalizedGrade.isBlank() || normalizedBasic <= 0.0) {
+            _matchedSalary2027.value = null
+            return@launch
+        }
+        _matchedSalary2027.value = matchSalaryStepUseCase(
+            grade = normalizedGrade,
+            currentBasicSalary = normalizedBasic
+        )
     }
 
     fun loadEntriesForClaim(claimPeriodId: Long) = viewModelScope.launch {
