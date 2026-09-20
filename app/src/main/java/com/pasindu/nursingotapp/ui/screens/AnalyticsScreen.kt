@@ -263,10 +263,19 @@ fun AnalyticsScreen(
         )
     }
 
-    // Burnout is a claim-period wellness metric. Week-by-week mode only scopes
-    // the shift-distribution chart; it must not change the burnout gauge.
-    val burnoutStartDate = selectedClaimPeriod?.startDate ?: currentStartDate
-    val burnoutEndDate = selectedClaimPeriod?.endDate ?: currentEndDate
+    // Burnout follows the same scope the user is inspecting:
+    // full-period mode = the selected claim; week-by-week mode = the selected week.
+    val burnoutUsesSelectedWeek = shiftViewMode == ShiftDistributionViewMode.WEEK_BY_WEEK
+    val burnoutStartDate = if (burnoutUsesSelectedWeek) {
+        currentStartDate
+    } else {
+        selectedClaimPeriod?.startDate ?: currentStartDate
+    }
+    val burnoutEndDate = if (burnoutUsesSelectedWeek) {
+        currentEndDate
+    } else {
+        selectedClaimPeriod?.endDate ?: currentEndDate
+    }
 
     val burnoutPeriodEntries = remember(allEntries, burnoutStartDate, burnoutEndDate) {
         allEntries.filter {
@@ -316,7 +325,14 @@ fun AnalyticsScreen(
             else -> "No shifts logged for this period."
         }
 
-        Triple(avgWeeklyHours, consecutiveNights, suggestion)
+        BurnoutCalculation(
+            avgWeeklyHours = avgWeeklyHours,
+            consecutiveNightShifts = consecutiveNights,
+            suggestionText = suggestion,
+            totalHours = totalHours.toFloat(),
+            periodDays = daysInPeriod.toInt(),
+            weeksEquivalent = weeksInPeriod.toFloat()
+        )
     }
 
     val chartPeriods = remember(pastPeriods) {
@@ -527,9 +543,13 @@ fun AnalyticsScreen(
                 BurnoutMeterCard(
                     startDate = burnoutStartDate,
                     endDate = burnoutEndDate,
-                    avgWeeklyHours = burnoutData.first,
-                    consecutiveNightShifts = burnoutData.second,
-                    suggestionText = burnoutData.third
+                    avgWeeklyHours = burnoutData.avgWeeklyHours,
+                    consecutiveNightShifts = burnoutData.consecutiveNightShifts,
+                    suggestionText = burnoutData.suggestionText,
+                    totalHours = burnoutData.totalHours,
+                    periodDays = burnoutData.periodDays,
+                    weeksEquivalent = burnoutData.weeksEquivalent,
+                    isWeeklyView = burnoutUsesSelectedWeek
                 )
             } else {
                 SpecialRestBalanceCard(restData = restData)
@@ -750,6 +770,15 @@ private fun InsightDefinitionRow(
 }
 
 private enum class ShiftDistributionViewMode { FULL_PERIOD, WEEK_BY_WEEK }
+
+private data class BurnoutCalculation(
+    val avgWeeklyHours: Float,
+    val consecutiveNightShifts: Int,
+    val suggestionText: String,
+    val totalHours: Float,
+    val periodDays: Int,
+    val weeksEquivalent: Float
+)
 
 private data class ClaimPeriodOtChartPoint(
     val periodId: Long,
@@ -1210,6 +1239,51 @@ private fun AnimatedOtBar(
     startAnimation: Boolean,
     modifier: Modifier
 ) {
+    var selectedSegment by remember(animationKey, index) { mutableStateOf<String?>(null) }
+
+    selectedSegment?.let { segment ->
+        val value = if (segment == "duty") dutyOtHours else additionalOtHours
+        AlertDialog(
+            onDismissRequest = { selectedSegment = null },
+            title = {
+                Text(
+                    if (segment == "duty") "OT from Duty" else "Additional OT",
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        "${value.toInt()} hours",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (segment == "duty") MedicalBlue else Purple
+                    )
+                    Text(
+                        if (segment == "duty") {
+                            "Overtime generated after the first 36 normal duty hours in this complete Sunday–Saturday week."
+                        } else {
+                            "OT hours recorded separately from the normal duty-hour threshold."
+                        },
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        "Total OT for this bar: ${totalOtHours.toInt()}h",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedSegment = null }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
     val targetFraction = if (startAnimation && maxHours > 0f) {
         (totalOtHours / maxHours).coerceIn(0f, 1f)
     } else {
@@ -1285,6 +1359,10 @@ private fun AnimatedOtBar(
                         .fillMaxHeight(progress.value.coerceAtLeast(0.04f))
                         .clip(NursingShapes.pill)
                         .background(Purple)
+                        .clickable(
+                            onClickLabel = "Show additional OT value",
+                            onClick = { selectedSegment = "additional" }
+                        )
                 ) {
                     if (dutyOtHours > 0f) {
                         Box(
@@ -1293,6 +1371,10 @@ private fun AnimatedOtBar(
                                 .fillMaxHeight(dutyFraction)
                                 .align(Alignment.BottomCenter)
                                 .background(MedicalBlue)
+                                .clickable(
+                                    onClickLabel = "Show duty OT value",
+                                    onClick = { selectedSegment = "duty" }
+                                )
                         )
                     }
                 }
