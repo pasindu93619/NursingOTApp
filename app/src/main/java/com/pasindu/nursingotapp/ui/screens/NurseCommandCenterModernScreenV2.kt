@@ -32,11 +32,11 @@ import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import com.pasindu.nursingotapp.ui.theme.*
 
-private val HeroBlueSoft = Color(0xFFEAF6FF)
-private val HeroMintSoft = Color(0xFFEAFBF5)
-private val HeroAmberSoft = Color(0xFFFFF6E7)
-private val HeroPurpleSoft = Color(0xFFF3EEFF)
-private val HeroInk = Color(0xFF12204A)
+private val HeroBlueSoft = MedicalBlue.copy(alpha = 0.08f)
+private val HeroMintSoft = Emerald.copy(alpha = 0.08f)
+private val HeroAmberSoft = Amber.copy(alpha = 0.10f)
+private val HeroPurpleSoft = Purple.copy(alpha = 0.08f)
+private val HeroInk = Slate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,13 +188,7 @@ private fun HeroCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    brush = Brush.horizontalGradient(
-                        listOf(
-                            Color(0xFF006BA6),
-                            ClinicalPrimaryColor,
-                            Color(0xFF38BDF8)
-                        )
-                    ),
+                    brush = ClinicalAiGradient,
                     shape = RoundedCornerShape(28.dp)
                 )
                 .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -205,11 +199,13 @@ private fun HeroCard(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
-                    text = "NURSINGOS",
+                    text = "NURSINGOS  •  ${state.nurseName}",
                     color = Color.White.copy(alpha = 0.76f),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.4.sp
+                    letterSpacing = 1.1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = label,
@@ -220,20 +216,43 @@ private fun HeroCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT",
+                    text = buildString {
+                        append("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT")
+                        if (state.unitName.isNotBlank()) append("  •  ${state.unitName}")
+                    },
                     color = Color.White.copy(alpha = 0.84f),
-                    fontSize = 11.sp
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                TextButton(
-                    onClick = { onNavigate(state.insightRoute) },
-                    contentPadding = PaddingValues(0.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Open today's insight  ›",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(50.dp),
+                        color = Color.White.copy(alpha = 0.16f)
+                    ) {
+                        Text(
+                            text = state.todayStatus,
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.8.sp,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                        )
+                    }
+                    TextButton(
+                        onClick = { onNavigate(state.insightRoute) },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            text = "Open insight  ›",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -416,11 +435,23 @@ private fun ScoreCard(
                 color = accent,
                 trackColor = accent.copy(alpha = 0.10f)
             )
-            Text(
-                text = "Overall readiness  •  Tap for details",
-                color = TextSecondary,
-                fontSize = 10.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = state.nursingOsScoreLabel,
+                    color = accent,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Operational signal  •  Tap for details",
+                    color = TextSecondary,
+                    fontSize = 10.sp
+                )
+            }
         }
     }
 }
@@ -444,17 +475,36 @@ private fun Agenda(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Prioritized agenda",
-                color = HeroInk,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                text = "Your next actions, in order",
-                color = TextSecondary,
-                fontSize = 10.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Prioritized agenda",
+                        color = HeroInk,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "Your next actions, in order",
+                        color = TextSecondary,
+                        fontSize = 10.sp
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = if (items.isEmpty()) HeroMintSoft else HeroAmberSoft
+                ) {
+                    Text(
+                        text = if (items.isEmpty()) "CLEAR" else items.size.toString() + " ACTIONS",
+                        color = if (items.isEmpty()) Emerald else Amber,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(6.dp))
 
             if (items.isEmpty()) {
@@ -501,6 +551,21 @@ private fun Agenda(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                        }
+                        if (index == 0) {
+                            Surface(
+                                shape = RoundedCornerShape(50.dp),
+                                color = Amber.copy(alpha = 0.10f)
+                            ) {
+                                Text(
+                                    text = "NEXT",
+                                    color = Amber,
+                                    fontSize = 7.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
                         }
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
