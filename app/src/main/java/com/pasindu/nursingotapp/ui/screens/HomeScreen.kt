@@ -60,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
@@ -200,9 +201,9 @@ private fun ShiftSnapshotCard(
         else -> MaterialTheme.colorScheme.error
     }
     val scoreText = when {
-        score >= 80 -> "Balanced"
-        score >= 60 -> "Watch workload"
-        else -> "High workload"
+        score >= 80 -> "Low workload pressure"
+        score >= 60 -> "Moderate workload pressure"
+        else -> "High workload pressure"
     }
     val animatedScore by animateFloatAsState(
         targetValue = score / 100f,
@@ -220,8 +221,23 @@ private fun ShiftSnapshotCard(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("NursingOS", color = AiAccentColor, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text("Shift snapshot", color = HomeInk, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Your most important numbers", color = TextSecondary, fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Shift snapshot", color = HomeInk, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                        Spacer(Modifier.width(7.dp))
+                        Surface(
+                            shape = RoundedCornerShape(50.dp),
+                            color = HomeMintSoft
+                        ) {
+                            Text(
+                                "LIVE",
+                                color = Emerald,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    Text("Current month to date • updates from your recorded entries", color = TextSecondary, fontSize = 11.sp)
                 }
                 Surface(
                     modifier = Modifier.clickable(onClick = onGuide),
@@ -243,11 +259,40 @@ private fun ShiftSnapshotCard(
                 SnapshotMetric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, HomeMintSoft, Modifier.weight(1f)) { onNavigate("advanced_finance_hub") }
             }
 
-            Spacer(Modifier.height(15.dp))
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = SurfaceMuted
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.MoreTime, null, tint = Amber, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("OT composition", color = HomeInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "${formatHours(state.dutyDerivedOtHoursThisMonth)} duty-shift OT + ${formatHours(state.additionalOtHoursThisMonth)} additional OT",
+                            color = TextSecondary,
+                            fontSize = 9.sp
+                        )
+                    }
+                    Text("= ${formatHours(state.otHoursThisMonth)}", color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+            }
+
+            Spacer(Modifier.height(13.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Workload", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("Workload pressure", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Text(scoreText, color = scoreAccent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "Higher score = less recorded workload pressure",
+                        color = TextSecondary,
+                        fontSize = 8.sp
+                    )
                 }
                 Text("$score/100", color = scoreAccent, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.width(8.dp))
@@ -265,7 +310,16 @@ private fun ShiftSnapshotCard(
 }
 
 @Composable
-private fun SnapshotMetric(label: String, value: String, icon: ImageVector, accent: Color, surface: Color, modifier: Modifier, onClick: () -> Unit) {
+private fun SnapshotMetric(
+    label: String,
+    value: String,
+    detail: String,
+    icon: ImageVector,
+    accent: Color,
+    surface: Color,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
     Surface(
         modifier = modifier.clickable(onClick = onClick),
         color = surface,
@@ -275,7 +329,22 @@ private fun SnapshotMetric(label: String, value: String, icon: ImageVector, acce
             Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
             Spacer(Modifier.height(6.dp))
             Text(label, color = TextSecondary, fontSize = 9.sp)
-            Text(value, color = HomeInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                value,
+                color = HomeInk,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                detail,
+                color = TextSecondary,
+                fontSize = 7.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -373,10 +442,10 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 @Composable
 private fun DashboardGuideDialog(onDismiss: () -> Unit) {
     val items = listOf(
-        DashboardGuideItem("Duty", "Normal duty hours recorded for the current period.", "OT & Claims"),
-        DashboardGuideItem("OT", "Overtime hours recorded for the current period.", "OT & Claims"),
-        DashboardGuideItem("Net", "Estimated net earnings calculated from available financial data. It is an estimate, not a payslip.", "Finance"),
-        DashboardGuideItem("Workload", "A 0–100 indicator summarizing the current workload state.", "Command Center"),
+        DashboardGuideItem("Duty", "Total recorded duty-shift hours from the start of the current month through today.", "OT & Claims"),
+        DashboardGuideItem("OT", "Total OT through today = duty-shift OT from the Sunday–Saturday 36h rule + separately recorded additional OT. The same duty hours are not counted twice.", "OT & Claims"),
+        DashboardGuideItem("Net", "Net salary from the current month's saved financial record after recorded deductions. If no net record exists, Home shows — instead of treating basic salary as net pay.", "Finance"),
+        DashboardGuideItem("Workload", "A 0–100 operational workload-pressure signal. It starts at 100 and subtracts transparent penalties for recorded duty hours, OT hours, and pending clinical tasks. Higher means less recorded workload pressure. It is not a medical or mental-health score.", "Command Center"),
         DashboardGuideItem("Today's focus", "Highlights the most useful next action based on pending clinical work and CPD progress.", "Planning / Knowledge")
     )
 
@@ -390,7 +459,13 @@ private fun DashboardGuideDialog(onDismiss: () -> Unit) {
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                Text("Home is a quick starting point. Open a workspace when you need the full details.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text("Home is a live starting point. Open a workspace when you need the full details.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Workload score formula: 100 − duty-hours penalty − OT penalty − pending-task penalty. " +
+                        "The current transparent limits are 25 points for duty load, 35 for OT load, and 20 for pending tasks.",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
                 items.forEach { item ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -413,6 +488,9 @@ private fun SectionTitle(title: String, subtitle: String) {
         Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
     }
 }
+
+private fun formatHours(value: Double): String =
+    if (value % 1.0 == 0.0) "${value.toInt()} h" else String.format(Locale.US, "%.1f h", value)
 
 private fun moneyShort(value: Double): String = when {
     value >= 1_000_000 -> "Rs.${String.format("%.1fM", value / 1_000_000)}"
