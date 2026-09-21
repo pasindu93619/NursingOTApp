@@ -257,7 +257,7 @@ private fun ShiftSnapshotCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SnapshotMetric(
                     label = "Duty",
-                    value = formatHours(${state.dutyHoursThisMonth}),
+                    value = formatHours(state.dutyHoursThisMonth),
                     detail = "Recorded duty to date",
                     icon = Icons.Default.Schedule,
                     accent = ClinicalPrimaryColor,
@@ -266,7 +266,7 @@ private fun ShiftSnapshotCard(
                 ) { onNavigate("claim_period") }
                 SnapshotMetric(
                     label = "OT",
-                    value = formatHours(${state.otHoursThisMonth}),
+                    value = formatHours(state.otHoursThisMonth),
                     detail = "36h rule included",
                     icon = Icons.Default.MoreTime,
                     accent = Amber,
