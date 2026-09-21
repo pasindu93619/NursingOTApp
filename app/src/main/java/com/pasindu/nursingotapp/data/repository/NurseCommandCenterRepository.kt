@@ -83,8 +83,8 @@ class NurseCommandCenterRepository(
                 .sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) }
 
             // NursingOS wellness/OT metrics use the universal weekly duty rule:
-            // for each complete Sunday-Saturday week, duty-derived OT is the
-            // portion of recorded duty above 36 hours. Separately recorded OT
+            // for each Sunday-Saturday week represented up to today, duty-derived
+            // OT is the portion of recorded duty above 36 hours. Separately recorded OT
             // remains additional OT and is not counted twice.
             val dutyDerivedOtHours = otRuleEntries
                 .groupBy { sundayOfWeek(it.date) }
