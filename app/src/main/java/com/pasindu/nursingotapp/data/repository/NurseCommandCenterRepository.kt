@@ -123,9 +123,7 @@ class NurseCommandCenterRepository(
                 .groupBy { sundayOfWeek(it.date) }
                 .asSequence()
                 .filter { (weekStart, _) ->
-                    val weekEnd = weekStart.plusDays(6)
-                    !weekStart.isBefore(start) && !weekEnd.isAfter(end) &&
-                        !weekEnd.isAfter(today)
+                    weekStart >= start || weekStart == currentWeekStart
                 }
                 .sumOf { (_, weekLogs) ->
                     (weekLogs.sumOf { it.computedNormalHours.toDouble().coerceAtLeast(0.0) } -
