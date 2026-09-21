@@ -93,7 +93,7 @@ class NurseCommandCenterRepository(
                     weekStart >= start || weekStart == currentWeekStart
                 }
                 .sumOf { (_, weekLogs) ->
-                    (weekLogs.sumOf { it.computedNormalHours.toDouble().coerceAtLeast(0.0) } -
+                    (weekLogs.sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) } -
                         WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS).coerceAtLeast(0.0)
                 }
 
