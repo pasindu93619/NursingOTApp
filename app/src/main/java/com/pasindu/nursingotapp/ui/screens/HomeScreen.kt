@@ -238,7 +238,7 @@ private fun ShiftSnapshotCard(
                             )
                         }
                     }
-                    Text("Current month to date • updates from your recorded entries", color = TextSecondary, fontSize = 11.sp)
+                    Text("Current OT claim period • live from your recorded entries", color = TextSecondary, fontSize = 11.sp)
                 }
                 Surface(
                     modifier = Modifier.clickable(onClick = onGuide),
@@ -258,7 +258,7 @@ private fun ShiftSnapshotCard(
                 SnapshotMetric(
                     label = "Duty",
                     value = formatHours(state.dutyHoursThisMonth),
-                    detail = "Recorded duty to date",
+                    detail = "Current claim period",
                     icon = Icons.Default.Schedule,
                     accent = ClinicalPrimaryColor,
                     surface = HomeBlueSoft,
@@ -297,9 +297,9 @@ private fun ShiftSnapshotCard(
                     Icon(Icons.Default.MoreTime, null, tint = Amber, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(7.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("OT composition", color = HomeInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("OT calculation", color = HomeInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            "${formatHours(state.dutyDerivedOtHoursThisMonth)} duty-shift OT + ${formatHours(state.additionalOtHoursThisMonth)} additional OT",
+                            "Sunday–Saturday duty hours above 36h are OT",
                             color = TextSecondary,
                             fontSize = 9.sp
                         )
@@ -467,8 +467,8 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 @Composable
 private fun DashboardGuideDialog(onDismiss: () -> Unit) {
     val items = listOf(
-        DashboardGuideItem("Duty", "Total recorded duty-shift hours from the start of the current month through today.", "OT & Claims"),
-        DashboardGuideItem("OT", "Total OT through today = duty-shift OT from the Sunday–Saturday 36h rule + separately recorded additional OT. The same duty hours are not counted twice.", "OT & Claims"),
+        DashboardGuideItem("Duty", "Total recorded duty-shift hours inside the current OT claim period, from its start through today when the period is still in progress.", "OT & Claims"),
+        DashboardGuideItem("OT", "OT through today = for each Sunday–Saturday week represented in the current OT claim period, max(weekly duty-shift hours − 36, 0). There is no separate additional-OT addition on Home.", "OT & Claims"),
         DashboardGuideItem("Net", "Net salary from the current month's saved financial record after recorded deductions. If no net record exists, Home shows — instead of treating basic salary as net pay.", "Finance"),
         DashboardGuideItem("Workload", "A 0–100 operational workload-pressure signal. It starts at 100 and subtracts transparent penalties for recorded duty hours, OT hours, and pending clinical tasks. Higher means less recorded workload pressure. It is not a medical or mental-health score.", "Command Center"),
         DashboardGuideItem("Today's focus", "Highlights the most useful next action based on pending clinical work and CPD progress.", "Planning / Knowledge")
