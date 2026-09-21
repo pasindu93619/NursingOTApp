@@ -14,7 +14,7 @@ data class NurseCommandCenterState(
     val dutyHoursThisMonth: Double = 0.0,
     val claimCompletedDays: Int = 0,
     val claimTotalDays: Int = 0,
-    val estimatedNetSalary: Double = 0.0,
+    val estimatedNetSalary: Double? = null,
     val estimatedGrossSalary: Double = 0.0,
     val cpdPoints: Int = 0,
     val cpdTarget: Int = 10,
@@ -46,7 +46,7 @@ data class NurseCommandCenterState(
 
     /** Ratio of net pay retained from gross pay, expressed as 0..1. */
     val netRetentionRatio: Float
-        get() = if (estimatedGrossSalary > 0.0 && estimatedNetSalary >= 0.0) {
+        get() = if (estimatedGrossSalary > 0.0 && estimatedNetSalary != null && estimatedNetSalary >= 0.0) {
             (estimatedNetSalary / estimatedGrossSalary).toFloat().coerceIn(0f, 1f)
         } else {
             1f

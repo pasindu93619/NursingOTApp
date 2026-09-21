@@ -811,6 +811,14 @@ private fun Section(title: String, subtitle: String) {
     }
 }
 
+private fun formatMoneyShort(value: Double?): String = value?.let { amount ->
+    when {
+        amount >= 1_000_000 -> "Rs.${String.format("%.1fM", amount / 1_000_000)}"
+        amount >= 100_000 -> "Rs.${String.format("%.0fK", amount / 1_000)}"
+        else -> "Rs.${amount.toInt()}"
+    }
+} ?: "—"
+
 private fun wellnessColorV2(score: Int): Color = when {
     score >= 80 -> Emerald
     score >= 60 -> Amber
