@@ -101,8 +101,28 @@ class NurseCommandCenterRepository(
             }
 
             val payableNormalHours = weeklyResult?.totalNormalHours ?: 0.0
-            val workedOtHours = workedToDateEntries
+
+            // NursingOS wellness/OT metrics use the universal weekly duty rule:
+            // for each complete Sunday-Saturday week, duty-derived OT is the
+            // portion of recorded duty above 36 hours. Separately recorded OT
+            // remains additional OT and is not counted twice.
+            val dutyDerivedOtHours = monthlyLogs
+                .groupBy { sundayOfWeek(it.date) }
+                .asSequence()
+                .filter { (weekStart, _) ->
+                    val weekEnd = weekStart.plusDays(6)
+                    !weekStart.isBefore(start) && !weekEnd.isAfter(end) &&
+                        !weekEnd.isAfter(today)
+                }
+                .sumOf { (_, weekLogs) ->
+                    (weekLogs.sumOf { it.computedNormalHours.toDouble().coerceAtLeast(0.0) } -
+                        WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS).coerceAtLeast(0.0)
+                }
+
+            val additionalOtHours = workedToDateEntries
                 .sumOf { it.otHours.toDouble().coerceAtLeast(0.0) }
+            val workedOtHours = dutyDerivedOtHours + additionalOtHours
+
             val phHours = workedToDateEntries
                 .filter { it.isPH }
                 .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
