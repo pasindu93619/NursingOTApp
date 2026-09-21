@@ -32,7 +32,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -136,6 +135,12 @@ fun CarePulseModernScreen(
                         trackColor = scoreColor.copy(alpha = 0.10f)
                     )
                     Text(
+                        text = "Claim-period scope: ${state.claimCompletedDays} of ${state.claimTotalDays} claim days recorded.",
+                        color = TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
                         text = when {
                             score >= 80 -> "Your current workload signal is in the balanced range."
                             score >= 60 -> "Your current workload signal suggests taking a closer look at recovery time."
@@ -149,9 +154,9 @@ fun CarePulseModernScreen(
             }
 
             SectionLabel("WORKSPACES", "Move directly to the data behind the signal")
-            Action("Clinical workspace", "${state.pendingClinicalTasks} pending clinical task(s)", Icons.Default.MedicalServices, ClinicalPrimaryColor, CareBlueSoft) { onNavigate("clinical_planning") }
+            Action("Clinical workspace", "${state.pendingClinicalTasks} pending clinical task(s)", Icons.Default.MedicalServices, Amber, CareAmberSoft) { onNavigate("clinical_planning") }
             Action("Shift analytics", "Review workload trends and existing burnout meter", Icons.Default.Analytics, Purple, CarePurpleSoft) { onNavigate("analytics") }
-            Action("OT & claims", "Keep duty and claim records current", Icons.Default.Schedule, Amber, CareAmberSoft) { onNavigate("claim_period") }
+            Action("OT & claims", "Keep duty and claim records current", Icons.Default.Schedule, ClinicalPrimaryColor, CareBlueSoft) { onNavigate("claim_period") }
             Action("Finance", "Review salary and deduction data", Icons.Default.AccountBalance, Emerald, CareMintSoft) { onNavigate("advanced_finance_hub") }
 
             Card(
