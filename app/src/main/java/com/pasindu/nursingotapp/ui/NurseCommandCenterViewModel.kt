@@ -53,8 +53,6 @@ class NurseCommandCenterViewModel @Inject constructor(
                         unitName = profile?.unit.orEmpty(),
                         dutyHoursThisMonth = snapshot.dutyHours,
                         otHoursThisMonth = snapshot.otHours,
-                        dutyDerivedOtHoursThisMonth = snapshot.dutyDerivedOtHours,
-                        additionalOtHoursThisMonth = snapshot.additionalOtHours,
                         phHoursThisMonth = snapshot.phHours,
                         estimatedGrossSalary = snapshot.grossSalary,
                         estimatedNetSalary = snapshot.netSalary,
