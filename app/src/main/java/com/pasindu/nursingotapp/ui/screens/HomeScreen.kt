@@ -166,7 +166,7 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
             modifier = Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(28.dp)).padding(horizontal = 20.dp, vertical = 19.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(Modifier.size(64.dp).border(1.dp, Color.White.copy(alpha = 0.34f), CircleShape), CircleShape, Color.White.copy(alpha = 0.12f)) {
+            Surface(Modifier.size(64.dp), CircleShape, Color.White.copy(alpha = 0.12f)) {
                 Box(contentAlignment = Alignment.Center) {
                     Surface(Modifier.size(52.dp), CircleShape, Color.White.copy(alpha = 0.10f)) {
                         Box(contentAlignment = Alignment.Center) {
