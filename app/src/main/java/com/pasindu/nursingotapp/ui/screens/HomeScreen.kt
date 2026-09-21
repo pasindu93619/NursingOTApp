@@ -285,7 +285,7 @@ private fun ShiftSnapshotCard(
                 ) { onNavigate("claim_period") }
                 SnapshotMetric(
                     label = "Net",
-                    value = if (state.estimatedNetSalary > 0.0) moneyShort(state.estimatedNetSalary) else "—",
+                    value = state.estimatedNetSalary?.takeIf { it > 0.0 }?.let(::moneyShort) ?: "—",
                     detail = "After recorded deductions",
                     icon = Icons.Default.Payments,
                     accent = Emerald,
@@ -522,7 +522,7 @@ private fun DashboardGuideDialog(
                     GuideSection("4", "SHIFT SNAPSHOT", "What the numbers mean", ClinicalPrimaryColor) {
                         SnapshotGuideNumber("Duty", formatHours(state.dutyHoursThisMonth), "Total recorded duty-shift hours within your current OT claim period, from its start through today when the period is still in progress.", ClinicalPrimaryColor, HomeBlueSoft, "OT & Claims") { onNavigate("claim_period") }
                         SnapshotGuideNumber("OT", formatHours(state.otHoursThisMonth), "For each Sunday–Saturday week represented in the current OT claim period, OT is max(weekly duty-shift hours − " + WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS.toInt() + ", 0). DailyEntryEntity.otHours is already part of the recorded duty-shift entry, so Home does not add a second separate OT category.", Amber, HomeAmberSoft, "OT & Claims") { onNavigate("claim_period") }
-                        SnapshotGuideNumber("Net", if (state.estimatedNetSalary > 0.0) moneyShort(state.estimatedNetSalary) else "—", "Net salary from the current month's saved financial record after recorded deductions. If no net record exists, Home shows — instead of treating basic salary as net pay.", Emerald, HomeMintSoft, "Finance") { onNavigate("advanced_finance_hub") }
+                        SnapshotGuideNumber("Net", state.estimatedNetSalary?.takeIf { it > 0.0 }?.let(::moneyShort) ?: "—", "Net salary from the current month's saved financial record after recorded deductions. If no net record exists, Home shows — instead of treating basic salary as net pay.", Emerald, HomeMintSoft, "Finance") { onNavigate("advanced_finance_hub") }
                         SnapshotGuideNumber("Workload pressure", state.wellnessScore.coerceIn(0, 100).toString() + "/100", "100 means low pressure; lower scores mean higher pressure. The score is driven down by higher recorded duty hours, higher OT hours, and more pending clinical tasks. Workload score formula: 100 − duty-hours penalty − OT penalty − pending-task penalty. The current transparent limits are 25 points for duty load, 35 for OT load, and 20 for pending tasks.", Purple, HomePurpleSoft, "Command Center") { onNavigate("nurse_command_center") }
                     }
                     TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Got it", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold) }
