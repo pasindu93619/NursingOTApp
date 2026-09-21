@@ -1,4 +1,9 @@
 package com.pasindu.nursingotapp.ui.screens
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.key
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -38,6 +43,8 @@ import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.MedicalBlue
 import com.pasindu.nursingotapp.ui.theme.NursingShapes
 import com.pasindu.nursingotapp.ui.theme.Purple
+import com.pasindu.nursingotapp.ui.theme.PositiveGradient
+import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
@@ -733,6 +740,10 @@ fun ClaimPeriodModernScreen(
         mutableStateOf(defaultSuggestion)
     }
 
+    val activeSelectedPeriod =
+        !today.isBefore(selectedSuggestion.startDate) &&
+                !today.isAfter(selectedSuggestion.endDate)
+
     var wardType by remember {
         mutableStateOf("Normal")
     }
@@ -748,6 +759,17 @@ fun ClaimPeriodModernScreen(
     var showDeleteAll by remember {
         mutableStateOf(false)
     }
+
+    val otArrowPulse = rememberInfiniteTransition(label = "otStartArrowPulse")
+    val otArrowAlpha by otArrowPulse.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "otStartArrowAlpha"
+    )
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -834,13 +856,43 @@ fun ClaimPeriodModernScreen(
                         Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Text(
-                            "NURSINGOS • DUTY",
-                            color = SurfaceWhite.copy(.72f),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.4.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "NURSINGOS • DUTY",
+                                color = SurfaceWhite.copy(.72f),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.4.sp
+                            )
+
+                            if (activeSelectedPeriod) {
+                                Spacer(Modifier.width(8.dp))
+
+                                Surface(
+                                    modifier = Modifier.border(
+                                        1.dp,
+                                        SurfaceWhite.copy(.18f),
+                                        NursingShapes.pill
+                                    ),
+                                    shape = NursingShapes.pill,
+                                    color = SurfaceWhite.copy(.16f)
+                                ) {
+                                    Text(
+                                        "ACTIVE PERIOD",
+                                        modifier = Modifier.padding(
+                                            horizontal = 8.dp,
+                                            vertical = 4.dp
+                                        ),
+                                        color = SurfaceWhite,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = .8.sp
+                                    )
+                                }
+                            }
+                        }
 
                         Text(
                             "Your OT workspace",
@@ -996,7 +1048,7 @@ fun ClaimPeriodModernScreen(
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
                                 contentDescription = null,
-                                tint = ClinicalPrimaryColor
+                                tint = ClinicalPrimaryColor.copy(alpha = otArrowAlpha)
                             )
                         }
                     }
@@ -1049,6 +1101,41 @@ fun ClaimPeriodModernScreen(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
+
+                                val elapsedDays = when {
+                                    today.isBefore(selectedSuggestion.startDate) -> 0
+                                    today.isAfter(selectedSuggestion.endDate) -> selectedSuggestion.days
+                                    else -> ChronoUnit.DAYS.between(
+                                        selectedSuggestion.startDate,
+                                        today
+                                    ).toInt() + 1
+                                }
+                                val elapsedFraction =
+                                    (elapsedDays.toFloat() / selectedSuggestion.days.toFloat())
+                                        .coerceIn(0f, 1f)
+
+                                Spacer(Modifier.height(8.dp))
+
+                                Text(
+                                    "${elapsedDays} of ${selectedSuggestion.days} days elapsed",
+                                    color = TextSecondary,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .background(SurfaceMuted, RoundedCornerShape(50))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(elapsedFraction)
+                                            .fillMaxHeight()
+                                            .background(PositiveGradient, RoundedCornerShape(50))
+                                    )
+                                }
                             }
                         }
                     }
@@ -1079,28 +1166,54 @@ fun ClaimPeriodModernScreen(
                                     ),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val weekIsPast = range.second.isBefore(today)
+                                    val weekIsCurrent =
+                                        !today.isBefore(range.first) &&
+                                                !today.isAfter(range.second)
+
                                     Surface(
-                                        modifier = Modifier.size(27.dp),
+                                        modifier = Modifier
+                                            .size(if (weekIsCurrent) 31.dp else 27.dp)
+                                            .then(
+                                                if (weekIsCurrent) {
+                                                    Modifier.border(
+                                                        2.dp,
+                                                        MedicalBlue.copy(.30f),
+                                                        CircleShape
+                                                    )
+                                                } else {
+                                                    Modifier
+                                                }
+                                            ),
                                         shape = CircleShape,
-                                        color = if (index == 0) {
-                                            OtModernBlueSoft
-                                        } else {
-                                            OtModernPurpleSoft
+                                        color = when {
+                                            weekIsPast -> Emerald.copy(.14f)
+                                            weekIsCurrent -> MedicalBlue.copy(.14f)
+                                            else -> SurfaceMuted
                                         }
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                "${index + 1}",
-                                                color = if (index == 0) {
-                                                    ClinicalPrimaryColor
-                                                } else {
-                                                    Purple
-                                                },
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Black
-                                            )
+                                            if (weekIsPast) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Completed week",
+                                                    tint = Emerald,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    "${index + 1}",
+                                                    color = if (weekIsCurrent) {
+                                                        MedicalBlue
+                                                    } else {
+                                                        TextSecondary
+                                                    },
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Black
+                                                )
+                                            }
                                         }
                                     }
 
@@ -1141,12 +1254,22 @@ fun ClaimPeriodModernScreen(
                             Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = Amber,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Surface(
+                                modifier = Modifier.size(32.dp),
+                                shape = CircleShape,
+                                color = Amber.copy(alpha = 0.14f)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = Amber,
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                }
+                            }
 
                             Spacer(Modifier.width(9.dp))
 
@@ -1410,6 +1533,7 @@ fun ClaimPeriodModernScreen(
                 periods.forEach { period ->
                     ModernSavedPeriodCard(
                         period = period,
+                        today = today,
                         onOpen = {
                             onNavigateToDailyEntry(
                                 period.id,
@@ -1590,6 +1714,7 @@ fun ClaimPeriodModernScreen(
     @Composable
     private fun ModernSavedPeriodCard(
         period: ClaimPeriodEntity,
+        today: LocalDate,
         onOpen: () -> Unit,
         onDelete: () -> Unit
     ) {
@@ -1609,6 +1734,24 @@ fun ClaimPeriodModernScreen(
         val special = period.wardType == "Special"
         val accent = if (special) Purple else ClinicalPrimaryColor
         val surface = if (special) OtModernPurpleSoft else OtModernBlueSoft
+
+        val status = when {
+            today.isBefore(period.startDate) -> "Upcoming"
+            today.isAfter(period.endDate) -> "Completed"
+            else -> "Active"
+        }
+
+        val statusColor = when (status) {
+            "Active" -> Emerald
+            "Upcoming" -> Amber
+            else -> TextSecondary
+        }
+
+        val statusSurface = when (status) {
+            "Active" -> OtModernMintSoft
+            "Upcoming" -> OtModernAmberSoft
+            else -> SurfaceMuted
+        }
 
         Card(
             Modifier
@@ -1647,16 +1790,47 @@ fun ClaimPeriodModernScreen(
                     Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    Text(
-                        if (special) {
-                            "Special unit"
-                        } else {
-                            "Normal ward"
-                        },
-                        color = OtModernInk,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (special) {
+                                "Special unit"
+                            } else {
+                                "Normal ward"
+                            },
+                            color = OtModernInk,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Surface(
+                            modifier = Modifier.border(
+                                if (status == "Active") 1.dp else 0.dp,
+                                if (status == "Active") {
+                                    MedicalBlue.copy(.60f)
+                                } else {
+                                    Color.Transparent
+                                },
+                                NursingShapes.pill
+                            ),
+                            shape = NursingShapes.pill,
+                            color = statusSurface
+                        ) {
+                            Text(
+                                status,
+                                modifier = Modifier.padding(
+                                    horizontal = 8.dp,
+                                    vertical = 4.dp
+                                ),
+                                color = statusColor,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = .4.sp
+                            )
+                        }
+                    }
 
                     Text(
                         "${period.startDate.format(formatter)} → ${period.endDate.format(formatter)}",
@@ -1682,5 +1856,3 @@ fun ClaimPeriodModernScreen(
                     )
                 }
             }
-        }
-    }
