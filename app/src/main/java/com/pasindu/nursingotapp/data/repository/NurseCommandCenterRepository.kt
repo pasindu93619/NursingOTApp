@@ -20,6 +20,7 @@ class NurseCommandCenterRepository(
     private val database: AppDatabase
 ) {
     private val profileDao = database.profileDao()
+    private val claimPeriodDao = database.claimPeriodDao()
     private val dailyEntryDao = database.dailyEntryDao()
     private val financialDao = database.financialDao()
     private val clinicalPlanningDao = database.clinicalPlanningDao()
@@ -29,8 +30,6 @@ class NurseCommandCenterRepository(
         val profile: ProfileEntity?,
         val dutyHours: Double,
         val otHours: Double,
-        val dutyDerivedOtHours: Double,
-        val additionalOtHours: Double,
         val phHours: Double,
         val claimCompletedDays: Int,
         val claimTotalDays: Int,
@@ -55,55 +54,63 @@ class NurseCommandCenterRepository(
 
         return combine(
             profileDao.observeProfile(),
+            claimPeriodDao.observeClaimPeriods(),
             dailyEntryDao.observeAllEntries(),
             financialDao.getAllFinancialRecords(),
             clinicalPlanningDao.getAllTasks(),
             knowledgeHubDao.getAllCpdLogs()
-        ) { currentProfile, entries, finance, clinicalTasks, cpdLogs ->
+        ) { currentProfile, claimPeriods, entries, finance, clinicalTasks, cpdLogs ->
+            val currentClaimPeriod = claimPeriods
+                .asSequence()
+                .filter { period ->
+                    !today.isBefore(period.startDate) && !today.isAfter(period.endDate)
+                }
+                .maxByOrNull { it.startDate }
+
+            val claimEndThroughToday = currentClaimPeriod?.endDate?.let { periodEnd ->
+                minOf(periodEnd, today)
+            }
+
+            val claimEntries = currentClaimPeriod?.let { period ->
+                val effectiveEnd = claimEndThroughToday ?: period.endDate
+                entries.filter { entry ->
+                    entry.claimPeriodId == period.id &&
+                        !entry.date.isBefore(period.startDate) &&
+                        !entry.date.isAfter(effectiveEnd)
+                }
+            }.orEmpty()
+
+            // Home Duty is the actual recorded hours in the CURRENT OT claim period,
+            // not the calendar month. A DailyEntry shift can contain both normal-duty
+            // hours and separately entered OT hours, so both fields are part of the
+            // recorded duty-shift total.
+            val dutyHoursToDate = claimEntries.sumOf { entry ->
+                (entry.normalHours.toDouble() + entry.otHours.toDouble())
+                    .coerceAtLeast(0.0)
+            }
+
+            // Home OT uses only the universal 36-hour Sunday-Saturday threshold.
+            // There is no separate Home "additional OT" category: DailyEntryEntity.otHours
+            // is already a component of the same recorded duty-shift entry.
+            val dutyOtHours = claimEntries
+                .groupBy { sundayOfWeek(it.date) }
+                .values
+                .sumOf { weekEntries ->
+                    val weekDutyHours = weekEntries.sumOf { entry ->
+                        (entry.normalHours.toDouble() + entry.otHours.toDouble())
+                            .coerceAtLeast(0.0)
+                    }
+                    (weekDutyHours - WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS)
+                        .coerceAtLeast(0.0)
+                }
+
+            val phHours = claimEntries
+                .filter { it.isPH }
+                .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
+
             val monthlyEntries = entries.filter { entry ->
                 entry.date >= start && entry.date <= end
             }
-            val workedToDateEntries = monthlyEntries.filter { entry -> entry.date <= today }
-            val currentWeekStart = sundayOfWeek(today)
-
-            // OT from duty shifts must use the same universal 36h Sunday-Saturday
-            // rule as the rest of the app. Include the current week-to-date so
-            // Home stays live, while keeping additional OT separate to avoid
-            // double-counting the same hours.
-            val otRuleEntries = entries.filter { entry ->
-                entry.date <= today &&
-                    (entry.date >= start || sundayOfWeek(entry.date) == currentWeekStart)
-            }
-
-            val todayEntry = entries
-                .filter { it.date == today }
-                .maxByOrNull { it.id }
-
-            val dutyHoursToDate = workedToDateEntries
-                .sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) }
-
-            // NursingOS wellness/OT metrics use the universal weekly duty rule:
-            // for each Sunday-Saturday week represented up to today, duty-derived
-            // OT is the portion of recorded duty above 36 hours. Separately recorded OT
-            // remains additional OT and is not counted twice.
-            val dutyDerivedOtHours = otRuleEntries
-                .groupBy { sundayOfWeek(it.date) }
-                .asSequence()
-                .filter { (weekStart, _) ->
-                    weekStart >= start || weekStart == currentWeekStart
-                }
-                .sumOf { (_, weekLogs) ->
-                    (weekLogs.sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) } -
-                        WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS).coerceAtLeast(0.0)
-                }
-
-            val additionalOtHours = workedToDateEntries
-                .sumOf { it.otHours.toDouble().coerceAtLeast(0.0) }
-            val workedOtHours = dutyDerivedOtHours + additionalOtHours
-
-            val phHours = workedToDateEntries
-                .filter { it.isPH }
-                .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
 
             val currentMonthKey = month.toString()
             val currentMonthFinance = finance.firstOrNull {
@@ -116,12 +123,14 @@ class NurseCommandCenterRepository(
                         .thenBy { it.triggerTime }
                 )
 
+            val todayEntry = entries
+                .filter { it.date == today }
+                .maxByOrNull { it.id }
+
             Snapshot(
                 profile = currentProfile,
                 dutyHours = dutyHoursToDate,
-                otHours = workedOtHours,
-                dutyDerivedOtHours = dutyDerivedOtHours,
-                additionalOtHours = additionalOtHours,
+                otHours = dutyOtHours,
                 phHours = phHours,
                 claimCompletedDays = monthlyEntries.count {
                     !it.isLeave && (
