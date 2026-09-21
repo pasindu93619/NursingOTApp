@@ -3,7 +3,6 @@ package com.pasindu.nursingotapp.data.repository
 import com.pasindu.nursingotapp.data.local.AppDatabase
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
-import com.pasindu.nursingotapp.data.model.DailyLog
 import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -79,38 +78,6 @@ class NurseCommandCenterRepository(
             val todayEntry = entries
                 .filter { it.date == today }
                 .maxByOrNull { it.id }
-
-            val monthlyLogs = monthlyEntries.map { entry ->
-                DailyLog(
-                    id = entry.id,
-                    date = entry.date,
-                    isPH = entry.isPH,
-                    isDO = entry.isDO,
-                    isLeave = entry.isLeave,
-                    leaveType = entry.leaveType,
-                    reason = entry.reason,
-                    wardOverride = entry.wardOverride,
-                    normalTimeInStr = entry.normalTimeIn,
-                    normalTimeOutStr = entry.normalTimeOut,
-                    otTimeInStr = entry.otTimeIn,
-                    otTimeOutStr = entry.otTimeOut,
-                    computedNormalHours = entry.normalHours,
-                    computedOtHours = entry.otHours
-                )
-            }
-
-            val weeklyResult = if (monthlyLogs.isEmpty()) {
-                null
-            } else {
-                WeeklyOtCalculator.calculate(
-                    logs = monthlyLogs,
-                    claimStart = start,
-                    claimEnd = end,
-                    otRate = 0.0,
-                    dayRate = 0.0,
-                    doRate = 0.0
-                )
-            }
 
             val dutyHoursToDate = workedToDateEntries
                 .sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) }
