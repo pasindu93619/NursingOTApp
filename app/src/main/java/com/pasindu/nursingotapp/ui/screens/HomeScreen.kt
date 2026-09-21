@@ -73,6 +73,7 @@ import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
+import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 
@@ -254,9 +255,33 @@ private fun ShiftSnapshotCard(
 
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SnapshotMetric("Duty", "${state.dutyHoursThisMonth.toInt()} h", Icons.Default.Schedule, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
-                SnapshotMetric("OT", "${state.otHoursThisMonth.toInt()} h", Icons.Default.MoreTime, Amber, HomeAmberSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
-                SnapshotMetric("Net", moneyShort(state.estimatedNetSalary), Icons.Default.Payments, Emerald, HomeMintSoft, Modifier.weight(1f)) { onNavigate("advanced_finance_hub") }
+                SnapshotMetric(
+                    label = "Duty",
+                    value = formatHours(${state.dutyHoursThisMonth}),
+                    detail = "Recorded duty to date",
+                    icon = Icons.Default.Schedule,
+                    accent = ClinicalPrimaryColor,
+                    surface = HomeBlueSoft,
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate("claim_period") }
+                SnapshotMetric(
+                    label = "OT",
+                    value = formatHours(${state.otHoursThisMonth}),
+                    detail = "36h rule included",
+                    icon = Icons.Default.MoreTime,
+                    accent = Amber,
+                    surface = HomeAmberSoft,
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate("claim_period") }
+                SnapshotMetric(
+                    label = "Net",
+                    value = if (state.estimatedNetSalary > 0.0) moneyShort(state.estimatedNetSalary) else "—",
+                    detail = "After recorded deductions",
+                    icon = Icons.Default.Payments,
+                    accent = Emerald,
+                    surface = HomeMintSoft,
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate("advanced_finance_hub") }
             }
 
             Spacer(Modifier.height(12.dp))
