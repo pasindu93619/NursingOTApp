@@ -285,13 +285,18 @@ private fun ShiftSnapshotCard(
                 ) { onNavigate("claim_period") }
                 SnapshotMetric(
                     label = "Net",
-                    value = state.estimatedNetSalary?.takeIf { it > 0.0 }?.let(::moneyShort) ?: "—",
+                    value = state.estimatedNetSalary
+                        ?.takeIf { it > 0.0 }
+                        ?.let(::moneyShort)
+                        ?: "—",
                     detail = "After recorded deductions",
                     icon = Icons.Default.Payments,
                     accent = Emerald,
                     surface = HomeMintSoft,
                     modifier = Modifier.weight(1f)
-                ) { onNavigate("advanced_finance_hub") }
+                ) {
+                    onNavigate("advanced_finance_hub")
+                }
             }
 
             Spacer(Modifier.height(12.dp))
