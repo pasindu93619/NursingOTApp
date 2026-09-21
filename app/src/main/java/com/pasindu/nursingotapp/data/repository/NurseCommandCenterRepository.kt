@@ -1,7 +1,11 @@
 package com.pasindu.nursingotapp.data.repository
 
 import com.pasindu.nursingotapp.data.local.AppDatabase
+import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
+import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
+import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
+import com.pasindu.nursingotapp.data.local.entity.FinancialRecordEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import kotlinx.coroutines.flow.Flow
@@ -57,9 +61,22 @@ class NurseCommandCenterRepository(
             claimPeriodDao.observeClaimPeriods(),
             dailyEntryDao.observeAllEntries(),
             financialDao.getAllFinancialRecords(),
-            clinicalPlanningDao.getAllTasks(),
-            knowledgeHubDao.getAllCpdLogs()
-        ) { currentProfile, claimPeriods, entries, finance, clinicalTasks, cpdLogs ->
+            clinicalPlanningDao.getAllTasks()
+        ) { currentProfile, claimPeriods, entries, finance, clinicalTasks ->
+            FiveWay(
+                currentProfile = currentProfile,
+                claimPeriods = claimPeriods,
+                entries = entries,
+                finance = finance,
+                clinicalTasks = clinicalTasks
+            )
+        }.combine(knowledgeHubDao.getAllCpdLogs()) { five, cpdLogs ->
+            val currentProfile = five.currentProfile
+            val claimPeriods = five.claimPeriods
+            val entries = five.entries
+            val finance = five.finance
+            val clinicalTasks = five.clinicalTasks
+
             val currentClaimPeriod = claimPeriods
                 .asSequence()
                 .filter { period ->
@@ -162,6 +179,14 @@ class NurseCommandCenterRepository(
             )
         }
     }
+
+    private data class FiveWay(
+        val currentProfile: ProfileEntity?,
+        val claimPeriods: List<ClaimPeriodEntity>,
+        val entries: List<DailyEntryEntity>,
+        val finance: List<FinancialRecordEntity>,
+        val clinicalTasks: List<ClinicalTaskEntity>
+    )
 
     suspend fun setClinicalTaskCompleted(taskId: Int, completed: Boolean = true) {
         clinicalPlanningDao.setTaskCompleted(taskId, completed)
