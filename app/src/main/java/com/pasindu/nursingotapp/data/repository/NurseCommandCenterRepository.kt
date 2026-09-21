@@ -180,6 +180,19 @@ class NurseCommandCenterRepository(
         clinicalPlanningDao.setTaskCompleted(taskId, completed)
     }
 
+    private fun sundayOfWeek(date: LocalDate): LocalDate {
+        val daysFromSunday = when (date.dayOfWeek) {
+            java.time.DayOfWeek.SUNDAY -> 0L
+            java.time.DayOfWeek.MONDAY -> 1L
+            java.time.DayOfWeek.TUESDAY -> 2L
+            java.time.DayOfWeek.WEDNESDAY -> 3L
+            java.time.DayOfWeek.THURSDAY -> 4L
+            java.time.DayOfWeek.FRIDAY -> 5L
+            java.time.DayOfWeek.SATURDAY -> 6L
+        }
+        return date.minusDays(daysFromSunday)
+    }
+
     private fun priorityRank(priority: String): Int = when (priority.uppercase()) {
         "HIGH", "CRITICAL", "URGENT" -> 0
         "MEDIUM" -> 1
