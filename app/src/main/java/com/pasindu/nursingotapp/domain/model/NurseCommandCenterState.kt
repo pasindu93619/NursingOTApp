@@ -10,6 +10,8 @@ data class NurseCommandCenterState(
     val nurseName: String = "Nursing Officer",
     val unitName: String = "",
     val otHoursThisMonth: Double = 0.0,
+    val dutyDerivedOtHoursThisMonth: Double = 0.0,
+    val additionalOtHoursThisMonth: Double = 0.0,
     val phHoursThisMonth: Double = 0.0,
     val dutyHoursThisMonth: Double = 0.0,
     val claimCompletedDays: Int = 0,
