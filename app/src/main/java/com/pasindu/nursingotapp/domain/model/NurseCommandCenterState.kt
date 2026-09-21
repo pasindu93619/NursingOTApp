@@ -265,7 +265,7 @@ data class NurseCommandCenterState(
             if (claimTotalDays > 0 && claimProgress < 0.85f && todayClaimRecorded && nursingOsDecision.route != "claim_period") {
                 add(AgendaItem("monthly_claim", AgendaPriority.LATER, "Keep the monthly claim current", "$claimCompletedDays/$claimTotalDays days recorded.", "Open OT Claim", "claim_period"))
             }
-            if (estimatedGrossSalary > 0.0 && estimatedNetSalary > 0.0 && netRetentionRatio < 0.80f && nursingOsDecision.route != "advanced_finance_hub") {
+            if (estimatedGrossSalary > 0.0 && estimatedNetSalary != null && estimatedNetSalary > 0.0 && netRetentionRatio < 0.80f && nursingOsDecision.route != "advanced_finance_hub") {
                 add(AgendaItem("deductions", AgendaPriority.LATER, "Review deductions", "Net pay is below 80% of gross pay.", "Open Finance", "advanced_finance_hub"))
             }
         }
