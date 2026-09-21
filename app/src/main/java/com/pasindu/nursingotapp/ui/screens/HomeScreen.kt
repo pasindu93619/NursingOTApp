@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import java.util.Locale
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
+import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
@@ -151,7 +152,7 @@ fun HomeScreen(
         item { Spacer(Modifier.height(8.dp)) }
     }
 
-    if (showGuide) DashboardGuideDialog { showGuide = false }
+    if (showGuide) DashboardGuideDialog(state = commandState) { showGuide = false }
 }
 
 @Composable
@@ -238,14 +239,19 @@ private fun ShiftSnapshotCard(
                     Text("Current OT claim period • live from your recorded entries", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
                 Surface(
-                    modifier = Modifier.clickable(onClick = onGuide),
-                    shape = RoundedCornerShape(50.dp),
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(onClick = onGuide),
+                    shape = CircleShape,
                     color = HomeBlueSoft
                 ) {
-                    Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text("Guide", color = ClinicalPrimaryColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Info,
+                            "Open NursingOS Guide",
+                            tint = ClinicalPrimaryColor,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
@@ -459,10 +465,13 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 }
 
 @Composable
-private fun DashboardGuideDialog(onDismiss: () -> Unit) {
+private fun DashboardGuideDialog(
+    state: NurseCommandCenterState,
+    onDismiss: () -> Unit
+) {
     val items = listOf(
         DashboardGuideItem("Duty", "Total recorded duty-shift hours inside the current OT claim period, from its start through today when the period is still in progress.", "OT & Claims"),
-        DashboardGuideItem("OT", "OT through today = for each Sunday–Saturday week represented in the current OT claim period, max(weekly duty-shift hours − 36, 0). There is no separate additional-OT addition on Home.", "OT & Claims"),
+        DashboardGuideItem("OT", "OT through today = for each Sunday–Saturday week represented in the current OT claim period, max(weekly duty-shift hours − ${'$'}{WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS.toInt()}, 0). There is no separate Home "additional OT" category: DailyEntryEntity.otHours is already part of the recorded duty-shift entry.", "OT & Claims"),
         DashboardGuideItem("Net", "Net salary from the current month's saved financial record after recorded deductions. If no net record exists, Home shows — instead of treating basic salary as net pay.", "Finance"),
         DashboardGuideItem("Workload", "A 0–100 operational workload-pressure signal. It starts at 100 and subtracts transparent penalties for recorded duty hours, OT hours, and pending clinical tasks. Higher means less recorded workload pressure. It is not a medical or mental-health score.", "Command Center"),
         DashboardGuideItem("Today's focus", "Highlights the most useful next action based on pending clinical work and CPD progress.", "Planning / Knowledge")
@@ -473,19 +482,36 @@ private fun DashboardGuideDialog(onDismiss: () -> Unit) {
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Default.Info, null, tint = ClinicalPrimaryColor, modifier = Modifier.size(22.dp))
-                Text("How to read Home", fontWeight = FontWeight.Bold)
+                Text("Your daily dashboard", fontWeight = FontWeight.Bold)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                Text("Home is a live starting point. Open a workspace when you need the full details.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Home is a live starting point. Open a workspace when you need the full details.",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
                 Text(
                     "Workload score formula: 100 − duty-hours penalty − OT penalty − pending-task penalty. " +
                         "The current transparent limits are 25 points for duty load, 35 for OT load, and 20 for pending tasks.",
                     color = TextSecondary,
                     style = MaterialTheme.typography.bodySmall
                 )
-                items.forEach { item ->
+
+                items.take(3).forEach { item ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(item.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(item.action, color = ClinicalPrimaryColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
+                        Text(item.meaning, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                SnapshotNumbersGuideSection(state)
+
+                items.drop(3).forEach { item ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(item.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -498,6 +524,127 @@ private fun DashboardGuideDialog(onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } }
     )
+}
+
+@Composable
+private fun SnapshotNumbersGuideSection(state: NurseCommandCenterState) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = HomeBlueSoft.copy(alpha = 0.72f)
+    ) {
+        Column(
+            Modifier.padding(13.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(34.dp),
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.86f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            "4",
+                            color = ClinicalPrimaryColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+                Spacer(Modifier.width(9.dp))
+                Column {
+                    Text(
+                        "04 • SHIFT SNAPSHOT",
+                        color = ClinicalPrimaryColor,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    )
+                    Text(
+                        "What the numbers mean",
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            SnapshotGuideNumber(
+                label = "Duty",
+                value = formatHours(state.dutyHoursThisMonth),
+                description = "Total recorded duty-shift hours within your current OT claim period (for example, Aug 30 – Sep 26). It updates as you log or edit duty entries for this period."
+            )
+            SnapshotGuideNumber(
+                label = "OT",
+                value = formatHours(state.otHoursThisMonth),
+                description = "Hours beyond ${'$'}{WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS.toInt()} in any single Sunday–Saturday week within your claim period. Example: if you worked 48h one week, 12h of that is OT."
+            )
+            SnapshotGuideNumber(
+                label = "Net",
+                value = if (state.estimatedNetSalary > 0.0) moneyShort(state.estimatedNetSalary) else "—",
+                description = "Your saved net salary for the current month, after recorded deductions. Shows '—' until you save a financial record for this month — this is never the same as basic salary."
+            )
+            SnapshotGuideNumber(
+                label = "Workload pressure",
+                value = "${state.wellnessScore.coerceIn(0, 100)}/100",
+                description = "100 means low pressure; lower scores mean higher pressure. The current score is driven down by higher recorded duty hours, higher OT hours, and more pending clinical tasks."
+            )
+        }
+    }
+}
+
+@Composable
+private fun SnapshotGuideNumber(
+    label: String,
+    value: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            modifier = Modifier.size(28.dp),
+            shape = CircleShape,
+            color = Color.White.copy(alpha = 0.80f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    label.first().uppercaseChar().toString(),
+                    color = ClinicalPrimaryColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    label,
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    value,
+                    color = ClinicalPrimaryColor,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Black
+                )
+            }
+            Text(
+                description,
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 }
 
 @Composable
