@@ -6,6 +6,8 @@ import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
  * Shared dashboard snapshot for the NursingOS command center.
  * Keep this model UI-friendly, but independent from Compose and Room.
  */
+const val DEFAULT_CPD_TARGET = 10
+
 data class NurseCommandCenterState(
     val nurseName: String = "Nursing Officer",
     val unitName: String = "",
@@ -17,7 +19,7 @@ data class NurseCommandCenterState(
     val estimatedNetSalary: Double? = null,
     val estimatedGrossSalary: Double = 0.0,
     val cpdPoints: Int = 0,
-    val cpdTarget: Int = 10,
+    val cpdTarget: Int = DEFAULT_CPD_TARGET,
     val pendingClinicalTasks: Int = 0,
     val pendingClinicalTaskDetails: List<ClinicalTaskEntity> = emptyList(),
     val wellnessScore: Int = 100,

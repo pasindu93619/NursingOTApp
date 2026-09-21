@@ -3,6 +3,7 @@ package com.pasindu.nursingotapp.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.repository.NurseCommandCenterRepository
+import com.pasindu.nursingotapp.domain.model.DEFAULT_CPD_TARGET
 import com.pasindu.nursingotapp.domain.model.NurseCommandCenterState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,7 +41,7 @@ class NurseCommandCenterViewModel @Inject constructor(
             repository.observeSnapshot()
                 .map { snapshot ->
                     val profile = snapshot.profile
-                    val cpdTarget = 10
+                    val cpdTarget = DEFAULT_CPD_TARGET
                     val wellnessScore = calculateWellnessScore(
                         dutyHours = snapshot.dutyHours,
                         otHours = snapshot.otHours,

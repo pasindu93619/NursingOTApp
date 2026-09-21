@@ -1,8 +1,5 @@
 package com.pasindu.nursingotapp.ui.screens
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,8 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -115,6 +110,11 @@ fun NurseCommandCenterModernScreenV2(
                 subtitle = "Live values from your existing NursingOS data"
             )
             Metrics(state = state, onNavigate = onNavigate)
+            Section(
+                title = "Pulse overview",
+                subtitle = "Professional progress, claims and workload at a glance"
+            )
+            PulseRow(state = state, onNavigate = onNavigate)
             ScoreCard(state = state, onNavigate = onNavigate)
             Agenda(
                 state = state,
@@ -127,40 +127,7 @@ fun NurseCommandCenterModernScreenV2(
             )
             QuickActions(onNavigate = onNavigate)
             Insight(state = state, onNavigate = onNavigate)
-            Section(
-                title = "Professional & wellbeing",
-                subtitle = "Existing progress, presented in one place"
-            )
-            Pulse(
-                title = "Professional pulse",
-                value = "${state.cpdPoints}/${state.cpdTarget} CPD",
-                progress = state.cpdProgress,
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                accent = Purple,
-                surface = HeroPurpleSoft,
-                action = "Knowledge Hub",
-                onClick = { onNavigate("knowledge_hub") }
-            )
-            Pulse(
-                title = "Claim pulse",
-                value = "${state.claimCompletedDays}/${state.claimTotalDays} days",
-                progress = state.claimProgress,
-                icon = Icons.Default.Summarize,
-                accent = ClinicalPrimaryColor,
-                surface = HeroBlueSoft,
-                action = "OT Claim",
-                onClick = { onNavigate("claim_period") }
-            )
-            Pulse(
-                title = "Wellness pulse",
-                value = "${state.wellnessScore.coerceIn(0, 100)}/100",
-                progress = state.wellnessScore.coerceIn(0, 100) / 100f,
-                icon = Icons.Default.EmojiEvents,
-                accent = wellnessColorV2(state.wellnessScore),
-                surface = HeroMintSoft,
-                action = "CarePulse",
-                onClick = { onNavigate("care_pulse") }
-            )
+
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
@@ -216,12 +183,19 @@ private fun HeroCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = buildString {
-                        append("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT")
-                        if (state.unitName.isNotBlank()) append("  •  ${state.unitName}")
-                    },
+                    text = "${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT  •  ${state.phHoursThisMonth.toInt()}h PH",
                     color = Color.White.copy(alpha = 0.84f),
                     fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = buildString {
+                        append("Claims ${state.claimCompletedDays}/${state.claimTotalDays}")
+                        if (state.unitName.isNotBlank()) append("  •  ${state.unitName}")
+                    },
+                    color = Color.White.copy(alpha = 0.76f),
+                    fontSize = 9.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -321,6 +295,7 @@ private fun Metrics(
         MetricV2(
             title = "Net",
             value = formatMoneyShort(state.estimatedNetSalary),
+            detail = financialHealthLabel(state),
             icon = Icons.Default.Payments,
             accent = Emerald,
             surface = HeroMintSoft,
@@ -338,7 +313,8 @@ private fun MetricV2(
     accent: Color,
     surface: Color,
     modifier: Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    detail: String? = null
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
@@ -367,6 +343,16 @@ private fun MetricV2(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            detail?.let { text ->
+                Text(
+                    text = text,
+                    color = TextSecondary,
+                    fontSize = 7.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -377,22 +363,28 @@ private fun ScoreCard(
     onNavigate: (String) -> Unit
 ) {
     val score = state.nursingOsScore.coerceIn(0, 100)
+    val workSignal = minOf(
+        state.wellnessScore,
+        state.otLoadScore,
+        (state.claimProgress * 100f).toInt()
+    )
+    val signalBreakdown = listOf(
+        "Work" to workSignal,
+        "Finance" to state.financialHealthScore,
+        "Clinical" to state.clinicalHealthScore,
+        "Learning" to (state.cpdProgress * 100f).toInt()
+    )
+    val lowestSignal = signalBreakdown.minByOrNull { it.second }
+    var showScoreBreakdown by remember { mutableStateOf(false) }
+
     val accent = when {
         score >= 85 -> Emerald
         score >= 70 -> ClinicalPrimaryColor
         score >= 50 -> Amber
         else -> MaterialTheme.colorScheme.error
     }
-    val progress by animateFloatAsState(
-        targetValue = score / 100f,
-        animationSpec = tween(900, easing = FastOutSlowInEasing),
-        label = "command_score"
-    )
-
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onNavigate(state.insightRoute) },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(23.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -402,7 +394,9 @@ private fun ScoreCard(
             verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showScoreBreakdown = !showScoreBreakdown },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -426,15 +420,30 @@ private fun ScoreCard(
                     maxLines = 1
                 )
             }
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(7.dp)
-                    .clip(RoundedCornerShape(50.dp)),
-                color = accent,
-                trackColor = accent.copy(alpha = 0.10f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                ScoreSignalChip("Work", workSignal, Amber, HeroAmberSoft, Modifier.weight(1f))
+                ScoreSignalChip("Finance", state.financialHealthScore, Emerald, HeroMintSoft, Modifier.weight(1f))
+                ScoreSignalChip("Clinical", state.clinicalHealthScore, MedicalBlue, HeroBlueSoft, Modifier.weight(1f))
+                ScoreSignalChip("Learning", (state.cpdProgress * 100f).toInt(), Purple, HeroPurpleSoft, Modifier.weight(1f))
+            }
+            if (showScoreBreakdown && lowestSignal != null) {
+                Surface(
+                    shape = RoundedCornerShape(13.dp),
+                    color = SurfaceMuted
+                ) {
+                    Text(
+                        text = "Lowest signal: " + lowestSignal.first + " • " + lowestSignal.second + "/100",
+                        color = TextSecondary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -446,11 +455,17 @@ private fun ScoreCard(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "Operational signal  •  Tap for details",
-                    color = TextSecondary,
-                    fontSize = 10.sp
-                )
+                TextButton(
+                    onClick = { onNavigate(state.insightRoute) },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        text = "Open insights  ›",
+                        color = TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
@@ -487,9 +502,15 @@ private fun Agenda(
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Your next actions, in order",
+                        text = if (state.pendingClinicalTasks > 0) {
+                            "${state.pendingClinicalTasks} pending clinical task(s) • ranked with your other priorities"
+                        } else {
+                            "No pending clinical tasks • ranked actions from your live snapshot"
+                        },
                         color = TextSecondary,
-                        fontSize = 10.sp
+                        fontSize = 9.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Surface(
@@ -530,13 +551,21 @@ private fun Agenda(
                             .padding(vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "${index + 1}",
-                            color = if (index == 0) Amber else ClinicalPrimaryColor,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black,
-                            modifier = Modifier.width(24.dp)
-                        )
+                        val itemAccent = agendaAccent(item)
+                        Surface(
+                            modifier = Modifier.size(28.dp),
+                            shape = CircleShape,
+                            color = itemAccent.copy(alpha = 0.12f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "${index + 1}",
+                                    color = itemAccent,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = item.title,
@@ -705,7 +734,7 @@ private fun Insight(
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = state.dailyInsight,
+                    text = state.todayAction,
                     color = TextSecondary,
                     fontSize = 11.sp,
                     maxLines = 2,
@@ -723,72 +752,172 @@ private fun Insight(
 }
 
 @Composable
-private fun Pulse(
+private fun PulseRow(
+    state: NurseCommandCenterState,
+    onNavigate: (String) -> Unit
+) {
+    val professional = pulseVisual(state.cpdProgress)
+    val claim = pulseVisual(state.claimProgress)
+    val wellness = pulseVisual(state.wellnessScore.coerceIn(0, 100) / 100f)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        PulseTile(
+            title = "Professional",
+            value = "${state.cpdPoints}/${state.cpdTarget}",
+            status = professional.status,
+            accent = Purple,
+            statusColor = professional.color,
+            surface = HeroPurpleSoft,
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            modifier = Modifier.weight(1f),
+            onClick = { onNavigate("knowledge_hub") }
+        )
+        PulseTile(
+            title = "Claim",
+            value = "${state.claimCompletedDays}/${state.claimTotalDays}",
+            status = claim.status,
+            accent = ClinicalPrimaryColor,
+            statusColor = claim.color,
+            surface = HeroBlueSoft,
+            icon = Icons.Default.Summarize,
+            modifier = Modifier.weight(1f),
+            onClick = { onNavigate("claim_period") }
+        )
+        PulseTile(
+            title = "Wellness",
+            value = "${state.wellnessScore.coerceIn(0, 100)}/100",
+            status = wellness.status,
+            accent = wellness.color,
+            statusColor = wellness.color,
+            surface = HeroAmberSoft,
+            icon = Icons.Default.HealthAndSafety,
+            modifier = Modifier.weight(1f),
+            onClick = { onNavigate("care_pulse") }
+        )
+    }
+}
+
+@Composable
+private fun PulseTile(
     title: String,
     value: String,
-    progress: Float,
-    icon: ImageVector,
+    status: String,
     accent: Color,
+    statusColor: Color,
     surface: Color,
-    action: String,
+    icon: ImageVector,
+    modifier: Modifier,
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier
+            .height(124.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(15.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(11.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = accent
-            )
-            Spacer(modifier = Modifier.width(11.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = HeroInk,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    text = value,
-                    color = accent,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Spacer(modifier = Modifier.height(5.dp))
-                LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(50.dp)),
-                    color = accent,
-                    trackColor = Color.White.copy(alpha = 0.72f)
-                )
+            Surface(
+                modifier = Modifier.size(34.dp),
+                shape = CircleShape,
+                color = accent.copy(alpha = 0.12f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+                }
             }
-            TextButton(
-                onClick = onClick,
-                contentPadding = PaddingValues(horizontal = 3.dp)
+            Text(
+                text = title,
+                color = TextSecondary,
+                fontSize = 8.5.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = value,
+                color = HeroInk,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1
+            )
+            Surface(
+                shape = RoundedCornerShape(50.dp),
+                color = statusColor.copy(alpha = 0.12f)
             ) {
                 Text(
-                    text = action,
-                    color = accent,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = status,
+                    color = statusColor,
+                    fontSize = 7.5.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                     maxLines = 1
                 )
             }
         }
     }
 }
+
+private data class PulseVisual(
+    val color: Color,
+    val status: String
+)
+
+private fun pulseVisual(progress: Float): PulseVisual = when {
+    progress >= 0.80f -> PulseVisual(Emerald, "On track")
+    progress >= 0.50f -> PulseVisual(Amber, "Needs attention")
+    else -> PulseVisual(CriticalRed, "Needs attention")
+}
+
+private fun agendaAccent(item: AgendaItem): Color = when (item.route) {
+    "knowledge_hub" -> Purple
+    "claim_period" -> ClinicalPrimaryColor
+    "advanced_finance_hub" -> Emerald
+    "care_pulse" -> Amber
+    "clinical_planning" -> Amber
+    else -> Slate
+}
+
+@Composable
+private fun ScoreSignalChip(
+    label: String,
+    value: Int,
+    accent: Color,
+    surface: Color,
+    modifier: Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(13.dp),
+        color = surface
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(label, color = accent, fontSize = 7.5.sp, fontWeight = FontWeight.Black)
+            Text("$value", color = HeroInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+private fun financialHealthLabel(state: NurseCommandCenterState): String =
+    if (state.estimatedGrossSalary > 0.0 && state.estimatedNetSalary != null) {
+        val deductionPercent = (
+            (state.estimatedGrossSalary - state.estimatedNetSalary) /
+                state.estimatedGrossSalary * 100.0
+            ).coerceIn(0.0, 100.0)
+        "Deductions ${deductionPercent.toInt()}%"
+    } else {
+        "No financial record"
+    }
 
 @Composable
 private fun Section(title: String, subtitle: String) {
