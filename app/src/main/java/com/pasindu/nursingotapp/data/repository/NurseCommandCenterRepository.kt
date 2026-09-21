@@ -30,6 +30,8 @@ class NurseCommandCenterRepository(
         val profile: ProfileEntity?,
         val dutyHours: Double,
         val otHours: Double,
+        val dutyDerivedOtHours: Double,
+        val additionalOtHours: Double,
         val phHours: Double,
         val claimCompletedDays: Int,
         val claimTotalDays: Int,
@@ -63,6 +65,16 @@ class NurseCommandCenterRepository(
                 entry.date >= start && entry.date <= end
             }
             val workedToDateEntries = monthlyEntries.filter { entry -> entry.date <= today }
+            val currentWeekStart = sundayOfWeek(today)
+
+            // OT from duty shifts must use the same universal 36h Sunday-Saturday
+            // rule as the rest of the app. Include the current week-to-date so
+            // Home stays live, while keeping additional OT separate to avoid
+            // double-counting the same hours.
+            val otRuleEntries = entries.filter { entry ->
+                entry.date <= today &&
+                    (entry.date >= start || sundayOfWeek(entry.date) == currentWeekStart)
+            }
 
             val todayEntry = entries
                 .filter { it.date == today }
@@ -100,13 +112,14 @@ class NurseCommandCenterRepository(
                 )
             }
 
-            val payableNormalHours = weeklyResult?.totalNormalHours ?: 0.0
+            val dutyHoursToDate = workedToDateEntries
+                .sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) }
 
             // NursingOS wellness/OT metrics use the universal weekly duty rule:
             // for each complete Sunday-Saturday week, duty-derived OT is the
             // portion of recorded duty above 36 hours. Separately recorded OT
             // remains additional OT and is not counted twice.
-            val dutyDerivedOtHours = monthlyLogs
+            val dutyDerivedOtHours = otRuleEntries
                 .groupBy { sundayOfWeek(it.date) }
                 .asSequence()
                 .filter { (weekStart, _) ->
@@ -140,8 +153,10 @@ class NurseCommandCenterRepository(
 
             Snapshot(
                 profile = currentProfile,
-                dutyHours = payableNormalHours,
+                dutyHours = dutyHoursToDate,
                 otHours = workedOtHours,
+                dutyDerivedOtHours = dutyDerivedOtHours,
+                additionalOtHours = additionalOtHours,
                 phHours = phHours,
                 claimCompletedDays = monthlyEntries.count {
                     !it.isLeave && (
@@ -155,9 +170,7 @@ class NurseCommandCenterRepository(
                 grossSalary = currentMonthFinance?.grossSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
-                netSalary = currentMonthFinance?.netSalary
-                    ?: currentProfile?.basicSalary
-                    ?: 0.0,
+                netSalary = currentMonthFinance?.netSalary ?: 0.0,
                 pendingClinicalTasks = pendingTaskDetails.size,
                 cpdPoints = cpdLogs.sumOf { it.earnedPoints },
                 pendingClinicalTaskDetails = pendingTaskDetails,
