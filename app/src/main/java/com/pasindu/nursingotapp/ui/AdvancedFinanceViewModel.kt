@@ -77,7 +77,8 @@ class AdvancedFinanceViewModel @Inject constructor(
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val calculateFinanceSummaryUseCase: CalculateFinanceSummaryUseCase,
     private val saveFinanceCompensationUseCase: SaveFinanceCompensationUseCase,
-    private val saveFinanceRatesUseCase: SaveFinanceRatesUseCase
+    private val saveFinanceRatesUseCase: SaveFinanceRatesUseCase,
+    private val profileCompensationDao: com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AdvancedFinanceUiState())
@@ -97,6 +98,7 @@ class AdvancedFinanceViewModel @Inject constructor(
                         )?.basicSalary2027?.let { matched2027Basic ->
                             applyMatched2027DayRateUseCase(matched2027Basic)
                         }
+                        ensureFixedAllowances()
                     }
                     recalculate()
                 }.onFailure { error ->
@@ -158,6 +160,16 @@ class AdvancedFinanceViewModel @Inject constructor(
         }
     }
 
+    private suspend fun ensureFixedAllowances() {
+        val current = profileCompensationDao.getOnce()
+        saveFinanceCompensationUseCase(
+            riskAllowance = FIXED_RISK_ALLOWANCE_RS,
+            claAllowance = FIXED_CLA_ALLOWANCE_RS,
+            additionalAllowancesTotal = current?.additionalAllowancesTotal ?: 0.0,
+            totalDeductions = current?.totalDeductions ?: 0.0
+        )
+    }
+
     fun refresh() = recalculate()
     fun updateApit(value: String) { _uiState.value = _uiState.value.copy(apit = parseMoney(value)) }
     fun updateWop(value: String) { _uiState.value = _uiState.value.copy(wop = parseMoney(value)) }
@@ -199,6 +211,11 @@ class AdvancedFinanceViewModel @Inject constructor(
             isLoading = false,
             errorMessage = error.message?.takeIf { it.isNotBlank() } ?: fallbackMessage
         )
+    }
+
+    private companion object {
+        const val FIXED_RISK_ALLOWANCE_RS = 6850.0
+        const val FIXED_CLA_ALLOWANCE_RS = 17800.0
     }
 
     private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
