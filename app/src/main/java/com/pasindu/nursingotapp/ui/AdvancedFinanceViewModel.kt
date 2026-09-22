@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
+import com.pasindu.nursingotapp.domain.finance.FinancialSnapshot
 import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
@@ -31,6 +32,7 @@ data class AdvancedFinanceUiState(
     val profile: ProfileEntity? = null,
     val claimPeriod: ClaimPeriodEntity? = null,
     val periodSummary: PeriodSummary? = null,
+    val financialSnapshot: FinancialSnapshot? = null,
     val payRateSettings: PayRateSettingsEntity? = null,
     val compensation: ProfileCompensationEntity? = null,
     val claimStart: java.time.LocalDate? = null,
@@ -50,15 +52,16 @@ data class AdvancedFinanceUiState(
     val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
     val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
     val basisSalary2027: Double? get() = payRateSettings?.basisSalary2027
-    val totalNormalHours: Double get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
-    val totalOTHours: Double get() = periodSummary?.totalOTHours?.toDouble() ?: 0.0
-    val totalPHDays: Int get() = periodSummary?.totalPHDays ?: 0
-    val totalDODays: Int get() = periodSummary?.totalDODays ?: 0
-    val otAmountRs: Double get() = totalOTHours * otRate
-    val phAmountRs: Double get() = totalPHDays * phRate
-    val doAmountRs: Double get() = totalDODays * doRate
-    val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
-    val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
+    val totalNormalHours: Double get() = financialSnapshot?.normalDutyHours ?: periodSummary?.totalNormalHours?.toDouble() ?: 0.0
+    val totalOTHours: Double get() = financialSnapshot?.totalOtHours ?: periodSummary?.totalOTHours?.toDouble() ?: 0.0
+    val totalPHDays: Int get() = financialSnapshot?.publicHolidayDays ?: periodSummary?.totalPHDays ?: 0
+    val totalDODays: Int get() = financialSnapshot?.workingDayOffDays ?: periodSummary?.totalDODays ?: 0
+    val otAmountRs: Double get() = financialSnapshot?.otEarnings ?: periodSummary?.otAmountRs ?: 0.0
+    val phAmountRs: Double get() = financialSnapshot?.phEarnings ?: periodSummary?.phAmountRs ?: 0.0
+    val doAmountRs: Double get() = financialSnapshot?.doEarnings ?: periodSummary?.doAmountRs ?: 0.0
+    val grossEarnings: Double get() = financialSnapshot?.grossEarnings
+        ?: (currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs)
+    val estimatedNetSalary: Double get() = financialSnapshot?.netPay ?: (grossEarnings - paysheetDeductions)
     val dutyProgress36Hours: Float get() = if (totalNormalHours <= 0.0) 0f else (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
 }
 
@@ -127,12 +130,23 @@ class AdvancedFinanceViewModel @Inject constructor(
                         entries = entries,
                         claimStart = claimPeriod.startDate,
                         claimEnd = claimPeriod.endDate,
-                        payRates = state.payRateSettings
+                        payRates = state.payRateSettings,
+                        compensation = state.compensation
                     )
-                }.onSuccess { summary ->
+                }.onSuccess { snapshot ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        periodSummary = summary,
+                        financialSnapshot = snapshot,
+                        periodSummary = PeriodSummary(
+                            totalNormalHours = snapshot.normalDutyHours.toFloat(),
+                            totalOTHours = snapshot.totalOtHours.toFloat(),
+                            totalPHDays = snapshot.publicHolidayDays,
+                            totalDODays = snapshot.workingDayOffDays,
+                            otAmountRs = snapshot.otEarnings,
+                            phAmountRs = snapshot.phEarnings,
+                            doAmountRs = snapshot.doEarnings,
+                            totalAmountRs = snapshot.otEarnings + snapshot.phEarnings + snapshot.doEarnings
+                        ),
                         claimStart = claimPeriod.startDate,
                         claimEnd = claimPeriod.endDate,
                         errorMessage = null
