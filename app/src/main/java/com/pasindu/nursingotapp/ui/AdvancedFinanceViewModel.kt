@@ -50,6 +50,11 @@ data class AdvancedFinanceUiState(
             period.endDate.plusDays(1)
         ).toInt()
     } ?: 0
+    val claimWeekStarts: List<java.time.LocalDate> get() = claimPeriod?.let { period ->
+        (0 until claimWeekCount).map { index ->
+            period.startDate.plusWeeks(index.toLong())
+        }
+    } ?: emptyList()
     val requiredDutyHours: Double get() = claimWeekCount * 36.0
     val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
