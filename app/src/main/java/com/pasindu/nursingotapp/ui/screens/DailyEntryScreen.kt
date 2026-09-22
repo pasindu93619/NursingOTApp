@@ -124,64 +124,6 @@ fun DailyEntryScreen(
     }
     val completionFraction = if (allDates.isEmpty()) 0f else completedCount.toFloat() / allDates.size
 
-    val sessionSelectedDates = remember(stagedEdits.toMap()) { stagedEdits.keys.toSet() }
-
-    val sessionShiftHours = remember(stagedEdits.toMap()) {
-        sessionSelectedDates.sumOf { date ->
-            stagedEdits[date]?.shift?.let { brush ->
-                when (brush) {
-                    "Morn (7-13)", "Eve (13-19)" -> 6.0
-                    "Night (19-7)" -> 12.0
-                    "Day (7-16)", "Custom Shift" -> if (brush == "Custom Shift") customHrs.toDoubleOrNull() ?: 0.0 else 9.0
-                    else -> 0.0
-                }
-            } ?: 0.0
-        }
-    }
-
-    val sessionLoggedOtHours = remember(stagedEdits.toMap()) {
-        sessionSelectedDates.sumOf { date ->
-            stagedEdits[date]?.ot?.let { brush ->
-                when (brush) {
-                    "Morn OT", "Eve OT" -> 6.0
-                    "Night OT" -> 12.0
-                    "Custom OT" -> customHrs.toDoubleOrNull() ?: 0.0
-                    else -> 0.0
-                }
-            } ?: 0.0
-        }
-    }
-
-    val sessionOtBy36hRule = remember(stagedEdits.toMap(), startDate, endDate) {
-        sessionSelectedDates.groupBy { date ->
-            date.minusDays(
-                when (date.dayOfWeek) {
-                    DayOfWeek.SUNDAY -> 0L
-                    DayOfWeek.MONDAY -> 1L
-                    DayOfWeek.TUESDAY -> 2L
-                    DayOfWeek.WEDNESDAY -> 3L
-                    DayOfWeek.THURSDAY -> 4L
-                    DayOfWeek.FRIDAY -> 5L
-                    DayOfWeek.SATURDAY -> 6L
-                }
-            )
-        }.values.sumOf { dates ->
-            (dates.sumOf { date ->
-                stagedEdits[date]?.shift?.let { brush ->
-                    when (brush) {
-                        "Morn (7-13)", "Eve (13-19)" -> 6.0
-                        "Night (19-7)" -> 12.0
-                        "Day (7-16)" -> 9.0
-                        "Custom Shift" -> customHrs.toDoubleOrNull() ?: 0.0
-                        else -> 0.0
-                    }
-                } ?: 0.0
-            } - WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS).coerceAtLeast(0.0)
-        }
-    }
-
-    val sessionTotalOtHours = sessionOtBy36hRule + sessionLoggedOtHours
-
     fun quickApplyRemaining(brush: String) {
         setCategory(CATEGORY_SHIFT_DUTY)
         selectedBrush = brush
@@ -196,7 +138,7 @@ fun DailyEntryScreen(
     fun quickApplyWeek(brush: String) {
         setCategory(CATEGORY_SHIFT_DUTY)
         selectedBrush = brush
-        val anchor = sessionSelectedDates.minOrNull() ?: allDates.firstOrNull() ?: return
+        val anchor = stagedEdits.keys.minOrNull() ?: allDates.firstOrNull() ?: return
         val sunday = anchor.minusDays(
             when (anchor.dayOfWeek) {
                 DayOfWeek.SUNDAY -> 0L
