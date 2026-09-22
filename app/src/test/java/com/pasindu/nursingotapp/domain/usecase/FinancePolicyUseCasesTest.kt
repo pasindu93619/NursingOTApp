@@ -25,6 +25,51 @@ class FinancePolicyUseCasesTest {
     }
 
     @Test
+    fun synchronizePolicyRates_gradeThreeStepThree_uses2027BasicForBothDayRates() = runBlocking {
+        val payDao = FakePayRateDao(
+            PayRateSettingsEntity(
+                id = 1,
+                otRate = 283.0,
+                phRate = 0.0,
+                doRate = 0.0,
+                rateSource = "MANUAL",
+                basisSalary2027 = null,
+                updatedAt = 1L
+            )
+        )
+        val salary = SalaryStep2027Entity(
+            grade = "Grade III",
+            salaryStep = 3,
+            currentBasicSalary2026 = 52809.0,
+            basicSalary2027 = 56520.0
+        )
+        val salaryDao = FakeSalaryDao(listOf(salary))
+
+        SynchronizePolicyRatesUseCase(
+            payRateSettingsDao = payDao,
+            salaryStep2027Dao = salaryDao
+        )(
+            ProfileEntity(
+                id = 1,
+                fullName = "Test Nurse",
+                serviceNo = "N1",
+                unit = "Ward",
+                paySheetNo = "P1",
+                grade = "Grade III",
+                basicSalary = 52809.0,
+                otRate = 283.0,
+                updatedAt = 1L
+            )
+        )
+
+        val saved = payDao.value.value
+        assertEquals(283.0, saved?.otRate ?: 0.0, 0.001)
+        assertEquals(56520.0, saved?.basisSalary2027 ?: 0.0, 0.001)
+        assertEquals(1884.0, saved?.phRate ?: 0.0, 0.001)
+        assertEquals(1884.0, saved?.doRate ?: 0.0, 0.001)
+    }
+
+    @Test
     fun synchronizePolicyRates_preservesUserConfiguredOtRateAndCalculatesDayRate() = runBlocking {
         val userEnteredOtRate = 350.0
         val payDao = FakePayRateDao(
