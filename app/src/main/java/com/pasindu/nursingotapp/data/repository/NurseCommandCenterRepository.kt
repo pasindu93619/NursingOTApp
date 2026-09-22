@@ -38,7 +38,7 @@ class NurseCommandCenterRepository(
         val claimCompletedDays: Int,
         val claimTotalDays: Int,
         val grossSalary: Double,
-        val netSalary: Double,
+        val netSalary: Double?,
         val pendingClinicalTasks: Int,
         val cpdPoints: Int,
         val pendingClinicalTaskDetails: List<ClinicalTaskEntity>,
@@ -161,7 +161,7 @@ class NurseCommandCenterRepository(
                 grossSalary = currentMonthFinance?.grossSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
-                netSalary = currentMonthFinance?.netSalary ?: 0.0,
+                netSalary = currentMonthFinance?.netSalary,
                 pendingClinicalTasks = pendingTaskDetails.size,
                 cpdPoints = cpdLogs.sumOf { it.earnedPoints },
                 pendingClinicalTaskDetails = pendingTaskDetails,

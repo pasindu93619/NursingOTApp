@@ -6,6 +6,8 @@ import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
  * Shared dashboard snapshot for the NursingOS command center.
  * Keep this model UI-friendly, but independent from Compose and Room.
  */
+const val DEFAULT_CPD_TARGET = 10
+
 data class NurseCommandCenterState(
     val nurseName: String = "Nursing Officer",
     val unitName: String = "",
@@ -14,10 +16,10 @@ data class NurseCommandCenterState(
     val dutyHoursThisMonth: Double = 0.0,
     val claimCompletedDays: Int = 0,
     val claimTotalDays: Int = 0,
-    val estimatedNetSalary: Double = 0.0,
+    val estimatedNetSalary: Double? = null,
     val estimatedGrossSalary: Double = 0.0,
     val cpdPoints: Int = 0,
-    val cpdTarget: Int = 10,
+    val cpdTarget: Int = DEFAULT_CPD_TARGET,
     val pendingClinicalTasks: Int = 0,
     val pendingClinicalTaskDetails: List<ClinicalTaskEntity> = emptyList(),
     val wellnessScore: Int = 100,
@@ -46,7 +48,7 @@ data class NurseCommandCenterState(
 
     /** Ratio of net pay retained from gross pay, expressed as 0..1. */
     val netRetentionRatio: Float
-        get() = if (estimatedGrossSalary > 0.0 && estimatedNetSalary >= 0.0) {
+        get() = if (estimatedGrossSalary > 0.0 && estimatedNetSalary != null && estimatedNetSalary >= 0.0) {
             (estimatedNetSalary / estimatedGrossSalary).toFloat().coerceIn(0f, 1f)
         } else {
             1f
@@ -263,7 +265,7 @@ data class NurseCommandCenterState(
             if (claimTotalDays > 0 && claimProgress < 0.85f && todayClaimRecorded && nursingOsDecision.route != "claim_period") {
                 add(AgendaItem("monthly_claim", AgendaPriority.LATER, "Keep the monthly claim current", "$claimCompletedDays/$claimTotalDays days recorded.", "Open OT Claim", "claim_period"))
             }
-            if (estimatedGrossSalary > 0.0 && estimatedNetSalary > 0.0 && netRetentionRatio < 0.80f && nursingOsDecision.route != "advanced_finance_hub") {
+            if (estimatedGrossSalary > 0.0 && estimatedNetSalary != null && estimatedNetSalary > 0.0 && netRetentionRatio < 0.80f && nursingOsDecision.route != "advanced_finance_hub") {
                 add(AgendaItem("deductions", AgendaPriority.LATER, "Review deductions", "Net pay is below 80% of gross pay.", "Open Finance", "advanced_finance_hub"))
             }
         }
