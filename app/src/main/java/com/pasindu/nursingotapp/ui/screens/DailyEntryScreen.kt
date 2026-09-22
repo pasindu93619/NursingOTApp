@@ -124,6 +124,95 @@ fun DailyEntryScreen(
     }
     val completionFraction = if (allDates.isEmpty()) 0f else completedCount.toFloat() / allDates.size
 
+    val sessionSelectedDates = remember(stagedEdits.toMap()) { stagedEdits.keys.toSet() }
+
+    val sessionShiftHours = remember(stagedEdits.toMap()) {
+        sessionSelectedDates.sumOf { date ->
+            stagedEdits[date]?.shift?.let { brush ->
+                when (brush) {
+                    "Morn (7-13)", "Eve (13-19)" -> 6.0
+                    "Night (19-7)" -> 12.0
+                    "Day (7-16)", "Custom Shift" -> if (brush == "Custom Shift") customHrs.toDoubleOrNull() ?: 0.0 else 9.0
+                    else -> 0.0
+                }
+            } ?: 0.0
+        }
+    }
+
+    val sessionLoggedOtHours = remember(stagedEdits.toMap()) {
+        sessionSelectedDates.sumOf { date ->
+            stagedEdits[date]?.ot?.let { brush ->
+                when (brush) {
+                    "Morn OT", "Eve OT" -> 6.0
+                    "Night OT" -> 12.0
+                    "Custom OT" -> customHrs.toDoubleOrNull() ?: 0.0
+                    else -> 0.0
+                }
+            } ?: 0.0
+        }
+    }
+
+    val sessionOtBy36hRule = remember(stagedEdits.toMap(), startDate, endDate) {
+        sessionSelectedDates.groupBy { date ->
+            date.minusDays(
+                when (date.dayOfWeek) {
+                    DayOfWeek.SUNDAY -> 0L
+                    DayOfWeek.MONDAY -> 1L
+                    DayOfWeek.TUESDAY -> 2L
+                    DayOfWeek.WEDNESDAY -> 3L
+                    DayOfWeek.THURSDAY -> 4L
+                    DayOfWeek.FRIDAY -> 5L
+                    DayOfWeek.SATURDAY -> 6L
+                }
+            )
+        }.values.sumOf { dates ->
+            (dates.sumOf { date ->
+                stagedEdits[date]?.shift?.let { brush ->
+                    when (brush) {
+                        "Morn (7-13)", "Eve (13-19)" -> 6.0
+                        "Night (19-7)" -> 12.0
+                        "Day (7-16)" -> 9.0
+                        "Custom Shift" -> customHrs.toDoubleOrNull() ?: 0.0
+                        else -> 0.0
+                    }
+                } ?: 0.0
+            } - WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS).coerceAtLeast(0.0)
+        }
+    }
+
+    val sessionTotalOtHours = sessionOtBy36hRule + sessionLoggedOtHours
+
+    fun quickApplyRemaining(brush: String) {
+        setCategory(CATEGORY_SHIFT_DUTY)
+        selectedBrush = brush
+        allDates.filter { date ->
+            allSavedEntries.none { it.date == date && it.normalHours > 0f } &&
+                stagedEdits[date]?.shift == null
+        }.forEach { date ->
+            stagedEdits[date] = (stagedEdits[date] ?: StagedEdit()).copy(shift = brush)
+        }
+    }
+
+    fun quickApplyWeek(brush: String) {
+        setCategory(CATEGORY_SHIFT_DUTY)
+        selectedBrush = brush
+        val anchor = sessionSelectedDates.minOrNull() ?: allDates.firstOrNull() ?: return
+        val sunday = anchor.minusDays(
+            when (anchor.dayOfWeek) {
+                DayOfWeek.SUNDAY -> 0L
+                DayOfWeek.MONDAY -> 1L
+                DayOfWeek.TUESDAY -> 2L
+                DayOfWeek.WEDNESDAY -> 3L
+                DayOfWeek.THURSDAY -> 4L
+                DayOfWeek.FRIDAY -> 5L
+                DayOfWeek.SATURDAY -> 6L
+            }
+        )
+        (0L..6L).map { sunday.plusDays(it) }.filter { it in allDates }.forEach { date ->
+            stagedEdits[date] = (stagedEdits[date] ?: StagedEdit()).copy(shift = brush)
+        }
+    }
+
     fun chooseBrush(brush: String) {
         selectedBrush = brush
         when (brush) {
@@ -227,7 +316,7 @@ fun DailyEntryScreen(
                                         }
                                         when (edit.leave) {
                                             "CL", "VL", "sL", "DL" -> { isL = true; lType = edit.leave.replace("sL", "Special Leave"); nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false; oIn = ""; oOut = ""; oHrs = 0f }
-                                            "DO" -> { isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
+                                            "DO", "DO — no-pay leave" -> { isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
                                             "PH" -> { isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f }
                                             "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }
                                             "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
@@ -378,7 +467,7 @@ fun DailyEntryScreen(
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(items = when (brushCategory) {
                             CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
-                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "Clear Leave")
+                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "DO — no-pay leave", "Clear Leave")
                             CATEGORY_SERVICE_DAYS -> listOf("Work DO", "Work PH", "Clear Leave")
                             else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
                         }) { brush ->
@@ -456,6 +545,7 @@ fun DailyEntryScreen(
                             val renderLeave = when {
                                 staged?.leave != null -> when (staged.leave) {
                                     "Clear Leave", "Clear Exceptions" -> ""
+                                    "DO — no-pay leave" -> "DO"
                                     "Work DO" -> "W.DO"
                                     "Work PH" -> "W.PH"
                                     "SL (Short)" -> "SL"
