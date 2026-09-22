@@ -20,6 +20,7 @@ import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -111,11 +112,25 @@ class AdvancedFinanceViewModel @Inject constructor(
     private fun recalculate() {
         val state = _uiState.value
         val profile = state.profile ?: run {
-            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
+            _uiState.value = state.copy(
+                isLoading = false,
+                periodSummary = null,
+                financialSnapshot = null,
+                claimStart = null,
+                claimEnd = null,
+                errorMessage = null
+            )
             return
         }
         val claimPeriod = state.claimPeriod ?: run {
-            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
+            _uiState.value = state.copy(
+                isLoading = false,
+                periodSummary = null,
+                financialSnapshot = null,
+                claimStart = null,
+                claimEnd = null,
+                errorMessage = null
+            )
             return
         }
 
@@ -133,19 +148,23 @@ class AdvancedFinanceViewModel @Inject constructor(
                         compensation = state.compensation
                     )
                 }.onSuccess { snapshot ->
+                    val compatibilitySummary = PeriodSummary(
+                        totalNormalHours = snapshot.normalDutyHours.toFloat(),
+                        totalOTHours = snapshot.totalOtHours.toFloat(),
+                        totalPHDays = snapshot.publicHolidayDays,
+                        totalDODays = snapshot.workingDayOffDays,
+                        otAmountRs = snapshot.otEarnings,
+                        phAmountRs = snapshot.phEarnings,
+                        doAmountRs = snapshot.doEarnings,
+                        totalAmountRs = snapshot.otEarnings +
+                            snapshot.phEarnings +
+                            snapshot.doEarnings
+                    )
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         financialSnapshot = snapshot,
-                        periodSummary = PeriodSummary(
-                            totalNormalHours = snapshot.normalDutyHours.toFloat(),
-                            totalOTHours = snapshot.totalOtHours.toFloat(),
-                            totalPHDays = snapshot.publicHolidayDays,
-                            totalDODays = snapshot.workingDayOffDays,
-                            otAmountRs = snapshot.otEarnings,
-                            phAmountRs = snapshot.phEarnings,
-                            doAmountRs = snapshot.doEarnings,
-                            totalAmountRs = snapshot.otEarnings + snapshot.phEarnings + snapshot.doEarnings
-                        ),
+                        periodSummary = compatibilitySummary,
                         claimStart = claimPeriod.startDate,
                         claimEnd = claimPeriod.endDate,
                         errorMessage = null
@@ -165,26 +184,81 @@ class AdvancedFinanceViewModel @Inject constructor(
     fun updateLoanDeduction(value: String) { _uiState.value = _uiState.value.copy(loanDeduction = parseMoney(value)) }
     fun updateOtherDeduction(value: String) { _uiState.value = _uiState.value.copy(otherDeduction = parseMoney(value)) }
 
-    fun updateOtRate(value: String) = saveRates(parseMoney(value), _uiState.value.phRate, _uiState.value.doRate, _uiState.value.basisSalary2027, "2027_BASIC_SALARY_DIV_30")
-    fun updatePhRate(value: String) = saveRates(_uiState.value.otRate, parseMoney(value), _uiState.value.doRate, _uiState.value.basisSalary2027, "MANUAL")
-    fun updateDoRate(value: String) = saveRates(_uiState.value.otRate, _uiState.value.phRate, parseMoney(value), _uiState.value.basisSalary2027, "MANUAL")
-    fun updateBasisSalary2027(value: String) = saveRates(_uiState.value.otRate, _uiState.value.phRate, _uiState.value.doRate, value.trim().replace(",", "").toDoubleOrNull()?.takeIf { it > 0.0 }, _uiState.value.payRateSettings?.rateSource ?: "MANUAL")
+    fun updateOtRate(value: String) = saveRates(
+        parseMoney(value),
+        _uiState.value.phRate,
+        _uiState.value.doRate,
+        _uiState.value.basisSalary2027,
+        "2027_BASIC_SALARY_DIV_30"
+    )
+
+    fun updatePhRate(value: String) = saveRates(
+        _uiState.value.otRate,
+        parseMoney(value),
+        _uiState.value.doRate,
+        _uiState.value.basisSalary2027,
+        "MANUAL"
+    )
+
+    fun updateDoRate(value: String) = saveRates(
+        _uiState.value.otRate,
+        _uiState.value.phRate,
+        parseMoney(value),
+        _uiState.value.basisSalary2027,
+        "MANUAL"
+    )
+
+    fun updateBasisSalary2027(value: String) = saveRates(
+        _uiState.value.otRate,
+        _uiState.value.phRate,
+        _uiState.value.doRate,
+        value.trim().replace(",", "").toDoubleOrNull()?.takeIf { it > 0.0 },
+        _uiState.value.payRateSettings?.rateSource ?: "MANUAL"
+    )
 
     fun apply2027DayRateFromSalary(basisSalary2027: Double) {
         if (basisSalary2027 <= 0.0) return
         val dayRate = basisSalary2027 / 30.0
-        saveRates(_uiState.value.otRate, dayRate, dayRate, basisSalary2027, "2027_BASIC_SALARY_DIV_30")
+        saveRates(
+            _uiState.value.otRate,
+            dayRate,
+            dayRate,
+            basisSalary2027,
+            "2027_BASIC_SALARY_DIV_30"
+        )
     }
 
-    fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) {
+    fun saveCompensation(
+        riskAllowance: Double,
+        claAllowance: Double,
+        additionalAllowancesTotal: Double,
+        totalDeductions: Double
+    ) {
         launchWithError("Unable to save compensation information.") {
-            saveFinanceCompensationUseCase(riskAllowance, claAllowance, additionalAllowancesTotal, totalDeductions)
+            saveFinanceCompensationUseCase(
+                riskAllowance,
+                claAllowance,
+                additionalAllowancesTotal,
+                totalDeductions
+            )
         }
     }
 
-    private fun saveRates(otRate: Double, phRate: Double, doRate: Double, basisSalary2027: Double?, source: String) {
+    private fun saveRates(
+        otRate: Double,
+        phRate: Double,
+        doRate: Double,
+        basisSalary2027: Double?,
+        source: String
+    ) {
         launchWithError("Unable to save pay rate settings.") {
-            saveFinanceRatesUseCase(otRate, phRate, doRate, basisSalary2027, source)
+            saveFinanceRatesUseCase(
+                otRate,
+                phRate,
+                doRate,
+                basisSalary2027,
+                source
+            )
         }
     }
 
@@ -202,9 +276,18 @@ class AdvancedFinanceViewModel @Inject constructor(
         )
     }
 
-    private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+    private fun parseMoney(value: String): Double =
+        value.trim()
+            .replace(",", "")
+            .toDoubleOrNull()
+            ?.coerceAtLeast(0.0)
+            ?: 0.0
 
-    private fun <T> kotlinx.coroutines.flow.Flow<T>.collectInViewModel(block: (T) -> Unit) {
-        viewModelScope.launch { collect { block(it) } }
+    private fun <T> Flow<T>.collectInViewModel(block: (T) -> Unit) {
+        viewModelScope.launch {
+            collect { value ->
+                block(value)
+            }
+        }
     }
 }
