@@ -17,12 +17,14 @@ class CalculateFinanceSummaryUseCase {
         claimEnd: LocalDate,
         payRates: PayRateSettingsEntity?,
         compensation: ProfileCompensationEntity? = null
-    ): FinancialSnapshot = FinanceCalculationEngine.calculate(
-        profile = profile,
-        entries = entries,
-        claimStart = claimStart,
-        claimEnd = claimEnd,
-        payRates = payRates,
-        compensation = compensation
-    )
+    ): FinancialSnapshot {
+        return FinanceCalculationEngine.calculate(
+            profile = profile,
+            entries = entries,
+            claimStart = claimStart,
+            claimEnd = claimEnd,
+            payRates = payRates,
+            compensation = compensation
+        )
+    }
 }
