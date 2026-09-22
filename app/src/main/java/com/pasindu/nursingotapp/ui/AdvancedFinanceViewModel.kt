@@ -6,7 +6,7 @@ import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
-import com.pasindu.nursingotapp.domain.finance.FinancialSnapshot
+import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
@@ -24,41 +24,41 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 data class AdvancedFinanceUiState(
     val isLoading: Boolean = true,
     val profile: ProfileEntity? = null,
     val claimPeriod: ClaimPeriodEntity? = null,
-    val financialSnapshot: FinancialSnapshot? = null,
+    val periodSummary: PeriodSummary? = null,
     val payRateSettings: PayRateSettingsEntity? = null,
     val compensation: ProfileCompensationEntity? = null,
+    val claimStart: java.time.LocalDate? = null,
+    val claimEnd: java.time.LocalDate? = null,
     val apit: Double = 0.0,
     val wop: Double = 0.0,
     val loanDeduction: Double = 0.0,
     val otherDeduction: Double = 0.0,
     val errorMessage: String? = null
 ) {
-    val currentBasicSalary: Double get() = financialSnapshot?.currentBasicSalary ?: profile?.basicSalary ?: 0.0
-    val riskAllowance: Double get() = financialSnapshot?.riskAllowance ?: compensation?.riskAllowance ?: 0.0
-    val claAllowance: Double get() = financialSnapshot?.claAllowance ?: compensation?.claAllowance ?: 0.0
-    val additionalAllowancesTotal: Double get() = financialSnapshot?.additionalAllowances ?: compensation?.additionalAllowancesTotal ?: 0.0
-    val paysheetDeductions: Double get() = financialSnapshot?.totalDeductions ?: compensation?.totalDeductions ?: 0.0
-    val otRate: Double get() = financialSnapshot?.otRate ?: payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
-    val phRate: Double get() = financialSnapshot?.phRate ?: payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
-    val doRate: Double get() = financialSnapshot?.doRate ?: payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
-    val basisSalary2027: Double? get() = financialSnapshot?.basisSalary2027 ?: payRateSettings?.basisSalary2027
-    val totalNormalHours: Double get() = financialSnapshot?.normalDutyHours ?: 0.0
-    val totalDutyHours: Double get() = financialSnapshot?.totalDutyHours ?: 0.0
-    val dutyGeneratedOtHours: Double get() = financialSnapshot?.dutyGeneratedOtHours ?: 0.0
-    val recordedOtHours: Double get() = financialSnapshot?.recordedOtHours ?: 0.0
-    val totalOTHours: Double get() = financialSnapshot?.totalOtHours ?: 0.0
-    val totalPHDays: Int get() = financialSnapshot?.publicHolidayDays ?: 0
-    val totalDODays: Int get() = financialSnapshot?.workingDayOffDays ?: 0
-    val otAmountRs: Double get() = financialSnapshot?.otEarnings ?: 0.0
-    val phAmountRs: Double get() = financialSnapshot?.phEarnings ?: 0.0
-    val doAmountRs: Double get() = financialSnapshot?.doEarnings ?: 0.0
-    val grossEarnings: Double get() = financialSnapshot?.grossEarnings ?: 0.0
-    val estimatedNetSalary: Double get() = financialSnapshot?.netPay ?: 0.0
+    val currentBasicSalary: Double get() = profile?.basicSalary ?: 0.0
+    val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
+    val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
+    val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
+    val paysheetDeductions: Double get() = compensation?.totalDeductions ?: 0.0
+    val otRate: Double get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
+    val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
+    val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
+    val basisSalary2027: Double? get() = payRateSettings?.basisSalary2027
+    val totalNormalHours: Double get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
+    val totalOTHours: Double get() = periodSummary?.totalOTHours?.toDouble() ?: 0.0
+    val totalPHDays: Int get() = periodSummary?.totalPHDays ?: 0
+    val totalDODays: Int get() = periodSummary?.totalDODays ?: 0
+    val otAmountRs: Double get() = totalOTHours * otRate
+    val phAmountRs: Double get() = totalPHDays * phRate
+    val doAmountRs: Double get() = totalDODays * doRate
+    val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
+    val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
     val dutyProgress36Hours: Float get() = if (totalNormalHours <= 0.0) 0f else (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
 }
 
@@ -87,7 +87,9 @@ class AdvancedFinanceViewModel @Inject constructor(
                     ensureManualPayRateRecordUseCase()
                     if (profile != null) synchronizePolicyRatesUseCase(profile)
                     recalculate()
-                }.onFailure { error -> setError(error, "Unable to initialize financial information.") }
+                }.onFailure { error ->
+                    setError(error, "Unable to initialize financial information.")
+                }
             }
         }
         observeClaimPeriod().collectInViewModel { periods ->
@@ -107,35 +109,40 @@ class AdvancedFinanceViewModel @Inject constructor(
     private fun recalculate() {
         val state = _uiState.value
         val profile = state.profile ?: run {
-            _uiState.value = state.copy(isLoading = false, financialSnapshot = null, errorMessage = null)
+            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
             return
         }
         val claimPeriod = state.claimPeriod ?: run {
-            _uiState.value = state.copy(isLoading = false, financialSnapshot = null, errorMessage = null)
+            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
             return
         }
 
         viewModelScope.launch {
-            runCatching { observeClaimDailyEntriesUseCase(claimPeriod.id).first() }
-                .onSuccess { entries ->
-                    runCatching {
-                        calculateFinanceSummaryUseCase(
-                            profile = profile,
-                            entries = entries,
-                            claimStart = claimPeriod.startDate,
-                            claimEnd = claimPeriod.endDate,
-                            payRates = state.payRateSettings,
-                            compensation = state.compensation
-                        )
-                    }.onSuccess { snapshot ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            financialSnapshot = snapshot,
-                            errorMessage = null
-                        )
-                    }.onFailure { error -> setError(error, "Unable to calculate financial summary.") }
+            runCatching {
+                observeClaimDailyEntriesUseCase(claimPeriod.id).first()
+            }.onSuccess { entries ->
+                runCatching {
+                    calculateFinanceSummaryUseCase(
+                        profile = profile,
+                        entries = entries,
+                        claimStart = claimPeriod.startDate,
+                        claimEnd = claimPeriod.endDate,
+                        payRates = state.payRateSettings
+                    )
+                }.onSuccess { summary ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        periodSummary = summary,
+                        claimStart = claimPeriod.startDate,
+                        claimEnd = claimPeriod.endDate,
+                        errorMessage = null
+                    )
+                }.onFailure { error ->
+                    setError(error, "Unable to calculate financial summary.")
                 }
-                .onFailure { error -> setError(error, "Unable to load financial information.") }
+            }.onFailure { error ->
+                setError(error, "Unable to load financial information.")
+            }
         }
     }
 
@@ -170,7 +177,8 @@ class AdvancedFinanceViewModel @Inject constructor(
 
     private fun launchWithError(message: String, block: suspend () -> Unit) {
         viewModelScope.launch {
-            runCatching { block() }.onFailure { error -> setError(error, message) }
+            runCatching { block() }
+                .onFailure { error -> setError(error, message) }
         }
     }
 
@@ -181,8 +189,7 @@ class AdvancedFinanceViewModel @Inject constructor(
         )
     }
 
-    private fun parseMoney(value: String): Double =
-        value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+    private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
 
     private fun <T> kotlinx.coroutines.flow.Flow<T>.collectInViewModel(block: (T) -> Unit) {
         viewModelScope.launch { collect { block(it) } }
