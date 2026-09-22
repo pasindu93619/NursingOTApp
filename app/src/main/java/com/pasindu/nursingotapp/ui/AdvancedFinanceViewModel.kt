@@ -291,3 +291,15 @@ class AdvancedFinanceViewModel @Inject constructor(
         }
     }
 }
+
+
+private fun FinancialSnapshot.toPeriodSummary(): PeriodSummary = PeriodSummary(
+    totalNormalHours = normalDutyHours.toFloat(),
+    totalOTHours = totalOtHours.toFloat(),
+    totalPHDays = publicHolidayDays,
+    totalDODays = workingDayOffDays,
+    otAmountRs = otEarnings,
+    phAmountRs = phEarnings,
+    doAmountRs = doEarnings,
+    totalAmountRs = otEarnings + phEarnings + doEarnings
+)
