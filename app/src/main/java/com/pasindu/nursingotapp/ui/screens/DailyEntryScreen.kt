@@ -25,6 +25,9 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
@@ -69,6 +72,8 @@ private val DailyPurple = Color(0xFF7257E8)
 private val DailyBlueSoft = Color(0xFFEAF6FF)
 private val DailyPurpleSoft = Color(0xFFF3EEFF)
 private val DailyMintSoft = Color(0xFFEAFBF5)
+private val DailyAmberSoft = Color(0xFFFFF7E6)
+private val DailyOvertimeSoft = Color(0xFFFFF3E0)
 private val DailyHeroGradient = Brush.horizontalGradient(listOf(DailyBlue, DailyCyan, Color(0xFF4B78F2), DailyPurple))
 
 private const val CATEGORY_SHIFT_DUTY = "Shift Duty"
