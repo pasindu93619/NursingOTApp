@@ -264,6 +264,9 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
         }
         Spacer(Modifier.height(10.dp))
+    }
+}
+
 @Composable
 private fun PulseMetric(modifier: Modifier, title: String, value: String, accent: Color, surface: Color) {
     Surface(modifier, color = surface, shape = RoundedCornerShape(15.dp)) {
