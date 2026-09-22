@@ -636,18 +636,13 @@ fun DailyEntryScreen(
                     Spacer(Modifier.height(10.dp))
                     val firstDayOfWeek = allDates.firstOrNull()?.dayOfWeek?.value ?: 7
                     val emptyDaysBefore = if (firstDayOfWeek == 7) 0 else firstDayOfWeek
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(7),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        userScrollEnabled = false,
+                        modifier = Modifier.height((5 * 62).dp)
                     ) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(7),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            userScrollEnabled = false,
-                            modifier = Modifier.height((5 * 62).dp)
-                        ) {
                         items(listOf("S", "M", "T", "W", "T", "F", "S")) { day -> Text(day, textAlign = TextAlign.Center, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 4.dp)) }
                         items(emptyDaysBefore) { Spacer(Modifier.size(42.dp)) }
                         items(items = allDates, key = { it.toString() }) { date ->
@@ -836,7 +831,6 @@ fun DailyEntryScreen(
                                 if (staged != null) Icon(Icons.Default.CheckCircle, "Staged", tint = DailyCyan, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(11.dp))
                             }
                         }
-                    }
                     }
                 }
             }
