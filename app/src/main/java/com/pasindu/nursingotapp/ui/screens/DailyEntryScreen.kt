@@ -150,32 +150,51 @@ fun DailyEntryScreen(
         }
     }
 
-    val sessionSelectedDates = stagedEdits.keys.toSet()
+    fun applyEdit(date: LocalDate) {
+        val current = stagedEdits[date] ?: StagedEdit()
+        val next = when (brushCategory) {
+            CATEGORY_SHIFT_DUTY -> current.copy(shift = if (current.shift == selectedBrush) null else selectedBrush)
+            CATEGORY_OVERTIME -> current.copy(ot = if (current.ot == selectedBrush) null else selectedBrush)
+            CATEGORY_LEAVE_REST, CATEGORY_SERVICE_DAYS -> current.copy(leave = if (current.leave == selectedBrush) null else selectedBrush)
+            else -> current
+        }
+        if (next.shift == null && next.ot == null && next.leave == null) stagedEdits.remove(date) else stagedEdits[date] = next
+    }
 
-    val sessionShiftHours = sessionSelectedDates.sumOf { date ->
-        stagedEdits[date]?.shift?.let { brush ->
-            when (brush) {
+    val sessionDates = remember(stagedEdits.toMap(), allSavedEntries) {
+        stagedEdits.keys.toSet()
+    }
+
+    val sessionShiftHours = sessionDates.sumOf { date ->
+        val staged = stagedEdits[date]
+        if (staged?.shift != null) {
+            when (staged.shift) {
                 "Morn (7-13)", "Eve (13-19)" -> 6.0
                 "Night (19-7)" -> 12.0
                 "Day (7-16)" -> 9.0
                 "Custom Shift" -> customHrs.toDoubleOrNull() ?: 0.0
                 else -> 0.0
             }
-        } ?: 0.0
+        } else {
+            allSavedEntries.firstOrNull { it.date == date }?.normalHours?.toDouble() ?: 0.0
+        }
     }
 
-    val sessionLoggedOtHours = sessionSelectedDates.sumOf { date ->
-        stagedEdits[date]?.ot?.let { brush ->
-            when (brush) {
+    val sessionLoggedOtHours = sessionDates.sumOf { date ->
+        val staged = stagedEdits[date]
+        if (staged?.ot != null) {
+            when (staged.ot) {
                 "Morn OT", "Eve OT" -> 6.0
                 "Night OT" -> 12.0
                 "Custom OT" -> customHrs.toDoubleOrNull() ?: 0.0
                 else -> 0.0
             }
-        } ?: 0.0
+        } else {
+            allSavedEntries.firstOrNull { it.date == date }?.otHours?.toDouble() ?: 0.0
+        }
     }
 
-    val sessionOtBy36hRule = sessionSelectedDates
+    val sessionOtBy36hRule = sessionDates
         .groupBy { date ->
             date.minusDays(
                 when (date.dayOfWeek) {
@@ -193,67 +212,23 @@ fun DailyEntryScreen(
         .sumOf { dates ->
             (
                 dates.sumOf { date ->
-                    stagedEdits[date]?.shift?.let { brush ->
-                        when (brush) {
+                    val staged = stagedEdits[date]
+                    if (staged?.shift != null) {
+                        when (staged.shift) {
                             "Morn (7-13)", "Eve (13-19)" -> 6.0
                             "Night (19-7)" -> 12.0
                             "Day (7-16)" -> 9.0
                             "Custom Shift" -> customHrs.toDoubleOrNull() ?: 0.0
                             else -> 0.0
                         }
-                    } ?: 0.0
+                    } else {
+                        allSavedEntries.firstOrNull { it.date == date }?.normalHours?.toDouble() ?: 0.0
+                    }
                 } - 36.0
             ).coerceAtLeast(0.0)
         }
 
     val sessionTotalOtHours = sessionOtBy36hRule + sessionLoggedOtHours
-
-    fun quickApplyRemaining(brush: String) {
-        setCategory(CATEGORY_SHIFT_DUTY)
-        selectedBrush = brush
-        allDates
-            .filter { date ->
-                allSavedEntries.none { it.date == date && it.normalHours > 0f } &&
-                    stagedEdits[date]?.shift == null
-            }
-            .forEach { date ->
-                stagedEdits[date] = (stagedEdits[date] ?: StagedEdit()).copy(shift = brush)
-            }
-    }
-
-    fun quickApplyWeek(brush: String) {
-        setCategory(CATEGORY_SHIFT_DUTY)
-        selectedBrush = brush
-        val anchor = stagedEdits.keys.minOrNull() ?: allDates.firstOrNull() ?: return
-        val sunday = anchor.minusDays(
-            when (anchor.dayOfWeek) {
-                DayOfWeek.SUNDAY -> 0L
-                DayOfWeek.MONDAY -> 1L
-                DayOfWeek.TUESDAY -> 2L
-                DayOfWeek.WEDNESDAY -> 3L
-                DayOfWeek.THURSDAY -> 4L
-                DayOfWeek.FRIDAY -> 5L
-                DayOfWeek.SATURDAY -> 6L
-            }
-        )
-        (0L..6L)
-            .map { sunday.plusDays(it) }
-            .filter { it in allDates }
-            .forEach { date ->
-                stagedEdits[date] = (stagedEdits[date] ?: StagedEdit()).copy(shift = brush)
-            }
-    }
-
-    fun applyEdit(date: LocalDate) {
-        val current = stagedEdits[date] ?: StagedEdit()
-        val next = when (brushCategory) {
-            CATEGORY_SHIFT_DUTY -> current.copy(shift = if (current.shift == selectedBrush) null else selectedBrush)
-            CATEGORY_OVERTIME -> current.copy(ot = if (current.ot == selectedBrush) null else selectedBrush)
-            CATEGORY_LEAVE_REST, CATEGORY_SERVICE_DAYS -> current.copy(leave = if (current.leave == selectedBrush) null else selectedBrush)
-            else -> current
-        }
-        if (next.shift == null && next.ot == null && next.leave == null) stagedEdits.remove(date) else stagedEdits[date] = next
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
