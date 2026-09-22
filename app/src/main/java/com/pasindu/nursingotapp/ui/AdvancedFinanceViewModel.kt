@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
+import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
@@ -85,7 +86,10 @@ class AdvancedFinanceViewModel @Inject constructor(
             viewModelScope.launch {
                 runCatching {
                     ensureManualPayRateRecordUseCase()
-                    if (profile != null) synchronizePolicyRatesUseCase(profile)
+                    if (profile != null) {
+                        applyMatched2027DayRateUseCase(profile)
+                        synchronizePolicyRatesUseCase(profile)
+                    }
                     recalculate()
                 }.onFailure { error ->
                     setError(error, "Unable to initialize financial information.")
