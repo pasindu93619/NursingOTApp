@@ -39,7 +39,9 @@ class SynchronizePolicyRatesUseCase(
 
         val current = payRateSettingsDao.observe().first()
         val otRate = (current?.otRate ?: profile.otRate).coerceAtLeast(0.0)
-        val dayRate = (salaryStep.basicSalary2027 / 30.0).coerceAtLeast(0.0)
+        val dayRate = salaryStep.basicSalary2027
+            .div(30.0)
+            .coerceAtLeast(0.0)
 
         payRateSettingsDao.upsert(
             PayRateSettingsEntity(
@@ -51,6 +53,40 @@ class SynchronizePolicyRatesUseCase(
                 basisSalary2027 = salaryStep.basicSalary2027
             )
         )
+    }
+}
+
+/**
+ * Re-applies the same matched 2027 salary-step policy used by the finance
+ * synchronization path. This prevents individual screens from maintaining
+ * a separate PH/DO calculation.
+ */
+class ApplyMatched2027DayRateUseCase(
+    private val payRateSettingsDao: PayRateSettingsDao,
+    private val salaryStep2027Dao: SalaryStep2027Dao
+) {
+    suspend operator fun invoke(profile: ProfileEntity): Double? {
+        val salaryStep = salaryStep2027Dao.findByCurrentBasic(
+            grade = profile.grade,
+            currentBasicSalary = profile.basicSalary
+        ) ?: return null
+
+        val dayRate = salaryStep.basicSalary2027
+            .div(30.0)
+            .coerceAtLeast(0.0)
+
+        val current = payRateSettingsDao.observe().first()
+        payRateSettingsDao.upsert(
+            PayRateSettingsEntity(
+                id = 1,
+                otRate = (current?.otRate ?: profile.otRate).coerceAtLeast(0.0),
+                phRate = dayRate,
+                doRate = dayRate,
+                rateSource = "2027_BASIC_SALARY_DIV_30",
+                basisSalary2027 = salaryStep.basicSalary2027
+            )
+        )
+        return dayRate
     }
 }
 
