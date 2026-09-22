@@ -336,44 +336,68 @@ private fun EmptyVaultCard(onAdd: () -> Unit) { Surface(Modifier.fillMaxWidth(),
 @Composable
 private fun VaultHero(count: Int, bytes: Long, monthsCovered: Int, onAdd: () -> Unit) {
     val storageText = formatBytes(bytes)
+
     Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(27.dp),
         color = Slate
     ) {
         Column(
-            Modifier
-                .background(AdvancedGradient, RoundedCornerShape(NursingDimensions.Radius.extraLarge))
-                .padding(NursingDimensions.Spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AdvancedGradient, RoundedCornerShape(27.dp))
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Surface(
-                color = Color.White.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(NursingDimensions.Radius.pill)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "PRIVATE DOCUMENT VAULT",
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(
-                        horizontal = NursingDimensions.Spacing.md,
-                        vertical = NursingDimensions.Spacing.sm
+                Surface(
+                    color = Color.White.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        "PRIVATE DOCUMENT VAULT",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     )
-                )
+                }
+
+                Surface(
+                    color = Color.White.copy(alpha = 0.13f),
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Private",
+                        tint = Color.White,
+                        modifier = Modifier.padding(9.dp).size(17.dp)
+                    )
+                }
             }
+
             Text(
                 "Never lose a paysheet again.",
                 color = Color.White,
-                style = MaterialTheme.typography.headlineMedium
+                fontSize = 27.sp,
+                fontWeight = FontWeight.Black
             )
+
             Text(
                 "One organized, private archive for every month.",
-                color = Color.White.copy(alpha = 0.88f),
-                style = MaterialTheme.typography.bodyLarge
+                color = Color.White.copy(alpha = 0.82f),
+                fontSize = 13.sp,
+                lineHeight = 19.sp
             )
+
             Row(
-                horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 VaultStat(
                     "$count",
@@ -391,21 +415,28 @@ private fun VaultHero(count: Int, bytes: Long, monthsCovered: Int, onAdd: () -> 
                     "$monthsCovered",
                     "MONTHS COVERED",
                     Modifier.weight(1f),
-                    MaterialTheme.colorScheme.primary
+                    MedicalBlue
                 )
             }
+
             Button(
                 onClick = onAdd,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor = Slate
                 )
             ) {
                 Icon(Icons.Default.CameraAlt, contentDescription = null)
-                Spacer(Modifier.width(NursingDimensions.Spacing.sm))
-                Text("ADD PAY SHEET", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "ADD PAY SHEET",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
             }
         }
     }
