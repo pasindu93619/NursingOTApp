@@ -244,24 +244,26 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
                 Text("Normal duty + overtime for this period", color = TextSecondary, fontSize = 10.sp)
             }
             Surface(color = FinanceBlueSoft, shape = RoundedCornerShape(50.dp)) {
-                Text("36h target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("${state.requiredDutyHours.oneDecimal()}h required", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Spacer(Modifier.height(15.dp))
-        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PulseMetric(Modifier.weight(1f), "Normal Duty", "${state.totalNormalHours.oneDecimal()} h", ClinicalPrimaryColor, FinanceBlueSoft)
-            PulseMetric(Modifier.weight(1f), "Overtime", "${state.totalOTHours.oneDecimal()} h", Purple, FinancePurpleSoft)
-        }
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PulseMetric(Modifier.weight(1f), "PH", "${state.totalPHDays} days", Amber, FinanceAmberSoft)
-            PulseMetric(Modifier.weight(1f), "DO", "${state.totalDODays} days", Emerald, FinanceMintSoft)
+        Text("${state.claimWeekCount} full Sunday–Saturday week(s) • 36h required each", color = TextSecondary, fontSize = 9.sp)
+        Spacer(Modifier.height(12.dp))
+        if (state.claimWeekCount > 0) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                repeat(state.claimWeekCount) {
+                    Surface(
+                        modifier = Modifier.weight(1f).height(10.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        color = ClinicalPrimaryColor.copy(alpha = 0.12f)
+                    ) {}
+                }
+            }
+        } else {
+            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
         }
-    }
-}
-
+        Spacer(Modifier.height(10.dp))
 @Composable
 private fun PulseMetric(modifier: Modifier, title: String, value: String, accent: Color, surface: Color) {
     Surface(modifier, color = surface, shape = RoundedCornerShape(15.dp)) {
