@@ -204,6 +204,7 @@ fun PaySheetBankScreen(
     }
 
     val usedBytes = remember(documents) { documents.sumOf { it.fileSizeBytes } }
+    val monthsCovered = remember(documents) { documents.map { it.monthKey }.distinct().size }
     val sortedDocuments = remember(documents) { documents.sortedByDescending { it.monthKey } }
 
     Column(Modifier.fillMaxSize().background(AppBackground)) {
@@ -236,8 +237,14 @@ fun PaySheetBankScreen(
             Modifier.fillMaxSize().padding(horizontal = NursingDimensions.Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
         ) {
-            item { VaultHero(count = documents.size, bytes = usedBytes, onAdd = { pickerYear = Year.now().value; showMonthPicker = true }) }
-            item { PaySheetVaultStorageCard(documents) }
+            item {
+                VaultHero(
+                    count = documents.size,
+                    bytes = usedBytes,
+                    monthsCovered = monthsCovered,
+                    onAdd = { pickerYear = Year.now().value; showMonthPicker = true }
+                )
+            }
             item { PaySheetVaultSearchPanel(documents = documents, onDocumentSelected = { document: PaySheetDocumentEntity -> selected = document }) }
             item {
                 Row(
@@ -327,7 +334,82 @@ fun PaySheetBankScreen(
 private fun EmptyVaultCard(onAdd: () -> Unit) { Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) { Row(Modifier.padding(NursingDimensions.Spacing.lg), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(54.dp).clip(RoundedCornerShape(NursingDimensions.Radius.large)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = TextSecondary) }; Spacer(Modifier.width(NursingDimensions.Spacing.md)); Column(Modifier.weight(1f)) { Text("Your vault is empty", color = TextPrimary, style = MaterialTheme.typography.titleSmall); Text("Choose a month, then add your paysheet.", color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; IconButton(onClick = onAdd) { Icon(Icons.Default.PhotoCamera, contentDescription = "Add paysheet", tint = MaterialTheme.colorScheme.primary) } } } }
 
 @Composable
-private fun VaultHero(count: Int, bytes: Long, onAdd: () -> Unit) { val storageText = formatBytes(bytes); Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge), color = Slate) { Column(Modifier.background(AdvancedGradient, RoundedCornerShape(NursingDimensions.Radius.extraLarge)).padding(NursingDimensions.Spacing.xxl), verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)) { Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(NursingDimensions.Radius.pill)) { Text("PRIVATE DOCUMENT VAULT", color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = NursingDimensions.Spacing.md, vertical = NursingDimensions.Spacing.sm)) }; Text("Never lose a paysheet again.", color = Color.White, style = MaterialTheme.typography.headlineMedium); Text("One organized, private archive for every month.", color = Color.White.copy(alpha = 0.88f), style = MaterialTheme.typography.bodyLarge); Row(horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md), modifier = Modifier.fillMaxWidth()) { VaultStat("$count", "MONTHS", Modifier.weight(1f), MaterialTheme.colorScheme.primary); VaultStat(storageText, "STORAGE", Modifier.weight(1f), Emerald) }; Button(onClick = onAdd, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge), colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Slate)) { Icon(Icons.Default.CameraAlt, contentDescription = null); Spacer(Modifier.width(NursingDimensions.Spacing.sm)); Text("ADD PAY SHEET", style = MaterialTheme.typography.titleMedium) } } } }
+private fun VaultHero(count: Int, bytes: Long, monthsCovered: Int, onAdd: () -> Unit) {
+    val storageText = formatBytes(bytes)
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        color = Slate
+    ) {
+        Column(
+            Modifier
+                .background(AdvancedGradient, RoundedCornerShape(NursingDimensions.Radius.extraLarge))
+                .padding(NursingDimensions.Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
+        ) {
+            Surface(
+                color = Color.White.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(NursingDimensions.Radius.pill)
+            ) {
+                Text(
+                    "PRIVATE DOCUMENT VAULT",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(
+                        horizontal = NursingDimensions.Spacing.md,
+                        vertical = NursingDimensions.Spacing.sm
+                    )
+                )
+            }
+            Text(
+                "Never lose a paysheet again.",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                "One organized, private archive for every month.",
+                color = Color.White.copy(alpha = 0.88f),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                VaultStat(
+                    "$count",
+                    "PAY SHEETS",
+                    Modifier.weight(1f),
+                    Purple
+                )
+                VaultStat(
+                    storageText,
+                    "STORAGE USED",
+                    Modifier.weight(1f),
+                    Emerald
+                )
+                VaultStat(
+                    "$monthsCovered",
+                    "MONTHS COVERED",
+                    Modifier.weight(1f),
+                    MaterialTheme.colorScheme.primary
+                )
+            }
+            Button(
+                onClick = onAdd,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Slate
+                )
+            ) {
+                Icon(Icons.Default.CameraAlt, contentDescription = null)
+                Spacer(Modifier.width(NursingDimensions.Spacing.sm))
+                Text("ADD PAY SHEET", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
 
 @Composable
 private fun VaultStat(value: String, label: String, modifier: Modifier, accent: Color) { Surface(modifier = modifier, color = Color.White.copy(alpha = 0.10f), shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) { Column(Modifier.padding(NursingDimensions.Spacing.lg)) { Text(value, color = accent, style = MaterialTheme.typography.headlineMedium); Text(label, color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.labelMedium) } } }
