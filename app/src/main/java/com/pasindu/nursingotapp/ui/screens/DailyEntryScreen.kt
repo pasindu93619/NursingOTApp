@@ -545,7 +545,7 @@ fun DailyEntryScreen(
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(items = when (brushCategory) {
                                 CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
-                                CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "DO — no-pay leave", "Clear Leave")
+                                CATEGORY_LEAVE_REST -> listOf("CL", "PH", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "DO — no-pay leave", "Clear Leave")
                                 CATEGORY_SERVICE_DAYS -> listOf("Work DO", "Work PH", "Clear Leave")
                                 else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
                             }) { brush ->
