@@ -230,6 +230,42 @@ fun DailyEntryScreen(
 
     val sessionTotalOtHours = sessionOtBy36hRule + sessionLoggedOtHours
 
+    fun quickApplyRemaining(brush: String) {
+        brushCategory = CATEGORY_SHIFT_DUTY
+        selectedBrush = brush
+        allDates
+            .filter { date ->
+                allSavedEntries.none { it.date == date && it.normalHours > 0f } &&
+                    stagedEdits[date]?.shift == null
+            }
+            .forEach { date ->
+                stagedEdits[date] = (stagedEdits[date] ?: StagedEdit()).copy(shift = brush)
+            }
+    }
+
+    fun quickApplyWeek(brush: String) {
+        brushCategory = CATEGORY_SHIFT_DUTY
+        selectedBrush = brush
+        val anchorDate = stagedEdits.keys.minOrNull() ?: allDates.firstOrNull() ?: return
+        val sunday = anchorDate.minusDays(
+            when (anchorDate.dayOfWeek) {
+                DayOfWeek.SUNDAY -> 0L
+                DayOfWeek.MONDAY -> 1L
+                DayOfWeek.TUESDAY -> 2L
+                DayOfWeek.WEDNESDAY -> 3L
+                DayOfWeek.THURSDAY -> 4L
+                DayOfWeek.FRIDAY -> 5L
+                DayOfWeek.SATURDAY -> 6L
+            }
+        )
+        (0L..6L)
+            .map { sunday.plusDays(it) }
+            .filter { it in allDates }
+            .forEach { date ->
+                stagedEdits[date] = (stagedEdits[date] ?: StagedEdit()).copy(shift = brush)
+            }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
