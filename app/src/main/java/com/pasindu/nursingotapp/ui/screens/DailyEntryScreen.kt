@@ -271,20 +271,41 @@ fun DailyEntryScreen(
         bottomBar = {
             Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = Color.White) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(18.dp), color = DailyBlueSoft) {
-                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                Text("PERIOD PROGRESS", color = DailyCyan, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                Text("$completedCount / ${allDates.size} days", color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                            }
-                        }
-                        Surface(shape = RoundedCornerShape(18.dp), color = DailyMintSoft) {
-                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.End) {
-                                Text("TOTAL", color = Color(0xFF0E9F73), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                Text(String.format(Locale.US, "%.1fh • %.1fh OT", animatedNormalHrs, animatedOtHrs), color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                            }
-                        }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        SummaryMetricCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.TouchApp,
+                            label = "SHIFT DUTY",
+                            value = String.format(Locale.US, "%.1fh", sessionShiftHours),
+                            accent = DailyCyan,
+                            container = DailyBlueSoft
+                        )
+                        SummaryMetricCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Schedule,
+                            label = "OVER 36H",
+                            value = String.format(Locale.US, "%.1fh", sessionOtBy36hRule),
+                            accent = Color(0xFFF59E0B),
+                            container = DailyAmberSoft
+                        )
+                        SummaryMetricCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Paid,
+                            label = "TOTAL OT",
+                            value = String.format(Locale.US, "%.1fh", sessionTotalOtHours),
+                            accent = Color(0xFFEF4444),
+                            container = DailyOvertimeSoft
+                        )
                     }
+                    Text(
+                        String.format(Locale.US, "%.1fh over-36 + %.1fh logged overtime = %.1fh total OT", sessionOtBy36hRule, sessionLoggedOtHours, sessionTotalOtHours),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                     Button(
                         enabled = !isSavingBulk && (stagedEdits.isNotEmpty() || isAutoFillMode),
                         onClick = {
@@ -434,6 +455,26 @@ fun DailyEntryScreen(
                             }
                         }
                     }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                val brush = if (wardType == "Normal") "Morn (7-13)" else "Day (7-16)"
+                                quickApplyWeek(brush)
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(13.dp),
+                            contentPadding = PaddingValues(horizontal = 7.dp)
+                        ) { Text("Apply whole week", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold) }
+                        OutlinedButton(
+                            onClick = {
+                                val brush = if (wardType == "Normal") "Morn (7-13)" else "Day (7-16)"
+                                quickApplyRemaining(brush)
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(13.dp),
+                            contentPadding = PaddingValues(horizontal = 7.dp)
+                        ) { Text("Apply remaining days", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold) }
+                    }
                 }
             }
 
@@ -464,21 +505,58 @@ fun DailyEntryScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(CATEGORY_SHIFT_DUTY, CATEGORY_LEAVE_REST, CATEGORY_SERVICE_DAYS, CATEGORY_OVERTIME).forEach { category ->
                             val selected = brushCategory == category
-                            Surface(Modifier.weight(1f).clickable { setCategory(category) }, shape = RoundedCornerShape(13.dp), color = if (selected) DailyCyan else DailyBlueSoft) {
-                                Text(category, Modifier.padding(vertical = 10.dp, horizontal = 2.dp), textAlign = TextAlign.Center, color = if (selected) Color.White else DailyInk, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                            val identity = when (category) {
+                                CATEGORY_SHIFT_DUTY -> DailyCyan
+                                CATEGORY_LEAVE_REST -> Color(0xFF10B981)
+                                CATEGORY_SERVICE_DAYS -> DailyPurple
+                                else -> Color(0xFFF59E0B)
+                            }
+                            val soft = when (category) {
+                                CATEGORY_SHIFT_DUTY -> DailyBlueSoft
+                                CATEGORY_LEAVE_REST -> DailyMintSoft
+                                CATEGORY_SERVICE_DAYS -> DailyPurpleSoft
+                                else -> DailyAmberSoft
+                            }
+                            Surface(Modifier.weight(1f).clickable { setCategory(category) }, shape = RoundedCornerShape(13.dp), color = if (selected) identity else soft) {
+                                Text(category, Modifier.padding(vertical = 10.dp, horizontal = 2.dp), textAlign = TextAlign.Center, color = if (selected) Color.White else identity, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                     }
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(items = when (brushCategory) {
-                            CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
-                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "DO — no-pay leave", "Clear Leave")
-                            CATEGORY_SERVICE_DAYS -> listOf("Work DO", "Work PH", "Clear Leave")
-                            else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
-                        }) { brush ->
-                            val selected = selectedBrush == brush
-                            Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) DailyCyan else MaterialTheme.colorScheme.surfaceVariant) {
-                                Text(brush, Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.width(3.dp).height(36.dp).clip(RoundedCornerShape(3.dp)).background(
+                            when (brushCategory) {
+                                CATEGORY_SHIFT_DUTY -> DailyCyan
+                                CATEGORY_LEAVE_REST -> Color(0xFF10B981)
+                                CATEGORY_SERVICE_DAYS -> DailyPurple
+                                else -> Color(0xFFF59E0B)
+                            }
+                        ))
+                        Spacer(Modifier.width(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(items = when (brushCategory) {
+                                CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
+                                CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "DO — no-pay leave", "Clear Leave")
+                                CATEGORY_SERVICE_DAYS -> listOf("Work DO", "Work PH", "Clear Leave")
+                                else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
+                            }) { brush ->
+                                val selected = selectedBrush == brush
+                                val identity = when (brushCategory) {
+                                    CATEGORY_SHIFT_DUTY -> DailyCyan
+                                    CATEGORY_LEAVE_REST -> Color(0xFF10B981)
+                                    CATEGORY_SERVICE_DAYS -> DailyPurple
+                                    else -> Color(0xFFF59E0B)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) identity else MaterialTheme.colorScheme.surfaceVariant) {
+                                        Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            if (brush == "DO — no-pay leave") {
+                                                Icon(Icons.Default.EventBusy, null, tint = if (selected) Color.White else Color(0xFF10B981), modifier = Modifier.size(15.dp))
+                                                Spacer(Modifier.width(5.dp))
+                                            }
+                                            Text(brush, color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -616,7 +694,13 @@ fun DailyEntryScreen(
                             val top by animateColorAsState(topColor, tween(500, easing = FastOutSlowInEasing), label = "top")
                             val bottom by animateColorAsState(bottomColor, tween(500, easing = FastOutSlowInEasing), label = "bottom")
                             val split = Brush.linearGradient(0f to top, .5f to top, .5f to bottom, 1f to bottom)
-                            val borderColor by animateColorAsState(if (staged != null) DailyCyan else Color.LightGray, label = "border")
+                            val categoryAccent = when {
+                                staged?.leave != null -> Color(0xFF10B981)
+                                staged?.ot != null -> Color(0xFFF59E0B)
+                                staged?.shift != null -> DailyCyan
+                                else -> Color.LightGray
+                            }
+                            val borderColor by animateColorAsState(categoryAccent, label = "border")
                             var cleared by remember { mutableStateOf(false) }
                             val clearScale by animateFloatAsState(if (cleared) 0.8f else 1f, tween(150), label = "clear")
                             LaunchedEffect(cleared) { if (cleared) { delay(150); cleared = false } }
@@ -718,6 +802,24 @@ fun DailyEntryScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SummaryMetricCard(
+    modifier: Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    accent: Color,
+    container: Color
+) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), color = container) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+            Text(label, color = accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
+            Text(value, color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
