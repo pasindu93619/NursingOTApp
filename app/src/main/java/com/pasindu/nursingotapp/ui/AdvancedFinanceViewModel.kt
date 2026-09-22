@@ -41,6 +41,11 @@ data class AdvancedFinanceUiState(
     val wop: Double = 0.0,
     val loanDeduction: Double = 0.0,
     val otherDeduction: Double = 0.0,
+    val otherAllowancesEnabled: Boolean = false,
+    val customAllowances: List<com.pasindu.nursingotapp.data.model.CustomAllowance> = emptyList(),
+    val loanOutstandingBalance: Double = 0.0,
+    val loanMonthlyInstallment: Double = 0.0,
+    val loanInstallmentsRemaining: Int? = null,
     val errorMessage: String? = null
 ) {
     val currentBasicSalary: Double get() = profile?.basicSalary ?: 0.0
@@ -60,6 +65,7 @@ data class AdvancedFinanceUiState(
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
     val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
     val paysheetDeductions: Double get() = compensation?.totalDeductions ?: 0.0
+    val allowanceTotal: Double get() = riskAllowance + claAllowance + additionalAllowancesTotal
     val otRate: Double get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
     val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
     val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
@@ -229,6 +235,8 @@ class AdvancedFinanceViewModel @Inject constructor(
         const val FIXED_RISK_ALLOWANCE_RS = 6850.0
         const val FIXED_CLA_ALLOWANCE_RS = 17800.0
     }
+
+    fun setOtherAllowancesEnabled(enabled: Boolean) { _uiState.value = _uiState.value.copy(otherAllowancesEnabled = enabled) }
 
     private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
 
