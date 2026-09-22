@@ -44,6 +44,13 @@ data class AdvancedFinanceUiState(
     val errorMessage: String? = null
 ) {
     val currentBasicSalary: Double get() = profile?.basicSalary ?: 0.0
+    val claimWeekCount: Int get() = claimPeriod?.let { period ->
+        java.time.temporal.ChronoUnit.WEEKS.between(
+            period.startDate,
+            period.endDate.plusDays(1)
+        ).toInt()
+    } ?: 0
+    val requiredDutyHours: Double get() = claimWeekCount * 36.0
     val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
     val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
