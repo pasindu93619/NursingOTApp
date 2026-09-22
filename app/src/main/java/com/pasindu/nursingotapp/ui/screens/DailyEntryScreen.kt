@@ -546,16 +546,31 @@ fun DailyEntryScreen(
                                     CATEGORY_SERVICE_DAYS -> DailyPurple
                                     else -> Color(0xFFF59E0B)
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) identity else MaterialTheme.colorScheme.surfaceVariant) {
-                                        Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            if (brush == "DO — no-pay leave") {
-                                                Icon(Icons.Default.EventBusy, null, tint = if (selected) Color.White else Color(0xFF10B981), modifier = Modifier.size(15.dp))
-                                                Spacer(Modifier.width(5.dp))
-                                            }
-                                            Text(brush, color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                Surface(
+                                    Modifier.clickable { chooseBrush(brush) },
+                                    shape = RoundedCornerShape(13.dp),
+                                    color = if (selected) identity else MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Row(
+                                        Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (brush == "DO — no-pay leave") {
+                                            Icon(
+                                                Icons.Default.EventBusy,
+                                                contentDescription = null,
+                                                tint = if (selected) Color.White else Color(0xFF10B981),
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Spacer(Modifier.width(5.dp))
                                         }
-                                    )
+                                        Text(
+                                            brush,
+                                            color = if (selected) Color.White else DailyInk,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    }
                                 }
                             }
                         }
