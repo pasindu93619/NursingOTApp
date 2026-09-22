@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -589,6 +590,40 @@ fun DailyEntryScreen(
 
             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                 Column(Modifier.padding(14.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            onClick = {
+                                val sourceWeek = stagedEdits.keys.minOrNull()?.let { anchor ->
+                                    val sunday = anchor.minusDays(
+                                        when (anchor.dayOfWeek) {
+                                            DayOfWeek.SUNDAY -> 0L
+                                            DayOfWeek.MONDAY -> 1L
+                                            DayOfWeek.TUESDAY -> 2L
+                                            DayOfWeek.WEDNESDAY -> 3L
+                                            DayOfWeek.THURSDAY -> 4L
+                                            DayOfWeek.FRIDAY -> 5L
+                                            DayOfWeek.SATURDAY -> 6L
+                                        }
+                                    )
+                                    (0L..6L).map { sunday.plusDays(it) }
+                                }
+                                if (sourceWeek != null) {
+                                    sourceWeek.forEachIndexed { index, sourceDate ->
+                                        val source = stagedEdits[sourceDate]
+                                        val target = sourceDate.plusWeeks(1)
+                                        if (target in allDates && source != null) {
+                                            stagedEdits[target] = source
+                                        }
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Repeat this week's pattern", fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("${startDate.month.name.lowercase().replaceFirstChar { it.uppercase() }} calendar", color = DailyInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
@@ -695,45 +730,75 @@ fun DailyEntryScreen(
                             val hasLeaveAnim = renderLeave.isNotBlank() && renderLeave !in listOf("W.DO", "W.PH")
                             val hasShiftAnim = willHaveShift && !hasLeaveAnim
                             val hasOtAnim = willHaveOT && !hasLeaveAnim
-                            val topColor = when {
-                                hasLeaveAnim && renderLeave == "PH" -> Color(0xFFFDCB6E)
-                                hasLeaveAnim && renderLeave == "DO" -> Color(0xFFDFE6E9)
-                                hasLeaveAnim && renderLeave == "SD" -> Color(0xFF7986CB)
-                                hasLeaveAnim -> Color(0xFFFF6B6B)
-                                hasShiftAnim -> Color(0xFF55EFC4)
-                                hasOtAnim -> Color(0xFF74B9FF)
-                                isWknd -> weekend_background_highlight
-                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)
+                            val shiftTypeColor = when {
+                                renderShift == "7-13" -> Color(0xFFFFE5B4) // Morning
+                                renderShift == "13-19" -> Color(0xFFDDF3FF) // Evening
+                                renderShift == "19-7" -> Color(0xFFE9DDFF) // Night
+                                renderShift == "7-16" -> Color(0xFFDFF8EE)
+                                renderShift == "Cus" -> Color(0xFFE8F1F8)
+                                else -> null
                             }
-                            val bottomColor = when {
-                                hasOtAnim -> Color(0xFF74B9FF)
-                                hasLeaveAnim && renderLeave == "PH" -> Color(0xFFFDCB6E)
-                                hasLeaveAnim && renderLeave == "DO" -> Color(0xFFDFE6E9)
-                                hasLeaveAnim && renderLeave == "SD" -> Color(0xFF7986CB)
-                                hasLeaveAnim -> Color(0xFFFF6B6B)
-                                hasShiftAnim -> Color(0xFF55EFC4)
-                                isWknd -> weekend_background_highlight
-                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)
+                            val leaveTypeColor = when (renderLeave) {
+                                "DO" -> Color(0xFFEAFBF5)
+                                "PH" -> Color(0xFFFFF1CC)
+                                "SD" -> DailyPurpleSoft
+                                "W.DO", "W.PH" -> Color(0xFFF1F5F9)
+                                else -> if (renderLeave.isNotBlank()) Color(0xFFFFE3E3) else null
                             }
+                            val otTypeColor = if (hasOtAnim) Color(0xFFFFF1D6) else null
+                            val cellColor = when {
+                                shiftTypeColor != null && !hasLeaveAnim -> shiftTypeColor
+                                leaveTypeColor != null -> leaveTypeColor
+                                otTypeColor != null && !hasShiftAnim -> otTypeColor
+                                else -> if (isWknd && !hasShiftAnim && !hasLeaveAnim && !hasOtAnim) {
+                                    weekend_background_highlight
+                                } else {
+                                    Color.Transparent
+                                }
+                            }
+                            val emptyDay = !hasShiftAnim && !hasLeaveAnim && !hasOtAnim && renderShift.isBlank() && renderLeave.isBlank() && oHrs <= 0f
+                            val topColor = if (emptyDay) {
+                                Color.Transparent
+                            } else {
+                                cellColor
+                            }
+                            val bottomColor = topColor
                             val top by animateColorAsState(topColor, tween(500, easing = FastOutSlowInEasing), label = "top")
                             val bottom by animateColorAsState(bottomColor, tween(500, easing = FastOutSlowInEasing), label = "bottom")
                             val split = Brush.linearGradient(0f to top, .5f to top, .5f to bottom, 1f to bottom)
-                            val categoryAccent = when {
-                                staged?.leave != null -> Color(0xFF10B981)
-                                staged?.ot != null -> Color(0xFFF59E0B)
-                                staged?.shift != null -> DailyCyan
+                            val borderAccent = when {
+                                renderLeave == "PH" -> Color(0xFFF59E0B)
+                                renderLeave == "DO" || renderLeave == "SD" -> Color(0xFF10B981)
+                                renderLeave.isNotBlank() -> Color(0xFF10B981)
+                                hasOtAnim -> Color(0xFFF59E0B)
+                                renderShift == "7-13" -> Color(0xFFF59E0B)
+                                renderShift == "13-19" -> Color(0xFF0EA5E9)
+                                renderShift == "19-7" -> DailyPurple
+                                renderShift.isNotBlank() -> DailyCyan
                                 else -> Color.LightGray
                             }
-                            val borderColor by animateColorAsState(categoryAccent, label = "border")
+                            val borderColor by animateColorAsState(borderAccent, tween(300), label = "border")
                             var cleared by remember { mutableStateOf(false) }
                             val clearScale by animateFloatAsState(if (cleared) 0.8f else 1f, tween(150), label = "clear")
                             LaunchedEffect(cleared) { if (cleared) { delay(150); cleared = false } }
+                            val isWeekStart = date.dayOfWeek == DayOfWeek.SUNDAY
+
                             Box(
-                                Modifier.aspectRatio(1f)
+                                Modifier
+                                    .aspectRatio(1f)
+                                    .padding(top = if (isWeekStart) 5.dp else 0.dp)
                                     .scale(clearScale)
                                     .clip(RoundedCornerShape(11.dp))
                                     .background(split)
-                                    .border(if (staged != null) 2.dp else 1.dp, borderColor, RoundedCornerShape(11.dp))
+                                    .border(if (emptyDay) 1.dp else if (staged != null) 2.dp else 1.dp, borderColor, RoundedCornerShape(11.dp))
+                                    .pointerInput(brushCategory, selectedBrush, existing) {
+                                        detectDragGestures(
+                                            onDragStart = { },
+                                            onDragEnd = { },
+                                            onDragCancel = { },
+                                            onDrag = { _, _ -> }
+                                        )
+                                    }
                                     .pointerInput(brushCategory, selectedBrush, existing) {
                                         detectTapGestures(
                                             onTap = { applyEdit(date) },
