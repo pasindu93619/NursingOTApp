@@ -28,6 +28,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+data class CustomAllowanceDraft(
+    val name: String,
+    val amount: Double
+)
+
 data class AdvancedFinanceUiState(
     val isLoading: Boolean = true,
     val profile: ProfileEntity? = null,
@@ -42,7 +47,7 @@ data class AdvancedFinanceUiState(
     val loanDeduction: Double = 0.0,
     val otherDeduction: Double = 0.0,
     val otherAllowancesEnabled: Boolean = false,
-    val customAllowances: List<com.pasindu.nursingotapp.data.model.CustomAllowance> = emptyList(),
+    val customAllowances: List<CustomAllowanceDraft> = emptyList(),
     val loanOutstandingBalance: Double = 0.0,
     val loanMonthlyInstallment: Double = 0.0,
     val loanInstallmentsRemaining: Int? = null,
