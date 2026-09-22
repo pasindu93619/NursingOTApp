@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
@@ -68,6 +69,7 @@ import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
 import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
 import com.pasindu.nursingotapp.ui.PaySheetBankViewModel
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
+import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
