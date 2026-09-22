@@ -70,6 +70,7 @@ class AdvancedFinanceViewModel @Inject constructor(
     observePayRates: ObserveOtRateUseCase,
     observeCompensation: ObserveProfileCompensationUseCase,
     private val ensureManualPayRateRecordUseCase: EnsureManualPayRateRecordUseCase,
+    private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase,
     private val synchronizePolicyRatesUseCase: SynchronizePolicyRatesUseCase,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val calculateFinanceSummaryUseCase: CalculateFinanceSummaryUseCase,
