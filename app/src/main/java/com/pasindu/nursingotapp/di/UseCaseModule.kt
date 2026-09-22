@@ -32,12 +32,14 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveFinanceDeductionsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.SavePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileSettingsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveProfileUseCase
+import com.pasindu.nursingotapp.domain.usecase.ObserveFinanceDeductionsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
 import dagger.Module
 import dagger.Provides
@@ -62,6 +64,8 @@ object UseCaseModule {
     @Provides fun provideSynchronizePolicyRatesUseCase(payRateSettingsDao: PayRateSettingsDao, salaryStep2027Dao: SalaryStep2027Dao) = SynchronizePolicyRatesUseCase(payRateSettingsDao, salaryStep2027Dao)
     @Provides fun provideSaveFinanceCompensationUseCase(dao: ProfileCompensationDao) = SaveFinanceCompensationUseCase(dao)
     @Provides fun provideSaveFinanceRatesUseCase(dao: PayRateSettingsDao) = SaveFinanceRatesUseCase(dao)
+    @Provides fun provideObserveFinanceDeductionsUseCase(dao: ProfileCompensationDao) = ObserveFinanceDeductionsUseCase(dao)
+    @Provides fun provideSaveFinanceDeductionsUseCase(dao: ProfileCompensationDao) = SaveFinanceDeductionsUseCase(dao)
     @Provides fun provideObserveClaimPeriodsUseCase(dao: ClaimPeriodDao) = ObserveClaimPeriodsUseCase(dao)
     @Provides fun provideCreateClaimPeriodUseCase(dao: ClaimPeriodDao) = CreateClaimPeriodUseCase(dao)
     @Provides fun provideDeleteClaimPeriodUseCase(claimPeriodDao: ClaimPeriodDao, dailyEntryDao: DailyEntryDao) = DeleteClaimPeriodUseCase(claimPeriodDao, dailyEntryDao)
