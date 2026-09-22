@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
+import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
@@ -71,6 +72,7 @@ class AdvancedFinanceViewModel @Inject constructor(
     observeCompensation: ObserveProfileCompensationUseCase,
     private val ensureManualPayRateRecordUseCase: EnsureManualPayRateRecordUseCase,
     private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase,
+    private val salaryStep2027Dao: SalaryStep2027Dao,
     private val synchronizePolicyRatesUseCase: SynchronizePolicyRatesUseCase,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val calculateFinanceSummaryUseCase: CalculateFinanceSummaryUseCase,
@@ -88,8 +90,13 @@ class AdvancedFinanceViewModel @Inject constructor(
                 runCatching {
                     ensureManualPayRateRecordUseCase()
                     if (profile != null) {
-                        applyMatched2027DayRateUseCase(profile.basicSalary)
                         synchronizePolicyRatesUseCase(profile)
+                        salaryStep2027Dao.findByCurrentBasic(
+                            grade = profile.grade,
+                            currentBasicSalary = profile.basicSalary
+                        )?.basicSalary2027?.let { matched2027Basic ->
+                            applyMatched2027DayRateUseCase(matched2027Basic)
+                        }
                     }
                     recalculate()
                 }.onFailure { error ->
