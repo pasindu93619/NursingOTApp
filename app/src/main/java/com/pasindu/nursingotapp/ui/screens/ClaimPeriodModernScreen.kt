@@ -1856,3 +1856,5 @@ fun ClaimPeriodModernScreen(
                     )
                 }
             }
+        }
+    }
