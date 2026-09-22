@@ -1,9 +1,12 @@
 package com.pasindu.nursingotapp.data.repository
 
 import com.pasindu.nursingotapp.data.local.AppDatabase
+import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
+import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
+import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
+import com.pasindu.nursingotapp.data.local.entity.FinancialRecordEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
-import com.pasindu.nursingotapp.data.model.DailyLog
 import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -21,6 +24,7 @@ class NurseCommandCenterRepository(
     private val database: AppDatabase
 ) {
     private val profileDao = database.profileDao()
+    private val claimPeriodDao = database.claimPeriodDao()
     private val dailyEntryDao = database.dailyEntryDao()
     private val financialDao = database.financialDao()
     private val clinicalPlanningDao = database.clinicalPlanningDao()
@@ -54,58 +58,76 @@ class NurseCommandCenterRepository(
 
         return combine(
             profileDao.observeProfile(),
+            claimPeriodDao.observeClaimPeriods(),
             dailyEntryDao.observeAllEntries(),
             financialDao.getAllFinancialRecords(),
-            clinicalPlanningDao.getAllTasks(),
-            knowledgeHubDao.getAllCpdLogs()
-        ) { currentProfile, entries, finance, clinicalTasks, cpdLogs ->
+            clinicalPlanningDao.getAllTasks()
+        ) { currentProfile, claimPeriods, entries, finance, clinicalTasks ->
+            FiveWay(
+                currentProfile = currentProfile,
+                claimPeriods = claimPeriods,
+                entries = entries,
+                finance = finance,
+                clinicalTasks = clinicalTasks
+            )
+        }.combine(knowledgeHubDao.getAllCpdLogs()) { five, cpdLogs ->
+            val currentProfile = five.currentProfile
+            val claimPeriods = five.claimPeriods
+            val entries = five.entries
+            val finance = five.finance
+            val clinicalTasks = five.clinicalTasks
+
+            val currentClaimPeriod = claimPeriods
+                .asSequence()
+                .filter { period ->
+                    !today.isBefore(period.startDate) && !today.isAfter(period.endDate)
+                }
+                .maxByOrNull { it.startDate }
+
+            val claimEndThroughToday = currentClaimPeriod?.endDate?.let { periodEnd ->
+                minOf(periodEnd, today)
+            }
+
+            val claimEntries = currentClaimPeriod?.let { period ->
+                val effectiveEnd = claimEndThroughToday ?: period.endDate
+                entries.filter { entry ->
+                    entry.claimPeriodId == period.id &&
+                        !entry.date.isBefore(period.startDate) &&
+                        !entry.date.isAfter(effectiveEnd)
+                }
+            }.orEmpty()
+
+            // Home Duty is the actual recorded hours in the CURRENT OT claim period,
+            // not the calendar month. A DailyEntry shift can contain both normal-duty
+            // hours and separately entered OT hours, so both fields are part of the
+            // recorded duty-shift total.
+            val dutyHoursToDate = claimEntries.sumOf { entry ->
+                (entry.normalHours.toDouble() + entry.otHours.toDouble())
+                    .coerceAtLeast(0.0)
+            }
+
+            // Home OT uses only the universal 36-hour Sunday-Saturday threshold.
+            // There is no separate Home "additional OT" category: DailyEntryEntity.otHours
+            // is already a component of the same recorded duty-shift entry.
+            val dutyOtHours = claimEntries
+                .groupBy { sundayOfWeek(it.date) }
+                .values
+                .sumOf { weekEntries ->
+                    val weekDutyHours = weekEntries.sumOf { entry ->
+                        (entry.normalHours.toDouble() + entry.otHours.toDouble())
+                            .coerceAtLeast(0.0)
+                    }
+                    (weekDutyHours - WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS)
+                        .coerceAtLeast(0.0)
+                }
+
+            val phHours = claimEntries
+                .filter { it.isPH }
+                .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
+
             val monthlyEntries = entries.filter { entry ->
                 entry.date >= start && entry.date <= end
             }
-            val workedToDateEntries = monthlyEntries.filter { entry -> entry.date <= today }
-
-            val todayEntry = entries
-                .filter { it.date == today }
-                .maxByOrNull { it.id }
-
-            val monthlyLogs = monthlyEntries.map { entry ->
-                DailyLog(
-                    id = entry.id,
-                    date = entry.date,
-                    isPH = entry.isPH,
-                    isDO = entry.isDO,
-                    isLeave = entry.isLeave,
-                    leaveType = entry.leaveType,
-                    reason = entry.reason,
-                    wardOverride = entry.wardOverride,
-                    normalTimeInStr = entry.normalTimeIn,
-                    normalTimeOutStr = entry.normalTimeOut,
-                    otTimeInStr = entry.otTimeIn,
-                    otTimeOutStr = entry.otTimeOut,
-                    computedNormalHours = entry.normalHours,
-                    computedOtHours = entry.otHours
-                )
-            }
-
-            val weeklyResult = if (monthlyLogs.isEmpty()) {
-                null
-            } else {
-                WeeklyOtCalculator.calculate(
-                    logs = monthlyLogs,
-                    claimStart = start,
-                    claimEnd = end,
-                    otRate = 0.0,
-                    dayRate = 0.0,
-                    doRate = 0.0
-                )
-            }
-
-            val payableNormalHours = weeklyResult?.totalNormalHours ?: 0.0
-            val workedOtHours = workedToDateEntries
-                .sumOf { it.otHours.toDouble().coerceAtLeast(0.0) }
-            val phHours = workedToDateEntries
-                .filter { it.isPH }
-                .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
 
             val currentMonthKey = month.toString()
             val currentMonthFinance = finance.firstOrNull {
@@ -118,10 +140,14 @@ class NurseCommandCenterRepository(
                         .thenBy { it.triggerTime }
                 )
 
+            val todayEntry = entries
+                .filter { it.date == today }
+                .maxByOrNull { it.id }
+
             Snapshot(
                 profile = currentProfile,
-                dutyHours = payableNormalHours,
-                otHours = workedOtHours,
+                dutyHours = dutyHoursToDate,
+                otHours = dutyOtHours,
                 phHours = phHours,
                 claimCompletedDays = monthlyEntries.count {
                     !it.isLeave && (
@@ -135,9 +161,7 @@ class NurseCommandCenterRepository(
                 grossSalary = currentMonthFinance?.grossSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
-                netSalary = currentMonthFinance?.netSalary
-                    ?: currentProfile?.basicSalary
-                    ?: 0.0,
+                netSalary = currentMonthFinance?.netSalary ?: 0.0,
                 pendingClinicalTasks = pendingTaskDetails.size,
                 cpdPoints = cpdLogs.sumOf { it.earnedPoints },
                 pendingClinicalTaskDetails = pendingTaskDetails,
@@ -156,8 +180,29 @@ class NurseCommandCenterRepository(
         }
     }
 
+    private data class FiveWay(
+        val currentProfile: ProfileEntity?,
+        val claimPeriods: List<ClaimPeriodEntity>,
+        val entries: List<DailyEntryEntity>,
+        val finance: List<FinancialRecordEntity>,
+        val clinicalTasks: List<ClinicalTaskEntity>
+    )
+
     suspend fun setClinicalTaskCompleted(taskId: Int, completed: Boolean = true) {
         clinicalPlanningDao.setTaskCompleted(taskId, completed)
+    }
+
+    private fun sundayOfWeek(date: LocalDate): LocalDate {
+        val daysFromSunday = when (date.dayOfWeek) {
+            java.time.DayOfWeek.SUNDAY -> 0L
+            java.time.DayOfWeek.MONDAY -> 1L
+            java.time.DayOfWeek.TUESDAY -> 2L
+            java.time.DayOfWeek.WEDNESDAY -> 3L
+            java.time.DayOfWeek.THURSDAY -> 4L
+            java.time.DayOfWeek.FRIDAY -> 5L
+            java.time.DayOfWeek.SATURDAY -> 6L
+        }
+        return date.minusDays(daysFromSunday)
     }
 
     private fun priorityRank(priority: String): Int = when (priority.uppercase()) {
