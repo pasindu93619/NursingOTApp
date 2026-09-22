@@ -88,7 +88,7 @@ class AdvancedFinanceViewModel @Inject constructor(
                 runCatching {
                     ensureManualPayRateRecordUseCase()
                     if (profile != null) {
-                        applyMatched2027DayRateUseCase(profile)
+                        applyMatched2027DayRateUseCase(profile.basicSalary)
                         synchronizePolicyRatesUseCase(profile)
                     }
                     recalculate()
