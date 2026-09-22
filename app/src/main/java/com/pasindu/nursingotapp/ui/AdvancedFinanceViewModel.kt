@@ -2,10 +2,10 @@ package com.pasindu.nursingotapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
-import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
@@ -17,6 +17,7 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
+import com.pasindu.nursingotapp.domain.usecase.SaveFinanceDeductionsUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 data class CustomAllowanceDraft(
     val name: String,
@@ -54,37 +54,66 @@ data class AdvancedFinanceUiState(
     val errorMessage: String? = null
 ) {
     val currentBasicSalary: Double get() = profile?.basicSalary ?: 0.0
+
     val claimWeekCount: Int get() = claimPeriod?.let { period ->
         java.time.temporal.ChronoUnit.WEEKS.between(
             period.startDate,
             period.endDate.plusDays(1)
         ).toInt()
     } ?: 0
+
     val claimWeekStarts: List<java.time.LocalDate> get() = claimPeriod?.let { period ->
         (0 until claimWeekCount).map { index ->
             period.startDate.plusWeeks(index.toLong())
         }
     } ?: emptyList()
+
     val requiredDutyHours: Double get() = claimWeekCount * 36.0
     val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
     val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
-    val paysheetDeductions: Double get() = compensation?.totalDeductions ?: 0.0
+
+    private val enteredDeductionsTotal: Double
+        get() = apit + wop + loanDeduction + otherDeduction
+
+    val paysheetDeductions: Double
+        get() = if (enteredDeductionsTotal > 0.0) {
+            enteredDeductionsTotal
+        } else {
+            compensation?.totalDeductions?.takeIf { it > 0.0 } ?: 0.0
+        }
+
+    val hasEnteredDeduction: Boolean
+        get() = enteredDeductionsTotal > 0.0 || (compensation?.totalDeductions ?: 0.0) > 0.0
+
     val allowanceTotal: Double get() = riskAllowance + claAllowance + additionalAllowancesTotal
     val otRate: Double get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
     val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
     val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
     val basisSalary2027: Double? get() = payRateSettings?.basisSalary2027
+
     val totalNormalHours: Double get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
     val totalOTHours: Double get() = periodSummary?.totalOTHours?.toDouble() ?: 0.0
     val totalPHDays: Int get() = periodSummary?.totalPHDays ?: 0
     val totalDODays: Int get() = periodSummary?.totalDODays ?: 0
+
     val otAmountRs: Double get() = totalOTHours * otRate
     val phAmountRs: Double get() = totalPHDays * phRate
     val doAmountRs: Double get() = totalDODays * doRate
-    val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
-    val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
-    val dutyProgress36Hours: Float get() = if (totalNormalHours <= 0.0) 0f else (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
+
+    val grossEarnings: Double
+        get() = currentBasicSalary + riskAllowance + claAllowance +
+            additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
+
+    val estimatedNetSalary: Double
+        get() = grossEarnings - paysheetDeductions
+
+    val dutyProgress36Hours: Float
+        get() = if (totalNormalHours <= 0.0) {
+            0f
+        } else {
+            (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
+        }
 }
 
 @HiltViewModel
@@ -101,7 +130,7 @@ class AdvancedFinanceViewModel @Inject constructor(
     private val calculateFinanceSummaryUseCase: CalculateFinanceSummaryUseCase,
     private val saveFinanceCompensationUseCase: SaveFinanceCompensationUseCase,
     private val saveFinanceRatesUseCase: SaveFinanceRatesUseCase,
-    private val profileCompensationDao: com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
+    private val saveFinanceDeductionsUseCase: SaveFinanceDeductionsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AdvancedFinanceUiState())
@@ -129,16 +158,26 @@ class AdvancedFinanceViewModel @Inject constructor(
                 }
             }
         }
+
         observeClaimPeriod().collectInViewModel { periods ->
             _uiState.value = _uiState.value.copy(claimPeriod = periods.firstOrNull())
             recalculate()
         }
+
         observePayRates().collectInViewModel { settings ->
             _uiState.value = _uiState.value.copy(payRateSettings = settings)
             recalculate()
         }
+
         observeCompensation().collectInViewModel { compensation ->
-            _uiState.value = _uiState.value.copy(compensation = compensation)
+            val current = _uiState.value
+            _uiState.value = current.copy(
+                compensation = compensation,
+                apit = current.apit,
+                wop = current.wop,
+                loanDeduction = current.loanDeduction,
+                otherDeduction = current.otherDeduction
+            )
             recalculate()
         }
     }
@@ -146,11 +185,24 @@ class AdvancedFinanceViewModel @Inject constructor(
     private fun recalculate() {
         val state = _uiState.value
         val profile = state.profile ?: run {
-            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
+            _uiState.value = state.copy(
+                isLoading = false,
+                periodSummary = null,
+                claimStart = null,
+                claimEnd = null,
+                errorMessage = null
+            )
             return
         }
+
         val claimPeriod = state.claimPeriod ?: run {
-            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
+            _uiState.value = state.copy(
+                isLoading = false,
+                periodSummary = null,
+                claimStart = null,
+                claimEnd = null,
+                errorMessage = null
+            )
             return
         }
 
@@ -184,7 +236,7 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 
     private suspend fun ensureFixedAllowances() {
-        val current = profileCompensationDao.getOnce()
+        val current = _uiState.value.compensation
         saveFinanceCompensationUseCase(
             riskAllowance = FIXED_RISK_ALLOWANCE_RS,
             claAllowance = FIXED_CLA_ALLOWANCE_RS,
@@ -194,31 +246,138 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 
     fun refresh() = recalculate()
-    fun updateApit(value: String) { _uiState.value = _uiState.value.copy(apit = parseMoney(value)) }
-    fun updateWop(value: String) { _uiState.value = _uiState.value.copy(wop = parseMoney(value)) }
-    fun updateLoanDeduction(value: String) { _uiState.value = _uiState.value.copy(loanDeduction = parseMoney(value)) }
-    fun updateOtherDeduction(value: String) { _uiState.value = _uiState.value.copy(otherDeduction = parseMoney(value)) }
 
-    fun updateOtRate(value: String) = saveRates(parseMoney(value), _uiState.value.phRate, _uiState.value.doRate, _uiState.value.basisSalary2027, "2027_BASIC_SALARY_DIV_30")
-    fun updatePhRate(value: String) = saveRates(_uiState.value.otRate, parseMoney(value), _uiState.value.doRate, _uiState.value.basisSalary2027, "MANUAL")
-    fun updateDoRate(value: String) = saveRates(_uiState.value.otRate, _uiState.value.phRate, parseMoney(value), _uiState.value.basisSalary2027, "MANUAL")
-    fun updateBasisSalary2027(value: String) = saveRates(_uiState.value.otRate, _uiState.value.phRate, _uiState.value.doRate, value.trim().replace(",", "").toDoubleOrNull()?.takeIf { it > 0.0 }, _uiState.value.payRateSettings?.rateSource ?: "MANUAL")
+    fun updateApit(value: String) {
+        val parsed = parseMoney(value)
+        _uiState.value = _uiState.value.copy(apit = parsed)
+        persistDeductions()
+    }
+
+    fun updateWop(value: String) {
+        val parsed = parseMoney(value)
+        _uiState.value = _uiState.value.copy(wop = parsed)
+        persistDeductions()
+    }
+
+    fun updateLoanDeduction(value: String) {
+        val parsed = parseMoney(value)
+        _uiState.value = _uiState.value.copy(loanDeduction = parsed)
+        persistDeductions()
+    }
+
+    fun updateOtherDeduction(value: String) {
+        val parsed = parseMoney(value)
+        _uiState.value = _uiState.value.copy(otherDeduction = parsed)
+        persistDeductions()
+    }
+
+    fun clearDeductions() {
+        _uiState.value = _uiState.value.copy(
+            apit = 0.0,
+            wop = 0.0,
+            loanDeduction = 0.0,
+            otherDeduction = 0.0
+        )
+        viewModelScope.launch {
+            runCatching {
+                saveFinanceDeductionsUseCase(0.0, 0.0, 0.0, 0.0)
+            }.onFailure { error ->
+                setError(error, "Unable to clear deduction information.")
+            }
+        }
+    }
+
+    private fun persistDeductions() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            runCatching {
+                saveFinanceDeductionsUseCase(
+                    apit = state.apit,
+                    wop = state.wop,
+                    loan = state.loanDeduction,
+                    other = state.otherDeduction
+                )
+            }.onFailure { error ->
+                setError(error, "Unable to save deduction information.")
+            }
+        }
+    }
+
+    fun updateOtRate(value: String) = saveRates(
+        parseMoney(value),
+        _uiState.value.phRate,
+        _uiState.value.doRate,
+        _uiState.value.basisSalary2027,
+        "2027_BASIC_SALARY_DIV_30"
+    )
+
+    fun updatePhRate(value: String) = saveRates(
+        _uiState.value.otRate,
+        parseMoney(value),
+        _uiState.value.doRate,
+        _uiState.value.basisSalary2027,
+        "MANUAL"
+    )
+
+    fun updateDoRate(value: String) = saveRates(
+        _uiState.value.otRate,
+        _uiState.value.phRate,
+        parseMoney(value),
+        _uiState.value.basisSalary2027,
+        "MANUAL"
+    )
+
+    fun updateBasisSalary2027(value: String) = saveRates(
+        _uiState.value.otRate,
+        _uiState.value.phRate,
+        _uiState.value.doRate,
+        value.trim().replace(",", "").toDoubleOrNull()?.takeIf { it > 0.0 },
+        _uiState.value.payRateSettings?.rateSource ?: "MANUAL"
+    )
 
     fun apply2027DayRateFromSalary(basisSalary2027: Double) {
         if (basisSalary2027 <= 0.0) return
         val dayRate = basisSalary2027 / 30.0
-        saveRates(_uiState.value.otRate, dayRate, dayRate, basisSalary2027, "2027_BASIC_SALARY_DIV_30")
+        saveRates(
+            _uiState.value.otRate,
+            dayRate,
+            dayRate,
+            basisSalary2027,
+            "2027_BASIC_SALARY_DIV_30"
+        )
     }
 
-    fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) {
+    fun saveCompensation(
+        riskAllowance: Double,
+        claAllowance: Double,
+        additionalAllowancesTotal: Double,
+        totalDeductions: Double
+    ) {
         launchWithError("Unable to save compensation information.") {
-            saveFinanceCompensationUseCase(riskAllowance, claAllowance, additionalAllowancesTotal, totalDeductions)
+            saveFinanceCompensationUseCase(
+                riskAllowance,
+                claAllowance,
+                additionalAllowancesTotal,
+                totalDeductions
+            )
         }
     }
 
-    private fun saveRates(otRate: Double, phRate: Double, doRate: Double, basisSalary2027: Double?, source: String) {
+    private fun saveRates(
+        otRate: Double,
+        phRate: Double,
+        doRate: Double,
+        basisSalary2027: Double?,
+        source: String
+    ) {
         launchWithError("Unable to save pay rate settings.") {
-            saveFinanceRatesUseCase(otRate, phRate, doRate, basisSalary2027, source)
+            saveFinanceRatesUseCase(
+                otRate,
+                phRate,
+                doRate,
+                basisSalary2027,
+                source
+            )
         }
     }
 
@@ -241,9 +400,12 @@ class AdvancedFinanceViewModel @Inject constructor(
         const val FIXED_CLA_ALLOWANCE_RS = 17800.0
     }
 
-    fun setOtherAllowancesEnabled(enabled: Boolean) { _uiState.value = _uiState.value.copy(otherAllowancesEnabled = enabled) }
+    fun setOtherAllowancesEnabled(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(otherAllowancesEnabled = enabled)
+    }
 
-    private fun parseMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+    private fun parseMoney(value: String): Double =
+        value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
 
     private fun <T> kotlinx.coroutines.flow.Flow<T>.collectInViewModel(block: (T) -> Unit) {
         viewModelScope.launch { collect { block(it) } }
