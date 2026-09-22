@@ -161,40 +161,47 @@ fun DailyEntryScreen(
         if (next.shift == null && next.ot == null && next.leave == null) stagedEdits.remove(date) else stagedEdits[date] = next
     }
 
-    val sessionDates = remember(stagedEdits.toMap(), allSavedEntries) {
-        stagedEdits.keys.toSet()
+    val displayedDates = allDates.filter { date ->
+        stagedEdits.containsKey(date) ||
+            allSavedEntries.any { it.date == date && it.claimPeriodId == claimPeriodId }
     }
 
-    val sessionShiftHours = sessionDates.sumOf { date ->
+    fun displayedShiftHours(date: LocalDate): Double {
         val staged = stagedEdits[date]
         if (staged?.shift != null) {
-            when (staged.shift) {
+            return when (staged.shift) {
                 "Morn (7-13)", "Eve (13-19)" -> 6.0
                 "Night (19-7)" -> 12.0
                 "Day (7-16)" -> 9.0
                 "Custom Shift" -> customHrs.toDoubleOrNull() ?: 0.0
                 else -> 0.0
             }
-        } else {
-            allSavedEntries.firstOrNull { it.date == date }?.normalHours?.toDouble() ?: 0.0
         }
+        return allSavedEntries.firstOrNull {
+            it.date == date && it.claimPeriodId == claimPeriodId
+        }?.normalHours?.toDouble() ?: 0.0
     }
 
-    val sessionLoggedOtHours = sessionDates.sumOf { date ->
+    fun displayedOtHours(date: LocalDate): Double {
         val staged = stagedEdits[date]
         if (staged?.ot != null) {
-            when (staged.ot) {
+            return when (staged.ot) {
                 "Morn OT", "Eve OT" -> 6.0
                 "Night OT" -> 12.0
                 "Custom OT" -> customHrs.toDoubleOrNull() ?: 0.0
                 else -> 0.0
             }
-        } else {
-            allSavedEntries.firstOrNull { it.date == date }?.otHours?.toDouble() ?: 0.0
         }
+        return allSavedEntries.firstOrNull {
+            it.date == date && it.claimPeriodId == claimPeriodId
+        }?.otHours?.toDouble() ?: 0.0
     }
 
-    val sessionOtBy36hRule = sessionDates
+    val sessionShiftHours = displayedDates.sumOf { displayedShiftHours(it) }
+
+    val sessionLoggedOtHours = displayedDates.sumOf { displayedOtHours(it) }
+
+    val sessionOtBy36hRule = displayedDates
         .groupBy { date ->
             date.minusDays(
                 when (date.dayOfWeek) {
@@ -210,22 +217,7 @@ fun DailyEntryScreen(
         }
         .values
         .sumOf { dates ->
-            (
-                dates.sumOf { date ->
-                    val staged = stagedEdits[date]
-                    if (staged?.shift != null) {
-                        when (staged.shift) {
-                            "Morn (7-13)", "Eve (13-19)" -> 6.0
-                            "Night (19-7)" -> 12.0
-                            "Day (7-16)" -> 9.0
-                            "Custom Shift" -> customHrs.toDoubleOrNull() ?: 0.0
-                            else -> 0.0
-                        }
-                    } else {
-                        allSavedEntries.firstOrNull { it.date == date }?.normalHours?.toDouble() ?: 0.0
-                    }
-                } - 36.0
-            ).coerceAtLeast(0.0)
+            (dates.sumOf { displayedShiftHours(it) } - 36.0).coerceAtLeast(0.0)
         }
 
     val sessionTotalOtHours = sessionOtBy36hRule + sessionLoggedOtHours
@@ -405,6 +397,7 @@ fun DailyEntryScreen(
                                 isSavingBulk = false
                                 isAutoFillMode = false
                                 stagedEdits.clear()
+                                viewModel.loadEntriesForClaim(claimPeriodId)
                                 Toast.makeText(context, "Saved Successfully!", Toast.LENGTH_SHORT).show()
                             }
                         },
