@@ -70,6 +70,7 @@ import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.CriticalRed
 import com.pasindu.nursingotapp.ui.theme.Emerald
+import com.pasindu.nursingotapp.ui.theme.PositiveGradient
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
