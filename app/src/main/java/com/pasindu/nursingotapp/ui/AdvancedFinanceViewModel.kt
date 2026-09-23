@@ -27,8 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
-import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalAdjusters
 
 data class AdvancedFinanceUiState(
     val isLoading: Boolean = true,
@@ -212,10 +210,3 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 }
 
-private fun countFullSundaySaturdayWeeks(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Int {
-    if (endDate.isBefore(startDate)) return 0
-    val firstSunday = if (startDate.dayOfWeek == DayOfWeek.SUNDAY) startDate else startDate.with(TemporalAdjusters.next(DayOfWeek.SUNDAY))
-    val lastSaturday = if (endDate.dayOfWeek == DayOfWeek.SATURDAY) endDate else endDate.with(TemporalAdjusters.previous(DayOfWeek.SATURDAY))
-    if (firstSunday.isAfter(lastSaturday)) return 0
-    return ChronoUnit.WEEKS.between(firstSunday, lastSaturday.plusDays(1)).toInt()
-}
