@@ -66,6 +66,7 @@ fun ProfileScreen(
     val matchedSalary2027 by viewModel.matchedSalary2027.collectAsState()
     val compensation by viewModel.profileCompensation.collectAsState()
     val savedAdditionalAllowances by viewModel.additionalAllowances.collectAsState()
+    val savedDeductions by viewModel.profileDeductions.collectAsState()
 
     var fullName by remember { mutableStateOf("") }
     var serviceNo by remember { mutableStateOf("") }
@@ -78,9 +79,10 @@ fun ProfileScreen(
     var hasAdditionalAllowances by remember { mutableStateOf(false) }
     var additionalAllowances by remember { mutableStateOf(listOf<AllowanceRow>()) }
     var totalDeductions by remember { mutableStateOf("") }
+    var profileDeductions by remember { mutableStateOf(listOf<DeductionRow>()) }
     var showGradeSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(userProfile, compensation, savedAdditionalAllowances) {
+    LaunchedEffect(userProfile, compensation, savedAdditionalAllowances, savedDeductions) {
         userProfile?.let {
             fullName = it.fullName
             serviceNo = it.serviceNo
@@ -102,6 +104,13 @@ fun ProfileScreen(
             )
         }
         hasAdditionalAllowances = savedAdditionalAllowances.isNotEmpty()
+        profileDeductions = savedDeductions.mapIndexed { index, item ->
+            DeductionRow(
+                id = if (item.id > 0L) item.id.toInt() else index + 1,
+                name = item.name,
+                amount = cleanNumber(item.amount)
+            )
+        }
     }
 
     LaunchedEffect(grade, basicSalary) {
@@ -115,7 +124,7 @@ fun ProfileScreen(
     val parsedRisk = parsedMoney(riskAllowance)
     val parsedCla = parsedMoney(claAllowance)
     val parsedAdditional = additionalAllowances.sumOf { parsedMoney(it.amount) }
-    val deductions = parsedMoney(totalDeductions)
+    val deductions = profileDeductions.sumOf { parsedMoney(it.amount) }
     val additionalTotal = if (hasAdditionalAllowances) parsedAdditional else 0.0
     val grossPay = parsedBasic + parsedRisk + parsedCla + additionalTotal
     val netPay = grossPay - deductions
@@ -382,8 +391,59 @@ fun ProfileScreen(
             }
 
             Spacer(Modifier.height(6.dp))
-            ProfileTextField("Total Paysheet Deductions", totalDeductions, { totalDeductions = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
-            Text("Enter only the total deduction printed on the paysheet. Individual payroll deductions vary between nurses.", color = Slate, fontSize = 10.sp)
+            Text("Payroll deductions", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(
+                "These entries are saved against the current claim period and imported by Advanced Finance.",
+                color = Slate,
+                fontSize = 10.sp
+            )
+            if (profileDeductions.isEmpty()) {
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    color = Color(0xFFF8FAFC),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        "No deductions entered for this claim period.",
+                        Modifier.padding(14.dp),
+                        color = Slate,
+                        fontSize = 10.sp
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    profileDeductions.forEach { row ->
+                        DeductionEditorRow(
+                            row = row,
+                            onNameChange = { name ->
+                                profileDeductions = profileDeductions.map {
+                                    if (it.id == row.id) it.copy(name = name) else it
+                                }
+                            },
+                            onAmountChange = { amount ->
+                                profileDeductions = profileDeductions.map {
+                                    if (it.id == row.id) it.copy(amount = amount) else it
+                                }
+                            },
+                            onDelete = {
+                                profileDeductions = profileDeductions.filterNot { it.id == row.id }
+                            }
+                        )
+                    }
+                }
+            }
+            OutlinedButton(
+                onClick = {
+                    val nextId = (profileDeductions.maxOfOrNull { it.id } ?: 0) + 1
+                    profileDeductions = profileDeductions + DeductionRow(nextId, "", "")
+                },
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.AddCircleOutline, null)
+                Spacer(Modifier.width(8.dp))
+                Text("ADD DEDUCTION", fontWeight = FontWeight.Black)
+            }
         }
 
         Card(Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(28.dp)), RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Navy)) {
@@ -435,6 +495,15 @@ fun ProfileScreen(
                     claAllowance = parsedCla,
                     additionalAllowancesTotal = additionalTotal,
                     totalDeductions = deductions,
+                    deductions = profileDeductions
+                        .filter { it.name.isNotBlank() && parsedMoney(it.amount) >= 0.0 }
+                        .map { row ->
+                            ProfileDeductionEntity(
+                                claimPeriodId = 0L,
+                                name = row.name.trim(),
+                                amount = parsedMoney(row.amount)
+                            )
+                        },
                     additionalAllowances = additionalAllowances
                         .filter { it.name.isNotBlank() && parsedMoney(it.amount) > 0.0 }
                         .map { row ->
