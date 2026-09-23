@@ -6,6 +6,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -182,19 +183,32 @@ fun DailyEntryScreen(
         bottomBar = {
             Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = Color.White) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(18.dp), color = DailyBlueSoft) {
-                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                Text("PERIOD PROGRESS", color = DailyCyan, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                Text("$completedCount / ${allDates.size} days", color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                    val currentSessionEntries = allSavedEntries.filter { it.date in startDate..endDate }
+                    val selectedDutyHours = currentSessionEntries.sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) }
+                    val loggedOtHours = currentSessionEntries.sumOf { it.otHours.toDouble().coerceAtLeast(0.0) }
+                    val weeklyDutyOtHours = currentSessionEntries
+                        .groupBy { entry ->
+                            val daysFromSunday = when (entry.date.dayOfWeek) {
+                                DayOfWeek.SUNDAY -> 0L
+                                DayOfWeek.MONDAY -> 1L
+                                DayOfWeek.TUESDAY -> 2L
+                                DayOfWeek.WEDNESDAY -> 3L
+                                DayOfWeek.THURSDAY -> 4L
+                                DayOfWeek.FRIDAY -> 5L
+                                DayOfWeek.SATURDAY -> 6L
                             }
+                            entry.date.minusDays(daysFromSunday)
                         }
-                        Surface(shape = RoundedCornerShape(18.dp), color = DailyMintSoft) {
-                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.End) {
-                                Text("TOTAL", color = Color(0xFF0E9F73), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                                Text(String.format(Locale.US, "%.1fh • %.1fh OT", animatedNormalHrs, animatedOtHrs), color = DailyInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                            }
+                        .values
+                        .sumOf { week ->
+                            (week.sumOf { it.normalHours.toDouble().coerceAtLeast(0.0) } - com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS)
+                                .coerceAtLeast(0.0)
                         }
+                    val totalOtSummary = weeklyDutyOtHours + loggedOtHours
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        DutySummaryCard(Modifier.weight(1f), "SHIFT DUTY", String.format(Locale.US, "%.1fh", selectedDutyHours), DailyCyan, DailyBlueSoft)
+                        DutySummaryCard(Modifier.weight(1f), "OVER 36h", String.format(Locale.US, "%.1fh", weeklyDutyOtHours), DailyAmber, Color(0xFFFFF3CD))
+                        DutySummaryCard(Modifier.weight(1f), "TOTAL OT", String.format(Locale.US, "%.1fh", totalOtSummary), Color.White, DailyAmber, gradient = DailyWarningGradient)
                     }
                     Button(
                         enabled = !isSavingBulk && (stagedEdits.isNotEmpty() || isAutoFillMode),
@@ -337,12 +351,37 @@ fun DailyEntryScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val quick = if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)") else listOf("Day (7-16)")
                         quick.forEach { brush ->
-                            Surface(Modifier.weight(1f).clickable { setCategory(CATEGORY_SHIFT_DUTY); chooseBrush(brush) }, shape = RoundedCornerShape(14.dp), color = DailyBlueSoft) {
+                            val active = brushCategory == CATEGORY_SHIFT_DUTY && selectedBrush == brush
+                            Surface(
+                                Modifier.weight(1f).clickable { setCategory(CATEGORY_SHIFT_DUTY); chooseBrush(brush) },
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (active) DailyCyan else DailyBlueSoft,
+                                border = if (active) BorderStroke(1.dp, DailyCyan.copy(alpha = 0.28f)) else null
+                            ) {
                                 Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(brush.substringBefore(" "), color = DailyCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                    Text(brush.substringAfter(" ", "").replace("(", "").replace(")", ""), color = DailyInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text(brush.substringBefore(" "), color = if (active) Color.White else DailyCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                    Text(brush.substringAfter(" ", "").replace("(", "").replace(")", ""), color = if (active) Color.White else DailyInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
+                        }
+                    }
+                    Surface(
+                        Modifier.fillMaxWidth().clickable {
+                            isAutoFillMode = true
+                            setCategory(CATEGORY_SHIFT_DUTY)
+                            selectedBrush = if (wardType == "Normal") "Morn (7-13)" else "Day (7-16)"
+                        },
+                        shape = RoundedCornerShape(15.dp),
+                        color = DailyMintSoft
+                    ) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = DailyEmerald, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(7.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Apply to remaining days", color = DailyEmerald, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Keep planned exceptions • fill the rest in one tap", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.5.sp)
+                            }
+                            Icon(Icons.Default.ArrowForward, null, tint = DailyEmerald, modifier = Modifier.size(17.dp))
                         }
                     }
                 }
@@ -653,6 +692,34 @@ fun DailyEntryScreen(
                         Text("Generating Form...", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DutySummaryCard(
+    modifier: Modifier,
+    title: String,
+    value: String,
+    accent: Color,
+    surface: Color,
+    gradient: Brush? = null
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(15.dp),
+        color = if (gradient == null) surface else Color.Transparent
+    ) {
+        Row(
+            Modifier
+                .then(if (gradient != null) Modifier.background(gradient, RoundedCornerShape(15.dp)) else Modifier)
+                .padding(horizontal = 9.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(title, color = if (gradient != null) Color.White.copy(alpha = .82f) else accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                Text(value, color = if (gradient != null) Color.White else DailyInk, fontSize = 11.sp, fontWeight = FontWeight.Black)
             }
         }
     }
