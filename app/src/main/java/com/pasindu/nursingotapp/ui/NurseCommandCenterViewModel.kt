@@ -63,6 +63,7 @@ class NurseCommandCenterViewModel @Inject constructor(
                         cpdTarget = cpdTarget,
                         claimCompletedDays = snapshot.claimCompletedDays,
                         claimTotalDays = snapshot.claimTotalDays,
+                        consecutiveWorkedDays = snapshot.consecutiveWorkedDays,
                         wellnessScore = wellnessScore,
                         todayDutyRecorded = snapshot.todayDutyRecorded,
                         todayDutyHours = snapshot.todayDutyHours,
