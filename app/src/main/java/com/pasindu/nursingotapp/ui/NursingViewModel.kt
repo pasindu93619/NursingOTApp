@@ -3,6 +3,7 @@ package com.pasindu.nursingotapp.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
+import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
@@ -45,7 +46,8 @@ class NursingViewModel @Inject constructor(
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val saveDailyEntryUseCase: SaveDailyEntryUseCase,
     private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase,
-    private val calculateDailyEntryHoursUseCase: CalculateDailyEntryHoursUseCase
+    private val calculateDailyEntryHoursUseCase: CalculateDailyEntryHoursUseCase,
+    private val profileAdditionalAllowanceDao: ProfileAdditionalAllowanceDao
 ) : ViewModel() {
 
     private val _userProfile = MutableStateFlow<ProfileEntity?>(null)
@@ -56,6 +58,9 @@ class NursingViewModel @Inject constructor(
 
     private val _matchedSalary2027 = MutableStateFlow<SalaryStep2027Entity?>(null)
     val matchedSalary2027: StateFlow<SalaryStep2027Entity?> = _matchedSalary2027.asStateFlow()
+
+    private val _additionalAllowances = MutableStateFlow<List<ProfileAdditionalAllowanceEntity>>(emptyList())
+    val additionalAllowances: StateFlow<List<ProfileAdditionalAllowanceEntity>> = _additionalAllowances.asStateFlow()
 
     private val _configuredOtRate = MutableStateFlow(0.0)
     val configuredOtRate: StateFlow<Double> = _configuredOtRate.asStateFlow()
@@ -76,6 +81,9 @@ class NursingViewModel @Inject constructor(
         }
         viewModelScope.launch {
             observeProfileCompensation().collect { compensation -> _profileCompensation.value = compensation }
+        }
+        viewModelScope.launch {
+            profileAdditionalAllowanceDao.observeAll().collect { allowances -> _additionalAllowances.value = allowances }
         }
         viewModelScope.launch {
             observeOtRate().collect { settings ->
