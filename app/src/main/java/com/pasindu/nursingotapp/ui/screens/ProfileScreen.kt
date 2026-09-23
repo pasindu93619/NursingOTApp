@@ -44,6 +44,7 @@ import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.state.ViewModelOperationState
+import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
