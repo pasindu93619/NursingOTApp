@@ -335,8 +335,13 @@ fun ProfileScreen(
                     Icon(Icons.Default.AddCircleOutline, null, tint = Orange, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Additional allowances?", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text("Add other paysheet allowances one by one.", color = Slate, fontSize = 10.sp)
+                        Text("Do you have other allowances?", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (hasAdditionalAllowances) "Yes • Add other paysheet allowances one by one."
+                            else "No • Only the fixed Risk and CLA allowances are included.",
+                            color = Slate,
+                            fontSize = 10.sp
+                        )
                     }
                     Switch(
                         checked = hasAdditionalAllowances,
