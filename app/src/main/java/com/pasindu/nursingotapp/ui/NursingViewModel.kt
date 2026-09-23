@@ -3,6 +3,10 @@ package com.pasindu.nursingotapp.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
+import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
+import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
@@ -47,7 +51,9 @@ class NursingViewModel @Inject constructor(
     private val saveDailyEntryUseCase: SaveDailyEntryUseCase,
     private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase,
     private val calculateDailyEntryHoursUseCase: CalculateDailyEntryHoursUseCase,
-    private val profileAdditionalAllowanceDao: ProfileAdditionalAllowanceDao
+    private val profileAdditionalAllowanceDao: ProfileAdditionalAllowanceDao,
+    private val claimPeriodDao: ClaimPeriodDao,
+    private val profileDeductionDao: ProfileDeductionDao
 ) : ViewModel() {
 
     private val _userProfile = MutableStateFlow<ProfileEntity?>(null)
@@ -55,6 +61,12 @@ class NursingViewModel @Inject constructor(
 
     private val _profileCompensation = MutableStateFlow<com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity?>(null)
     val profileCompensation: StateFlow<com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity?> = _profileCompensation.asStateFlow()
+
+    private val _currentClaimPeriod = MutableStateFlow<ClaimPeriodEntity?>(null)
+    val currentClaimPeriod: StateFlow<ClaimPeriodEntity?> = _currentClaimPeriod.asStateFlow()
+
+    private val _profileDeductions = MutableStateFlow<List<ProfileDeductionEntity>>(emptyList())
+    val profileDeductions: StateFlow<List<ProfileDeductionEntity>> = _profileDeductions.asStateFlow()
 
     private val _matchedSalary2027 = MutableStateFlow<SalaryStep2027Entity?>(null)
     val matchedSalary2027: StateFlow<SalaryStep2027Entity?> = _matchedSalary2027.asStateFlow()
@@ -86,10 +98,45 @@ class NursingViewModel @Inject constructor(
             profileAdditionalAllowanceDao.observeAll().collect { allowances -> _additionalAllowances.value = allowances }
         }
         viewModelScope.launch {
+            claimPeriodDao.observeClaimPeriods().collect { periods ->
+                val latest = periods.firstOrNull()
+                _currentClaimPeriod.value = latest
+                observeDeductionsForClaim(latest?.id)
+            }
+        }
+        viewModelScope.launch {
             observeOtRate().collect { settings ->
                 _configuredOtRate.value = settings?.otRate?.coerceAtLeast(0.0) ?: 0.0
             }
         }
+    }
+
+    private var deductionObservationJob: kotlinx.coroutines.Job? = null
+
+    private fun observeDeductionsForClaim(claimPeriodId: Long?) {
+        deductionObservationJob?.cancel()
+        _profileDeductions.value = emptyList()
+        if (claimPeriodId == null) return
+        deductionObservationJob = viewModelScope.launch {
+            profileDeductionDao.observeForClaimPeriod(claimPeriodId).collect { items ->
+                _profileDeductions.value = items
+            }
+        }
+    }
+
+    fun saveProfileDeductions(items: List<ProfileDeductionEntity>) = launchOperation(setOperationState) {
+        val claimId = _currentClaimPeriod.value?.id ?: return@launchOperation
+        profileDeductionDao.deleteForClaimPeriod(claimId)
+        profileDeductionDao.upsertAll(
+            items.filter { it.name.isNotBlank() && it.amount >= 0.0 }.map {
+                it.copy(
+                    id = 0L,
+                    claimPeriodId = claimId,
+                    name = it.name.trim(),
+                    amount = it.amount
+                )
+            }
+        )
     }
 
     fun saveProfile(profile: ProfileEntity) = launchOperation(setOperationState) {
