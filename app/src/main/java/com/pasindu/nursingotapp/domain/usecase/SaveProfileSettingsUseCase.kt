@@ -1,24 +1,30 @@
 package com.pasindu.nursingotapp.domain.usecase
 
+import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
-import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
-import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
+import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import kotlinx.coroutines.flow.first
 
-/** Atomically persists profile, compensation, and resolved service rates. */
+/**
+ * Persists the complete profile settings bundle.
+ *
+ * Save failures are allowed to propagate to the ViewModel; navigation must only
+ * happen after every persistence operation below has returned successfully.
+ */
 class SaveProfileSettingsUseCase(
     private val profileDao: ProfileDao,
     private val compensationDao: ProfileCompensationDao,
     private val additionalAllowanceDao: ProfileAdditionalAllowanceDao,
     private val payRateSettingsDao: PayRateSettingsDao,
-    private val claimPeriodDao: com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao,
+    private val claimPeriodDao: ClaimPeriodDao,
     private val profileDeductionDao: ProfileDeductionDao
 ) {
     suspend operator fun invoke(
@@ -32,6 +38,12 @@ class SaveProfileSettingsUseCase(
         otRate: Double,
         matched2027Basic: Double?
     ) {
+        require(profile.fullName.isNotBlank()) { "Profile name cannot be empty." }
+        require(profile.serviceNo.isNotBlank()) { "Service number cannot be empty." }
+        require(profile.grade.isNotBlank()) { "Nursing grade must be selected." }
+        require(profile.basicSalary > 0.0) { "Current basic salary must be greater than zero." }
+        require(otRate > 0.0) { "A valid nursing-service OT rate is required." }
+
         profileDao.upsert(profile)
 
         compensationDao.upsert(
@@ -46,26 +58,36 @@ class SaveProfileSettingsUseCase(
         )
 
         additionalAllowanceDao.deleteAll()
-        additionalAllowances
+        val validAllowances = additionalAllowances
             .filter { it.name.trim().isNotEmpty() && it.amount > 0.0 }
-            .map { it.copy(id = 0L, name = it.name.trim(), amount = it.amount.coerceAtLeast(0.0)) }
-            .let { valid ->
-                if (valid.isNotEmpty()) additionalAllowanceDao.upsertAll(valid)
+            .map {
+                it.copy(
+                    id = 0L,
+                    name = it.name.trim(),
+                    amount = it.amount.coerceAtLeast(0.0)
+                )
+            }
+        if (validAllowances.isNotEmpty()) {
+            additionalAllowanceDao.upsertAll(validAllowances)
+        }
+
+        val claimId = claimPeriodDao.getLatestClaimPeriod()?.id
+        val validDeductions = deductions
+            .filter { it.name.trim().isNotEmpty() && it.amount >= 0.0 }
+            .map {
+                it.copy(
+                    id = 0L,
+                    claimPeriodId = claimId ?: 0L,
+                    name = it.name.trim(),
+                    amount = it.amount.coerceAtLeast(0.0)
+                )
             }
 
-        claimPeriodDao.getLatestClaimPeriod()?.id?.let { claimId ->
+        if (claimId != null) {
             profileDeductionDao.deleteForClaimPeriod(claimId)
-            deductions
-                .filter { it.name.trim().isNotEmpty() && it.amount >= 0.0 }
-                .map {
-                    it.copy(
-                        id = 0L,
-                        claimPeriodId = claimId,
-                        name = it.name.trim(),
-                        amount = it.amount.coerceAtLeast(0.0)
-                    )
-                }
-                .let { valid -> if (valid.isNotEmpty()) profileDeductionDao.upsertAll(valid) }
+            if (validDeductions.isNotEmpty()) {
+                profileDeductionDao.upsertAll(validDeductions)
+            }
         }
 
         val current = payRateSettingsDao.observe().first()
