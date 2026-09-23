@@ -68,6 +68,7 @@ import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
+import com.pasindu.nursingotapp.ui.theme.CriticalRed
 import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
@@ -340,45 +341,69 @@ private fun QuickInsights(state: AdvancedFinanceUiState) {
 
 @Composable
 private fun MoneyMovement(state: AdvancedFinanceUiState) {
-    val items = listOf(
+    val earnings = listOf(
         "Basic" to state.currentBasicSalary,
         "OT" to state.otAmountRs,
         "PH" to state.phAmountRs,
         "DO" to state.doAmountRs,
         "Allowances" to (state.riskAllowance + state.claAllowance + state.additionalAllowancesTotal)
     )
-    val maxValue = max(items.maxOfOrNull { it.second } ?: 1.0, 1.0)
     FinanceCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("How Your Money Moves", color = FinanceInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Earnings constellation for this period", color = TextSecondary, fontSize = 10.sp)
+                Text("Gross → deductions → estimated net", color = TextSecondary, fontSize = 10.sp)
             }
-            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(50.dp)) { Text("LIVE", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+            Surface(color = Purple.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
+                Text("LIVE", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
         }
         Spacer(Modifier.height(14.dp))
-        Surface(color = Color(0xFFF7F9FC), shape = RoundedCornerShape(21.dp)) {
-            Column(Modifier.padding(15.dp)) {
-                items.forEach { (label, value) ->
-                    val fraction = (value / maxValue).coerceIn(0.0, 1.0).toFloat()
-                    val accent = when (label) { "Basic" -> ClinicalPrimaryColor; "OT" -> Purple; "PH" -> Amber; else -> Emerald }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.width(48.dp), color = TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        LinearProgressIndicator(progress = { fraction }, modifier = Modifier.weight(1f).height(7.dp), color = accent, trackColor = accent.copy(alpha = 0.10f))
-                        Spacer(Modifier.width(9.dp))
-                        Text(formatRs(value), color = FinanceInk, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.height(9.dp))
-                }
-            }
+        WaterfallTotal("GROSS", state.grossEarnings, ClinicalAiGradient)
+        Spacer(Modifier.height(10.dp))
+        earnings.forEach { (label, value) ->
+            MoneyFlowRow(label, value, when (label) {
+                "OT" -> Purple
+                "PH" -> Amber
+                "DO", "Allowances" -> Emerald
+                else -> ClinicalPrimaryColor
+            }, positive = true)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Claim earnings", color = TextSecondary, fontSize = 10.sp)
-            Text(formatRs(state.grossEarnings), color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-        }
+        Spacer(Modifier.height(6.dp))
+        MoneyFlowRow("Deductions", state.paysheetDeductions, CriticalRed, positive = false, empty = !state.hasEnteredDeductions)
+        Spacer(Modifier.height(10.dp))
+        WaterfallTotal("ESTIMATED NET", state.estimatedNetSalary, PositiveGradient)
     }
 }
 
+@Composable
+private fun MoneyFlowRow(label: String, value: Double, accent: Color, positive: Boolean, empty: Boolean = false) {
+    val icon = if (positive) Icons.Default.Payments else Icons.Default.RemoveCircleOutline
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Surface(color = accent.copy(alpha = 0.10f), shape = androidx.compose.foundation.shape.CircleShape) {
+            Icon(icon, null, tint = accent, modifier = Modifier.padding(7.dp).size(15.dp))
+        }
+        Spacer(Modifier.width(9.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, color = FinanceInk, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (empty) "Not entered" else if (positive) "Added to gross" else "Subtracted from gross", color = TextSecondary, fontSize = 8.sp)
+        }
+        Text(if (empty) "—" else if (positive) formatRs(value) else "− ${formatRs(value)}", color = accent, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+    }
+    Spacer(Modifier.height(7.dp))
+}
+
+@Composable
+private fun WaterfallTotal(label: String, value: Double, gradient: Brush) {
+    Surface(color = Color.White, shape = RoundedCornerShape(17.dp), tonalElevation = 1.dp) {
+        Box(Modifier.fillMaxWidth().background(gradient, RoundedCornerShape(17.dp)).padding(14.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = Color.White.copy(alpha = 0.82f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(formatRs(value), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
 @Composable
 private fun PayRatesSummary(state: AdvancedFinanceUiState) {
     FinanceCard {
