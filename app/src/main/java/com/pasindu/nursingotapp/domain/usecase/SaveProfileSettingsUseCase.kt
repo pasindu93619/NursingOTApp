@@ -2,6 +2,8 @@ package com.pasindu.nursingotapp.domain.usecase
 
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
+import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.first
 class SaveProfileSettingsUseCase(
     private val profileDao: ProfileDao,
     private val compensationDao: ProfileCompensationDao,
+    private val additionalAllowanceDao: ProfileAdditionalAllowanceDao,
     private val payRateSettingsDao: PayRateSettingsDao
 ) {
     suspend operator fun invoke(
@@ -20,6 +23,7 @@ class SaveProfileSettingsUseCase(
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double,
+        additionalAllowances: List<ProfileAdditionalAllowanceEntity>,
         otRate: Double,
         matched2027Basic: Double?
     ) {
@@ -35,6 +39,14 @@ class SaveProfileSettingsUseCase(
                 updatedAt = System.currentTimeMillis()
             )
         )
+
+        additionalAllowanceDao.deleteAll()
+        additionalAllowances
+            .filter { it.name.trim().isNotEmpty() && it.amount > 0.0 }
+            .map { it.copy(id = 0L, name = it.name.trim(), amount = it.amount.coerceAtLeast(0.0)) }
+            .let { valid ->
+                if (valid.isNotEmpty()) additionalAllowanceDao.upsertAll(valid)
+            }
 
         val current = payRateSettingsDao.observe().first()
         val basisSalary2027 = matched2027Basic?.takeIf { it > 0.0 }
