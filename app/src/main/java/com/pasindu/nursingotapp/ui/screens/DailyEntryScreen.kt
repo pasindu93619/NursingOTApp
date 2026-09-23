@@ -414,9 +414,6 @@ fun DailyEntryScreen(
                             }
                             Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) accent else surface) {
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    if (brush == "DO") {
-                                        Icon(Icons.Default.EventBusy, null, tint = if (selected) Color.White else DailyEmerald, modifier = Modifier.size(14.dp))
-                                    }
                                     Text(brush, color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
                             }
