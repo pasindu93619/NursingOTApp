@@ -3,7 +3,9 @@ package com.pasindu.nursingotapp.domain.usecase
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
@@ -15,7 +17,9 @@ class SaveProfileSettingsUseCase(
     private val profileDao: ProfileDao,
     private val compensationDao: ProfileCompensationDao,
     private val additionalAllowanceDao: ProfileAdditionalAllowanceDao,
-    private val payRateSettingsDao: PayRateSettingsDao
+    private val payRateSettingsDao: PayRateSettingsDao,
+    private val claimPeriodDao: com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao,
+    private val profileDeductionDao: ProfileDeductionDao
 ) {
     suspend operator fun invoke(
         profile: ProfileEntity,
@@ -23,6 +27,7 @@ class SaveProfileSettingsUseCase(
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double,
+        deductions: List<ProfileDeductionEntity>,
         additionalAllowances: List<ProfileAdditionalAllowanceEntity>,
         otRate: Double,
         matched2027Basic: Double?
@@ -47,6 +52,21 @@ class SaveProfileSettingsUseCase(
             .let { valid ->
                 if (valid.isNotEmpty()) additionalAllowanceDao.upsertAll(valid)
             }
+
+        claimPeriodDao.getLatestClaimPeriod()?.id?.let { claimId ->
+            profileDeductionDao.deleteForClaimPeriod(claimId)
+            deductions
+                .filter { it.name.trim().isNotEmpty() && it.amount >= 0.0 }
+                .map {
+                    it.copy(
+                        id = 0L,
+                        claimPeriodId = claimId,
+                        name = it.name.trim(),
+                        amount = it.amount.coerceAtLeast(0.0)
+                    )
+                }
+                .let { valid -> if (valid.isNotEmpty()) profileDeductionDao.upsertAll(valid) }
+        }
 
         val current = payRateSettingsDao.observe().first()
         val basisSalary2027 = matched2027Basic?.takeIf { it > 0.0 }
