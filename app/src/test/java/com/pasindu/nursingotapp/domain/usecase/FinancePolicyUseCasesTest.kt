@@ -25,12 +25,11 @@ class FinancePolicyUseCasesTest {
     }
 
     @Test
-    fun synchronizePolicyRates_preservesUserConfiguredOtRateAndCalculatesDayRate() = runBlocking {
-        val userEnteredOtRate = 350.0
+    fun synchronizePolicyRates_usesGradePolicyOtRateAndCalculatesDayRate() = runBlocking {
         val payDao = FakePayRateDao(
             PayRateSettingsEntity(
                 id = 1,
-                otRate = userEnteredOtRate,
+                otRate = 350.0,
                 phRate = 0.0,
                 doRate = 0.0,
                 rateSource = "MANUAL",
@@ -42,17 +41,17 @@ class FinancePolicyUseCasesTest {
             grade = "Grade III",
             salaryStep = 1,
             currentBasicSalary2026 = 50290.0,
-            basicSalary2027 = 55600.0
+            basicSalary2027 = 56520.0
         )
         val salaryDao = FakeSalaryDao(listOf(salary))
 
         SynchronizePolicyRatesUseCase(payDao, salaryDao)(testProfile())
 
         val saved = payDao.value.value
-        assertEquals(userEnteredOtRate, saved?.otRate ?: 0.0, 0.001)
-        assertEquals(55600.0 / 30.0, saved?.phRate ?: 0.0, 0.001)
-        assertEquals(55600.0 / 30.0, saved?.doRate ?: 0.0, 0.001)
-        assertEquals(55600.0, saved?.basisSalary2027 ?: 0.0, 0.001)
+        assertEquals(NursingOtRatePolicy.rateForGrade("Grade III") ?: 0.0, saved?.otRate ?: 0.0, 0.001)
+        assertEquals(56520.0 / 30.0, saved?.phRate ?: 0.0, 0.001)
+        assertEquals(56520.0 / 30.0, saved?.doRate ?: 0.0, 0.001)
+        assertEquals(56520.0, saved?.basisSalary2027 ?: 0.0, 0.001)
         assertEquals("2027_BASIC_SALARY_DIV_30", saved?.rateSource)
     }
 
