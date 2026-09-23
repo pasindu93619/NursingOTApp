@@ -25,6 +25,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import java.time.DayOfWeek
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 data class AdvancedFinanceUiState(
     val isLoading: Boolean = true,
@@ -35,6 +38,7 @@ data class AdvancedFinanceUiState(
     val compensation: ProfileCompensationEntity? = null,
     val claimStart: java.time.LocalDate? = null,
     val claimEnd: java.time.LocalDate? = null,
+    val fullWeeks: Int = 0,
     val apit: Double = 0.0,
     val wop: Double = 0.0,
     val loanDeduction: Double = 0.0,
@@ -59,7 +63,8 @@ data class AdvancedFinanceUiState(
     val doAmountRs: Double get() = totalDODays * doRate
     val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
     val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
-    val dutyProgress36Hours: Float get() = if (totalNormalHours <= 0.0) 0f else (totalNormalHours / 36.0).coerceIn(0.0, 1.0).toFloat()
+    val workloadTargetHours: Double get() = fullWeeks * 36.0
+    val dutyProgress36Hours: Float get() = if (workloadTargetHours <= 0.0) 0f else (totalNormalHours / workloadTargetHours).coerceIn(0.0, 1.0).toFloat()
 }
 
 @HiltViewModel
@@ -135,6 +140,7 @@ class AdvancedFinanceViewModel @Inject constructor(
                         periodSummary = summary,
                         claimStart = claimPeriod.startDate,
                         claimEnd = claimPeriod.endDate,
+                        fullWeeks = countFullSundaySaturdayWeeks(claimPeriod.startDate, claimPeriod.endDate),
                         errorMessage = null
                     )
                 }.onFailure { error ->
@@ -194,4 +200,12 @@ class AdvancedFinanceViewModel @Inject constructor(
     private fun <T> kotlinx.coroutines.flow.Flow<T>.collectInViewModel(block: (T) -> Unit) {
         viewModelScope.launch { collect { block(it) } }
     }
+}
+
+private fun countFullSundaySaturdayWeeks(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Int {
+    if (endDate.isBefore(startDate)) return 0
+    val firstSunday = if (startDate.dayOfWeek == DayOfWeek.SUNDAY) startDate else startDate.with(TemporalAdjusters.next(DayOfWeek.SUNDAY))
+    val lastSaturday = if (endDate.dayOfWeek == DayOfWeek.SATURDAY) endDate else endDate.with(TemporalAdjusters.previous(DayOfWeek.SATURDAY))
+    if (firstSunday.isAfter(lastSaturday)) return 0
+    return ChronoUnit.WEEKS.between(firstSunday, lastSaturday.plusDays(1)).toInt()
 }
