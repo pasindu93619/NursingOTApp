@@ -417,6 +417,15 @@ fun ProfileScreen(
                     claAllowance = parsedCla,
                     additionalAllowancesTotal = additionalTotal,
                     totalDeductions = deductions,
+                    additionalAllowances = additionalAllowances
+                        .filter { it.name.isNotBlank() && parsedMoney(it.amount) > 0.0 }
+                        .map { row ->
+                            com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity(
+                                id = if (row.id > 0) row.id.toLong() else 0L,
+                                name = row.name.trim(),
+                                amount = parsedMoney(row.amount)
+                            )
+                        },
                     otRate = selectedOtRate ?: 0.0,
                     matched2027Basic = matched2027Basic,
                     onSaved = {
