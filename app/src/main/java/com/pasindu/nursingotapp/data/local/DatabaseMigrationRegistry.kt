@@ -30,10 +30,11 @@ object DatabaseMigrationRegistry {
         AppDatabase.MIGRATION_9_10,
         AppDatabase.MIGRATION_10_11,
         AppDatabase.MIGRATION_11_12,
-        AppDatabase.MIGRATION_12_13
+        AppDatabase.MIGRATION_12_13,
+        AppDatabase.MIGRATION_13_14
     )
 
-    const val CURRENT_DATABASE_VERSION = 13
+    const val CURRENT_DATABASE_VERSION = 14
 
     /**
      * Naming convention for future migrations:
