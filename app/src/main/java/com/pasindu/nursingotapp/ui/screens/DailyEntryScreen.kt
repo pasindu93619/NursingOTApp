@@ -453,14 +453,20 @@ fun DailyEntryScreen(
                         val quick = if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)") else listOf("Day (7-16)")
                         quick.forEach { brush ->
                             val active = brushCategory == CATEGORY_SHIFT_DUTY && selectedBrush == brush
+                            val brushColor = when (brush) {
+                                "Morn (7-13)" -> MorningDutyColor
+                                "Eve (13-19)", "Day (7-16)" -> EveningDutyColor
+                                "Night (19-7)" -> NightDutyColor
+                                else -> MedicalBlue
+                            }
                             Surface(
                                 Modifier.weight(1f).clickable { setCategory(CATEGORY_SHIFT_DUTY); chooseBrush(brush) },
                                 shape = RoundedCornerShape(16.dp),
-                                color = if (active) DailyCyan else DailyBlueSoft,
-                                border = if (active) BorderStroke(1.dp, DailyCyan.copy(alpha = 0.28f)) else null
+                                color = if (active) brushColor else brushColor.copy(alpha = .12f),
+                                border = if (active) BorderStroke(1.dp, brushColor.copy(alpha = .45f)) else null
                             ) {
                                 Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(brush.substringBefore(" "), color = if (active) Color.White else DailyCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                    Text(brush.substringBefore(" "), color = if (active) Color.White else brushColor, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                     Text(brush.substringAfter(" ", "").replace("(", "").replace(")", ""), color = if (active) Color.White else DailyInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
