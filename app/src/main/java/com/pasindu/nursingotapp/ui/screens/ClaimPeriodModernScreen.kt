@@ -1664,6 +1664,7 @@ fun ClaimPeriodModernScreen(
             ).toInt() + 1
 
         val special = period.wardType == "Special"
+        val today = LocalDate.now()
         val status = when {
             today in period.startDate..period.endDate -> "Active"
             period.endDate.isBefore(today) -> "Completed"
@@ -1748,7 +1749,7 @@ fun ClaimPeriodModernScreen(
                         Surface(
                             shape = NursingShapes.pill,
                             color = statusSurface,
-                            border = if (status == "Active") BorderStroke(
+                            border = if (status == "Active") androidx.compose.foundation.BorderStroke(
                                 1.dp,
                                 MedicalBlue.copy(alpha = 0.55f)
                             ) else null
