@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.domain.model.DailyLog
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
@@ -111,6 +112,7 @@ class NursingViewModel @Inject constructor(
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double,
+        additionalAllowances: List<ProfileAdditionalAllowanceEntity>,
         otRate: Double,
         matched2027Basic: Double?,
         onSaved: () -> Unit
@@ -123,6 +125,7 @@ class NursingViewModel @Inject constructor(
                 claAllowance = claAllowance,
                 additionalAllowancesTotal = additionalAllowancesTotal,
                 totalDeductions = totalDeductions,
+                additionalAllowances = additionalAllowances,
                 otRate = otRate,
                 matched2027Basic = matched2027Basic
             )
