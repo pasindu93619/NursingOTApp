@@ -219,19 +219,27 @@ fun ProfileScreen(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .imePadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(start = 16.dp, end = 88.dp, top = 10.dp, bottom = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (isSaving) "Saving profile…" else "Profile ready",
+                            when {
+                                isSaving -> "Saving profile…"
+                                operationState is ViewModelOperationState.Success -> "Profile saved"
+                                else -> "Profile ready"
+                            },
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            if (canSaveProfile) "Salary and service rates are ready to save"
-                            else "Complete the required profile and salary fields",
+                            when {
+                                isSaving -> "Writing your profile and payment settings"
+                                operationState is ViewModelOperationState.Success -> "Saved successfully"
+                                canSaveProfile -> "Tap SAVE to store your profile"
+                                else -> "Complete the required profile and salary fields"
+                            },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 9.sp
                         )
@@ -240,7 +248,9 @@ fun ProfileScreen(
                     Button(
                         onClick = saveProfile,
                         enabled = canSaveProfile,
-                        modifier = Modifier.height(52.dp),
+                        modifier = Modifier
+                            .height(52.dp)
+                            .widthIn(min = 124.dp, max = 156.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
