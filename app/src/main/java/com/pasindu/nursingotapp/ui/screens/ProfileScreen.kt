@@ -525,7 +525,7 @@ fun ProfileScreen(
     }
 }
 
-
+}
 private fun parsedMoney(value: String): Double {
     return value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
 }
