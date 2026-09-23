@@ -113,9 +113,9 @@ class AdvancedFinanceViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(compensation = compensation)
             recalculate()
         }
-        viewModelScope.launch {
-            observeClaimPeriods().collect { periods ->
-                val current = periods.firstOrNull()
+        observeClaimPeriod().collectInViewModel { periods ->
+            val current = periods.firstOrNull()
+            viewModelScope.launch {
                 val deductions = current?.let { profileDeductionDao.observeForClaimPeriod(it.id).first() } ?: emptyList()
                 _uiState.value = _uiState.value.copy(deductions = deductions)
                 recalculate()
