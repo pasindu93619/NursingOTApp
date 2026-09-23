@@ -25,11 +25,11 @@ class FinancePolicyUseCasesTest {
     }
 
     @Test
-    fun synchronizePolicyRates_usesGradePolicyOtRateAndCalculatesDayRate() = runBlocking {
+    fun applyFinancePolicyRates_gradeIIIStep3Resolves2027BasicAndUses884DayRate() = runBlocking {
         val payDao = FakePayRateDao(
             PayRateSettingsEntity(
                 id = 1,
-                otRate = 350.0,
+                otRate = 999.0,
                 phRate = 0.0,
                 doRate = 0.0,
                 rateSource = "MANUAL",
@@ -39,20 +39,27 @@ class FinancePolicyUseCasesTest {
         )
         val salary = SalaryStep2027Entity(
             grade = "Grade III",
-            salaryStep = 1,
-            currentBasicSalary2026 = 50290.0,
+            salaryStep = 3,
+            currentBasicSalary2026 = 52809.0,
             basicSalary2027 = 56520.0
         )
         val salaryDao = FakeSalaryDao(listOf(salary))
 
-        SynchronizePolicyRatesUseCase(payDao, salaryDao)(testProfile())
+        val matched = MatchSalaryStepUseCase(salaryDao)(testProfile())
+        assertNotNull(matched)
+        ApplyFinancePolicyRatesUseCase(
+            MatchSalaryStepUseCase(salaryDao),
+            ApplyMatched2027DayRateUseCase(payDao)
+        )(testProfile())
 
         val saved = payDao.value.value
-        assertEquals(NursingOtRatePolicy.rateForGrade("Grade III") ?: 0.0, saved?.otRate ?: 0.0, 0.001)
-        assertEquals(56520.0 / 30.0, saved?.phRate ?: 0.0, 0.001)
-        assertEquals(56520.0 / 30.0, saved?.doRate ?: 0.0, 0.001)
+        assertEquals(3, matched?.salaryStep)
+        assertEquals(52809.0, matched?.currentBasicSalary2026 ?: 0.0, 0.001)
         assertEquals(56520.0, saved?.basisSalary2027 ?: 0.0, 0.001)
+        assertEquals(1884.0, saved?.phRate ?: 0.0, 0.001)
+        assertEquals(1884.0, saved?.doRate ?: 0.0, 0.001)
         assertEquals("2027_BASIC_SALARY_DIV_30", saved?.rateSource)
+        assertEquals(999.0, saved?.otRate ?: 0.0, 0.001)
     }
 
     private fun testProfile() = ProfileEntity(
@@ -62,9 +69,10 @@ class FinancePolicyUseCasesTest {
         unit = "Ward",
         paySheetNo = "P1",
         grade = "Grade III",
-        basicSalary = 50290.0,
-        otRate = 0.0,
-        updatedAt = 1L
+        basicSalary = 52809.0,
+        otRate = 283.0,
+        updatedAt = 1L,
+        salaryStep = 3
     )
 
     private class FakePayRateDao(initial: PayRateSettingsEntity?) : PayRateSettingsDao {
