@@ -40,7 +40,7 @@ class SaveProfileSettingsUseCase(
                 riskAllowance = 6850.0,
                 claAllowance = 17800.0,
                 additionalAllowancesTotal = additionalAllowancesTotal.coerceAtLeast(0.0),
-                totalDeductions = totalDeductions.coerceAtLeast(0.0),
+                totalDeductions = deductions.sumOf { it.amount.coerceAtLeast(0.0) },
                 updatedAt = System.currentTimeMillis()
             )
         )
