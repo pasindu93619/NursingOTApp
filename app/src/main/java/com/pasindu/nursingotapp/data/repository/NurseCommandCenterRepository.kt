@@ -2,7 +2,6 @@ package com.pasindu.nursingotapp.data.repository
 
 import com.pasindu.nursingotapp.data.local.AppDatabase
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
-import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.FinancialRecordEntity
@@ -10,6 +9,7 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -37,6 +37,7 @@ class NurseCommandCenterRepository(
         val phHours: Double,
         val claimCompletedDays: Int,
         val claimTotalDays: Int,
+        val consecutiveWorkedDays: Int,
         val grossSalary: Double,
         val netSalary: Double?,
         val pendingClinicalTasks: Int,
@@ -80,7 +81,8 @@ class NurseCommandCenterRepository(
             val currentClaimPeriod = claimPeriods
                 .asSequence()
                 .filter { period ->
-                    !today.isBefore(period.startDate) && !today.isAfter(period.endDate)
+                    !today.isBefore(period.startDate) &&
+                        !today.isAfter(period.endDate)
                 }
                 .maxByOrNull { it.startDate }
 
@@ -125,6 +127,8 @@ class NurseCommandCenterRepository(
                 .filter { it.isPH }
                 .sumOf { it.normalHours.toDouble() + it.otHours.toDouble() }
 
+            val consecutiveWorkedDays = calculateCurrentConsecutiveWorkedDays(claimEntries)
+
             val monthlyEntries = entries.filter { entry ->
                 entry.date >= start && entry.date <= end
             }
@@ -133,6 +137,7 @@ class NurseCommandCenterRepository(
             val currentMonthFinance = finance.firstOrNull {
                 it.recordMonth == currentMonthKey
             }
+
             val pendingTaskDetails = clinicalTasks
                 .filter { !it.isCompleted }
                 .sortedWith(
@@ -158,6 +163,7 @@ class NurseCommandCenterRepository(
                         )
                 },
                 claimTotalDays = end.dayOfMonth,
+                consecutiveWorkedDays = consecutiveWorkedDays,
                 grossSalary = currentMonthFinance?.grossSalary
                     ?: currentProfile?.basicSalary
                     ?: 0.0,
@@ -180,6 +186,38 @@ class NurseCommandCenterRepository(
         }
     }
 
+    private fun calculateCurrentConsecutiveWorkedDays(
+        entries: List<DailyEntryEntity>
+    ): Int {
+        val workedDates = entries
+            .asSequence()
+            .filter { entry ->
+                !entry.isLeave &&
+                    (entry.normalHours > 0f || entry.otHours > 0f)
+            }
+            .map { it.date }
+            .distinct()
+            .sorted()
+            .toList()
+
+        if (workedDates.isEmpty()) return 0
+
+        var currentRun = 1
+
+        for (index in workedDates.lastIndex downTo 1) {
+            val currentDate = workedDates[index]
+            val previousDate = workedDates[index - 1]
+
+            if (previousDate == currentDate.minusDays(1)) {
+                currentRun++
+            } else {
+                break
+            }
+        }
+
+        return currentRun
+    }
+
     private data class FiveWay(
         val currentProfile: ProfileEntity?,
         val claimPeriods: List<ClaimPeriodEntity>,
@@ -194,13 +232,13 @@ class NurseCommandCenterRepository(
 
     private fun sundayOfWeek(date: LocalDate): LocalDate {
         val daysFromSunday = when (date.dayOfWeek) {
-            java.time.DayOfWeek.SUNDAY -> 0L
-            java.time.DayOfWeek.MONDAY -> 1L
-            java.time.DayOfWeek.TUESDAY -> 2L
-            java.time.DayOfWeek.WEDNESDAY -> 3L
-            java.time.DayOfWeek.THURSDAY -> 4L
-            java.time.DayOfWeek.FRIDAY -> 5L
-            java.time.DayOfWeek.SATURDAY -> 6L
+            DayOfWeek.SUNDAY -> 0L
+            DayOfWeek.MONDAY -> 1L
+            DayOfWeek.TUESDAY -> 2L
+            DayOfWeek.WEDNESDAY -> 3L
+            DayOfWeek.THURSDAY -> 4L
+            DayOfWeek.FRIDAY -> 5L
+            DayOfWeek.SATURDAY -> 6L
         }
         return date.minusDays(daysFromSunday)
     }
