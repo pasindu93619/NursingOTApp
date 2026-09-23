@@ -7,10 +7,6 @@ import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
-import com.pasindu.nursingotapp.data.local.dao.ClaimPeriodDao
-import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
-import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
-import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
