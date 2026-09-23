@@ -11,6 +11,7 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.domain.usecase.AddCpdLogUseCase
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
+import com.pasindu.nursingotapp.domain.usecase.ApplyFinancePolicyRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateDailyEntryHoursUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.CreateClaimPeriodUseCase
@@ -57,6 +58,7 @@ object UseCaseModule {
     @Provides fun provideSaveProfileSettingsUseCase(profileDao: ProfileDao, compensationDao: ProfileCompensationDao, additionalAllowanceDao: ProfileAdditionalAllowanceDao, payRateSettingsDao: PayRateSettingsDao) = SaveProfileSettingsUseCase(profileDao, compensationDao, additionalAllowanceDao, payRateSettingsDao)
     @Provides fun provideMatchSalaryStepUseCase(dao: SalaryStep2027Dao) = MatchSalaryStepUseCase(dao)
     @Provides fun provideApplyMatched2027DayRateUseCase(dao: PayRateSettingsDao) = ApplyMatched2027DayRateUseCase(dao)
+    @Provides fun provideApplyFinancePolicyRatesUseCase(matchSalaryStepUseCase: MatchSalaryStepUseCase, applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase) = ApplyFinancePolicyRatesUseCase(matchSalaryStepUseCase, applyMatched2027DayRateUseCase)
     @Provides fun provideCalculateDailyEntryHoursUseCase() = CalculateDailyEntryHoursUseCase()
     @Provides fun provideCalculateFinanceSummaryUseCase() = CalculateFinanceSummaryUseCase()
     @Provides fun provideEnsureManualPayRateRecordUseCase(dao: PayRateSettingsDao) = EnsureManualPayRateRecordUseCase(dao)
