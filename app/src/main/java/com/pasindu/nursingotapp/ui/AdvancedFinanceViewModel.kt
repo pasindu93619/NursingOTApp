@@ -16,7 +16,7 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
-import com.pasindu.nursingotapp.domain.usecase.SynchronizePolicyRatesUseCase
+import com.pasindu.nursingotapp.domain.usecase.ApplyFinancePolicyRatesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import java.time.DayOfWeek
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
@@ -74,7 +73,7 @@ class AdvancedFinanceViewModel @Inject constructor(
     observePayRates: ObserveOtRateUseCase,
     observeCompensation: ObserveProfileCompensationUseCase,
     private val ensureManualPayRateRecordUseCase: EnsureManualPayRateRecordUseCase,
-    private val synchronizePolicyRatesUseCase: SynchronizePolicyRatesUseCase,
+    private val applyFinancePolicyRatesUseCase: ApplyFinancePolicyRatesUseCase,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val calculateFinanceSummaryUseCase: CalculateFinanceSummaryUseCase,
     private val saveFinanceCompensationUseCase: SaveFinanceCompensationUseCase,
@@ -90,7 +89,7 @@ class AdvancedFinanceViewModel @Inject constructor(
             viewModelScope.launch {
                 runCatching {
                     ensureManualPayRateRecordUseCase()
-                    if (profile != null) synchronizePolicyRatesUseCase(profile)
+                    if (profile != null) applyFinancePolicyRatesUseCase(profile)
                     recalculate()
                 }.onFailure { error ->
                     setError(error, "Unable to initialize financial information.")
