@@ -210,3 +210,15 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 }
 
+
+private fun countFullSundaySaturdayWeeks(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Int {
+    if (endDate.isBefore(startDate)) return 0
+    val firstSunday = if (startDate.dayOfWeek == DayOfWeek.SUNDAY) startDate
+    else startDate.with(java.time.temporal.TemporalAdjusters.next(DayOfWeek.SUNDAY))
+    val lastSaturday = if (endDate.dayOfWeek == DayOfWeek.SATURDAY) endDate
+    else endDate.with(java.time.temporal.TemporalAdjusters.previous(DayOfWeek.SATURDAY))
+    if (firstSunday.isAfter(lastSaturday)) return 0
+    return java.time.temporal.ChronoUnit.WEEKS
+        .between(firstSunday, lastSaturday.plusDays(1))
+        .toInt()
+}
