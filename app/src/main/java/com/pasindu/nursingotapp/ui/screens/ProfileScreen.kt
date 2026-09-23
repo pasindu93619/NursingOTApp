@@ -526,7 +526,29 @@ fun ProfileScreen(
 }
 
 
-private fun parsedMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-private fun cleanNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
-private fun formatMoney(value: Double): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }.format(value)
-private fun formatCompact(value: Double): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply { maximumFractionDigits = 2 }.format(value)
+private fun parsedMoney(value: String): Double {
+    return value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+}
+
+private fun cleanNumber(value: Double): String {
+    return if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+}
+
+private fun formatMoney(value: Double): String {
+    return java.text.NumberFormat
+        .getNumberInstance(java.util.Locale.US)
+        .apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+        .format(value)
+}
+
+private fun formatCompact(value: Double): String {
+    return java.text.NumberFormat
+        .getNumberInstance(java.util.Locale.US)
+        .apply {
+            maximumFractionDigits = 2
+        }
+        .format(value)
+}
