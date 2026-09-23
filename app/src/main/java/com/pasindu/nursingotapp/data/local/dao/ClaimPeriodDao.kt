@@ -20,6 +20,9 @@ interface ClaimPeriodDao {
     @Query("SELECT * FROM claim_period WHERE id = :id LIMIT 1")
     suspend fun getClaimPeriodById(id: Long): ClaimPeriodEntity?
 
+    @Query("SELECT * FROM claim_period ORDER BY startDate DESC, endDate DESC LIMIT 1")
+    suspend fun getLatestClaimPeriod(): ClaimPeriodEntity?
+
     // --- NEW: DELETE FUNCTIONS ---
     @Delete
     suspend fun deleteClaimPeriod(claimPeriod: ClaimPeriodEntity)
