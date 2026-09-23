@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
 import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
@@ -317,8 +318,8 @@ fun ProfileScreen(
             }
 
             Text("Fixed allowances", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            AllowanceField("Risk / Responsibility Allowance", riskAllowance, { riskAllowance = it }, Orange)
-            AllowanceField("CLA", claAllowance, { claAllowance = it }, Green)
+            ReadOnlyAllowanceField("Risk / Responsibility Allowance", "Rs. 6,850", "Fixed for all nurses", Orange)
+            ReadOnlyAllowanceField("CLA", "Rs. 17,800", "Fixed for all nurses", Green)
 
             Surface(Modifier.fillMaxWidth(), color = Color(0xFFFFF7ED), shape = RoundedCornerShape(18.dp)) {
                 Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
