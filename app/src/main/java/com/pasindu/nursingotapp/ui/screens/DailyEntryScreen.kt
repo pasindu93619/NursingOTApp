@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -672,7 +673,16 @@ fun DailyEntryScreen(
                                 if (shortShift.isNotEmpty() && renderLeave !in listOf("DO", "PH", "CL", "VL", "sL", "DL", "AB", "SD")) Text(shortShift, Modifier.align(Alignment.TopStart).padding(start = 4.dp, top = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Black, color = Slate)
                                 if (shortOt.isNotEmpty()) Text(shortOt, Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Black, color = Slate)
                                 if (renderLeave.isNotEmpty()) Text(renderLeave.replace("Full ", "").take(5), Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp), fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (hasLeaveAnim && renderLeave !in listOf("PH", "DO")) Color.White else Slate)
-                                if (staged != null) Icon(Icons.Default.CheckCircle, "Staged", tint = DailyCyan, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(11.dp))
+                                if (renderLeave == "DO" || renderLeave == "PH") {
+                                    Icon(
+                                        Icons.Default.Event,
+                                        contentDescription = "Not worked",
+                                        tint = Emerald,
+                                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(11.dp)
+                                    )
+                                } else if (staged != null) {
+                                    Icon(Icons.Default.CheckCircle, "Staged", tint = MedicalBlue, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(11.dp))
+                                }
                             }
                         }
                     }
