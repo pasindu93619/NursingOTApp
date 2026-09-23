@@ -69,6 +69,11 @@ private val DailyPurple = Color(0xFF7257E8)
 private val DailyBlueSoft = Color(0xFFEAF6FF)
 private val DailyPurpleSoft = Color(0xFFF3EEFF)
 private val DailyMintSoft = Color(0xFFEAFBF5)
+private val DailyEmerald = Color(0xFF10B981)
+private val DailyAmber = Color(0xFFF59E0B)
+private val DailyPurpleSoft2 = Color(0xFFF3EEFF)
+private val DailySlateSoft = Color(0xFFF1F5F9)
+private val DailyWarningGradient = Brush.horizontalGradient(listOf(DailyAmber, Color(0xFFEF4444)))
 private val DailyHeroGradient = Brush.horizontalGradient(listOf(DailyBlue, DailyCyan, Color(0xFF4B78F2), DailyPurple))
 
 private const val CATEGORY_SHIFT_DUTY = "Shift Duty"
@@ -370,21 +375,50 @@ fun DailyEntryScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(CATEGORY_SHIFT_DUTY, CATEGORY_LEAVE_REST, CATEGORY_SERVICE_DAYS, CATEGORY_OVERTIME).forEach { category ->
                             val selected = brushCategory == category
-                            Surface(Modifier.weight(1f).clickable { setCategory(category) }, shape = RoundedCornerShape(13.dp), color = if (selected) DailyCyan else DailyBlueSoft) {
-                                Text(category, Modifier.padding(vertical = 10.dp, horizontal = 2.dp), textAlign = TextAlign.Center, color = if (selected) Color.White else DailyInk, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                            val accent = when (category) {
+                                CATEGORY_SHIFT_DUTY -> DailyCyan
+                                CATEGORY_LEAVE_REST -> DailyEmerald
+                                CATEGORY_SERVICE_DAYS -> DailyPurple
+                                else -> DailyAmber
+                            }
+                            val surface = when (category) {
+                                CATEGORY_SHIFT_DUTY -> DailyBlueSoft
+                                CATEGORY_LEAVE_REST -> DailyMintSoft
+                                CATEGORY_SERVICE_DAYS -> DailyPurpleSoft2
+                                else -> Color(0xFFFFF3CD)
+                            }
+                            Surface(Modifier.weight(1f).clickable { setCategory(category) }, shape = RoundedCornerShape(13.dp), color = if (selected) accent else surface) {
+                                Text(category, Modifier.padding(vertical = 10.dp, horizontal = 2.dp), textAlign = TextAlign.Center, color = if (selected) Color.White else accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                     }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(items = when (brushCategory) {
                             CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
-                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "CL/2", "SL (Short)", "Clear Leave")
+                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "DO", "CL/2", "SL (Short)", "Clear Leave")
                             CATEGORY_SERVICE_DAYS -> listOf("Work DO", "Work PH", "Clear Leave")
                             else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
                         }) { brush ->
                             val selected = selectedBrush == brush
-                            Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) DailyCyan else MaterialTheme.colorScheme.surfaceVariant) {
-                                Text(brush, Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            val accent = when (brushCategory) {
+                                CATEGORY_SHIFT_DUTY -> DailyCyan
+                                CATEGORY_LEAVE_REST -> DailyEmerald
+                                CATEGORY_SERVICE_DAYS -> DailyPurple
+                                else -> DailyAmber
+                            }
+                            val surface = when (brushCategory) {
+                                CATEGORY_SHIFT_DUTY -> DailyBlueSoft
+                                CATEGORY_LEAVE_REST -> DailyMintSoft
+                                CATEGORY_SERVICE_DAYS -> DailyPurpleSoft2
+                                else -> Color(0xFFFFF3CD)
+                            }
+                            Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) accent else surface) {
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    if (brush == "DO") {
+                                        Icon(Icons.Default.EventBusy, null, tint = if (selected) Color.White else DailyEmerald, modifier = Modifier.size(14.dp))
+                                    }
+                                    Text(brush, color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                }
                             }
                         }
                     }
