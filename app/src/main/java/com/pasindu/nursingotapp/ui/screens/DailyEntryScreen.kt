@@ -535,6 +535,14 @@ fun DailyEntryScreen(
                             }
                         }
                     }
+                    Box(Modifier.fillMaxWidth().height(2.dp).background(
+                        when (brushCategory) {
+                            CATEGORY_SHIFT_DUTY -> MedicalBlue
+                            CATEGORY_LEAVE_REST -> Emerald
+                            CATEGORY_SERVICE_DAYS -> Purple
+                            else -> Amber
+                        }
+                    ))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(items = when (brushCategory) {
                             CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
