@@ -8,6 +8,7 @@ import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
@@ -43,6 +44,9 @@ object DaoModule {
 
     @Provides
     fun provideProfileCompensationDao(database: AppDatabase): ProfileCompensationDao = database.profileCompensationDao()
+
+    @Provides
+    fun provideProfileDeductionDao(database: AppDatabase): ProfileDeductionDao = database.profileDeductionDao()
 
     @Provides
     fun provideProfileAdditionalAllowanceDao(
