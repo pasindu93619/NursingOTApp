@@ -191,28 +191,51 @@ fun DailyEntryScreen(
         bottomBar = {
             Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = Color.White) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val currentSessionEntries = stagedEdits.keys
-                        .filter { it in startDate..endDate }
-                        .map { date -> date to stagedEdits.getValue(date) }
-                    val selectedDutyHours = currentSessionEntries.sumOf { (_, edit) ->
-                        when (edit.shift) {
-                            "Morn (7-13)", "Eve (13-19)" -> 6.0
-                            "Night (19-7)" -> 12.0
-                            "Day (7-16)" -> if (wardType == "Normal") 6.0 else 9.0
-                            "Custom Shift" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-                            else -> 0.0
+                    fun shiftHours(edit: StagedEdit): Double = when (edit.shift) {
+                        "Morn (7-13)", "Eve (13-19)" -> 6.0
+                        "Night (19-7)" -> 12.0
+                        "Day (7-16)" -> if (wardType == "Normal") 6.0 else 9.0
+                        "Custom Shift" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+                        else -> 0.0
+                    }
+                    fun otHours(edit: StagedEdit): Double = when (edit.ot) {
+                        "Morn OT", "Eve OT" -> 6.0
+                        "Night OT" -> 12.0
+                        "Custom OT" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+                        else -> 0.0
+                    }
+
+                    // Preview uses the same values as the eventual saved DailyLog fields.
+                    // Existing saved records are the base; staged edits override the selected dates.
+                    val currentSessionEntries = allDates.mapNotNull { date ->
+                        val staged = stagedEdits[date]
+                        val existing = allSavedEntries.find { it.date == date }
+                        if (staged == null && existing == null) null else date to (staged to existing)
+                    }
+
+                    val effectiveDutyEntries = currentSessionEntries.mapNotNull { (date, pair) ->
+                        val (staged, existing) = pair
+                        when {
+                            staged?.shift != null -> date to shiftHours(staged)
+                            staged?.leave != null -> null
+                            staged?.shift == null && existing != null && !existing.isLeave -> date to existing.normalHours.toDouble().coerceAtLeast(0.0)
+                            else -> null
                         }
                     }
-                    val loggedOtHours = currentSessionEntries.sumOf { (_, edit) ->
-                        when (edit.ot) {
-                            "Morn OT", "Eve OT" -> 6.0
-                            "Night OT" -> 12.0
-                            "Custom OT" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-                            else -> 0.0
+
+                    val effectiveOtEntries = currentSessionEntries.mapNotNull { (date, pair) ->
+                        val (staged, existing) = pair
+                        when {
+                            staged?.ot != null -> date to otHours(staged)
+                            staged?.leave != null -> null
+                            staged?.ot == null && existing != null -> date to existing.otHours.toDouble().coerceAtLeast(0.0)
+                            else -> null
                         }
                     }
-                    val weeklyDutyOtHours = currentSessionEntries
-                        .filter { (_, edit) -> edit.shift != null }
+
+                    val selectedDutyHours = effectiveDutyEntries.sumOf { it.second }
+                    val loggedOtHours = effectiveOtEntries.sumOf { it.second }
+                    val weeklyDutyOtHours = effectiveDutyEntries
                         .groupBy { (date, _) ->
                             val daysFromSunday = when (date.dayOfWeek) {
                                 DayOfWeek.SUNDAY -> 0L
@@ -227,16 +250,7 @@ fun DailyEntryScreen(
                         }
                         .values
                         .sumOf { week ->
-                            val shiftHours = week.sumOf { (_, edit) ->
-                                when (edit.shift) {
-                                    "Morn (7-13)", "Eve (13-19)" -> 6.0
-                                    "Night (19-7)" -> 12.0
-                                    "Day (7-16)" -> if (wardType == "Normal") 6.0 else 9.0
-                                    "Custom Shift" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-                                    else -> 0.0
-                                }
-                            }
-                            (shiftHours - com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS)
+                            (week.sumOf { it.second } - com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS)
                                 .coerceAtLeast(0.0)
                         }
                     val totalOtSummary = weeklyDutyOtHours + loggedOtHours
