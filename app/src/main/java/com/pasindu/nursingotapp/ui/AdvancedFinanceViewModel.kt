@@ -62,6 +62,7 @@ data class AdvancedFinanceUiState(
     val doAmountRs: Double get() = totalDODays * doRate
     val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
     val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
+    val hasEnteredDeductions: Boolean get() = paysheetDeductions > 0.0
     val workloadTargetHours: Double get() = fullWeeks * 36.0
     val dutyProgress36Hours: Float get() = if (workloadTargetHours <= 0.0) 0f else (totalNormalHours / workloadTargetHours).coerceIn(0.0, 1.0).toFloat()
 }
