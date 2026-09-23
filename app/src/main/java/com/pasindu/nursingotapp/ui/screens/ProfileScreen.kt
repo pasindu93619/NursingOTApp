@@ -62,6 +62,7 @@ fun ProfileScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     val matchedSalary2027 by viewModel.matchedSalary2027.collectAsState()
     val compensation by viewModel.profileCompensation.collectAsState()
+    val savedAdditionalAllowances by viewModel.additionalAllowances.collectAsState()
 
     var fullName by remember { mutableStateOf("") }
     var serviceNo by remember { mutableStateOf("") }
@@ -76,7 +77,7 @@ fun ProfileScreen(
     var totalDeductions by remember { mutableStateOf("") }
     var showGradeSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(userProfile, compensation) {
+    LaunchedEffect(userProfile, compensation, savedAdditionalAllowances) {
         userProfile?.let {
             fullName = it.fullName
             serviceNo = it.serviceNo
@@ -86,10 +87,18 @@ fun ProfileScreen(
             basicSalary = cleanNumber(it.basicSalary)
         }
         compensation?.let {
-            riskAllowance = cleanNumber(it.riskAllowance)
-            claAllowance = cleanNumber(it.claAllowance)
+            riskAllowance = "6850"
+            claAllowance = "17800"
             totalDeductions = cleanNumber(it.totalDeductions)
         }
+        additionalAllowances = savedAdditionalAllowances.mapIndexed { index, item ->
+            AllowanceRow(
+                id = if (item.id > 0L) item.id.toInt() else index + 1,
+                name = item.name,
+                amount = cleanNumber(item.amount)
+            )
+        }
+        hasAdditionalAllowances = savedAdditionalAllowances.isNotEmpty()
     }
 
     LaunchedEffect(grade, basicSalary) {
