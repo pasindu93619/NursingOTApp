@@ -75,12 +75,12 @@ private val DailyInk = Slate
 private val DailyBlue = MedicalBlue
 private val DailyCyan = MedicalBlue
 private val DailyPurple = Purple
-private val DailyBlueSoft = MedicalBlue.copy(alpha = 0.10f)
-private val DailyPurpleSoft = Purple.copy(alpha = 0.10f)
-private val DailyMintSoft = Emerald.copy(alpha = 0.10f)
+private val DailyBlueSoft = Color(0xFFE8F7FF)
+private val DailyPurpleSoft = Color(0xFFF3EEFF)
+private val DailyMintSoft = Color(0xFFEAFBF5)
 private val DailyEmerald = Emerald
 private val DailyAmber = Amber
-private val DailyPurpleSoft2 = Purple.copy(alpha = 0.10f)
+private val DailyPurpleSoft2 = Color(0xFFF3EEFF)
 private val DailySlateSoft = Color(0xFFF1F5F9)
 private val DailyWarningGradient = WarningCriticalGradient
 private val DailyHeroGradient = Brush.horizontalGradient(listOf(MedicalBlue, Purple))
@@ -241,8 +241,8 @@ fun DailyEntryScreen(
                         }
                     val totalOtSummary = weeklyDutyOtHours + loggedOtHours
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                        DutySummaryCard(Modifier.weight(1f), "SHIFT DUTY", String.format(Locale.US, "%.1fh", selectedDutyHours), MedicalBlue, MedicalBlue.copy(alpha = 0.10f))
-                        DutySummaryCard(Modifier.weight(1f), "OVER 36h", String.format(Locale.US, "%.1fh", weeklyDutyOtHours), Amber, Amber.copy(alpha = 0.12f))
+                        DutySummaryCard(Modifier.weight(1f), "SHIFT DUTY", String.format(Locale.US, "%.1fh", selectedDutyHours), MedicalBlue, Color(0xFFE8F7FF))
+                        DutySummaryCard(Modifier.weight(1f), "OVER 36h", String.format(Locale.US, "%.1fh", weeklyDutyOtHours), Amber, Color(0xFFFFF6DF))
                         DutySummaryCard(Modifier.weight(1f), "TOTAL OT", String.format(Locale.US, "%.1fh", totalOtSummary), Color.White, Amber, gradient = WarningCriticalGradient)
                     }
                     Text(
@@ -618,29 +618,29 @@ fun DailyEntryScreen(
                             val hasShiftAnim = willHaveShift && !hasLeaveAnim
                             val hasOtAnim = willHaveOT && !hasLeaveAnim
                             val topColor = when {
-                                hasLeaveAnim && renderLeave == "PH" -> Amber.copy(alpha = 0.72f)
-                                hasLeaveAnim && renderLeave == "DO" -> Emerald.copy(alpha = 0.28f)
-                                hasLeaveAnim && renderLeave == "SD" -> Purple.copy(alpha = 0.72f)
-                                hasLeaveAnim -> Emerald.copy(alpha = 0.82f)
-                                hasShiftAnim -> MedicalBlue.copy(alpha = 0.72f)
-                                hasOtAnim -> Amber.copy(alpha = 0.72f)
+                                hasLeaveAnim && renderLeave == "PH" -> Color(0xFFFFCA67)
+                                hasLeaveAnim && renderLeave == "DO" -> Color(0xFFD5F3E6)
+                                hasLeaveAnim && renderLeave == "SD" -> Color(0xFFB59CF7)
+                                hasLeaveAnim -> Color(0xFF7BDDB8)
+                                hasShiftAnim -> Color(0xFF6DCFF5)
+                                hasOtAnim -> Color(0xFFFFCA67)
                                 isWknd -> weekend_background_highlight
                                 else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)
                             }
                             val bottomColor = when {
-                                hasOtAnim -> Amber.copy(alpha = 0.72f)
-                                hasLeaveAnim && renderLeave == "PH" -> Amber.copy(alpha = 0.72f)
-                                hasLeaveAnim && renderLeave == "DO" -> Emerald.copy(alpha = 0.28f)
-                                hasLeaveAnim && renderLeave == "SD" -> Purple.copy(alpha = 0.72f)
-                                hasLeaveAnim -> Emerald.copy(alpha = 0.82f)
-                                hasShiftAnim -> MedicalBlue.copy(alpha = 0.72f)
+                                hasOtAnim -> Color(0xFFFFCA67)
+                                hasLeaveAnim && renderLeave == "PH" -> Color(0xFFFFCA67)
+                                hasLeaveAnim && renderLeave == "DO" -> Color(0xFFD5F3E6)
+                                hasLeaveAnim && renderLeave == "SD" -> Color(0xFFB59CF7)
+                                hasLeaveAnim -> Color(0xFF7BDDB8)
+                                hasShiftAnim -> Color(0xFF6DCFF5)
                                 isWknd -> weekend_background_highlight
                                 else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)
                             }
                             val top by animateColorAsState(topColor, tween(500, easing = FastOutSlowInEasing), label = "top")
                             val bottom by animateColorAsState(bottomColor, tween(500, easing = FastOutSlowInEasing), label = "bottom")
                             val split = Brush.linearGradient(0f to top, .5f to top, .5f to bottom, 1f to bottom)
-                            val borderColor by animateColorAsState(if (staged != null) DailyCyan else Color.LightGray, label = "border")
+                            val borderColor by animateColorAsState(if (staged != null) DailyBlue else Color(0xFFD7E1EA), label = "border")
                             var cleared by remember { mutableStateOf(false) }
                             val clearScale by animateFloatAsState(if (cleared) 0.8f else 1f, tween(150), label = "clear")
                             LaunchedEffect(cleared) { if (cleared) { delay(150); cleared = false } }
@@ -677,7 +677,7 @@ fun DailyEntryScreen(
                                     Icon(
                                         Icons.Default.Event,
                                         contentDescription = "Not worked",
-                                        tint = Emerald,
+                                        tint = DailyEmerald,
                                         modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(11.dp)
                                     )
                                 } else if (staged != null) {
@@ -692,8 +692,8 @@ fun DailyEntryScreen(
             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("Calendar key", color = DailyInk, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { KeyItem(MedicalBlue.copy(alpha = 0.72f), "Duty"); KeyItem(Amber.copy(alpha = 0.72f), "OT"); KeyItem(Amber.copy(alpha = 0.72f), "PH"); KeyItem(Emerald.copy(alpha = 0.82f), "Leave") }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { KeyItem(Purple.copy(alpha = 0.72f), "SD"); KeyItem(Brush.horizontalGradient(listOf(MedicalBlue.copy(alpha = 0.72f), Amber.copy(alpha = 0.72f))), "Duty + OT"); KeyItem(weekend_background_highlight, "Weekend") }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { KeyItem(Color(0xFF6DCFF5), "Duty"); KeyItem(Color(0xFFFFCA67), "OT"); KeyItem(Color(0xFFFFCA67), "PH"); KeyItem(Color(0xFF7BDDB8), "Leave") }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) { KeyItem(Color(0xFFB59CF7), "SD"); KeyItem(Brush.horizontalGradient(listOf(Color(0xFF6DCFF5), Color(0xFFFFCA67))), "Duty + OT"); KeyItem(weekend_background_highlight, "Weekend") }
                 }
             }
 
