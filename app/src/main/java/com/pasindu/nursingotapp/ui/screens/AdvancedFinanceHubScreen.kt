@@ -418,17 +418,39 @@ private fun SalaryDetailsCard(state: AdvancedFinanceUiState) {
 
 @Composable
 private fun PayRatesDetailsCard(state: AdvancedFinanceUiState, viewModel: AdvancedFinanceViewModel) {
-    var otRate by remember(state.otRate) { mutableStateOf(state.otRate.toString()) }
-    var phRate by remember(state.phRate) { mutableStateOf(state.phRate.toString()) }
-    var doRate by remember(state.doRate) { mutableStateOf(state.doRate.toString()) }
     FinanceCard {
-        Text("Pay Rate Settings", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        FinanceInput("OT rate / hour", otRate) { otRate = it; viewModel.updateOtRate(it) }
-        FinanceInput("PH rate / day", phRate) { phRate = it; viewModel.updatePhRate(it) }
-        FinanceInput("Working DO / day", doRate) { doRate = it; viewModel.updateDoRate(it) }
+        Text("Policy Rates Used", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        RateBox(
+            Modifier.fillMaxWidth(),
+            "OT",
+            formatRs(state.otRate),
+            "From ${state.profile?.grade.orEmpty()}, Step ${state.profile?.salaryStep ?: "grade policy"}",
+            Purple,
+            FinancePurpleSoft
+        )
+        RateBox(
+            Modifier.fillMaxWidth(),
+            "PH",
+            formatRs(state.phRate),
+            "From 2027 basic ÷ 30",
+            Amber,
+            FinanceAmberSoft
+        )
+        RateBox(
+            Modifier.fillMaxWidth(),
+            "Working DO",
+            formatRs(state.doRate),
+            "From 2027 basic ÷ 30",
+            Emerald,
+            FinanceMintSoft
+        )
+        Text(
+            "Policy-derived rates are read-only here. Change the nurse profile data to resolve the source values.",
+            color = TextSecondary,
+            fontSize = 9.sp
+        )
     }
 }
-
 @Composable
 private fun CommitmentsEditorCard(state: AdvancedFinanceUiState, viewModel: AdvancedFinanceViewModel) {
     var apit by remember(state.apit) { mutableStateOf(state.apit.toString()) }
