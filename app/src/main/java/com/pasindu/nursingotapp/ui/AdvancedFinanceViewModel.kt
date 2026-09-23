@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
+import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
 import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
@@ -35,6 +37,7 @@ data class AdvancedFinanceUiState(
     val periodSummary: PeriodSummary? = null,
     val payRateSettings: PayRateSettingsEntity? = null,
     val compensation: ProfileCompensationEntity? = null,
+    val deductions: List<ProfileDeductionEntity> = emptyList(),
     val claimStart: java.time.LocalDate? = null,
     val claimEnd: java.time.LocalDate? = null,
     val fullWeeks: Int = 0,
@@ -48,7 +51,7 @@ data class AdvancedFinanceUiState(
     val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
     val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
-    val paysheetDeductions: Double get() = compensation?.totalDeductions ?: 0.0
+    val paysheetDeductions: Double get() = deductions.sumOf { it.amount.coerceAtLeast(0.0) }
     val otRate: Double get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
     val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
     val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
@@ -62,7 +65,7 @@ data class AdvancedFinanceUiState(
     val doAmountRs: Double get() = totalDODays * doRate
     val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
     val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
-    val hasEnteredDeductions: Boolean get() = paysheetDeductions > 0.0
+    val hasEnteredDeductions: Boolean get() = deductions.isNotEmpty()
     val workloadTargetHours: Double get() = fullWeeks * 36.0
     val dutyProgress36Hours: Float get() = if (workloadTargetHours <= 0.0) 0f else (totalNormalHours / workloadTargetHours).coerceIn(0.0, 1.0).toFloat()
 }
@@ -73,6 +76,7 @@ class AdvancedFinanceViewModel @Inject constructor(
     observeClaimPeriod: ObserveClaimPeriodsUseCase,
     observePayRates: ObserveOtRateUseCase,
     observeCompensation: ObserveProfileCompensationUseCase,
+    private val profileDeductionDao: ProfileDeductionDao,
     private val ensureManualPayRateRecordUseCase: EnsureManualPayRateRecordUseCase,
     private val applyFinancePolicyRatesUseCase: ApplyFinancePolicyRatesUseCase,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
@@ -108,6 +112,14 @@ class AdvancedFinanceViewModel @Inject constructor(
         observeCompensation().collectInViewModel { compensation ->
             _uiState.value = _uiState.value.copy(compensation = compensation)
             recalculate()
+        }
+        viewModelScope.launch {
+            observeClaimPeriods().collect { periods ->
+                val current = periods.firstOrNull()
+                val deductions = current?.let { profileDeductionDao.observeForClaimPeriod(it.id).first() } ?: emptyList()
+                _uiState.value = _uiState.value.copy(deductions = deductions)
+                recalculate()
+            }
         }
     }
 
