@@ -177,7 +177,7 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = AppAppBackground,
+        containerColor = AppBackground,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             Surface(
