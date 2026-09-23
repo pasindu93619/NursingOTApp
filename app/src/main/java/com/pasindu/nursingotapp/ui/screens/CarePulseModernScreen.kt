@@ -107,8 +107,8 @@ fun CarePulseModernScreen(
             CareHero(state, score, onNavigate)
             SectionLabel("LIVE SNAPSHOT", "Your existing NursingOS data")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Metric("Duty", "${state.dutyHoursThisMonth.toInt()}h", Icons.Default.Schedule, ClinicalPrimaryColor, CareBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
-                Metric("OT", "${state.otHoursThisMonth.toInt()}h", Icons.Default.MoreTime, Amber, CareAmberSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
+                Metric("Duty hours this claim period", "${state.dutyHoursThisMonth.toInt()}h", Icons.Default.Schedule, ClinicalPrimaryColor, CareBlueSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
+                Metric("OT hours this claim period", "${state.otHoursThisMonth.toInt()}h", Icons.Default.MoreTime, Amber, CareAmberSoft, Modifier.weight(1f)) { onNavigate("claim_period") }
                 Metric("Tasks", state.pendingClinicalTasks.toString(), Icons.Default.TaskAlt, Purple, CarePurpleSoft, Modifier.weight(1f)) { onNavigate("clinical_planning") }
             }
 
@@ -141,6 +141,22 @@ fun CarePulseModernScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
+                        text = "Consecutive shifts without a logged rest day: ${state.consecutiveWorkedDays}",
+                        color = TextPrimary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = when {
+                            state.consecutiveWorkedDays <= 0 -> "Recovery reminder: no completed shift run is recorded yet."
+                            state.consecutiveWorkedDays == 1 -> "Recovery reminder: one consecutive logged shift is recorded."
+                            else -> "Recovery reminder: ${state.consecutiveWorkedDays} consecutive logged shifts without a logged rest day."
+                        },
+                        color = TextSecondary,
+                        fontSize = 10.sp,
+                        lineHeight = 15.sp
+                    )
+                    Text(
                         text = when {
                             score >= 80 -> "Your current workload signal is in the balanced range."
                             score >= 60 -> "Your current workload signal suggests taking a closer look at recovery time."
@@ -159,21 +175,6 @@ fun CarePulseModernScreen(
             Action("OT & claims", "Keep duty and claim records current", Icons.Default.Schedule, ClinicalPrimaryColor, CareBlueSoft) { onNavigate("claim_period") }
             Action("Finance", "Review salary and deduction data", Icons.Default.AccountBalance, Emerald, CareMintSoft) { onNavigate("advanced_finance_hub") }
 
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { onNavigate("knowledge_hub") },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CareMintSoft),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.KingBed, null, tint = Emerald, modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Recovery reminder", color = Slate, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("Use the workload signal as a prompt to review your recorded workload and recovery time.", color = TextSecondary, fontSize = 10.sp, lineHeight = 15.sp)
-                    }
-                }
-            }
             Spacer(Modifier.height(18.dp))
         }
     }
@@ -201,6 +202,7 @@ private fun CareHero(state: NurseCommandCenterState, score: Int, onNavigate: (St
                 Text("CARE PULSE", color = Color.White.copy(alpha = 0.75f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                 Text("Stay ahead of your shift", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text("${state.dutyHoursThisMonth.toInt()}h duty  •  ${state.otHoursThisMonth.toInt()}h OT  •  ${state.pendingClinicalTasks} tasks", color = Color.White.copy(alpha = 0.82f), fontSize = 10.sp)
+                Text("Current OT claim period", color = Color.White.copy(alpha = 0.72f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Text("Review workload", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onNavigate("analytics") })
             }
