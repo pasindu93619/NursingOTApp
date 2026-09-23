@@ -57,6 +57,7 @@ private val OtModernBlueSoft = Color(0xFFEAF6FF)
 private val OtModernPurpleSoft = Color(0xFFF3EEFF)
 private val OtModernMintSoft = Color(0xFFEAFBF5)
 private val OtModernAmberSoft = Color(0xFFFFF7E6)
+private val OtModernSlateSoft = Color(0xFFF1F5F9)
 private val OtModernHero = Brush.horizontalGradient(
     listOf(
         Color(0xFF075985),
@@ -834,13 +835,34 @@ fun ClaimPeriodModernScreen(
                         Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Text(
-                            "NURSINGOS • DUTY",
-                            color = SurfaceWhite.copy(.72f),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.4.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            Text(
+                                "NURSINGOS • DUTY",
+                                color = SurfaceWhite.copy(.72f),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.4.sp
+                            )
+                            val active = today in selectedSuggestion.startDate..selectedSuggestion.endDate
+                            if (active) {
+                                Surface(
+                                    shape = NursingShapes.pill,
+                                    color = SurfaceWhite.copy(.18f)
+                                ) {
+                                    Text(
+                                        "ACTIVE PERIOD",
+                                        color = SurfaceWhite,
+                                        fontSize = 7.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 0.8.sp,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
 
                         Text(
                             "Your OT workspace",
@@ -1049,6 +1071,25 @@ fun ClaimPeriodModernScreen(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
+                                val elapsed = when {
+                                    today.isBefore(selectedSuggestion.startDate) -> 0
+                                    today.isAfter(selectedSuggestion.endDate) -> selectedSuggestion.days
+                                    else -> ChronoUnit.DAYS.between(selectedSuggestion.startDate, today).toInt() + 1
+                                }.coerceIn(0, selectedSuggestion.days)
+                                val progress = if (selectedSuggestion.days > 0) elapsed.toFloat() / selectedSuggestion.days.toFloat() else 0f
+                                Spacer(Modifier.height(5.dp))
+                                Text(
+                                    "${elapsed} of ${selectedSuggestion.days} days elapsed",
+                                    color = TextSecondary,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                                    color = MedicalBlue,
+                                    trackColor = OtModernMintSoft
+                                )
                             }
                         }
                     }
@@ -1079,28 +1120,44 @@ fun ClaimPeriodModernScreen(
                                     ),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val weekStart = range.first
+                                    val weekEnd = range.second
+                                    val isPast = weekEnd.isBefore(today)
+                                    val isCurrent = !today.isBefore(weekStart) && !today.isAfter(weekEnd)
+                                    val badgeColor = when {
+                                        isCurrent -> MedicalBlue
+                                        isPast -> Emerald
+                                        else -> OtModernSlateSoft
+                                    }
                                     Surface(
-                                        modifier = Modifier.size(27.dp),
+                                        modifier = Modifier
+                                            .size(if (isCurrent) 30.dp else 27.dp)
+                                            .then(
+                                                if (isCurrent) Modifier.border(
+                                                    2.dp,
+                                                    MedicalBlue.copy(alpha = 0.35f),
+                                                    CircleShape
+                                                ) else Modifier
+                                            ),
                                         shape = CircleShape,
-                                        color = if (index == 0) {
-                                            OtModernBlueSoft
-                                        } else {
-                                            OtModernPurpleSoft
-                                        }
+                                        color = badgeColor
                                     ) {
-                                        Box(
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                "${index + 1}",
-                                                color = if (index == 0) {
-                                                    ClinicalPrimaryColor
-                                                } else {
-                                                    Purple
-                                                },
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Black
-                                            )
+                                        Box(contentAlignment = Alignment.Center) {
+                                            if (isPast) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Completed week",
+                                                    tint = SurfaceWhite,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    "${index + 1}",
+                                                    color = if (isCurrent) SurfaceWhite else TextSecondary,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Black
+                                                )
+                                            }
                                         }
                                     }
 
@@ -1607,8 +1664,22 @@ fun ClaimPeriodModernScreen(
             ).toInt() + 1
 
         val special = period.wardType == "Special"
-        val accent = if (special) Purple else ClinicalPrimaryColor
+        val status = when {
+            today in period.startDate..period.endDate -> "Active"
+            period.endDate.isBefore(today) -> "Completed"
+            else -> "Upcoming"
+        }
+        val accent = when (status) {
+            "Active" -> MedicalBlue
+            "Completed" -> TextSecondary
+            else -> Amber
+        }
         val surface = if (special) OtModernPurpleSoft else OtModernBlueSoft
+        val statusSurface = when (status) {
+            "Active" -> OtModernBlueSoft
+            "Completed" -> OtModernSlateSoft
+            else -> OtModernAmberSoft
+        }
 
         Card(
             Modifier
@@ -1664,12 +1735,33 @@ fun ClaimPeriodModernScreen(
                         fontSize = 10.sp
                     )
 
-                    Text(
-                        "$days day(s) • tap to continue",
-                        color = accent,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "$days day(s) • tap to continue",
+                            color = accent,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Surface(
+                            shape = NursingShapes.pill,
+                            color = statusSurface,
+                            border = if (status == "Active") BorderStroke(
+                                1.dp,
+                                MedicalBlue.copy(alpha = 0.55f)
+                            ) else null
+                        ) {
+                            Text(
+                                status,
+                                color = accent,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
 
                 IconButton(
