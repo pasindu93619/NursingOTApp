@@ -214,6 +214,7 @@ fun DailyEntryScreen(
                         "Custom Shift" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
                         else -> 0.0
                     }
+
                     fun otHours(edit: StagedEdit): Double = when (edit.ot) {
                         "Morn OT", "Eve OT" -> 6.0
                         "Night OT" -> 12.0
@@ -221,30 +222,26 @@ fun DailyEntryScreen(
                         else -> 0.0
                     }
 
-                    // Preview uses the same values as the eventual saved DailyLog fields.
-                    // Existing saved records are the base; staged edits override the selected dates.
-                    val currentSessionEntries = allDates.mapNotNull { date ->
+                    val effectiveEntries = allDates.mapNotNull { date ->
                         val staged = stagedEdits[date]
                         val existing = allSavedEntries.find { it.date == date }
-                        if (staged == null && existing == null) null else date to (staged to existing)
+                        if (staged == null && existing == null) null else Triple(date, staged, existing)
                     }
 
-                    val effectiveDutyEntries = currentSessionEntries.mapNotNull { (date, pair) ->
-                        val (staged, existing) = pair
+                    val effectiveDutyEntries = effectiveEntries.mapNotNull { (date, staged, existing) ->
                         when {
                             staged?.shift != null -> date to shiftHours(staged)
                             staged?.leave != null -> null
-                            staged?.shift == null && existing != null && !existing.isLeave -> date to existing.normalHours.toDouble().coerceAtLeast(0.0)
+                            existing != null && !existing.isLeave -> date to existing.normalHours.toDouble().coerceAtLeast(0.0)
                             else -> null
                         }
                     }
 
-                    val effectiveOtEntries = currentSessionEntries.mapNotNull { (date, pair) ->
-                        val (staged, existing) = pair
+                    val effectiveOtEntries = effectiveEntries.mapNotNull { (date, staged, existing) ->
                         when {
                             staged?.ot != null -> date to otHours(staged)
                             staged?.leave != null -> null
-                            staged?.ot == null && existing != null -> date to existing.otHours.toDouble().coerceAtLeast(0.0)
+                            existing != null -> date to existing.otHours.toDouble().coerceAtLeast(0.0)
                             else -> null
                         }
                     }
