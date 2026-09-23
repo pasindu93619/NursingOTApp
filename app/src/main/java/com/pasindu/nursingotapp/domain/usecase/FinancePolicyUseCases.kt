@@ -27,6 +27,33 @@ class EnsureManualPayRateRecordUseCase(
     }
 }
 
+/**
+ * Resolve the current 2026 salary row from the exact nurse profile inputs,
+ * then apply the matched 2027 basic salary as the authoritative PH/DO basis.
+ *
+ * The two operations remain deliberately separate so the salary-table lookup
+ * and the day-rate application are individually testable and reusable by
+ * Profile, Home, PDF export, and Finance.
+ */
+class ApplyFinancePolicyRatesUseCase(
+    private val matchSalaryStepUseCase: MatchSalaryStepUseCase,
+    private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase
+) {
+    suspend operator fun invoke(profile: ProfileEntity) =
+        matchSalaryStepUseCase(
+            grade = profile.grade,
+            currentBasicSalary = profile.basicSalary
+        )?.let { matched ->
+            applyMatched2027DayRateUseCase(matched.basicSalary2027)
+            matched
+        }
+}
+
+/**
+ * Backwards-compatible policy synchronizer retained for other existing
+ * callers. Advanced Finance uses [ApplyFinancePolicyRatesUseCase] so its
+ * source path is explicit and identical to the corrected profile flow.
+ */
 class SynchronizePolicyRatesUseCase(
     private val payRateSettingsDao: PayRateSettingsDao,
     private val salaryStep2027Dao: SalaryStep2027Dao
@@ -37,7 +64,9 @@ class SynchronizePolicyRatesUseCase(
             currentBasicSalary = profile.basicSalary
         ) ?: return
 
-        val otRate = com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy.rateForGrade(profile.grade) ?: profile.otRate.coerceAtLeast(0.0)
+        val otRate =
+            NursingOtRatePolicy.rateForGrade(profile.grade)
+                ?: profile.otRate.coerceAtLeast(0.0)
         val dayRate = (salaryStep.basicSalary2027 / 30.0).coerceAtLeast(0.0)
 
         payRateSettingsDao.upsert(
