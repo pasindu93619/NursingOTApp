@@ -14,6 +14,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -40,9 +41,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
+import com.pasindu.nursingotapp.ui.theme.CriticalRed
 
 private val Background = Color(0xFFF4F7FC)
 private val Navy = Color(0xFF102A56)
@@ -500,3 +503,48 @@ private fun parsedMoney(value: String): Double = value.trim().replace(",", "").t
 private fun cleanNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
 private fun formatMoney(value: Double): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }.format(value)
 private fun formatCompact(value: Double): String = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply { maximumFractionDigits = 2 }.format(value)
+
+private data class DeductionRow(
+    val id: Int,
+    val name: String,
+    val amount: String
+)
+
+@Composable
+private fun DeductionEditorRow(
+    row: DeductionRow,
+    onNameChange: (String) -> Unit,
+    onAmountChange: (String) -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        color = Color(0xFFF8FAFC),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = row.name,
+                    onValueChange = onNameChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    label = { Text("Deduction name") }
+                )
+                Spacer(Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = row.amount,
+                    onValueChange = onAmountChange,
+                    modifier = Modifier.weight(0.7f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text("Amount") },
+                    leadingIcon = { Text("Rs.", fontSize = 10.sp) }
+                )
+            }
+            TextButton(onClick = onDelete) {
+                Text("Remove", color = CriticalRed, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
