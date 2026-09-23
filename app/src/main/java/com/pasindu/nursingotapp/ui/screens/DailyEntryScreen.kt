@@ -104,6 +104,8 @@ private const val CATEGORY_LEAVE_REST = "Leave & Rest"
 private const val CATEGORY_SERVICE_DAYS = "Service Days"
 private const val CATEGORY_OVERTIME = "Overtime"
 
+private const val UNWORKED_DO_LEAVE_TYPE = "DO_UNPAID"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyEntryScreen(
@@ -345,7 +347,7 @@ fun DailyEntryScreen(
                                         }
                                         when (edit.leave) {
                                             "CL", "VL", "sL", "DL" -> { isL = true; lType = edit.leave.replace("sL", "Special Leave"); nIn = ""; nOut = ""; nHrs = getLeaveHrs(); isD = false; isP = false; oIn = ""; oOut = ""; oHrs = 0f }
-                                            "DO — not worked" -> { isL = true; lType = "DO"; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
+                                            "DO — no-pay leave" -> { isL = true; lType = UNWORKED_DO_LEAVE_TYPE; isD = true; isP = false; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
                                             "PH — not worked" -> { isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f }
                                             "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }
                                             "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
@@ -533,7 +535,7 @@ fun DailyEntryScreen(
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(items = when (brushCategory) {
                             CATEGORY_SHIFT_DUTY -> if (wardType == "Normal") listOf("Morn (7-13)", "Eve (13-19)", "Night (19-7)", "Custom Shift", "Clear Shift") else listOf("Day (7-16)", "Custom Shift", "Clear Shift")
-                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "DO — not worked", "PH — not worked", "CL/2", "SL (Short)", "Clear Leave")
+                            CATEGORY_LEAVE_REST -> listOf("CL", "SD", "VL", "sL", "DL", "AB", "DO — no-pay leave", "PH — not worked", "CL/2", "SL (Short)", "Clear Leave")
                             CATEGORY_SERVICE_DAYS -> listOf("Work DO", "Work PH", "Clear Leave")
                             else -> if (wardType == "Normal") listOf("Morn OT", "Eve OT", "Night OT", "Custom OT", "Clear OT") else listOf("Custom OT", "Clear OT")
                         }) { brush ->
@@ -557,7 +559,7 @@ fun DailyEntryScreen(
                                 border = if (selected) BorderStroke(1.dp, accent.copy(alpha = 0.45f)) else null
                             ) {
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    if (brush == "DO — not worked" || brush == "PH — not worked") {
+                                    if (brush == "DO — no-pay leave" || brush == "PH — not worked") {
                                         Text("•", color = if (selected) Color.White else DailyEmerald, fontSize = 14.sp, fontWeight = FontWeight.Black)
                                     }
                                     Text(brush, color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
@@ -599,6 +601,7 @@ fun DailyEntryScreen(
                             val oOut = existing?.otTimeOut ?: ""
                             val oHrs = existing?.otHours ?: 0f
                             val dbLeave = when {
+                                isL && isD && lType == UNWORKED_DO_LEAVE_TYPE -> "DO-NP"
                                 isL && isD -> "DO"
                                 isL && isP -> "PH"
                                 isL -> if (lType == "Special Leave") "sL" else if (lType == "SD") "SD" else if (lType.length > 4) lType.take(4) else lType
