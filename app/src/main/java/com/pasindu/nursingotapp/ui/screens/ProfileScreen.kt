@@ -119,10 +119,11 @@ fun ProfileScreen(
     val parsedRisk = parsedMoney(riskAllowance)
     val parsedCla = parsedMoney(claAllowance)
     val parsedAdditional = additionalAllowances.sumOf { parsedMoney(it.amount) }
-    val deductions = profileDeductions.sumOf { parsedMoney(it.amount) }
+    val claimPeriodDeductions = profileDeductions.sumOf { parsedMoney(it.amount) }
+    val totalPaysheetDeductions = parsedMoney(totalDeductions)
     val additionalTotal = if (hasAdditionalAllowances) parsedAdditional else 0.0
     val grossPay = parsedBasic + parsedRisk + parsedCla + additionalTotal
-    val netPay = grossPay - deductions
+    val netPay = grossPay - totalPaysheetDeductions
 
     val matched2027Basic = matchedSalary2027?.basicSalary2027
     val matched2027DayRate = matched2027Basic?.div(30.0)
@@ -162,7 +163,7 @@ fun ProfileScreen(
             riskAllowance = parsedRisk,
             claAllowance = parsedCla,
             additionalAllowancesTotal = additionalTotal,
-            totalDeductions = deductions,
+            totalDeductions = totalPaysheetDeductions,
             deductions = profileDeductions
                 .filter { it.name.isNotBlank() && parsedMoney(it.amount) >= 0.0 }
                 .map { row ->
@@ -582,7 +583,7 @@ fun ProfileScreen(
                 PreviewRow("CLA", parsedCla, MaterialTheme.colorScheme.secondary)
                 if (additionalTotal > 0.0) PreviewRow("Additional Allowances", additionalTotal, MaterialTheme.colorScheme.tertiary)
                 PreviewRow("GROSS PAY", grossPay, Color.White)
-                PreviewRow("TOTAL PAYROLL DEDUCTIONS", deductions, MaterialTheme.colorScheme.tertiary)
+                PreviewRow("TOTAL PAYROLL DEDUCTIONS", totalPaysheetDeductions, MaterialTheme.colorScheme.tertiary)
                 Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)) {
                     Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("NET PAY", color = MaterialTheme.colorScheme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Black)
