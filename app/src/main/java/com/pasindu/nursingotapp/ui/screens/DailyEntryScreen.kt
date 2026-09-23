@@ -451,8 +451,16 @@ fun DailyEntryScreen(
                                 CATEGORY_SERVICE_DAYS -> DailyPurpleSoft2
                                 else -> Color(0xFFFFF3CD)
                             }
-                            Surface(Modifier.clickable { chooseBrush(brush) }, shape = RoundedCornerShape(13.dp), color = if (selected) accent else surface) {
+                            Surface(
+                                Modifier.clickable { chooseBrush(brush) },
+                                shape = RoundedCornerShape(13.dp),
+                                color = if (selected) accent else surface,
+                                border = if (selected) BorderStroke(1.dp, accent.copy(alpha = 0.45f)) else null
+                            ) {
                                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    if (brush == "DO — not worked" || brush == "PH — not worked") {
+                                        Text("•", color = if (selected) Color.White else DailyEmerald, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                                    }
                                     Text(brush, color = if (selected) Color.White else DailyInk, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
                             }
