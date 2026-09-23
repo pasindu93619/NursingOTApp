@@ -201,6 +201,7 @@ class NursingViewModel @Inject constructor(
         claAllowance: Double,
         additionalAllowancesTotal: Double,
         totalDeductions: Double,
+        deductions: List<ProfileDeductionEntity>,
         additionalAllowances: List<ProfileAdditionalAllowanceEntity>,
         otRate: Double,
         matched2027Basic: Double?,
@@ -214,6 +215,7 @@ class NursingViewModel @Inject constructor(
                 claAllowance = claAllowance,
                 additionalAllowancesTotal = additionalAllowancesTotal,
                 totalDeductions = totalDeductions,
+                deductions = deductions,
                 additionalAllowances = additionalAllowances,
                 otRate = otRate,
                 matched2027Basic = matched2027Basic
