@@ -246,10 +246,9 @@ private fun FinanceMetric(
 }
 @Composable
 private fun WorkloadPulse(state: AdvancedFinanceUiState) {
-    val progress by animateFloatAsState(state.dutyProgress36Hours, tween(850, easing = FastOutSlowInEasing), label = "duty_progress")
     FinanceCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = FinanceBlueSoft, shape = RoundedCornerShape(13.dp)) {
+            Surface(color = ClinicalPrimaryColor.copy(alpha = 0.10f), shape = RoundedCornerShape(13.dp)) {
                 Icon(Icons.Default.ShowChart, null, tint = ClinicalPrimaryColor, modifier = Modifier.padding(9.dp))
             }
             Spacer(Modifier.width(10.dp))
@@ -257,12 +256,22 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
                 Text("Workload Pulse", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text("${state.fullWeeks} full Sunday–Saturday week(s) • 36h standard each", color = TextSecondary, fontSize = 10.sp)
             }
-            Surface(color = FinanceBlueSoft, shape = RoundedCornerShape(50.dp)) {
+            Surface(color = ClinicalPrimaryColor.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
                 Text("${formatHours(state.workloadTargetHours)} target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Spacer(Modifier.height(15.dp))
-        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(9.dp), color = ClinicalPrimaryColor, trackColor = ClinicalPrimaryColor.copy(alpha = 0.10f))
+        Spacer(Modifier.height(14.dp))
+        if (state.fullWeeks == 0) {
+            Text("No full Sunday–Saturday week is inside this claim period.", color = TextSecondary, fontSize = 10.sp)
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                repeat(state.fullWeeks) { index ->
+                    Surface(Modifier.weight(1f).height(14.dp), color = Amber.copy(alpha = if (index < state.fullWeeks) 0.72f else 0.18f), shape = RoundedCornerShape(50.dp)) { }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Target = 36h × ${state.fullWeeks} full week(s) = ${formatHours(state.workloadTargetHours)}", color = TextSecondary, fontSize = 9.sp)
+        }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PulseMetric(Modifier.weight(1f), "Normal Duty", "${state.totalNormalHours.oneDecimal()} h", ClinicalPrimaryColor, FinanceBlueSoft)
