@@ -13,6 +13,7 @@ import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
@@ -25,6 +26,7 @@ import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
@@ -41,10 +43,11 @@ import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
         PayRateSettingsEntity::class,
         ProfileCompensationEntity::class,
         ProfileAdditionalAllowanceEntity::class,
+        ProfileDeductionEntity::class,
         SalaryStep2027Entity::class,
         PaySheetDocumentEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -58,6 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun payRateSettingsDao(): PayRateSettingsDao
     abstract fun profileCompensationDao(): ProfileCompensationDao
     abstract fun profileAdditionalAllowanceDao(): ProfileAdditionalAllowanceDao
+    abstract fun profileDeductionDao(): ProfileDeductionDao
     abstract fun salaryStep2027Dao(): SalaryStep2027Dao
     abstract fun paySheetDocumentDao(): PaySheetDocumentDao
 
@@ -272,6 +276,21 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
             }
         }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `profile_deductions` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `claimPeriodId` INTEGER NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
 
         private fun createSuperAppTables(database: SupportSQLiteDatabase) {
             createFinancialRecordsTable(database)
