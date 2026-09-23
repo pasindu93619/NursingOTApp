@@ -84,6 +84,20 @@ private val DailyPurpleSoft2 = Color(0xFFF3EEFF)
 private val DailySlateSoft = Color(0xFFF1F5F9)
 private val DailyWarningGradient = Brush.horizontalGradient(listOf(Color(0xFFFFB45C), Color(0xFFFF8A6A)))
 private val DailyHeroGradient = Brush.horizontalGradient(listOf(Color(0xFF2AA7D6), Color(0xFF6F78D8)))
+private val MorningDutyColor = Color(0xFFF59E0B)
+private val MorningOtColor = Color(0xFFC2410C)
+private val EveningDutyColor = Color(0xFF0EA5E9)
+private val EveningOtColor = Color(0xFF1D4ED8)
+private val NightDutyColor = Color(0xFF8B5CF6)
+private val NightOtColor = Color(0xFF6D28D9)
+
+private val LeaveCLColor = Color(0xFF059669)
+private val LeaveSDColor = Color(0xFF10B981)
+private val LeaveVLColor = Color(0xFF34D399)
+private val LeaveSLColor = Color(0xFF047857)
+private val LeaveDLColor = Color(0xFF22C55E)
+private val LeaveABColor = Color(0xFF065F46)
+private val LeaveDOColor = Color(0xFF14B8A6)
 
 private const val CATEGORY_SHIFT_DUTY = "Shift Duty"
 private const val CATEGORY_LEAVE_REST = "Leave & Rest"
@@ -661,23 +675,42 @@ fun DailyEntryScreen(
                             val hasLeaveAnim = renderLeave.isNotBlank() && renderLeave !in listOf("W.DO", "W.PH")
                             val hasShiftAnim = willHaveShift && !hasLeaveAnim
                             val hasOtAnim = willHaveOT && !hasLeaveAnim
+                            val shiftColor = when (renderShift) {
+                                "7-13" -> MorningDutyColor
+                                "13-19", "7-16" -> EveningDutyColor
+                                "19-7" -> NightDutyColor
+                                else -> MedicalBlue
+                            }
+                            val otColor = when (shortOt) {
+                                "M" -> MorningOtColor
+                                "E" -> EveningOtColor
+                                "N" -> NightOtColor
+                                else -> EveningOtColor
+                            }
+                            val leaveColor = when (renderLeave) {
+                                "CL" -> LeaveCLColor
+                                "SD" -> LeaveSDColor
+                                "VL" -> LeaveVLColor
+                                "sL" -> LeaveSLColor
+                                "DL" -> LeaveDLColor
+                                "AB" -> LeaveABColor
+                                "DO" -> LeaveDOColor
+                                "PH" -> LeaveDOColor.copy(alpha = 0.88f)
+                                else -> Emerald
+                            }
                             val topColor = when {
-                                hasLeaveAnim && renderLeave == "PH" -> Color(0xFFFFE6B8)
-                                hasLeaveAnim && renderLeave == "DO" -> Color(0xFFEAF8F1)
-                                hasLeaveAnim && renderLeave == "SD" -> Color(0xFFE8DEFF)
-                                hasLeaveAnim -> Color(0xFFDDF4EA)
-                                hasShiftAnim -> Color(0xFFBFEAF9)
-                                hasOtAnim -> Color(0xFFFFE6B8)
+                                hasShiftAnim && hasOtAnim -> shiftColor
+                                hasShiftAnim -> shiftColor
+                                hasOtAnim -> otColor
+                                hasLeaveAnim -> leaveColor
                                 isWknd -> weekend_background_highlight
                                 else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)
                             }
                             val bottomColor = when {
-                                hasOtAnim -> Color(0xFFFFE6B8)
-                                hasLeaveAnim && renderLeave == "PH" -> Color(0xFFFFE6B8)
-                                hasLeaveAnim && renderLeave == "DO" -> Color(0xFFEAF8F1)
-                                hasLeaveAnim && renderLeave == "SD" -> Color(0xFFE8DEFF)
-                                hasLeaveAnim -> Color(0xFFDDF4EA)
-                                hasShiftAnim -> Color(0xFFBFEAF9)
+                                hasShiftAnim && hasOtAnim -> otColor
+                                hasOtAnim -> otColor
+                                hasShiftAnim -> shiftColor
+                                hasLeaveAnim -> leaveColor
                                 isWknd -> weekend_background_highlight
                                 else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)
                             }
@@ -713,10 +746,10 @@ fun DailyEntryScreen(
                                         )
                                     }
                             ) {
-                                Text(date.dayOfMonth.toString(), Modifier.align(Alignment.Center), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = if (hasLeaveAnim && renderLeave !in listOf("PH", "DO")) Color.White else DailyInk)
+                                Text(date.dayOfMonth.toString(), Modifier.align(Alignment.Center), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = if (hasLeaveAnim || hasShiftAnim || hasOtAnim) Color.White else DailyInk)
                                 if (shortShift.isNotEmpty() && renderLeave !in listOf("DO", "PH", "CL", "VL", "sL", "DL", "AB", "SD")) Text(shortShift, Modifier.align(Alignment.TopStart).padding(start = 4.dp, top = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Black, color = Slate)
                                 if (shortOt.isNotEmpty()) Text(shortOt, Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Black, color = Slate)
-                                if (renderLeave.isNotEmpty()) Text(renderLeave.replace("Full ", "").take(5), Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp), fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (hasLeaveAnim && renderLeave !in listOf("PH", "DO")) Color.White else Slate)
+                                if (renderLeave.isNotEmpty()) Text(renderLeave.replace("Full ", "").take(5), Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp), fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (hasLeaveAnim || hasShiftAnim || hasOtAnim) Color.White else Slate)
                                 if (renderLeave == "DO" || renderLeave == "PH") {
                                     Icon(
                                         Icons.Default.Event,
