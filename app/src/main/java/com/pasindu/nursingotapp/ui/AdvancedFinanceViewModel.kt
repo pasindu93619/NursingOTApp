@@ -165,8 +165,6 @@ class AdvancedFinanceViewModel @Inject constructor(
 
     fun apply2027DayRateFromSalary(basisSalary2027: Double) {
         if (basisSalary2027 <= 0.0) return
-        val dayRate = basisSalary2027 / 30.0
-        saveRates(_uiState.value.otRate, dayRate, dayRate, basisSalary2027, "2027_BASIC_SALARY_DIV_30")
     }
 
     fun saveCompensation(riskAllowance: Double, claAllowance: Double, additionalAllowancesTotal: Double, totalDeductions: Double) {
