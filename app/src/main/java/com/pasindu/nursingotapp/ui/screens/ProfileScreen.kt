@@ -409,7 +409,7 @@ fun ProfileScreen(
             }
 
             Text("Fixed allowances", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            AllowanceField("Risk / Responsibility Allowance", riskAllowance, { riskAllowance = it }, Amber)
+            AllowanceField("Risk / Responsibility Allowance", riskAllowance, { riskAllowance = it }, MaterialTheme.colorScheme.tertiary)
             AllowanceField("CLA", claAllowance, { claAllowance = it }, MaterialTheme.colorScheme.secondary)
 
             Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(18.dp)) {
@@ -474,11 +474,11 @@ fun ProfileScreen(
                 }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.10f))
                 PreviewRow("Basic Salary", parsedBasic, Color.White)
-                PreviewRow("Risk / Responsibility", parsedRisk, Amber)
+                PreviewRow("Risk / Responsibility", parsedRisk, MaterialTheme.colorScheme.tertiary)
                 PreviewRow("CLA", parsedCla, MaterialTheme.colorScheme.secondary)
                 if (additionalTotal > 0.0) PreviewRow("Additional Allowances", additionalTotal, MaterialTheme.colorScheme.tertiary)
                 PreviewRow("GROSS PAY", grossPay, Color.White)
-                PreviewRow("TOTAL PAYROLL DEDUCTIONS", deductions, Amber)
+                PreviewRow("TOTAL PAYROLL DEDUCTIONS", deductions, MaterialTheme.colorScheme.tertiary)
                 Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)) {
                     Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("NET PAY", color = MaterialTheme.colorScheme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Black)
