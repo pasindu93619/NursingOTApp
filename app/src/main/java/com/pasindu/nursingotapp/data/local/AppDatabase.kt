@@ -12,6 +12,7 @@ import com.pasindu.nursingotapp.data.local.dao.FinancialDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeHubDao
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
+import com.pasindu.nursingotapp.data.local.dao.ProfileAdditionalAllowanceDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
@@ -23,6 +24,7 @@ import com.pasindu.nursingotapp.data.local.entity.FinancialRecordEntity
 import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
+import com.pasindu.nursingotapp.data.local.entity.ProfileAdditionalAllowanceEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
@@ -38,10 +40,11 @@ import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
         CpdLogEntity::class,
         PayRateSettingsEntity::class,
         ProfileCompensationEntity::class,
+        ProfileAdditionalAllowanceEntity::class,
         SalaryStep2027Entity::class,
-        PaySheetDocumentEntity::class
+        PaySheetDocumentEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -54,6 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun knowledgeHubDao(): KnowledgeHubDao
     abstract fun payRateSettingsDao(): PayRateSettingsDao
     abstract fun profileCompensationDao(): ProfileCompensationDao
+    abstract fun profileAdditionalAllowanceDao(): ProfileAdditionalAllowanceDao
     abstract fun salaryStep2027Dao(): SalaryStep2027Dao
     abstract fun paySheetDocumentDao(): PaySheetDocumentDao
 
@@ -254,6 +258,18 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
                 database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_pay_sheet_documents_monthKey` ON `pay_sheet_documents` (`monthKey`)")
+            }
+        }
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(\"\"\"
+                    CREATE TABLE IF NOT EXISTS `profile_additional_allowances` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                \"\"\".trimIndent())
             }
         }
 
