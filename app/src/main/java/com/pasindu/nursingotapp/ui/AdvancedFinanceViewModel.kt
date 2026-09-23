@@ -118,7 +118,7 @@ class AdvancedFinanceViewModel @Inject constructor(
             return
         }
         val claimPeriod = state.claimPeriod ?: run {
-            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
+            _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, fullWeeks = 0, errorMessage = null)
             return
         }
 
