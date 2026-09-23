@@ -262,14 +262,14 @@ abstract class AppDatabase : RoomDatabase() {
         }
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(\"\"\"
+                database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `profile_additional_allowances` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         `name` TEXT NOT NULL,
                         `amount` REAL NOT NULL,
                         `updatedAt` INTEGER NOT NULL
                     )
-                \"\"\".trimIndent())
+                """.trimIndent())
             }
         }
 
