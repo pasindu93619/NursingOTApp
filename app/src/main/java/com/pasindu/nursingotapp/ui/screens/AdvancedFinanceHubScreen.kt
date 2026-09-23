@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -66,6 +67,7 @@ import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
 import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
+import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
@@ -211,25 +213,36 @@ private fun HeroAmount(modifier: Modifier, title: String, value: Double) {
 @Composable
 private fun EarningsOverview(state: AdvancedFinanceUiState) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FinanceMetric(Modifier.weight(1f), "Gross", state.grossEarnings, "Total", ClinicalPrimaryColor, FinanceBlueSoft)
-        FinanceMetric(Modifier.weight(1f), "OT", state.otAmountRs, "${state.totalOTHours.oneDecimal()} h", Purple, FinancePurpleSoft)
-        FinanceMetric(Modifier.weight(1f), "Deductions", state.paysheetDeductions, "Listed", Amber, FinanceAmberSoft)
-        FinanceMetric(Modifier.weight(1f), "Net Pay", state.estimatedNetSalary, "Take home", Emerald, FinanceMintSoft)
+        FinanceMetric(Modifier.weight(1f), "Gross", state.grossEarnings, "Total", ClinicalPrimaryColor, FinanceBlueSoft, Icons.Default.Payments)
+        FinanceMetric(Modifier.weight(1f), "OT", state.otAmountRs, "${state.totalOTHours.oneDecimal()} h", Purple, FinancePurpleSoft, Icons.Default.ShowChart)
+        FinanceMetric(Modifier.weight(1f), "Deductions", state.paysheetDeductions, if (state.hasEnteredDeductions) "Listed" else "—", Amber, FinanceAmberSoft, Icons.Default.RemoveCircleOutline, empty = !state.hasEnteredDeductions)
+        FinanceMetric(Modifier.weight(1f), "Net Pay", state.estimatedNetSalary, "Take home", Emerald, FinanceMintSoft, Icons.Default.AccountBalance)
     }
 }
 
 @Composable
-private fun FinanceMetric(modifier: Modifier, title: String, value: Double, subtitle: String, accent: Color, surface: Color) {
-    Surface(modifier, color = surface, shape = RoundedCornerShape(17.dp)) {
+private fun FinanceMetric(
+    modifier: Modifier,
+    title: String,
+    value: Double,
+    subtitle: String,
+    accent: Color,
+    surface: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    empty: Boolean = false
+) {
+    Surface(modifier, color = surface, shape = RoundedCornerShape(17.dp), tonalElevation = 1.dp) {
         Column(Modifier.padding(10.dp)) {
-            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Surface(color = accent.copy(alpha = 0.10f), shape = androidx.compose.foundation.shape.CircleShape) {
+                Icon(icon, null, tint = accent, modifier = Modifier.padding(6.dp).size(14.dp))
+            }
             Spacer(Modifier.height(5.dp))
-            Text(formatRs(value), color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Text(if (empty) "—" else formatRs(value), color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
             Text(subtitle, color = TextSecondary, fontSize = 8.sp)
         }
     }
 }
-
 @Composable
 private fun WorkloadPulse(state: AdvancedFinanceUiState) {
     val progress by animateFloatAsState(state.dutyProgress36Hours, tween(850, easing = FastOutSlowInEasing), label = "duty_progress")
