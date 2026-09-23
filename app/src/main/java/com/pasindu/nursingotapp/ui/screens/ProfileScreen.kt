@@ -522,8 +522,8 @@ fun ProfileScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-        }
     }
+}
 
 
 private fun parsedMoney(value: String): Double = value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
