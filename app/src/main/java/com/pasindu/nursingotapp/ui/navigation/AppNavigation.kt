@@ -182,7 +182,10 @@ fun AppNavigation() {
                 ProfileScreen(
                     viewModel = viewModel,
                     onNavigateToClaimPeriod = { _, _ ->
-                        navController.popBackStack("claim_period", inclusive = false)
+                        navController.navigate("claim_period") {
+                            popUpTo("profile") { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
