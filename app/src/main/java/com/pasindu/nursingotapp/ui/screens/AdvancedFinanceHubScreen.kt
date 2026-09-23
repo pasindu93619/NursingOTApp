@@ -241,10 +241,10 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text("Workload Pulse", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Normal duty + overtime for this period", color = TextSecondary, fontSize = 10.sp)
+                Text("${state.fullWeeks} full Sunday–Saturday week(s) • 36h standard each", color = TextSecondary, fontSize = 10.sp)
             }
             Surface(color = FinanceBlueSoft, shape = RoundedCornerShape(50.dp)) {
-                Text("36h target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("${formatHours(state.workloadTargetHours)} target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(15.dp))
@@ -557,6 +557,8 @@ private fun GuideItem(title: String, description: String) {
         Text(description, color = TextSecondary, fontSize = 9.sp)
     }
 }
+
+private fun formatHours(value: Double): String = if (value % 1.0 == 0.0) "${value.toInt()}h" else "%.1fh".format(Locale.US, value)
 
 private fun Double.oneDecimal(): String = "%.1f".format(Locale.US, this)
 private fun formatRs(value: Double): String = "Rs. " + NumberFormat.getNumberInstance(Locale.US).format(value)
