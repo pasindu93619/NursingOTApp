@@ -16,6 +16,7 @@ data class NurseCommandCenterState(
     val dutyHoursThisMonth: Double = 0.0,
     val claimCompletedDays: Int = 0,
     val claimTotalDays: Int = 0,
+    val consecutiveWorkedDays: Int = 0,
     val estimatedNetSalary: Double? = null,
     val estimatedGrossSalary: Double = 0.0,
     val cpdPoints: Int = 0,
