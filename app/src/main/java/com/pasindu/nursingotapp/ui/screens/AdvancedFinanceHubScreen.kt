@@ -327,7 +327,13 @@ private fun QuickInsights(state: AdvancedFinanceUiState) {
 
 @Composable
 private fun MoneyMovement(state: AdvancedFinanceUiState) {
-    val items = listOf("Basic" to state.currentBasicSalary, "OT" to state.otAmountRs, "PH" to state.phAmountRs, "DO" to state.doAmountRs)
+    val items = listOf(
+        "Basic" to state.currentBasicSalary,
+        "OT" to state.otAmountRs,
+        "PH" to state.phAmountRs,
+        "DO" to state.doAmountRs,
+        "Allowances" to (state.riskAllowance + state.claAllowance + state.additionalAllowancesTotal)
+    )
     val maxValue = max(items.maxOfOrNull { it.second } ?: 1.0, 1.0)
     FinanceCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -355,7 +361,7 @@ private fun MoneyMovement(state: AdvancedFinanceUiState) {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Claim earnings", color = TextSecondary, fontSize = 10.sp)
-            Text(formatRs(state.currentBasicSalary + state.otAmountRs + state.phAmountRs + state.doAmountRs), color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            Text(formatRs(state.grossEarnings), color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
