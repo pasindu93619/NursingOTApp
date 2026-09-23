@@ -68,12 +68,6 @@ class NursingViewModel @Inject constructor(
     private val _profileDeductions = MutableStateFlow<List<ProfileDeductionEntity>>(emptyList())
     val profileDeductions: StateFlow<List<ProfileDeductionEntity>> = _profileDeductions.asStateFlow()
 
-    private val _currentClaimPeriod = MutableStateFlow<ClaimPeriodEntity?>(null)
-    val currentClaimPeriod: StateFlow<ClaimPeriodEntity?> = _currentClaimPeriod.asStateFlow()
-
-    private val _profileDeductions = MutableStateFlow<List<ProfileDeductionEntity>>(emptyList())
-    val profileDeductions: StateFlow<List<ProfileDeductionEntity>> = _profileDeductions.asStateFlow()
-
     private val _matchedSalary2027 = MutableStateFlow<SalaryStep2027Entity?>(null)
     val matchedSalary2027: StateFlow<SalaryStep2027Entity?> = _matchedSalary2027.asStateFlow()
 
@@ -102,13 +96,6 @@ class NursingViewModel @Inject constructor(
         }
         viewModelScope.launch {
             profileAdditionalAllowanceDao.observeAll().collect { allowances -> _additionalAllowances.value = allowances }
-        }
-        viewModelScope.launch {
-            claimPeriodDao.observeClaimPeriods().collect { periods ->
-                val latest = periods.firstOrNull()
-                _currentClaimPeriod.value = latest
-                observeDeductionsForClaim(latest?.id)
-            }
         }
         viewModelScope.launch {
             claimPeriodDao.observeClaimPeriods().collect { periods ->
@@ -148,27 +135,6 @@ class NursingViewModel @Inject constructor(
                     name = it.name.trim(),
                     amount = it.amount
                 )
-            }
-        )
-    }
-
-    private var deductionObservationJob: kotlinx.coroutines.Job? = null
-
-    private fun observeDeductionsForClaim(claimPeriodId: Long?) {
-        deductionObservationJob?.cancel()
-        _profileDeductions.value = emptyList()
-        if (claimPeriodId == null) return
-        deductionObservationJob = viewModelScope.launch {
-            profileDeductionDao.observeForClaimPeriod(claimPeriodId).collect { _profileDeductions.value = it }
-        }
-    }
-
-    fun saveProfileDeductions(items: List<ProfileDeductionEntity>) = launchOperation(setOperationState) {
-        val claimId = _currentClaimPeriod.value?.id ?: return@launchOperation
-        profileDeductionDao.deleteForClaimPeriod(claimId)
-        profileDeductionDao.upsertAll(
-            items.filter { it.name.isNotBlank() && it.amount >= 0.0 }.map {
-                it.copy(id = 0L, claimPeriodId = claimId, name = it.name.trim(), amount = it.amount)
             }
         )
     }
