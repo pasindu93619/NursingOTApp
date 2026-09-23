@@ -44,17 +44,6 @@ import com.pasindu.nursingotapp.ui.components.NursingGradeSelectionSheet
 import com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.state.ViewModelOperationState
-import com.pasindu.nursingotapp.ui.theme.Amber
-import com.pasindu.nursingotapp.ui.theme.AppBackground
-import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
-import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
-import com.pasindu.nursingotapp.ui.theme.Emerald
-import com.pasindu.nursingotapp.ui.theme.Purple
-import com.pasindu.nursingotapp.ui.theme.Slate
-import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
-import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
-import com.pasindu.nursingotapp.ui.theme.TextPrimary
-import com.pasindu.nursingotapp.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,11 +167,11 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = AppBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             Surface(
-                color = SurfaceWhite,
+                color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 4.dp,
                 shadowElevation = 8.dp
             ) {
@@ -197,14 +186,14 @@ fun ProfileScreen(
                     Column(Modifier.weight(1f)) {
                         Text(
                             if (isSaving) "Saving profile…" else "Profile ready",
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             if (canSaveProfile) "Salary and service rates are ready to save"
                             else "Complete the required profile and salary fields",
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 9.sp
                         )
                     }
@@ -214,8 +203,8 @@ fun ProfileScreen(
                         enabled = canSaveProfile,
                         modifier = Modifier.height(52.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ClinicalPrimaryColor,
-                            disabledContainerColor = SurfaceMuted
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -255,7 +244,7 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .background(
                         Brush.linearGradient(
-                            listOf(Color.White, ClinicalPrimaryColor.copy(alpha = 0.035f), Purple.copy(alpha = 0.035f))
+                            listOf(Color.White, MaterialTheme.colorScheme.primary.copy(alpha = 0.035f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.035f))
                         )
                     )
                     .padding(22.dp)
@@ -264,24 +253,24 @@ fun ProfileScreen(
                     Modifier
                         .size(120.dp * glow)
                         .align(Alignment.TopEnd)
-                        .background(Purple.copy(alpha = 0.05f), CircleShape)
+                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.05f), CircleShape)
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(70.dp).background(ClinicalAiGradient, CircleShape),
+                        Modifier.size(70.dp).background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(initial, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("MASTER PROFILE", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                        Text("MASTER PROFILE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
                         Spacer(Modifier.height(3.dp))
-                        Text(displayFullName, color = TextPrimary, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                        Text(displayFullName, color = MaterialTheme.colorScheme.onSurface, fontSize = 23.sp, fontWeight = FontWeight.Black)
                         Spacer(Modifier.height(4.dp))
                         Text(
                             if (grade.isBlank()) "Complete your nursing profile" else "$grade • Unit $unit",
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -290,7 +279,7 @@ fun ProfileScreen(
             }
         }
 
-        ProfileSectionCard(Icons.Default.Person, ClinicalPrimaryColor, "Identity & Placement", "Professional credentials") {
+        ProfileSectionCard(Icons.Default.Person, MaterialTheme.colorScheme.primary, "Identity & Placement", "Professional credentials") {
             ProfileTextField("Full Name", fullName, { fullName = it })
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProfileTextField("Service No", serviceNo, { serviceNo = it }, Modifier.weight(1f), KeyboardType.Number)
@@ -303,7 +292,7 @@ fun ProfileScreen(
                     color = Color.White,
                     border = BorderStroke(
                         1.dp,
-                        if (grade.isBlank()) Slate.copy(alpha = 0.45f) else ClinicalPrimaryColor.copy(alpha = 0.45f)
+                        if (grade.isBlank()) MaterialTheme.colorScheme.outline.copy(alpha = 0.45f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                     )
                 ) {
                     Row(
@@ -313,15 +302,15 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Current Nursing Grade", color = TextSecondary, fontSize = 9.sp)
+                            Text("Current Nursing Grade", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp)
                             Text(
                                 grade.ifBlank { "Select grade" },
-                                color = if (grade.isBlank()) Slate else TextPrimary,
+                                color = if (grade.isBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
                                 fontSize = 13.sp,
                                 fontWeight = if (grade.isBlank()) FontWeight.Medium else FontWeight.Bold
                             )
                         }
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Select nursing grade", tint = ClinicalPrimaryColor)
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Select nursing grade", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -338,23 +327,23 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(Modifier.size(44.dp), CircleShape, ClinicalPrimaryColor.copy(alpha = 0.10f)) {
+                    Surface(Modifier.size(44.dp), CircleShape, MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Payments, contentDescription = null, tint = ClinicalPrimaryColor)
+                            Icon(Icons.Default.Payments, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("NURSING SERVICE OT RATE", color = ClinicalPrimaryColor, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                        Text("Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour", color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                        Text("$grade • automatically assigned", color = Emerald, fontSize = 10.sp)
+                        Text("NURSING SERVICE OT RATE", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour", color = MaterialTheme.colorScheme.onSurface, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                        Text("$grade • automatically assigned", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
                     }
-                    Icon(Icons.Default.Check, contentDescription = "Automatically assigned", tint = Emerald)
+                    Icon(Icons.Default.Check, contentDescription = "Automatically assigned", tint = MaterialTheme.colorScheme.secondary)
                 }
             }
         }
 
-        ProfileSectionCard(Icons.Default.AccountBalanceWallet, Purple, "Compensation Engine", "Current salary, allowances & service rates") {
+        ProfileSectionCard(Icons.Default.AccountBalanceWallet, MaterialTheme.colorScheme.tertiary, "Compensation Engine", "Current salary, allowances & service rates") {
             AnimatedVisibility(visible = parsedBasic > 0.0, enter = fadeIn(tween(450)) + slideInVertically(tween(450)) { it / 3 }) {
                 CurrentBasicCard(parsedBasic)
             }
@@ -368,48 +357,48 @@ fun ProfileScreen(
             }
 
             AnimatedVisibility(visible = parsedBasic > 0.0 && grade.isNotBlank() && matchedSalary2027 == null) {
-                Surface(Modifier.fillMaxWidth(), color = Amber.copy(alpha = 0.10f), shape = RoundedCornerShape(18.dp)) {
+                Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(18.dp)) {
                     Text(
                         "No exact salary-table match was found for Grade $grade and Rs. ${formatCompact(parsedBasic)}.",
                         Modifier.padding(14.dp),
-                        color = Amber,
+                        color = MaterialTheme.colorScheme.tertiary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            Text("Service payment rates", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Surface(Modifier.fillMaxWidth(), color = Purple.copy(alpha = 0.08f), shape = RoundedCornerShape(18.dp)) {
+            Text("Service payment rates", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (selectedOtRate != null) {
                         Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(14.dp)) {
                             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("NURSING SERVICE OT RATE", color = ClinicalPrimaryColor, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                                    Text("Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                                    Text("$grade • automatically assigned", color = Emerald, fontSize = 10.sp)
+                                    Text("NURSING SERVICE OT RATE", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                    Text("Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour", color = MaterialTheme.colorScheme.onSurface, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text("$grade • automatically assigned", color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp)
                                 }
-                                Icon(Icons.Default.Check, contentDescription = "Automatically assigned", tint = Emerald)
+                                Icon(Icons.Default.Check, contentDescription = "Automatically assigned", tint = MaterialTheme.colorScheme.secondary)
                             }
                         }
                     } else {
-                        Text("Select your current nursing grade to assign the OT rate automatically.", color = TextSecondary, fontSize = 10.sp)
+                        Text("Select your current nursing grade to assign the OT rate automatically.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                     }
 
                     matched2027DayRate?.let { rate ->
-                        Surface(Modifier.fillMaxWidth(), color = Emerald.copy(alpha = 0.10f), shape = RoundedCornerShape(14.dp)) {
+                        Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)) {
                             Column(Modifier.padding(12.dp)) {
-                                Text("2027 PH / DO RATE", color = Emerald, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                Text("2027 PH / DO RATE", color = MaterialTheme.colorScheme.secondary, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                 Text(
                                     "2027 basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = Rs. ${formatMoney(rate)} / day",
-                                    color = TextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     "PH rate: Rs. ${formatMoney(rate)}    •    DO rate: Rs. ${formatMoney(rate)}",
-                                    color = Emerald,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Black
                                 )
@@ -419,17 +408,17 @@ fun ProfileScreen(
                 }
             }
 
-            Text("Fixed allowances", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text("Fixed allowances", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Black)
             AllowanceField("Risk / Responsibility Allowance", riskAllowance, { riskAllowance = it }, Amber)
-            AllowanceField("CLA", claAllowance, { claAllowance = it }, Emerald)
+            AllowanceField("CLA", claAllowance, { claAllowance = it }, MaterialTheme.colorScheme.secondary)
 
-            Surface(Modifier.fillMaxWidth(), color = Amber.copy(alpha = 0.10f), shape = RoundedCornerShape(18.dp)) {
+            Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(18.dp)) {
                 Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.AddCircleOutline, null, tint = Amber, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.AddCircleOutline, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Additional allowances?", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text("Add other paysheet allowances one by one.", color = TextSecondary, fontSize = 10.sp)
+                        Text("Additional allowances?", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Add other paysheet allowances one by one.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                     }
                     Switch(
                         checked = hasAdditionalAllowances,
@@ -468,10 +457,10 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(6.dp))
             ProfileTextField("Total Paysheet Deductions", totalDeductions, { totalDeductions = it }, keyboardType = KeyboardType.Number, leadingText = "Rs.")
-            Text("Enter only the total deduction printed on the paysheet. Individual payroll deductions vary between nurses.", color = TextSecondary, fontSize = 10.sp)
+            Text("Enter only the total deduction printed on the paysheet. Individual payroll deductions vary between nurses.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
         }
 
-        Card(Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(28.dp)), RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Slate)) {
+        Card(Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(28.dp)), RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface)) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(46.dp).background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
@@ -486,13 +475,13 @@ fun ProfileScreen(
                 HorizontalDivider(color = Color.White.copy(alpha = 0.10f))
                 PreviewRow("Basic Salary", parsedBasic, Color.White)
                 PreviewRow("Risk / Responsibility", parsedRisk, Amber)
-                PreviewRow("CLA", parsedCla, Emerald)
-                if (additionalTotal > 0.0) PreviewRow("Additional Allowances", additionalTotal, Purple)
+                PreviewRow("CLA", parsedCla, MaterialTheme.colorScheme.secondary)
+                if (additionalTotal > 0.0) PreviewRow("Additional Allowances", additionalTotal, MaterialTheme.colorScheme.tertiary)
                 PreviewRow("GROSS PAY", grossPay, Color.White)
                 PreviewRow("TOTAL PAYROLL DEDUCTIONS", deductions, Amber)
-                Surface(color = Emerald.copy(alpha = 0.18f), shape = RoundedCornerShape(14.dp)) {
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)) {
                     Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("NET PAY", color = Emerald, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text("NET PAY", color = MaterialTheme.colorScheme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         Text(formatMoney(netPay), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     }
                 }
