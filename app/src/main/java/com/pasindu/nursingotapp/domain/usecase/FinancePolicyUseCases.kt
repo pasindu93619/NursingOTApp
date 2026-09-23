@@ -66,8 +66,8 @@ class SaveFinanceCompensationUseCase(
         profileCompensationDao.upsert(
             ProfileCompensationEntity(
                 id = 1,
-                riskAllowance = riskAllowance.coerceAtLeast(0.0),
-                claAllowance = claAllowance.coerceAtLeast(0.0),
+                riskAllowance = 6850.0,
+                claAllowance = 17800.0,
                 additionalAllowancesTotal = additionalAllowancesTotal.coerceAtLeast(0.0),
                 totalDeductions = totalDeductions.coerceAtLeast(0.0)
             )
