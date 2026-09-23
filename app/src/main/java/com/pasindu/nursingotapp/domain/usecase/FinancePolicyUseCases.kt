@@ -37,7 +37,6 @@ class SynchronizePolicyRatesUseCase(
             currentBasicSalary = profile.basicSalary
         ) ?: return
 
-        val current = payRateSettingsDao.observe().first()
         val otRate = com.pasindu.nursingotapp.domain.usecase.NursingOtRatePolicy.rateForGrade(profile.grade) ?: profile.otRate.coerceAtLeast(0.0)
         val dayRate = (salaryStep.basicSalary2027 / 30.0).coerceAtLeast(0.0)
 
