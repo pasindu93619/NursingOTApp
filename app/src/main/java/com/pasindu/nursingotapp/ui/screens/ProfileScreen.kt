@@ -552,3 +552,4 @@ private fun formatCompact(value: Double): String {
         }
         .format(value)
 }
+}
