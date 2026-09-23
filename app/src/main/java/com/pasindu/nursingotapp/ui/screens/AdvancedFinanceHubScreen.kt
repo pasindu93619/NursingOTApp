@@ -375,9 +375,10 @@ private fun PayRatesSummary(state: AdvancedFinanceUiState) {
             RateBox(Modifier.weight(1f), "Working DO", formatRs(state.doRate), "per day", Emerald, FinanceMintSoft)
         }
         Spacer(Modifier.height(10.dp))
-        Text("Grade ${state.profile?.grade.orEmpty()}", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-        Text(when (state.payRateSettings?.rateSource) { "MANUAL" -> "Using manually configured rates"; "BASIC_SALARY_DIV_30", "2027_BASIC_SALARY_DIV_30" -> "PH / Working DO: 2027 basic ÷ 30"; else -> "Configured finance pay rates" }, color = TextSecondary, fontSize = 10.sp)
-        state.basisSalary2027?.let { Spacer(Modifier.height(5.dp)); Text("2027 basic used for day-rate reference: ${formatRs(it)}", color = TextSecondary, fontSize = 10.sp) }
+        Text("Grade ${state.profile?.grade.orEmpty()} • Step ${state.profile?.salaryStep ?: "—"}", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Text("OT • From ${state.profile?.grade.orEmpty()}, Step ${state.profile?.salaryStep ?: "grade policy"}", color = TextSecondary, fontSize = 10.sp)
+        Text("PH / Working DO • From 2027 basic ÷ 30", color = TextSecondary, fontSize = 10.sp)
+        state.basisSalary2027?.let { Spacer(Modifier.height(5.dp)); Text("2027 basic used: ${formatRs(it)}", color = TextSecondary, fontSize = 10.sp) }
     }
 }
 
