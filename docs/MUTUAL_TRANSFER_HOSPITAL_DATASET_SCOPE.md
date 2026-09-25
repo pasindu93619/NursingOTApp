@@ -2,61 +2,62 @@
 
 ## Decision
 
-For the Mutual Transfer MVP, the Firestore `hospitals` collection is scoped to the **hospital-type records actually represented in the detailed regional listings** of the Sri Lanka Ministry of Health and Mass Media 2026 publication.
+For the Mutual Transfer MVP, the canonical hospital reference source is the supplied workbook:
 
-The project decision is now to use the **1,205 hospital-type records represented by the detailed regional listings**.
+**Sri_Lanka_Hospitals_List_2026.xlsx**
 
-The five separately listed **Arogya Center** records remain excluded from transfer destinations and remain source-reference inventory only.
+The workbook's **All Hospitals** sheet contains 1,216 records.
 
-## Source-authority rule
+For the Mutual Transfer hospital destination dataset, use the **1,206 hospital-type records** in that sheet.
 
-The detailed regional tables are authoritative for the assembled hospital record inventory.
+The following 10 records are excluded from transfer destinations:
 
-The publication summary contains arithmetic/category-count discrepancies relative to the detailed tables. We will not invent an additional institution or force the detailed tables to match a summary total.
+- 5 Arogya Center records
+- 3 Special Campaign / Other records
+- 2 Other Hospitals records
 
-The final dataset target is therefore **exactly 1,205 hospital-type records**.
+Therefore:
 
-## Manually reconciled source details
+**1,216 total workbook records - 10 excluded records = 1,206 hospital-type records.**
 
-The following source-layout issues were manually reconciled against the original PDF:
+The workbook is now the structured source for the canonical dataset. The earlier 1,205 PDF-summary arithmetic is not used to delete a detailed hospital record.
 
-- Page 7 contains both **DHA Moratuwa** and **DHA Wethara**.
-- Page 9 lists **DGH Negambo** and **DGH Gampaha**; **DGH Gampaha is Provincial Ministry**.
-- Page 28 contains **PMCU Kurumpasiddy (Instead of Palali)**.
-- Page 29 contains **PMCU Piramanthanaru (Elephantpass)**.
-- Page 30 contains **DGH Mullaitivu** and **BHA Mankulam**.
-- Page 45 contains **TH Anuradhapura**.
-- Page 50 contains **TH Badulla**.
+## Source corrections confirmed
 
-These are source reconciliation corrections, not newly invented records.
+The supplied workbook independently contains the previously reconciled records:
 
-## Excluded Arogya Centers
+- DHA Moratuwa
+- DHA Wethara
+- DGH Gampaha
+- PMCU Kurumpasiddy (Instead of Palali)
+- PMCU Piramanthanaru (Elephantpass)
+- BHA Mankulam
+- DGH Mullaitivu
+- TH Anuradhapura
+- TH Badulla
 
-The detailed 2026 publication lists these separately:
-
-- Thalpitiya — Kalutara
-- Polgollawatta — Kandy
-- Dankanda — Matale
-- Mapalagama — Galle
-- Ethoya — Ratnapura
-
-They remain source-reference inventory only and are not transfer destinations.
+DGH Gampaha is listed under RDHS Gampaha. Authority classification must not be invented from the workbook where the workbook does not provide an explicit authority field; such mapping remains a separate verified enrichment step.
 
 ## Data-quality rules
 
 - Do not invent HINs.
 - Do not invent coordinates.
 - Coordinates are nullable until independently validated.
-- Missing coordinates must never be converted to `0.0, 0.0`.
-- Preserve Ministry functional-status remarks.
-- Non-functioning institutions must not be offered as active transfer destinations.
-- `hospitalId` is the immutable application identifier; matching does not use display names.
-- Preserve provenance: Ministry source year/reference, coordinate source, verification date, and dataset version.
-- The canonical dataset must contain exactly **1,205 detailed hospital-type records** before Firestore import.
+- Missing coordinates must never become 0.0, 0.0.
+- Preserve the workbook's Remarks field exactly.
+- Do not silently assign functional status when the source does not explicitly provide it.
+- hospitalId is an immutable application identifier.
+- Matching must use hospitalId, never display names.
+- Preserve source row number for traceability.
+- Preserve source year and dataset version.
+- Do not import excluded Arogya Center, Special Campaign / Other, or Other Hospitals records into the transfer destination collection.
+
+## Canonical dataset target
+
+**Exactly 1,206 hospital-type records.**
+
+The canonical working artifact is generated from the supplied workbook and retains the source row number as sourceRow.
 
 ## Source
 
-Sri Lanka Ministry of Health and Mass Media, Directorate of Planning, **List of Hospitals — Updated 2026**.
-
-Official source:
-https://www.health.gov.lk/wp-content/uploads/2025/06/Institution-List-2026-Updated.pdf
+Sri Lanka Ministry of Health and Mass Media, Directorate of Planning, **List of Hospitals — Updated 2026**, supplied in structured workbook form as Sri_Lanka_Hospitals_List_2026.xlsx.
