@@ -3,6 +3,7 @@ package com.pasindu.nursingotapp.transfer.data
 import android.content.Context
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.zip.GZIPInputStream
@@ -79,10 +80,26 @@ class HospitalReferenceRepository @Inject constructor(
     }
 
     private fun readAssetPart(assetPath: String): List<HospitalReference> =
-        context.assets.open(assetPath).use { input ->
-            GZIPInputStream(input).use { gzip ->
-                BufferedReader(InputStreamReader(gzip, Charsets.UTF_8)).use { reader ->
-                    HospitalReferenceJsonlParser.parseLines(reader.lineSequence())
+        context.assets.open(assetPath).use { rawInput ->
+            BufferedInputStream(rawInput).use { input ->
+                input.mark(GZIP_HEADER_SIZE)
+                val firstByte = input.read()
+                val secondByte = input.read()
+                input.reset()
+
+                val decodedInput = if (
+                    firstByte == GZIP_MAGIC_FIRST &&
+                    secondByte == GZIP_MAGIC_SECOND
+                ) {
+                    GZIPInputStream(input)
+                } else {
+                    input
+                }
+
+                decodedInput.use { decoded ->
+                    BufferedReader(InputStreamReader(decoded, Charsets.UTF_8)).use { reader ->
+                        HospitalReferenceJsonlParser.parseLines(reader.lineSequence())
+                    }
                 }
             }
         }
@@ -90,6 +107,9 @@ class HospitalReferenceRepository @Inject constructor(
     private companion object {
         const val EXPECTED_HOSPITAL_COUNT = 1206
         const val DATASET_VERSION = "MOH-2026-1206"
+        const val GZIP_HEADER_SIZE = 2
+        const val GZIP_MAGIC_FIRST = 0x1f
+        const val GZIP_MAGIC_SECOND = 0x8b
 
         val ASSET_PARTS = (1..7).map { index ->
             "hospitals_2026/part%02d.jsonl.gz.data".format(index)
