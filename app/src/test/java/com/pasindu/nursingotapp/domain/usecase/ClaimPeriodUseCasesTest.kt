@@ -102,6 +102,9 @@ class ClaimPeriodUseCasesTest {
         override suspend fun getClaimPeriodById(id: Long): ClaimPeriodEntity? =
             items.value.firstOrNull { it.id == id }
 
+        override suspend fun getLatestClaimPeriod(): ClaimPeriodEntity? =
+            items.value.maxByOrNull { it.startDate }
+
         override suspend fun deleteClaimPeriod(claimPeriod: ClaimPeriodEntity) {
             items.value = items.value.filterNot { it.id == claimPeriod.id }
         }
