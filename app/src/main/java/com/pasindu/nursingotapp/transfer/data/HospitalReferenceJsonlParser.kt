@@ -2,7 +2,9 @@ package com.pasindu.nursingotapp.transfer.data
 
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 internal object HospitalReferenceJsonlParser {
@@ -42,7 +44,9 @@ internal object HospitalReferenceJsonlParser {
 
     private fun value(obj: JsonObject, vararg keys: String): String? =
         keys.firstNotNullOfOrNull { key ->
-            obj[key]?.jsonPrimitive?.contentOrNull
+            obj[key]?.let { element ->
+                if (element is JsonNull) null else element.jsonPrimitive.contentOrNull
+            }
         }?.trim()
 
     private fun nullableValue(obj: JsonObject, vararg keys: String): String? =
