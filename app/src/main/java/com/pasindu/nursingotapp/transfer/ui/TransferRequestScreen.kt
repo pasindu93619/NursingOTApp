@@ -78,6 +78,9 @@ private val TransferInk = Color(0xFF12204A)
 fun TransferRequestScreen(
     profile: ProfileEntity?,
     hospitalOptions: List<HospitalReference> = emptyList(),
+    hospitalDirectoryLoading: Boolean = false,
+    hospitalDirectoryError: String? = null,
+    onRetryHospitalDirectory: () -> Unit = {},
     onBack: () -> Unit,
     onSubmit: (String, List<String>) -> Unit
 ) {
@@ -229,6 +232,9 @@ fun TransferRequestScreen(
             hospitals = hospitalOptions.filterNot {
                 it.hospitalId == currentHospital?.hospitalId || preferences.any { selected -> selected.hospitalId == it.hospitalId }
             },
+            isLoading = hospitalDirectoryLoading,
+            loadError = hospitalDirectoryError,
+            onRetry = onRetryHospitalDirectory,
             onDismiss = { pickerMode = null },
             onSelect = {
                 if (pickerMode == PickerMode.CURRENT) currentHospital = it
@@ -395,6 +401,9 @@ private fun AddPreferenceCard(onClick: () -> Unit) {
 private fun HospitalPickerDialog(
     title: String,
     hospitals: List<HospitalReference>,
+    isLoading: Boolean,
+    loadError: String?,
+    onRetry: () -> Unit,
     onDismiss: () -> Unit,
     onSelect: (HospitalReference) -> Unit
 ) {
@@ -591,160 +600,248 @@ private fun HospitalPickerDialog(
 
                 Spacer(Modifier.height(9.dp))
 
-                if (hospitals.isEmpty()) {
-                    Surface(
-                        Modifier.fillMaxWidth(),
-                        RoundedCornerShape(20.dp),
-                        SurfaceMuted
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Surface(
-                                Modifier.size(42.dp),
-                                CircleShape,
-                                TransferBlueSoft
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.LocalHospital,
-                                        null,
-                                        tint = ClinicalPrimaryColor,
-                                        modifier = Modifier.size(21.dp)
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(9.dp))
-                            Text(
-                                "Hospital directory ready",
-                                color = TransferInk,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                "The 2026 reference data is bundled in the app. The repository will supply it to this picker in the next implementation step.",
-                                color = TextSecondary,
-                                fontSize = 9.sp,
-                                lineHeight = 13.sp
-                            )
-                        }
-                    }
-                } else if (visibleHospitals.isEmpty()) {
-                    Surface(
-                        Modifier.fillMaxWidth(),
-                        RoundedCornerShape(20.dp),
-                        SurfaceMuted
-                    ) {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 25.dp, horizontal = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                when {
+                    isLoading -> {
+                        Surface(
+                            Modifier.fillMaxWidth(),
+                            RoundedCornerShape(20.dp),
+                            SurfaceMuted
                         ) {
-                            Surface(
-                                Modifier.size(48.dp),
-                                CircleShape,
-                                TransferPurpleSoft
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        null,
-                                        tint = AiAccentColor,
-                                        modifier = Modifier.size(22.dp)
+                            Column(Modifier.padding(16.dp)) {
+                                Surface(
+                                    Modifier.size(42.dp),
+                                    CircleShape,
+                                    TransferBlueSoft
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.LocalHospital,
+                                            null,
+                                            tint = ClinicalPrimaryColor,
+                                            modifier = Modifier.size(21.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(9.dp))
+                                Text(
+                                    "Loading hospital directory",
+                                    color = TransferInk,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    "Loading the verified 2026 hospital reference data...",
+                                    color = TextSecondary,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+
+                    loadError != null -> {
+                        Surface(
+                            Modifier.fillMaxWidth(),
+                            RoundedCornerShape(20.dp),
+                            SurfaceMuted
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Surface(
+                                    Modifier.size(42.dp),
+                                    CircleShape,
+                                    TransferBlueSoft
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.LocalHospital,
+                                            null,
+                                            tint = ClinicalPrimaryColor,
+                                            modifier = Modifier.size(21.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(9.dp))
+                                Text(
+                                    "Unable to load hospital directory",
+                                    color = TransferInk,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    loadError,
+                                    color = TextSecondary,
+                                    fontSize = 8.5.sp,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(7.dp))
+                                TextButton(onClick = onRetry) {
+                                    Text(
+                                        "Retry",
+                                        color = ClinicalPrimaryColor,
+                                        fontWeight = FontWeight.Black
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(9.dp))
-                            Text(
-                                "No hospital found",
-                                color = TransferInk,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                "Try a hospital name, province or RDHS division.",
-                                color = TextSecondary,
-                                fontSize = 9.sp
-                            )
                         }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(320.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
-                    ) {
-                        items(visibleHospitals, key = { it.hospitalId }) { hospital ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSelect(hospital) },
-                                shape = RoundedCornerShape(18.dp),
-                                color = Color.White,
-                                border = BorderStroke(
-                                    1.dp,
-                                    BorderMuted.copy(alpha = .55f)
-                                )
-                            ) {
-                                Row(
-                                    Modifier.padding(
-                                        horizontal = 11.dp,
-                                        vertical = 10.dp
-                                    ),
-                                    verticalAlignment = Alignment.CenterVertically
+
+                    hospitals.isEmpty() -> {
+                        Surface(
+                            Modifier.fillMaxWidth(),
+                            RoundedCornerShape(20.dp),
+                            SurfaceMuted
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Surface(
+                                    Modifier.size(42.dp),
+                                    CircleShape,
+                                    TransferBlueSoft
                                 ) {
-                                    Surface(
-                                        Modifier.size(39.dp),
-                                        CircleShape,
-                                        TransferBlueSoft
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Default.LocalHospital,
-                                                null,
-                                                tint = ClinicalPrimaryColor,
-                                                modifier = Modifier.size(19.dp)
-                                            )
-                                        }
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Search,
+                                            null,
+                                            tint = ClinicalPrimaryColor,
+                                            modifier = Modifier.size(21.dp)
+                                        )
                                     }
+                                }
+                                Spacer(Modifier.height(9.dp))
+                                Text(
+                                    if (query.isBlank()) "No hospitals available" else "No hospital found",
+                                    color = TransferInk,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    if (query.isBlank()) {
+                                        "The hospital directory loaded successfully but contains no selectable records."
+                                    } else {
+                                        "Try a hospital name, province or RDHS division."
+                                    },
+                                    color = TextSecondary,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
 
-                                    Spacer(Modifier.width(10.dp))
+                    matchingHospitals.isEmpty() -> {
+                        Surface(
+                            Modifier.fillMaxWidth(),
+                            RoundedCornerShape(20.dp),
+                            SurfaceMuted
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Surface(
+                                    Modifier.size(42.dp),
+                                    CircleShape,
+                                    TransferBlueSoft
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Search,
+                                            null,
+                                            tint = ClinicalPrimaryColor,
+                                            modifier = Modifier.size(21.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(9.dp))
+                                Text(
+                                    "No hospital found",
+                                    color = TransferInk,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    "No hospital matches \"$query\". Try a hospital name, province or RDHS division.",
+                                    color = TextSecondary,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
 
-                                    Column(Modifier.weight(1f)) {
-                                        Text(
-                                            hospital.name,
-                                            color = TransferInk,
-                                            fontSize = 10.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            hospital.category + " • " + hospital.province,
-                                            color = TextSecondary,
-                                            fontSize = 8.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        if (hospital.administeringAuthority.isNotBlank()) {
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(320.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            items(visibleHospitals, key = { it.hospitalId }) { hospital ->
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onSelect(hospital) },
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        BorderMuted.copy(alpha = .55f)
+                                    )
+                                ) {
+                                    Row(
+                                        Modifier.padding(
+                                            horizontal = 11.dp,
+                                            vertical = 10.dp
+                                        ),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            Modifier.size(39.dp),
+                                            CircleShape,
+                                            TransferBlueSoft
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.LocalHospital,
+                                                    null,
+                                                    tint = ClinicalPrimaryColor,
+                                                    modifier = Modifier.size(19.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(Modifier.width(10.dp))
+
+                                        Column(Modifier.weight(1f)) {
                                             Text(
-                                                hospital.administeringAuthority,
-                                                color = ClinicalPrimaryColor,
-                                                fontSize = 7.5.sp,
-                                                fontWeight = FontWeight.SemiBold,
+                                                hospital.name,
+                                                color = TransferInk,
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(
+                                                hospital.category + " • " + hospital.province,
+                                                color = TextSecondary,
+                                                fontSize = 8.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            if (hospital.administeringAuthority.isNotBlank()) {
+                                                Text(
+                                                    hospital.administeringAuthority,
+                                                    color = ClinicalPrimaryColor,
+                                                    fontSize = 7.5.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
                                         }
-                                    }
 
-                                    Icon(
-                                        Icons.Default.ChevronRight,
-                                        null,
-                                        tint = ClinicalPrimaryColor,
-                                        modifier = Modifier.size(19.dp)
-                                    )
+                                        Icon(
+                                            Icons.Default.ChevronRight,
+                                            null,
+                                            tint = ClinicalPrimaryColor,
+                                            modifier = Modifier.size(19.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
