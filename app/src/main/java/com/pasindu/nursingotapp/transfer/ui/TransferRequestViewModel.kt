@@ -25,6 +25,9 @@ class TransferRequestViewModel @Inject constructor(
     private val _hospitalOptions = MutableStateFlow<List<HospitalReference>>(emptyList())
     val hospitalOptions: StateFlow<List<HospitalReference>> = _hospitalOptions.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     private val _loadError = MutableStateFlow<String?>(null)
     val loadError: StateFlow<String?> = _loadError.asStateFlow()
 
@@ -34,15 +37,20 @@ class TransferRequestViewModel @Inject constructor(
 
     private fun loadHospitals() {
         viewModelScope.launch {
+            _isLoading.value = true
+            _loadError.value = null
+
             runCatching {
                 hospitalReferenceRepository.getAll()
             }.onSuccess { hospitals ->
                 _hospitalOptions.value = hospitals
-                _loadError.value = null
             }.onFailure { error ->
                 _hospitalOptions.value = emptyList()
-                _loadError.value = error.message ?: "Unable to load hospital reference data"
+                _loadError.value =
+                    error.message ?: "Unable to load hospital reference data"
             }
+
+            _isLoading.value = false
         }
     }
 
