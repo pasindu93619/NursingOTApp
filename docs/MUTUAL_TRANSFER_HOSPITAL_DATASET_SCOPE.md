@@ -2,20 +2,21 @@
 
 ## Decision
 
-For the Mutual Transfer MVP, the Firestore `hospitals` collection is scoped to the **hospital-type records** in the Ministry of Health 2026 publication.
+For the Mutual Transfer MVP, the Firestore `hospitals` collection is scoped to the **hospital-type records in the detailed regional listings** of the Ministry of Health 2026 publication.
 
-The five separately listed **Arogya Center** records are not transfer-destination records in the MVP hospital collection. They remain part of the source inventory for future reference-data work.
+The project decision is now to use the **1,206 hospital-type records represented by the detailed regional listings**, rather than forcing the dataset to the publication summary's 1,205 arithmetic.
 
-## Current source-derived count
+The five separately listed **Arogya Center** records remain excluded from transfer destinations and remain source-reference inventory only.
 
-The Ministry summary lists these hospital-type totals:
+## Why 1,206
 
-- Tertiary Care: 55
-- Secondary Care: 81
-- Primary Care: 1,074
-- Sum of the listed hospital-type categories: **1,205**
+The Ministry summary arithmetic gives 1,205 hospital-type records, but the detailed regional listings contain one additional hospital-type record, producing 1,206.
 
-The publication's overall detailed total is 1,210. The detailed regional pages additionally contain five Arogya Center entries. The MVP therefore deliberately uses the 1,205 hospital-type records rather than forcing the Arogya Centers into the transfer-destination collection.
+The discrepancy is specifically associated with the detailed Base Hospital Type-B (BHB) listings: the summary reports 45, while the detailed regional BHB (n) declarations sum to 46.
+
+For this project, **the detailed regional listings are authoritative for the hospital record inventory**.
+
+We will not delete, reclassify, or duplicate a detailed hospital record merely to force the summary count.
 
 ## Excluded Arogya Centers
 
@@ -27,7 +28,7 @@ The detailed 2026 publication lists:
 - Mapalagama — Galle
 - Ethoya — Ratnapura
 
-These are retained as source-reference inventory only and are not silently deleted from the Ministry source.
+These remain source-reference inventory only and are not transfer destinations.
 
 ## Data-quality rules
 
@@ -39,6 +40,7 @@ These are retained as source-reference inventory only and are not silently delet
 - Non-functioning institutions must not be offered as active transfer destinations.
 - `hospitalId` is the immutable application identifier; matching does not use display names.
 - Preserve provenance: Ministry source year/reference, coordinate source, verification date, and dataset version.
+- The final dataset must contain exactly **1,206 detailed hospital-type records** before Firestore import.
 
 ## Source
 
