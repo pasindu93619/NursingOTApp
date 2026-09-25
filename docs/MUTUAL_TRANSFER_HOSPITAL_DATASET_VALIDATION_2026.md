@@ -6,16 +6,14 @@ Validation date: 2026-09-25
 
 ## Counts
 
-Total workbook rows: 1,216
+Total hospital records in workbook: 1,216
 
-Included hospital-type rows: 1,206
+Included Mutual Transfer hospital-type records: **1,206**
 
-Excluded rows:
+Excluded:
 - Arogya Center: 5
 - Special Campaign / Other: 3
 - Other Hospitals: 2
-
-Excluded total: 10
 
 ## Included category counts
 
@@ -32,24 +30,46 @@ Excluded total: 10
 - DHC: 279
 - PMCU: 577
 
-Included total: 1,206
+Included total: **1,206**
+
+## Authority
+
+The supplied workbook now provides an explicit Authority column for every included hospital record.
+
+The canonical dataset therefore preserves the supplied Authority value exactly:
+- Line Ministry
+- Provincial Ministry
+
+No additional authority inference is required for the canonical dataset.
+
+## Fields intentionally not required
+
+For this Mutual Transfer reference dataset, the project does not require:
+- HIN
+- latitude
+- longitude
+- a separately inferred functional-status field
+
+These fields will not block dataset completion.
+
+The workbook Remarks field is retained because it is source information and may contain operational notes.
 
 ## Integrity checks
 
-- Source row numbers are unique across the included records.
-- Institution-name duplicates exist in the workbook and are retained because names alone are not treated as unique identifiers.
-- No HIN values were invented.
-- No coordinates were invented.
-- Authority was not inferred where the workbook does not provide an explicit authority field.
-- Functional status was not inferred where the workbook does not explicitly provide it.
+- Source row numbers are unique across included records.
+- Institution names are not assumed to be unique.
+- Authority is present for all 1,206 included records.
+- No HIN values are invented.
+- No coordinates are invented.
 - Workbook Remarks values are preserved.
 - The five Arogya Centers are excluded from transfer destinations.
+- Special Campaign / Other and Other Hospitals are excluded from transfer destinations.
 
 ## Traceability
 
 Each canonical record uses hospitalId = MOH2026-<source row number> and retains sourceRow.
 
-The generated working artifact is:
+Canonical working artifact:
 Sri_Lanka_Hospitals_2026_Canonical_1206.csv
 
-This dataset is not yet a Firestore seed. Coordinate/HIN enrichment and final authority/status verification remain separate controlled steps.
+The canonical dataset is reference data only and is not yet a Firestore seed.
