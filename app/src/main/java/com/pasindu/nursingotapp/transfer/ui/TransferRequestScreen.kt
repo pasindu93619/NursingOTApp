@@ -400,13 +400,36 @@ private fun HospitalPickerDialog(
 ) {
     var query by remember { mutableStateOf("") }
 
-    val matchingHospitals = hospitals.filter {
-        query.isBlank() ||
-            it.name.contains(query, ignoreCase = true) ||
-            it.province.contains(query, ignoreCase = true) ||
-            it.rdhsDivision.contains(query, ignoreCase = true) ||
-            it.category.contains(query, ignoreCase = true)
+    fun normalizeSearchText(value: String): String =
+        value
+            .trim()
+            .lowercase()
+            .replace(Regex("\\s+"), " ")
+
+    val normalizedQuery = normalizeSearchText(query)
+
+    val matchingHospitals = hospitals.filter { hospital ->
+        if (normalizedQuery.isBlank()) {
+            true
+        } else {
+            val searchableText = listOf(
+                hospital.name,
+                hospital.province,
+                hospital.rdhsDivision,
+                hospital.category,
+                hospital.categoryFullName,
+                hospital.hospitalId
+            )
+                .joinToString(" ")
+                .let(::normalizeSearchText)
+
+            normalizedQuery
+                .split(" ")
+                .filter { it.isNotBlank() }
+                .all { token -> searchableText.contains(token) }
+        }
     }
+
     val visibleHospitals = matchingHospitals.take(80)
 
     Dialog(onDismissRequest = onDismiss) {
