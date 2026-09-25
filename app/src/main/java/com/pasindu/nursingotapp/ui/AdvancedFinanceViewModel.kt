@@ -236,12 +236,19 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 
     private suspend fun ensureFixedAllowances() {
-        val current = _uiState.value.compensation
+        // Read the persisted compensation row directly before writing the fixed
+        // allowances. The ViewModel state can still be null during startup even
+        // when ProfileScreen has already saved a paysheet deduction.
+        //
+        // Without this read, startup could write totalDeductions = 0.0 and
+        // overwrite the user's saved paysheet deduction before the observer
+        // delivered the existing compensation row.
+        val persisted = observeCompensation().first()
         saveFinanceCompensationUseCase(
             riskAllowance = FIXED_RISK_ALLOWANCE_RS,
             claAllowance = FIXED_CLA_ALLOWANCE_RS,
-            additionalAllowancesTotal = current?.additionalAllowancesTotal ?: 0.0,
-            totalDeductions = current?.totalDeductions ?: 0.0
+            additionalAllowancesTotal = persisted?.additionalAllowancesTotal ?: 0.0,
+            totalDeductions = persisted?.totalDeductions ?: 0.0
         )
     }
 
