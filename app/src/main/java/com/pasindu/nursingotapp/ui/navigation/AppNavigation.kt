@@ -78,6 +78,8 @@ fun AppNavigation() {
     val viewModel: NursingViewModel = hiltViewModel()
     val transferRequestViewModel: TransferRequestViewModel = hiltViewModel()
     val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
+    val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
+    val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
     val context = LocalContext.current
     val animDuration = NursingMotion.pageTransitionDurationMs
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -194,6 +196,9 @@ fun AppNavigation() {
                 TransferRequestScreen(
                     profile = viewModel.userProfile.value,
                     hospitalOptions = transferHospitalOptions,
+                    hospitalDirectoryLoading = transferHospitalLoading,
+                    hospitalDirectoryError = transferHospitalLoadError,
+                    onRetryHospitalDirectory = transferRequestViewModel::retry,
                     onBack = { navController.popBackStack() },
                     onSubmit = { _, _ ->
                         Toast.makeText(
