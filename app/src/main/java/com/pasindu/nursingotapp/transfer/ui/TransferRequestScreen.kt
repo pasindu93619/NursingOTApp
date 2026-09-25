@@ -198,8 +198,8 @@ fun TransferRequestScreen(
         }
 
         Surface(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding(),
-            Color.White,
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding(),
+            color = Color.White,
             shadowElevation = 12.dp
         ) {
             Button(
