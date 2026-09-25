@@ -685,6 +685,43 @@ private fun HospitalPickerDialog(
                         }
                     }
 
+                    normalizedQuery.isBlank() -> {
+                        Surface(
+                            Modifier.fillMaxWidth(),
+                            RoundedCornerShape(20.dp),
+                            SurfaceMuted
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Surface(
+                                    Modifier.size(42.dp),
+                                    CircleShape,
+                                    TransferBlueSoft
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Search,
+                                            null,
+                                            tint = ClinicalPrimaryColor,
+                                            modifier = Modifier.size(21.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(9.dp))
+                                Text(
+                                    "Search the hospital directory",
+                                    color = TransferInk,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    "Type a hospital name, province or RDHS division to see matching hospitals.",
+                                    color = TextSecondary,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+
                     hospitals.isEmpty() -> {
                         Surface(
                             Modifier.fillMaxWidth(),
