@@ -2,25 +2,37 @@
 
 ## Decision
 
-For the Mutual Transfer MVP, the Firestore `hospitals` collection is scoped to the **hospital-type records in the detailed regional listings** of the Ministry of Health 2026 publication.
+For the Mutual Transfer MVP, the Firestore `hospitals` collection is scoped to the **hospital-type records actually represented in the detailed regional listings** of the Sri Lanka Ministry of Health and Mass Media 2026 publication.
 
-The project decision is now to use the **1,206 hospital-type records represented by the detailed regional listings**, rather than forcing the dataset to the publication summary's 1,205 arithmetic.
+The project decision is now to use the **1,205 hospital-type records represented by the detailed regional listings**.
 
 The five separately listed **Arogya Center** records remain excluded from transfer destinations and remain source-reference inventory only.
 
-## Why 1,206
+## Source-authority rule
 
-The Ministry summary arithmetic gives 1,205 hospital-type records, but the detailed regional listings contain one additional hospital-type record, producing 1,206.
+The detailed regional tables are authoritative for the assembled hospital record inventory.
 
-The discrepancy is specifically associated with the detailed Base Hospital Type-B (BHB) listings: the summary reports 45, while the detailed regional BHB (n) declarations sum to 46.
+The publication summary contains arithmetic/category-count discrepancies relative to the detailed tables. We will not invent an additional institution or force the detailed tables to match a summary total.
 
-For this project, **the detailed regional listings are authoritative for the hospital record inventory**.
+The final dataset target is therefore **exactly 1,205 hospital-type records**.
 
-We will not delete, reclassify, or duplicate a detailed hospital record merely to force the summary count.
+## Manually reconciled source details
+
+The following source-layout issues were manually reconciled against the original PDF:
+
+- Page 7 contains both **DHA Moratuwa** and **DHA Wethara**.
+- Page 9 lists **DGH Negambo** and **DGH Gampaha**; **DGH Gampaha is Provincial Ministry**.
+- Page 28 contains **PMCU Kurumpasiddy (Instead of Palali)**.
+- Page 29 contains **PMCU Piramanthanaru (Elephantpass)**.
+- Page 30 contains **DGH Mullaitivu** and **BHA Mankulam**.
+- Page 45 contains **TH Anuradhapura**.
+- Page 50 contains **TH Badulla**.
+
+These are source reconciliation corrections, not newly invented records.
 
 ## Excluded Arogya Centers
 
-The detailed 2026 publication lists:
+The detailed 2026 publication lists these separately:
 
 - Thalpitiya — Kalutara
 - Polgollawatta — Kandy
@@ -28,7 +40,7 @@ The detailed 2026 publication lists:
 - Mapalagama — Galle
 - Ethoya — Ratnapura
 
-These remain source-reference inventory only and are not transfer destinations.
+They remain source-reference inventory only and are not transfer destinations.
 
 ## Data-quality rules
 
@@ -40,7 +52,7 @@ These remain source-reference inventory only and are not transfer destinations.
 - Non-functioning institutions must not be offered as active transfer destinations.
 - `hospitalId` is the immutable application identifier; matching does not use display names.
 - Preserve provenance: Ministry source year/reference, coordinate source, verification date, and dataset version.
-- The final dataset must contain exactly **1,206 detailed hospital-type records** before Firestore import.
+- The canonical dataset must contain exactly **1,205 detailed hospital-type records** before Firestore import.
 
 ## Source
 
