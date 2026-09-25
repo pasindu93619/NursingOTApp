@@ -17,6 +17,7 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
+import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
@@ -30,6 +31,7 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
+import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
 
 @Database(
     entities = [
@@ -46,8 +48,9 @@ import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
         ProfileDeductionEntity::class,
         SalaryStep2027Entity::class,
         PaySheetDocumentEntity::class,
+        TransferActiveCacheEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -64,6 +67,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun profileDeductionDao(): ProfileDeductionDao
     abstract fun salaryStep2027Dao(): SalaryStep2027Dao
     abstract fun paySheetDocumentDao(): PaySheetDocumentDao
+    abstract fun transferActiveCacheDao(): TransferActiveCacheDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -286,6 +290,27 @@ abstract class AppDatabase : RoomDatabase() {
                         `name` TEXT NOT NULL,
                         `amount` REAL NOT NULL,
                         `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `transfer_active_cache` (
+                        `id` INTEGER NOT NULL,
+                        `requestId` TEXT,
+                        `requestStatus` TEXT,
+                        `currentHospitalId` TEXT,
+                        `preferenceHospitalIdsJson` TEXT,
+                        `matchCycleId` TEXT,
+                        `matchType` TEXT,
+                        `matchStatus` TEXT,
+                        `matchPayloadJson` TEXT,
+                        `syncStatus` TEXT NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
                     )
                 """.trimIndent())
             }
