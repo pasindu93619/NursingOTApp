@@ -95,7 +95,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
     // Firebase foundation for Mutual Transfer.
-    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
