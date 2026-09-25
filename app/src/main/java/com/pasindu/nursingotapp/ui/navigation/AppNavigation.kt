@@ -47,6 +47,7 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
@@ -175,6 +176,12 @@ fun AppNavigation() {
             composable("care_pulse") {
                 CarePulseModernScreen(
                     onNavigate = ::navigateTo,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("transfer_identity") {
+                TransferIdentityScreen(
+                    onCompleted = { navController.navigate("home") { launchSingleTop = true } },
                     onBack = { navController.popBackStack() }
                 )
             }
