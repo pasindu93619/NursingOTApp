@@ -36,7 +36,7 @@ class HospitalReferenceJsonlParserTest {
     @Test
     fun parsesRecordWithUtf8Bom() {
         val hospital = HospitalReferenceJsonlParser.parseLine(
-            """\uFEFF{"hospitalId":"MOH2026-0003","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"TH","categoryFullName":"Teaching Hospital","name":"Apeksha Hospital","administeringAuthority":"Line Ministry","sourceYear":2026,"datasetVersion":"MOH-2026-1206"}"""
+            "\uFEFF" + """{"hospitalId":"MOH2026-0003","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"TH","categoryFullName":"Teaching Hospital","name":"Apeksha Hospital","administeringAuthority":"Line Ministry","sourceYear":2026,"datasetVersion":"MOH-2026-1206"}"""
         )
 
         requireNotNull(hospital)
