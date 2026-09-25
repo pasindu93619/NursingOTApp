@@ -92,7 +92,7 @@ class HospitalReferenceRepository @Inject constructor(
         const val DATASET_VERSION = "MOH-2026-1206"
 
         val ASSET_PARTS = (1..7).map { index ->
-            "hospitals_2026/part%02d.jsonl.gz".format(index)
+            "hospitals_2026/part%02d.jsonl.gz.data".format(index)
         }
     }
 }
