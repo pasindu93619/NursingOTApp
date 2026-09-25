@@ -31,7 +31,8 @@ object DatabaseMigrationRegistry {
         AppDatabase.MIGRATION_10_11,
         AppDatabase.MIGRATION_11_12,
         AppDatabase.MIGRATION_12_13,
-        AppDatabase.MIGRATION_13_14
+        AppDatabase.MIGRATION_13_14,
+        AppDatabase.MIGRATION_14_15
     )
 
     const val CURRENT_DATABASE_VERSION = 15
