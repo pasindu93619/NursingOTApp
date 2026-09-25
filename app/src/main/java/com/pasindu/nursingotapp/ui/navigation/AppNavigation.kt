@@ -48,6 +48,7 @@ import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
@@ -183,6 +184,19 @@ fun AppNavigation() {
                 TransferIdentityScreen(
                     onCompleted = { navController.navigate("home") { launchSingleTop = true } },
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable("transfer_request") {
+                TransferRequestScreen(
+                    profile = viewModel.userProfile.value,
+                    onBack = { navController.popBackStack() },
+                    onSubmit = { _, _ ->
+                        Toast.makeText(
+                            context,
+                            "Request UI complete. Matching submission will be wired in the next Mutual Transfer step.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 )
             }
             composable("profile") {
