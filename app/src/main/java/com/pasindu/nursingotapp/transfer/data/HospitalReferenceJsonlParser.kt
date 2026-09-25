@@ -15,7 +15,9 @@ internal object HospitalReferenceJsonlParser {
     }
 
     fun parseLine(line: String): HospitalReference? {
-        val trimmed = line.trim()
+        // Some bundled JSONL generators emit a UTF-8 BOM on the first line.
+        // Strip it before JSON parsing so one BOM cannot invalidate the whole dataset.
+        val trimmed = line.trim().removePrefix("\uFEFF")
         if (trimmed.isEmpty()) return null
 
         val obj = json.parseToJsonElement(trimmed).jsonObject
