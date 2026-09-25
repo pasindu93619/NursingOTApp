@@ -1,0 +1,50 @@
+package com.pasindu.nursingotapp.transfer.data
+
+import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+internal object HospitalReferenceJsonlParser {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = false
+    }
+
+    fun parseLine(line: String): HospitalReference? {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty()) return null
+
+        val obj = json.parseToJsonElement(trimmed).jsonObject
+
+        return HospitalReference(
+            hospitalId = required(obj, "hospitalId"),
+            province = value(obj, "province", "Province"),
+            rdhsDivision = value(obj, "rdhsDivision", "RDHS Division"),
+            category = required(obj, "category"),
+            categoryFullName = required(obj, "categoryFullName"),
+            name = required(obj, "name"),
+            administeringAuthority = value(obj, "administeringAuthority", "Authority"),
+            remarks = nullableValue(obj, "remarks", "Remarks"),
+            sourceYear = value(obj, "sourceYear")?.toIntOrNull() ?: 2026,
+            sourceReference = value(obj, "sourceReference")
+                ?: "Sri Lanka Hospitals List 2026 - All Hospitals",
+            datasetVersion = value(obj, "datasetVersion") ?: "MOH-2026-1206"
+        )
+    }
+
+    fun parseLines(lines: Sequence<String>): List<HospitalReference> =
+        lines.mapNotNull(::parseLine).toList()
+
+    private fun required(obj: JsonObject, key: String): String =
+        value(obj, key)?.takeIf { it.isNotBlank() }
+            ?: error("Hospital reference record is missing required field '$key'")
+
+    private fun value(obj: JsonObject, vararg keys: String): String? =
+        keys.firstNotNullOfOrNull { key ->
+            obj[key]?.jsonPrimitive?.contentOrNull
+        }?.trim()
+
+    private fun nullableValue(obj: JsonObject, vararg keys: String): String? =
+        value(obj, *keys)?.takeIf { it.isNotBlank() }
+}
