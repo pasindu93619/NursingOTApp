@@ -5,6 +5,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 internal object HospitalReferenceJsonlParser {
@@ -21,12 +22,12 @@ internal object HospitalReferenceJsonlParser {
 
         return HospitalReference(
             hospitalId = required(obj, "hospitalId"),
-            province = value(obj, "province", "Province"),
-            rdhsDivision = value(obj, "rdhsDivision", "RDHS Division"),
+            province = requiredAny(obj, "province", "Province"),
+            rdhsDivision = requiredAny(obj, "rdhsDivision", "RDHS Division"),
             category = required(obj, "category"),
             categoryFullName = required(obj, "categoryFullName"),
             name = required(obj, "name"),
-            administeringAuthority = value(obj, "administeringAuthority", "Authority"),
+            administeringAuthority = requiredAny(obj, "administeringAuthority", "Authority"),
             remarks = nullableValue(obj, "remarks", "Remarks"),
             sourceYear = value(obj, "sourceYear")?.toIntOrNull() ?: 2026,
             sourceReference = value(obj, "sourceReference")
@@ -41,6 +42,10 @@ internal object HospitalReferenceJsonlParser {
     private fun required(obj: JsonObject, key: String): String =
         value(obj, key)?.takeIf { it.isNotBlank() }
             ?: error("Hospital reference record is missing required field '$key'")
+
+    private fun requiredAny(obj: JsonObject, vararg keys: String): String =
+        value(obj, *keys)?.takeIf { it.isNotBlank() }
+            ?: error("Hospital reference record is missing required field: " + keys.joinToString(" / "))
 
     private fun value(obj: JsonObject, vararg keys: String): String? =
         keys.firstNotNullOfOrNull { key ->
