@@ -61,6 +61,10 @@ exports.publishVerifiedTransferProfile = onCall(
 
     const identity = identitySnapshot.data() || {};
 
+    if (identity.firebaseUid !== uid) {
+      throw new HttpsError("permission-denied", "Transfer identity ownership mismatch");
+    }
+
     if (identity.verificationMethod !== "VERIFIED") {
       throw new HttpsError(
         "permission-denied",
@@ -109,7 +113,9 @@ exports.publishVerifiedTransferProfile = onCall(
         ? 100
         : requireNonNegativeInteger(input.transferScore, "transferScore");
 
-    const contactVerified = input.contactVerified === true;
+    // Contact verification is a trusted identity property. The client cannot
+    // promote its own profile to contactVerified=true.
+    const contactVerified = identity.contactVerified === true;
 
     const profileRef = db.collection("transferProfiles").doc(serviceNo);
 
@@ -134,6 +140,13 @@ exports.publishVerifiedTransferProfile = onCall(
       if (!existing.exists) {
         transaction.create(profileRef, payload);
       } else {
+        const existingData = existing.data() || {};
+        if (existingData.firebaseUid !== uid) {
+          throw new HttpsError(
+            "already-exists",
+            "A different verified identity already owns this service number"
+          );
+        }
         transaction.update(profileRef, payload);
       }
     });
