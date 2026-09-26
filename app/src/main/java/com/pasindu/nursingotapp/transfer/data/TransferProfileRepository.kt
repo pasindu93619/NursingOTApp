@@ -2,6 +2,7 @@ package com.pasindu.nursingotapp.transfer.data
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.transfer.data.model.TransferProfileDocument
 import com.pasindu.nursingotapp.transfer.data.model.TransferVerificationStatus
@@ -23,7 +24,8 @@ import kotlinx.coroutines.tasks.await
 class TransferProfileRepository @Inject constructor(
     private val profileDao: ProfileDao,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val functions: FirebaseFunctions
 ) {
 
     suspend fun getVerificationStatus(): TransferVerificationStatus {
@@ -111,5 +113,49 @@ class TransferProfileRepository @Inject constructor(
             transferScore = transferScore,
             contactVerified = contactVerified
         )
+    }
+
+    /**
+     * Publishes the locally constructed transfer profile through the trusted
+     * Firebase Callable Function.
+     *
+     * The Android client still cannot write transferProfiles directly.
+     * The server re-checks authoritative verification and derives the
+     * canonical service number, name, and grade from the verified identity.
+     */
+    suspend fun publishVerifiedTransferProfile(
+        document: TransferProfileDocument
+    ): String {
+        val verificationStatus = getVerificationStatus()
+        check(verificationStatus == TransferVerificationStatus.Verified) {
+            "Transfer profile publication blocked: $verificationStatus"
+        }
+
+        val payload = mapOf(
+            "profile" to mapOf(
+                "serviceNo" to document.serviceNo,
+                "fullName" to document.fullName,
+                "grade" to document.grade,
+                "cadre" to document.cadre,
+                "currentHospitalId" to document.currentHospitalId,
+                "postingDate" to document.postingDate,
+                "yearsOfService" to document.yearsOfService,
+                "batchYear" to document.batchYear,
+                "transferScore" to document.transferScore,
+                "contactVerified" to document.contactVerified
+            )
+        )
+
+        val result = functions
+            .getHttpsCallable("publishVerifiedTransferProfile")
+            .call(payload)
+            .await()
+
+        @Suppress("UNCHECKED_CAST")
+        val response = result.data as? Map<String, Any?>
+            ?: error("Transfer profile publication returned an invalid response")
+
+        return response["serviceNo"] as? String
+            ?: error("Transfer profile publication response did not include serviceNo")
     }
 }
