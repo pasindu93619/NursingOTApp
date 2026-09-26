@@ -88,26 +88,68 @@ fun TransferRequestScreen(
     val preferences = remember { mutableStateListOf<HospitalReference>() }
     var pickerMode by remember { mutableStateOf<PickerMode?>(null) }
     var showProfileNotice by remember { mutableStateOf(false) }
-    val canSubmit = currentHospital != null && preferences.isNotEmpty()
 
-    Box(Modifier.fillMaxSize().background(AppBackground)) {
+    val canSubmit = currentHospital != null && preferences.isNotEmpty()
+    val progress = when {
+        currentHospital == null -> 0.33f
+        preferences.isEmpty() -> 0.66f
+        else -> 1f
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppBackground)
+    ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(18.dp, 10.dp, 18.dp, 116.dp),
-            verticalArrangement = Arrangement.spacedBy(13.dp)
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                top = 8.dp,
+                end = 18.dp,
+                bottom = 124.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Slate)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Slate
+                        )
                     }
-                    Column(Modifier.weight(1f)) {
-                        Text("Mutual Transfer", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                        Text("Create your transfer request", color = TextSecondary, fontSize = 10.sp)
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Mutual Transfer",
+                            color = TextPrimary,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            "Build your preferred transfer route",
+                            color = TextSecondary,
+                            fontSize = 10.sp
+                        )
                     }
-                    Surface(Modifier.size(40.dp), CircleShape, TransferPurpleSoft) {
+
+                    Surface(
+                        modifier = Modifier.size(42.dp),
+                        shape = CircleShape,
+                        color = TransferPurpleSoft
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.SwapHoriz, null, tint = AiAccentColor, modifier = Modifier.size(22.dp))
+                            Icon(
+                                Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                tint = AiAccentColor,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     }
                 }
@@ -115,35 +157,111 @@ fun TransferRequestScreen(
 
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth().shadow(7.dp, RoundedCornerShape(28.dp)),
-                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(8.dp, RoundedCornerShape(30.dp)),
+                    shape = RoundedCornerShape(30.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                 ) {
                     Box(
-                        Modifier.fillMaxWidth().background(ClinicalAiGradient, RoundedCornerShape(28.dp)).padding(20.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                ClinicalAiGradient,
+                                RoundedCornerShape(30.dp)
+                            )
+                            .padding(20.dp)
                     ) {
                         Column {
-                            Text("FIND YOUR NEXT", color = Color.White.copy(alpha = .76f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.8.sp)
-                            Spacer(Modifier.height(5.dp))
-                            Text("Hospital match", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
-                            Spacer(Modifier.height(5.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "MUTUAL TRANSFER",
+                                        color = Color.White.copy(alpha = .72f),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 1.7.sp
+                                    )
+                                    Spacer(Modifier.height(5.dp))
+                                    Text(
+                                        "Find your next\nhospital.",
+                                        color = Color.White,
+                                        fontSize = 27.sp,
+                                        lineHeight = 30.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+
+                                Surface(
+                                    modifier = Modifier.size(58.dp),
+                                    shape = CircleShape,
+                                    color = Color.White.copy(alpha = .13f)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(13.dp))
+
                             Text(
-                                "Tell us where you are posted and where you would like to go. Matching will use the rules defined for Mutual Transfer.",
-                                color = Color.White.copy(alpha = .88f), fontSize = 11.sp, lineHeight = 16.sp
+                                "Choose your current posting and rank the hospitals you would accept.",
+                                color = Color.White.copy(alpha = .88f),
+                                fontSize = 10.5.sp,
+                                lineHeight = 15.sp
                             )
-                            Spacer(Modifier.height(14.dp))
-                            Surface(shape = RoundedCornerShape(15.dp), color = Color.White.copy(alpha = .14f)) {
-                                Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(Modifier.size(30.dp), CircleShape, Color.White.copy(alpha = .16f)) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.SwapHoriz, null, tint = Color.White, modifier = Modifier.size(17.dp))
-                                        }
+
+                            Spacer(Modifier.height(17.dp))
+
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(17.dp),
+                                color = Color.White.copy(alpha = .13f)
+                            ) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "REQUEST SETUP",
+                                            color = Color.White.copy(alpha = .72f),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Black,
+                                            letterSpacing = 1.2.sp
+                                        )
+                                        Spacer(Modifier.weight(1f))
+                                        Text(
+                                            when {
+                                                progress >= 1f -> "READY"
+                                                currentHospital != null -> "2 OF 3"
+                                                else -> "1 OF 3"
+                                            },
+                                            color = Color.White,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
                                     }
-                                    Spacer(Modifier.width(9.dp))
-                                    Column {
-                                        Text("DIRECT 2-WAY MVP", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                                        Text("A ↔ B mutual exchange", color = Color.White.copy(alpha = .76f), fontSize = 8.sp)
-                                    }
+
+                                    Spacer(Modifier.height(8.dp))
+
+                                    androidx.compose.material3.LinearProgressIndicator(
+                                        progress = { progress },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp),
+                                        color = Color.White,
+                                        trackColor = Color.White.copy(alpha = .18f)
+                                    )
                                 }
                             }
                         }
@@ -151,49 +269,113 @@ fun TransferRequestScreen(
                 }
             }
 
-            item { ProfileContextCard(profile, { showProfileNotice = true }) }
-
-            item { TransferSectionTitle("01", "CURRENT POSTING", "Where are you posted now?", ClinicalPrimaryColor) }
             item {
-                HospitalSelectionCard(
-                    hospital = currentHospital,
-                    placeholder = "Select your current hospital",
-                    helper = "Choose from the official 2026 hospital reference list",
-                    accent = ClinicalPrimaryColor,
-                    surface = TransferBlueSoft,
-                    onClick = { pickerMode = PickerMode.CURRENT }
+                ProfileContextCard(
+                    profile = profile,
+                    onMissingProfile = { showProfileNotice = true }
                 )
             }
 
-            item { TransferSectionTitle("02", "PREFERRED DESTINATIONS", "Where would you like to go?", AiAccentColor) }
             item {
-                if (preferences.isEmpty()) {
-                    AddPreferenceCard { pickerMode = PickerMode.PREFERENCE }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        preferences.forEachIndexed { index, hospital ->
-                            PreferenceRow(index + 1, hospital) { preferences.removeAt(index) }
+                TransferStepCard(
+                    number = "01",
+                    eyebrow = "CURRENT POSTING",
+                    title = "Where are you posted now?",
+                    subtitle = "Your starting point for the mutual exchange.",
+                    accent = ClinicalPrimaryColor,
+                    completed = currentHospital != null
+                ) {
+                    HospitalSelectionCard(
+                        hospital = currentHospital,
+                        placeholder = "Select your current hospital",
+                        helper = "Official 2026 hospital reference list",
+                        accent = ClinicalPrimaryColor,
+                        surface = TransferBlueSoft,
+                        onClick = { pickerMode = PickerMode.CURRENT }
+                    )
+                }
+            }
+
+            item {
+                TransferStepCard(
+                    number = "02",
+                    eyebrow = "PREFERRED DESTINATIONS",
+                    title = "Where would you like to go?",
+                    subtitle = "Rank up to 3 destinations in the order you prefer.",
+                    accent = AiAccentColor,
+                    completed = preferences.isNotEmpty()
+                ) {
+                    if (preferences.isEmpty()) {
+                        AddPreferenceCard {
+                            pickerMode = PickerMode.PREFERENCE
                         }
-                        if (preferences.size < 3) AddPreferenceCard { pickerMode = PickerMode.PREFERENCE }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            preferences.forEachIndexed { index, hospital ->
+                                PreferenceRow(
+                                    rank = index + 1,
+                                    hospital = hospital,
+                                    onRemove = { preferences.removeAt(index) }
+                                )
+                            }
+
+                            if (preferences.size < 3) {
+                                AddPreferenceCard {
+                                    pickerMode = PickerMode.PREFERENCE
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             item {
-                Surface(Modifier.fillMaxWidth(), RoundedCornerShape(20.dp), TransferMintSoft) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
-                        Surface(Modifier.size(34.dp), CircleShape, Color.White.copy(alpha = .78f)) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = TransferMintSoft
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = .86f)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.CheckCircle, null, tint = Emerald, modifier = Modifier.size(19.dp))
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Emerald,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
+
                         Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("MATCHING RULE", color = Emerald, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                            Text("Same nursing grade is required", color = TransferInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "The MVP searches for a direct two-nurse exchange. Your grade is taken from your existing profile.",
-                                color = TextSecondary, fontSize = 9.sp, lineHeight = 13.sp
+                                "MATCHING RULE",
+                                color = Emerald,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.2.sp
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                "Same nursing grade",
+                                color = TransferInk,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                "Your grade comes from the existing nurse profile. The current MVP searches for a direct two-nurse exchange.",
+                                color = TextSecondary,
+                                fontSize = 9.sp,
+                                lineHeight = 13.sp
                             )
                         }
                     }
@@ -202,43 +384,90 @@ fun TransferRequestScreen(
         }
 
         Surface(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding(),
             color = Color.White,
-            shadowElevation = 12.dp
+            shadowElevation = 14.dp
         ) {
-            Button(
-                onClick = {
-                    val current = currentHospital ?: return@Button
-                    onSubmit(current.hospitalId, preferences.map { it.hospitalId })
-                },
-                enabled = canSubmit,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp).height(52.dp),
-                shape = RoundedCornerShape(17.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ClinicalPrimaryColor,
-                    disabledContainerColor = BorderMuted
+            Column(
+                modifier = Modifier.padding(
+                    start = 18.dp,
+                    end = 18.dp,
+                    top = 10.dp,
+                    bottom = 12.dp
                 )
             ) {
-                Icon(Icons.Default.Search, null, modifier = Modifier.size(19.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Start searching", fontSize = 14.sp, fontWeight = FontWeight.Black)
+                Text(
+                    when {
+                        currentHospital == null -> "Select your current hospital to continue"
+                        preferences.isEmpty() -> "Add at least one preferred destination"
+                        else -> "Destination preferences selected: " + preferences.size
+                    },
+                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 2.dp),
+                    color = TextSecondary,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(Modifier.height(7.dp))
+
+                Button(
+                    onClick = {
+                        val current = currentHospital ?: return@Button
+                        onSubmit(
+                            current.hospitalId,
+                            preferences.map { it.hospitalId }
+                        )
+                    },
+                    enabled = canSubmit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ClinicalPrimaryColor,
+                        disabledContainerColor = BorderMuted
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(19.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Start searching for a match",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     }
 
     if (pickerMode != null) {
         HospitalPickerDialog(
-            title = if (pickerMode == PickerMode.CURRENT) "Select current hospital" else "Add preferred hospital",
+            title = if (pickerMode == PickerMode.CURRENT) {
+                "Select current hospital"
+            } else {
+                "Add preferred hospital"
+            },
             hospitals = hospitalOptions.filterNot {
-                it.hospitalId == currentHospital?.hospitalId || preferences.any { selected -> selected.hospitalId == it.hospitalId }
+                it.hospitalId == currentHospital?.hospitalId ||
+                    preferences.any { selected -> selected.hospitalId == it.hospitalId }
             },
             isLoading = hospitalDirectoryLoading,
             loadError = hospitalDirectoryError,
             onRetry = onRetryHospitalDirectory,
             onDismiss = { pickerMode = null },
             onSelect = {
-                if (pickerMode == PickerMode.CURRENT) currentHospital = it
-                else if (preferences.size < 3) preferences.add(it)
+                if (pickerMode == PickerMode.CURRENT) {
+                    currentHospital = it
+                } else if (preferences.size < 3) {
+                    preferences.add(it)
+                }
                 pickerMode = null
             }
         )
@@ -247,7 +476,12 @@ fun TransferRequestScreen(
     if (showProfileNotice) {
         AlertDialog(
             onDismissRequest = { showProfileNotice = false },
-            title = { Text("Profile information needed", fontWeight = FontWeight.Black) },
+            title = {
+                Text(
+                    "Profile information needed",
+                    fontWeight = FontWeight.Black
+                )
+            },
             text = {
                 Text(
                     "Your existing nursing profile supplies identity and grade information for the transfer workflow. Complete your profile before creating a request.",
@@ -256,10 +490,93 @@ fun TransferRequestScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showProfileNotice = false }) {
-                    Text("OK", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                    Text(
+                        "OK",
+                        color = ClinicalPrimaryColor,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun TransferStepCard(
+    number: String,
+    eyebrow: String,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    completed: Boolean,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Surface(
+                    modifier = Modifier.size(34.dp),
+                    shape = CircleShape,
+                    color = accent.copy(alpha = .12f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            number,
+                            color = accent,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        eyebrow,
+                        color = accent,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        title,
+                        color = TextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        subtitle,
+                        color = TextSecondary,
+                        fontSize = 9.sp,
+                        lineHeight = 13.sp
+                    )
+                }
+
+                if (completed) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Completed",
+                        tint = Emerald,
+                        modifier = Modifier
+                            .padding(top = 3.dp)
+                            .size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            content()
+        }
     }
 }
 
