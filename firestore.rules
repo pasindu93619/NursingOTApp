@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /*
+     * Mutual Transfer identity boundary.
+     *
+     * Self-declared identity may be created/updated only by the
+     * authenticated Firebase user who owns the document.
+     *
+     * The client can never create or promote an identity to VERIFIED.
+     */
+    match /transferIdentities/{userId} {
+      allow read: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.verificationMethod == 'SELF_DECLARED'
+        && !request.resource.data.keys().hasAny([
+          'verifiedServiceNo'
+        ]);
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == request.auth.uid
+        && resource.data.verificationMethod == 'SELF_DECLARED'
+        && request.resource.data.verificationMethod == 'SELF_DECLARED'
+        && !request.resource.data.keys().hasAny([
+          'verifiedServiceNo'
+        ]);
+    }
+
+    /*
+     * Transfer profiles are deliberately not client-writable/readable yet.
+     *
+     * Publication will be opened only through the authoritative
+     * verification/server boundary in a later incremental step.
+     */
+    match /transferProfiles/{serviceNo} {
+      allow read, write: if false;
+    }
+
+    /*
+     * Deny every other collection until its explicit security contract
+     * is implemented.
+     */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
