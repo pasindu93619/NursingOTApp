@@ -255,7 +255,7 @@ fun TransferRequestScreen(
                                     Spacer(Modifier.height(8.dp))
 
                                     androidx.compose.material3.LinearProgressIndicator(
-                                        progress = { progress },
+                                        progress = progress,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(6.dp),
