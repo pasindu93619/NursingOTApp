@@ -49,7 +49,13 @@ data class AdvancedFinanceUiState(
     val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
     val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
-    val paysheetDeductions: Double get() = deductions.sumOf { it.amount.coerceAtLeast(0.0) }
+    /**
+     * Total Paysheet Deductions is the authoritative payroll aggregate entered
+     * on the nurse profile. Claim-period named deduction rows are kept separate
+     * and must never replace or double-count this paysheet total.
+     */
+    val paysheetDeductions: Double
+        get() = compensation?.totalDeductions?.coerceAtLeast(0.0) ?: 0.0
     val otRate: Double get() = payRateSettings?.otRate?.coerceAtLeast(0.0) ?: 0.0
     val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
     val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
@@ -63,7 +69,8 @@ data class AdvancedFinanceUiState(
     val doAmountRs: Double get() = totalDODays * doRate
     val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
     val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
-    val hasEnteredDeductions: Boolean get() = deductions.isNotEmpty()
+    val hasEnteredDeductions: Boolean
+        get() = (compensation?.totalDeductions ?: 0.0) > 0.0
     val workloadTargetHours: Double get() = fullWeeks * 36.0
     val dutyProgress36Hours: Float get() = if (workloadTargetHours <= 0.0) 0f else (totalNormalHours / workloadTargetHours).coerceIn(0.0, 1.0).toFloat()
 }

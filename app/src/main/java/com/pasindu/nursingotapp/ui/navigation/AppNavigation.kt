@@ -22,6 +22,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -47,6 +48,9 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferRequestViewModel
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
@@ -72,6 +76,10 @@ private val rootDestinations = listOf(
 fun AppNavigation() {
     val navController = rememberNavController()
     val viewModel: NursingViewModel = hiltViewModel()
+    val transferRequestViewModel: TransferRequestViewModel = hiltViewModel()
+    val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
+    val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
+    val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
     val context = LocalContext.current
     val animDuration = NursingMotion.pageTransitionDurationMs
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -178,11 +186,37 @@ fun AppNavigation() {
                     onBack = { navController.popBackStack() }
                 )
             }
+            composable("transfer_identity") {
+                TransferIdentityScreen(
+                    onCompleted = { navController.navigate("home") { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("transfer_request") {
+                TransferRequestScreen(
+                    profile = viewModel.userProfile.value,
+                    hospitalOptions = transferHospitalOptions,
+                    hospitalDirectoryLoading = transferHospitalLoading,
+                    hospitalDirectoryError = transferHospitalLoadError,
+                    onRetryHospitalDirectory = transferRequestViewModel::retry,
+                    onBack = { navController.popBackStack() },
+                    onSubmit = { _, _ ->
+                        Toast.makeText(
+                            context,
+                            "Request UI complete. Matching submission will be wired in the next Mutual Transfer step.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            }
             composable("profile") {
                 ProfileScreen(
                     viewModel = viewModel,
                     onNavigateToClaimPeriod = { _, _ ->
-                        navController.popBackStack("claim_period", inclusive = false)
+                        navController.navigate("claim_period") {
+                            popUpTo("profile") { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

@@ -12,6 +12,7 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
+import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -58,4 +59,7 @@ object DaoModule {
 
     @Provides
     fun providePaySheetDocumentDao(database: AppDatabase): PaySheetDocumentDao = database.paySheetDocumentDao()
+
+    @Provides
+    fun provideTransferActiveCacheDao(database: AppDatabase): TransferActiveCacheDao = database.transferActiveCacheDao()
 }
