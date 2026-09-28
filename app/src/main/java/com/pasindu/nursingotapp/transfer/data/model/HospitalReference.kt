@@ -22,6 +22,9 @@ data class HospitalReference(
     val name: String = "",
     val administeringAuthority: String = "",
     val remarks: String? = null,
+    val district: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val sourceYear: Int = 2026,
     val sourceReference: String = "Sri Lanka Hospitals List 2026 - All Hospitals",
     val datasetVersion: String = "MOH-2026-1206"

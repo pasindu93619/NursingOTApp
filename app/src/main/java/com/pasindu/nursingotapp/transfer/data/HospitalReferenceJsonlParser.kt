@@ -31,6 +31,9 @@ internal object HospitalReferenceJsonlParser {
             name = required(obj, "name"),
             administeringAuthority = requiredAny(obj, "administeringAuthority", "Authority"),
             remarks = nullableValue(obj, "remarks", "Remarks"),
+            district = nullableValue(obj, "district", "District"),
+            latitude = doubleValue(obj, "latitude", "Latitude"),
+            longitude = doubleValue(obj, "longitude", "Longitude"),
             sourceYear = value(obj, "sourceYear")?.toIntOrNull() ?: 2026,
             sourceReference = value(obj, "sourceReference")
                 ?: "Sri Lanka Hospitals List 2026 - All Hospitals",
@@ -58,4 +61,11 @@ internal object HospitalReferenceJsonlParser {
 
     private fun nullableValue(obj: JsonObject, vararg keys: String): String? =
         value(obj, *keys)?.takeIf { it.isNotBlank() }
+
+    private fun doubleValue(obj: JsonObject, vararg keys: String): Double? {
+        val raw = nullableValue(obj, *keys) ?: return null
+        val parsed = raw.toDoubleOrNull() ?: return null
+        if (parsed == 0.0) return null
+        return parsed
+    }
 }

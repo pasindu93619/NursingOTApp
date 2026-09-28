@@ -47,4 +47,57 @@ class HospitalReferenceJsonlParserTest {
     fun ignoresBlankLines() {
         assertNull(HospitalReferenceJsonlParser.parseLine("   "))
     }
+
+    @Test
+    fun parsesDistrictLatitudeAndLongitude() {
+        val hospital = HospitalReferenceJsonlParser.parseLine(
+            """{"hospitalId":"MOH2026-0001","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"NH","categoryFullName":"National Hospital","name":"NHSL","administeringAuthority":"Line Ministry","district":"Colombo","latitude":6.9183276,"longitude":79.8683654}"""
+        )
+
+        requireNotNull(hospital)
+        assertEquals("Colombo", hospital.district)
+        assertEquals(6.9183276, hospital.latitude)
+        assertEquals(79.8683654, hospital.longitude)
+    }
+
+    @Test
+    fun acceptsSourceCapitalizedGeographicFieldNames() {
+        val hospital = HospitalReferenceJsonlParser.parseLine(
+            """{"hospitalId":"MOH2026-0001","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"NH","categoryFullName":"National Hospital","name":"NHSL","administeringAuthority":"Line Ministry","District":"Colombo","Latitude":"6.9183276","Longitude":"79.8683654"}"""
+        )
+
+        requireNotNull(hospital)
+        assertEquals("Colombo", hospital.district)
+        assertEquals(6.9183276, hospital.latitude)
+        assertEquals(79.8683654, hospital.longitude)
+    }
+
+    @Test
+    fun preservesNullForMissingGeographicFields() {
+        val hospital = HospitalReferenceJsonlParser.parseLine(
+            """{"hospitalId":"MOH2026-0020","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"DHB","categoryFullName":"Divisional Hospital Type B","name":"DHB Padukka","administeringAuthority":"Provincial Ministry","district":null,"latitude":null,"longitude":null}"""
+        )
+
+        requireNotNull(hospital)
+        assertNull(hospital.district)
+        assertNull(hospital.latitude)
+        assertNull(hospital.longitude)
+    }
+
+    @Test
+    fun handlesInvalidCoordinatesAsNull() {
+        val nonNumeric = HospitalReferenceJsonlParser.parseLine(
+            """{"hospitalId":"MOH2026-0020","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"DHB","categoryFullName":"Divisional Hospital Type B","name":"DHB Padukka","administeringAuthority":"Provincial Ministry","latitude":"invalid","longitude":"unknown"}"""
+        )
+        requireNotNull(nonNumeric)
+        assertNull(nonNumeric.latitude)
+        assertNull(nonNumeric.longitude)
+
+        val zeroCoordinate = HospitalReferenceJsonlParser.parseLine(
+            """{"hospitalId":"MOH2026-0020","province":"Western Province","rdhsDivision":"RDHS Colombo","category":"DHB","categoryFullName":"Divisional Hospital Type B","name":"DHB Padukka","administeringAuthority":"Provincial Ministry","latitude":0.0,"longitude":0.0}"""
+        )
+        requireNotNull(zeroCoordinate)
+        assertNull(zeroCoordinate.latitude)
+        assertNull(zeroCoordinate.longitude)
+    }
 }

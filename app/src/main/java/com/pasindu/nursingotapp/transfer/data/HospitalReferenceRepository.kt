@@ -49,11 +49,13 @@ class HospitalReferenceRepository @Inject constructor(
     suspend fun search(
         query: String = "",
         province: String? = null,
-        authority: String? = null
+        authority: String? = null,
+        district: String? = null
     ): List<HospitalReference> {
         val normalizedQuery = query.trim().lowercase()
         val normalizedProvince = province?.trim()?.lowercase()
         val normalizedAuthority = authority?.trim()?.lowercase()
+        val normalizedDistrict = district?.trim()?.lowercase()
 
         return getAll().asSequence()
             .filter { hospital ->
@@ -62,7 +64,8 @@ class HospitalReferenceRepository @Inject constructor(
                     hospital.hospitalId.lowercase().contains(normalizedQuery) ||
                     hospital.category.lowercase().contains(normalizedQuery) ||
                     hospital.categoryFullName.lowercase().contains(normalizedQuery) ||
-                    hospital.rdhsDivision.lowercase().contains(normalizedQuery)
+                    hospital.rdhsDivision.lowercase().contains(normalizedQuery) ||
+                    (hospital.district?.lowercase()?.contains(normalizedQuery) == true)
             }
             .filter { hospital ->
                 normalizedProvince.isNullOrBlank() ||
@@ -71,6 +74,10 @@ class HospitalReferenceRepository @Inject constructor(
             .filter { hospital ->
                 normalizedAuthority.isNullOrBlank() ||
                     hospital.administeringAuthority.lowercase() == normalizedAuthority
+            }
+            .filter { hospital ->
+                normalizedDistrict.isNullOrBlank() ||
+                    hospital.district?.lowercase() == normalizedDistrict
             }
             .toList()
     }
