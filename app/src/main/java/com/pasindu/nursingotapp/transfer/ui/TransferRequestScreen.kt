@@ -1,5 +1,7 @@
 package com.pasindu.nursingotapp.transfer.ui
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +29,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -37,9 +39,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
@@ -64,6 +68,8 @@ import com.pasindu.nursingotapp.ui.theme.BorderMuted
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.Emerald
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
+import com.pasindu.nursingotapp.ui.theme.NursingMotion
 import com.pasindu.nursingotapp.ui.theme.Slate
 import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
@@ -74,6 +80,24 @@ private val TransferBlueSoft = Color(0xFFEAF6FF)
 private val TransferPurpleSoft = Color(0xFFF3EEFF)
 private val TransferMintSoft = Color(0xFFEAFBF5)
 private val TransferInk = Color(0xFF12204A)
+
+/**
+ * Formats a hospital's geographic location as "District • Province" or "RDHS • Province".
+ * Strictly respects privacy and geographic standards: never exposes raw coordinates or 0.0.
+ */
+private fun formatHospitalLocation(hospital: HospitalReference): String {
+    val district = hospital.district?.trim()?.takeIf { it.isNotEmpty() }
+    val rdhs = hospital.rdhsDivision.trim().takeIf { it.isNotEmpty() }
+    val province = hospital.province.trim().takeIf { it.isNotEmpty() }
+
+    val primaryRegion = when {
+        district != null -> if (district.endsWith("District", ignoreCase = true)) district else "$district District"
+        rdhs != null -> rdhs
+        else -> null
+    }
+
+    return listOfNotNull(primaryRegion, province).joinToString(" • ")
+}
 
 @Composable
 fun TransferRequestScreen(
@@ -117,7 +141,10 @@ fun TransferRequestScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                    ) {
                         Icon(
                             Icons.Default.ArrowBack,
                             contentDescription = "Back",
@@ -135,7 +162,7 @@ fun TransferRequestScreen(
                         Text(
                             "Build your preferred transfer route",
                             color = TextSecondary,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
                     }
 
@@ -217,7 +244,7 @@ fun TransferRequestScreen(
                             Text(
                                 "Choose your current posting and rank the hospitals you would accept.",
                                 color = Color.White.copy(alpha = .88f),
-                                fontSize = 10.5.sp,
+                                fontSize = 11.sp,
                                 lineHeight = 15.sp
                             )
 
@@ -236,26 +263,26 @@ fun TransferRequestScreen(
                                         Text(
                                             "REQUEST SETUP",
                                             color = Color.White.copy(alpha = .72f),
-                                            fontSize = 8.sp,
+                                            fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black,
                                             letterSpacing = 1.2.sp
                                         )
                                         Spacer(Modifier.weight(1f))
                                         Text(
                                             when {
-                                                progress >= 1f -> "READY"
+                                                progress >= 1f -> "READY (3 OF 3)"
                                                 currentHospital != null -> "2 OF 3"
                                                 else -> "1 OF 3"
                                             },
                                             color = Color.White,
-                                            fontSize = 8.sp,
+                                            fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black
                                         )
                                     }
 
                                     Spacer(Modifier.height(8.dp))
 
-                                    androidx.compose.material3.LinearProgressIndicator(
+                                    LinearProgressIndicator(
                                         progress = progress,
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -306,23 +333,91 @@ fun TransferRequestScreen(
                     accent = AiAccentColor,
                     completed = preferences.isNotEmpty()
                 ) {
-                    if (preferences.isEmpty()) {
-                        AddPreferenceCard {
-                            pickerMode = PickerMode.PREFERENCE
-                        }
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            preferences.forEachIndexed { index, hospital ->
-                                PreferenceRow(
-                                    rank = index + 1,
-                                    hospital = hospital,
-                                    onRemove = { preferences.removeAt(index) }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(
+                                animationSpec = tween(
+                                    durationMillis = NursingMotion.listItemDurationMs,
+                                    easing = NursingMotion.standardEasing
                                 )
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(9.dp)
+                    ) {
+                        // Preference Progress (1/3, 2/3, 3/3)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                repeat(3) { index ->
+                                    val isFilled = index < preferences.size
+                                    Box(
+                                        modifier = Modifier
+                                            .width(36.dp)
+                                            .height(5.dp)
+                                            .background(
+                                                color = if (isFilled) AiAccentColor else BorderMuted.copy(alpha = 0.5f),
+                                                shape = RoundedCornerShape(NursingDimensions.Radius.pill)
+                                            )
+                                    )
+                                }
                             }
 
-                            if (preferences.size < 3) {
-                                AddPreferenceCard {
-                                    pickerMode = PickerMode.PREFERENCE
+                            Surface(
+                                shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                                color = if (preferences.size == 3) Emerald.copy(alpha = 0.12f) else TransferPurpleSoft
+                            ) {
+                                Text(
+                                    text = "${preferences.size} / 3 selected",
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    color = if (preferences.size == 3) Emerald else AiAccentColor,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        preferences.forEachIndexed { index, hospital ->
+                            PreferenceRow(
+                                rank = index + 1,
+                                hospital = hospital,
+                                onRemove = { preferences.removeAt(index) }
+                            )
+                        }
+
+                        if (preferences.size < 3) {
+                            AddPreferenceCard(currentCount = preferences.size) {
+                                pickerMode = PickerMode.PREFERENCE
+                            }
+                        } else {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                color = TransferMintSoft,
+                                border = BorderStroke(1.dp, Emerald.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Emerald,
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "All 3 preferences selected. Remove an option to swap.",
+                                        color = TransferInk,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
@@ -361,7 +456,7 @@ fun TransferRequestScreen(
                             Text(
                                 "MATCHING RULE",
                                 color = Emerald,
-                                fontSize = 8.sp,
+                                fontSize = 8.5.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.2.sp
                             )
@@ -369,14 +464,14 @@ fun TransferRequestScreen(
                             Text(
                                 "Same nursing grade",
                                 color = TransferInk,
-                                fontSize = 12.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
                                 "Your grade comes from the existing nurse profile. The current MVP searches for a direct two-nurse exchange.",
                                 color = TextSecondary,
-                                fontSize = 9.sp,
-                                lineHeight = 13.sp
+                                fontSize = 9.5.sp,
+                                lineHeight = 13.5.sp
                             )
                         }
                     }
@@ -396,23 +491,41 @@ fun TransferRequestScreen(
                 modifier = Modifier.padding(
                     start = 18.dp,
                     end = 18.dp,
-                    top = 10.dp,
-                    bottom = 12.dp
+                    top = 11.dp,
+                    bottom = 13.dp
                 )
             ) {
-                Text(
-                    when {
-                        currentHospital == null -> "Select your current hospital to continue"
-                        preferences.isEmpty() -> "Add at least one preferred destination"
-                        else -> "Destination preferences selected: " + preferences.size
-                    },
-                    modifier = Modifier.padding(horizontal = 3.dp, vertical = 2.dp),
-                    color = TextSecondary,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(8.dp),
+                        shape = CircleShape,
+                        color = when {
+                            canSubmit -> Emerald
+                            currentHospital == null -> ClinicalPrimaryColor
+                            else -> AiAccentColor
+                        }
+                    ) {}
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = when {
+                            currentHospital == null -> "Step 1 of 2: Select your current posting to continue"
+                            preferences.isEmpty() -> "Step 2 of 2: Add at least 1 destination preference"
+                            else -> "Ready to search • ${preferences.size} of 3 destination${if (preferences.size > 1) "s" else ""} ranked"
+                        },
+                        color = when {
+                            canSubmit -> Emerald
+                            currentHospital == null -> TextSecondary
+                            else -> AiAccentColor
+                        },
+                        fontSize = 10.5.sp,
+                        fontWeight = if (canSubmit) FontWeight.Bold else FontWeight.SemiBold
+                    )
+                }
 
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Button(
                     onClick = {
@@ -429,18 +542,19 @@ fun TransferRequestScreen(
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ClinicalPrimaryColor,
-                        disabledContainerColor = BorderMuted
+                        disabledContainerColor = BorderMuted.copy(alpha = 0.7f),
+                        disabledContentColor = Color.White.copy(alpha = 0.8f)
                     )
                 ) {
                     Icon(
                         Icons.Default.Search,
                         contentDescription = null,
-                        modifier = Modifier.size(19.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "Start searching for a match",
-                        fontSize = 14.sp,
+                        fontSize = 14.5.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
@@ -490,7 +604,10 @@ fun TransferRequestScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showProfileNotice = false }) {
+                TextButton(
+                    onClick = { showProfileNotice = false },
+                    modifier = Modifier.defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum)
+                ) {
                     Text(
                         "OK",
                         color = ClinicalPrimaryColor,
@@ -518,7 +635,7 @@ private fun TransferStepCard(
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.padding(15.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
@@ -526,13 +643,13 @@ private fun TransferStepCard(
                 Surface(
                     modifier = Modifier.size(34.dp),
                     shape = CircleShape,
-                    color = accent.copy(alpha = .12f)
+                    color = if (completed) Emerald.copy(alpha = .14f) else accent.copy(alpha = .12f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             number,
-                            color = accent,
-                            fontSize = 9.sp,
+                            color = if (completed) Emerald else accent,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -543,8 +660,8 @@ private fun TransferStepCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         eyebrow,
-                        color = accent,
-                        fontSize = 8.sp,
+                        color = if (completed) Emerald else accent,
+                        fontSize = 8.5.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.2.sp
                     )
@@ -558,8 +675,8 @@ private fun TransferStepCard(
                     Text(
                         subtitle,
                         color = TextSecondary,
-                        fontSize = 9.sp,
-                        lineHeight = 13.sp
+                        fontSize = 9.5.sp,
+                        lineHeight = 13.5.sp
                     )
                 }
 
@@ -575,7 +692,7 @@ private fun TransferStepCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(13.dp))
             content()
         }
     }
@@ -586,8 +703,8 @@ private enum class PickerMode { CURRENT, PREFERENCE }
 @Composable
 private fun ProfileContextCard(profile: ProfileEntity?, onMissingProfile: () -> Unit) {
     Card(
-        Modifier.fillMaxWidth(),
-        RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -602,36 +719,43 @@ private fun ProfileContextCard(profile: ProfileEntity?, onMissingProfile: () -> 
             }
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
-                Text("YOUR NURSING PROFILE", color = AiAccentColor, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Text(
+                    "YOUR NURSING PROFILE",
+                    color = AiAccentColor,
+                    fontSize = 8.5.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.2.sp
+                )
+                Spacer(Modifier.height(2.dp))
                 Text(
                     if (profile == null) "Profile not completed" else profile.fullName.ifBlank { "Profile ready" },
-                    color = TransferInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                    color = TransferInk,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     if (profile == null) "Grade is required for matching" else "Grade: " + profile.grade,
-                    color = TextSecondary, fontSize = 9.sp
+                    color = TextSecondary,
+                    fontSize = 9.5.sp
                 )
             }
             if (profile == null) {
-                TextButton(onClick = onMissingProfile) { Text("Review", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold) }
+                TextButton(
+                    onClick = onMissingProfile,
+                    modifier = Modifier.defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum)
+                ) {
+                    Text("Review", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                }
             } else {
-                Icon(Icons.Default.CheckCircle, null, tint = Emerald, modifier = Modifier.size(22.dp))
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = "Profile ready",
+                    tint = Emerald,
+                    modifier = Modifier.size(22.dp)
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun TransferSectionTitle(number: String, eyebrow: String, title: String, accent: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(Modifier.size(31.dp), CircleShape, accent.copy(alpha = .12f)) {
-            Box(contentAlignment = Alignment.Center) { Text(number, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-        }
-        Spacer(Modifier.width(9.dp))
-        Column {
-            Text(eyebrow, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-            Text(title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -645,72 +769,370 @@ private fun HospitalSelectionCard(
     surface: Color,
     onClick: () -> Unit
 ) {
-    Surface(
-        Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp)).clickable(onClick = onClick),
-        RoundedCornerShape(20.dp), surface
-    ) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(43.dp), CircleShape, Color.White.copy(alpha = .82f)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.LocalHospital, null, tint = accent, modifier = Modifier.size(22.dp))
+    if (hospital == null) {
+        // UNSELECTED STATE
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 72.dp)
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(20.dp),
+            color = surface,
+            border = BorderStroke(1.5.dp, accent.copy(alpha = 0.22f))
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = .9f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.LocalHospital,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        placeholder,
+                        color = TransferInk,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        helper,
+                        color = TextSecondary,
+                        fontSize = 9.5.sp
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                    color = Color.White.copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Select",
+                            color = accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                 }
             }
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    hospital?.name ?: placeholder,
-                    color = if (hospital == null) TextSecondary else TransferInk,
-                    fontSize = 12.sp, fontWeight = FontWeight.ExtraBold,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    hospital?.let { it.categoryFullName.ifBlank { it.category } + " • " + it.province } ?: helper,
-                    color = TextSecondary, fontSize = 8.5.sp
-                )
+        }
+    } else {
+        // SELECTED STATE
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 78.dp)
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            border = BorderStroke(1.5.dp, accent.copy(alpha = 0.35f)),
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    shape = CircleShape,
+                    color = surface
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.LocalHospital,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(5.dp),
+                            color = surface
+                        ) {
+                            Text(
+                                hospital.category,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                color = accent,
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (hospital.administeringAuthority.isNotBlank()) {
+                            Text(
+                                hospital.administeringAuthority,
+                                color = TextSecondary,
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        hospital.name,
+                        color = TransferInk,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val locationText = formatHospitalLocation(hospital)
+                    if (locationText.isNotBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            locationText,
+                            color = TextSecondary,
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                    color = surface,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Change",
+                            color = accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                }
             }
-            Icon(Icons.Default.ChevronRight, null, tint = accent, modifier = Modifier.size(20.dp))
         }
     }
 }
 
 @Composable
-private fun PreferenceRow(rank: Int, hospital: HospitalReference, onRemove: () -> Unit) {
+private fun PreferenceRow(
+    rank: Int,
+    hospital: HospitalReference,
+    onRemove: () -> Unit
+) {
+    val rankLabel = when (rank) {
+        1 -> "1st"
+        2 -> "2nd"
+        3 -> "3rd"
+        else -> "#$rank"
+    }
+    val rankTitle = when (rank) {
+        1 -> "1st Choice"
+        2 -> "2nd Choice"
+        3 -> "3rd Choice"
+        else -> "Choice $rank"
+    }
+
     Surface(
-        Modifier.fillMaxWidth(),
-        RoundedCornerShape(18.dp),
-        Color.White,
-        border = BorderStroke(1.dp, BorderMuted.copy(alpha = .7f))
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 70.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, BorderMuted.copy(alpha = .7f)),
+        shadowElevation = 1.dp
     ) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.DragHandle, null, tint = BorderMuted, modifier = Modifier.size(19.dp))
-            Surface(Modifier.size(29.dp), CircleShape, TransferPurpleSoft) {
-                Box(contentAlignment = Alignment.Center) { Text(rank.toString(), color = AiAccentColor, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                color = TransferPurpleSoft
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        rankLabel,
+                        color = AiAccentColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
-            Spacer(Modifier.width(9.dp))
+
+            Spacer(Modifier.width(10.dp))
+
             Column(Modifier.weight(1f)) {
-                Text(hospital.name, color = TransferInk, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(hospital.category + " • " + hospital.province, color = TextSecondary, fontSize = 8.sp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(5.dp),
+                        color = TransferPurpleSoft
+                    ) {
+                        Text(
+                            rankTitle,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            color = AiAccentColor,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(5.dp),
+                        color = SurfaceMuted
+                    ) {
+                        Text(
+                            hospital.category,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            color = TextSecondary,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    hospital.name,
+                    color = TransferInk,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val locationText = formatHospitalLocation(hospital)
+                if (locationText.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        locationText,
+                        color = TextSecondary,
+                        fontSize = 9.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Default.Close, "Remove preference", tint = TextSecondary, modifier = Modifier.size(18.dp))
+
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+            ) {
+                Surface(
+                    modifier = Modifier.size(28.dp),
+                    shape = CircleShape,
+                    color = SurfaceMuted
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Remove preference $rank: ${hospital.name}",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun AddPreferenceCard(onClick: () -> Unit) {
-    Surface(Modifier.fillMaxWidth().clickable(onClick = onClick), RoundedCornerShape(18.dp), TransferPurpleSoft) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(40.dp), CircleShape, Color.White.copy(alpha = .82f)) {
-                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = AiAccentColor, modifier = Modifier.size(20.dp)) }
+private fun AddPreferenceCard(
+    currentCount: Int,
+    onClick: () -> Unit
+) {
+    val (title, subtitle) = when (currentCount) {
+        0 -> "Add 1st preferred hospital" to "Choose your top target destination (rank 1 of 3)"
+        1 -> "Add 2nd preferred hospital" to "Optional next preference (rank 2 of 3)"
+        2 -> "Add 3rd preferred hospital" to "Final target destination (rank 3 of 3)"
+        else -> "Add preferred hospital" to "Rank up to 3 destinations"
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 62.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = TransferPurpleSoft,
+        border = BorderStroke(1.dp, AiAccentColor.copy(alpha = 0.22f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = Color.White.copy(alpha = .86f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = AiAccentColor,
+                        modifier = Modifier.size(21.dp)
+                    )
+                }
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("Add preferred hospital", color = TransferInk, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Rank up to 3 destinations", color = TextSecondary, fontSize = 8.5.sp)
+                Text(
+                    title,
+                    color = TransferInk,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    subtitle,
+                    color = TextSecondary,
+                    fontSize = 9.sp
+                )
             }
-            Icon(Icons.Default.ChevronRight, null, tint = AiAccentColor, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = AiAccentColor,
+                modifier = Modifier.size(19.dp)
+            )
         }
     }
 }
@@ -745,7 +1167,8 @@ private fun HospitalPickerDialog(
                 hospital.rdhsDivision,
                 hospital.category,
                 hospital.categoryFullName,
-                hospital.hospitalId
+                hospital.hospitalId,
+                hospital.district ?: ""
             )
                 .joinToString(" ")
                 .let(::normalizeSearchText)
@@ -787,7 +1210,7 @@ private fun HospitalPickerDialog(
                         Text(
                             title,
                             color = TransferInk,
-                            fontSize = 21.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Black
                         )
                         Text(
@@ -797,23 +1220,28 @@ private fun HospitalPickerDialog(
                         )
                     }
 
-                    Surface(
-                        modifier = Modifier.size(38.dp),
-                        shape = CircleShape,
-                        color = SurfaceMuted
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
                     ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(19.dp)
-                            )
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = SurfaceMuted
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(13.dp))
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -829,7 +1257,7 @@ private fun HospitalPickerDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            modifier = Modifier.size(40.dp),
+                            modifier = Modifier.size(38.dp),
                             shape = CircleShape,
                             color = ClinicalPrimaryColor
                         ) {
@@ -838,7 +1266,7 @@ private fun HospitalPickerDialog(
                                     Icons.Default.Search,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
@@ -852,14 +1280,17 @@ private fun HospitalPickerDialog(
                             singleLine = true,
                             placeholder = {
                                 Text(
-                                    "Hospital, province or RDHS",
+                                    "Hospital, district, province, RDHS",
                                     color = TextSecondary.copy(alpha = .78f),
                                     fontSize = 11.sp
                                 )
                             },
                             trailingIcon = {
                                 if (query.isNotEmpty()) {
-                                    IconButton(onClick = { query = "" }) {
+                                    IconButton(
+                                        onClick = { query = "" },
+                                        modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                                    ) {
                                         Icon(
                                             Icons.Default.Close,
                                             contentDescription = "Clear search",
@@ -870,7 +1301,7 @@ private fun HospitalPickerDialog(
                                 }
                             },
                             shape = RoundedCornerShape(16.dp),
-                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = ClinicalPrimaryColor,
                                 unfocusedBorderColor = Color.Transparent,
                                 focusedContainerColor = Color.White.copy(alpha = .72f),
@@ -900,15 +1331,15 @@ private fun HospitalPickerDialog(
                             },
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             color = AiAccentColor,
-                            fontSize = 8.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
 
-                    Spacer(Modifier.width(7.dp))
+                    Spacer(Modifier.width(8.dp))
 
                     Text(
-                        if (query.isBlank()) "Start typing to narrow the list"
+                        if (query.isBlank()) "Type hospital name, district, or province"
                         else if (matchingHospitals.size > 80) "Showing first 80 results"
                         else "Tap a hospital to select",
                         color = TextSecondary,
@@ -992,7 +1423,10 @@ private fun HospitalPickerDialog(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.height(7.dp))
-                                TextButton(onClick = onRetry) {
+                                TextButton(
+                                    onClick = onRetry,
+                                    modifier = Modifier.defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum)
+                                ) {
                                     Text(
                                         "Retry",
                                         color = ClinicalPrimaryColor,
@@ -1032,7 +1466,7 @@ private fun HospitalPickerDialog(
                                     fontWeight = FontWeight.Black
                                 )
                                 Text(
-                                    "Type a hospital name, province or RDHS division to see matching hospitals.",
+                                    "Type a hospital name, district, province or RDHS division to find eligible transfer destinations.",
                                     color = TextSecondary,
                                     fontSize = 9.sp
                                 )
@@ -1072,7 +1506,7 @@ private fun HospitalPickerDialog(
                                     if (query.isBlank()) {
                                         "The hospital directory loaded successfully but contains no selectable records."
                                     } else {
-                                        "Try a hospital name, province or RDHS division."
+                                        "Try a hospital name, district, province or RDHS division."
                                     },
                                     color = TextSecondary,
                                     fontSize = 9.sp
@@ -1110,7 +1544,7 @@ private fun HospitalPickerDialog(
                                     fontWeight = FontWeight.Black
                                 )
                                 Text(
-                                    "No hospital matches \"$query\". Try a hospital name, province or RDHS division.",
+                                    "No hospital matches \"$query\". Try a hospital name, district, province or RDHS division.",
                                     color = TextSecondary,
                                     fontSize = 9.sp
                                 )
@@ -1129,6 +1563,7 @@ private fun HospitalPickerDialog(
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .defaultMinSize(minHeight = 64.dp)
                                         .clickable { onSelect(hospital) },
                                     shape = RoundedCornerShape(18.dp),
                                     color = Color.White,
@@ -1139,13 +1574,13 @@ private fun HospitalPickerDialog(
                                 ) {
                                     Row(
                                         Modifier.padding(
-                                            horizontal = 11.dp,
-                                            vertical = 10.dp
+                                            horizontal = 12.dp,
+                                            vertical = 11.dp
                                         ),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Surface(
-                                            Modifier.size(39.dp),
+                                            Modifier.size(38.dp),
                                             CircleShape,
                                             TransferBlueSoft
                                         ) {
@@ -1162,40 +1597,71 @@ private fun HospitalPickerDialog(
                                         Spacer(Modifier.width(10.dp))
 
                                         Column(Modifier.weight(1f)) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(5.dp),
+                                                    color = TransferBlueSoft
+                                                ) {
+                                                    Text(
+                                                        hospital.category,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                                        color = ClinicalPrimaryColor,
+                                                        fontSize = 8.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                if (hospital.administeringAuthority.isNotBlank()) {
+                                                    Text(
+                                                        hospital.administeringAuthority,
+                                                        color = TextSecondary,
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                            Spacer(Modifier.height(3.dp))
                                             Text(
                                                 hospital.name,
                                                 color = TransferInk,
-                                                fontSize = 10.5.sp,
+                                                fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis
                                             )
-                                            Spacer(Modifier.height(2.dp))
-                                            Text(
-                                                hospital.category + " • " + hospital.province,
-                                                color = TextSecondary,
-                                                fontSize = 8.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            if (hospital.administeringAuthority.isNotBlank()) {
+                                            val locationText = formatHospitalLocation(hospital)
+                                            if (locationText.isNotBlank()) {
+                                                Spacer(Modifier.height(2.dp))
                                                 Text(
-                                                    hospital.administeringAuthority,
-                                                    color = ClinicalPrimaryColor,
-                                                    fontSize = 7.5.sp,
-                                                    fontWeight = FontWeight.SemiBold,
+                                                    locationText,
+                                                    color = TextSecondary,
+                                                    fontSize = 9.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }
 
-                                        Icon(
-                                            Icons.Default.ChevronRight,
-                                            null,
-                                            tint = ClinicalPrimaryColor,
-                                            modifier = Modifier.size(19.dp)
-                                        )
+                                        Spacer(Modifier.width(6.dp))
+
+                                        Surface(
+                                            modifier = Modifier.size(32.dp),
+                                            shape = CircleShape,
+                                            color = SurfaceMuted
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.ChevronRight,
+                                                    contentDescription = "Select ${hospital.name}",
+                                                    tint = ClinicalPrimaryColor,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1207,7 +1673,9 @@ private fun HospitalPickerDialog(
 
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum)
                 ) {
                     Text(
                         "Close",
