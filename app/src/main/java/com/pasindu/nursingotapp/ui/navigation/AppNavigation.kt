@@ -200,12 +200,11 @@ fun AppNavigation() {
                     hospitalDirectoryError = transferHospitalLoadError,
                     onRetryHospitalDirectory = transferRequestViewModel::retry,
                     onBack = { navController.popBackStack() },
-                    onSubmit = { _, _ ->
-                        Toast.makeText(
-                            context,
-                            "Request UI complete. Matching submission will be wired in the next Mutual Transfer step.",
-                            Toast.LENGTH_LONG
-                        ).show()
+                    onSubmit = { currentHospitalId, preferenceHospitalIds ->
+                        transferRequestViewModel.submitRequest(
+                            currentHospitalId = currentHospitalId,
+                            preferenceHospitalIds = preferenceHospitalIds
+                        )
                     }
                 )
             }
