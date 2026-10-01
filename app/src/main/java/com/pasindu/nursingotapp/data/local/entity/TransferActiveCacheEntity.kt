@@ -17,6 +17,7 @@ data class TransferActiveCacheEntity(
     val requestStatus: String? = null,
     val currentHospitalId: String? = null,
     val preferenceHospitalIdsJson: String? = null,
+    val grade: String? = null,
     val matchCycleId: String? = null,
     val matchType: String? = null,
     val matchStatus: String? = null,

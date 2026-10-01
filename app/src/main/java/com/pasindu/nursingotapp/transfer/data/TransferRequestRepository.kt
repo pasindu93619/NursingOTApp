@@ -1,5 +1,6 @@
 package com.pasindu.nursingotapp.transfer.data
 
+import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
 import com.pasindu.nursingotapp.transfer.data.model.CacheSyncStatus
@@ -27,7 +28,8 @@ import kotlinx.serialization.json.Json
  * The caller (ViewModel) is responsible for catching and surfacing it to the UI.
  */
 class TransferRequestRepository @Inject constructor(
-    private val dao: TransferActiveCacheDao
+    private val dao: TransferActiveCacheDao,
+    private val profileDao: ProfileDao
 ) {
 
     // ---------------------------------------------------------------------------
@@ -87,6 +89,12 @@ class TransferRequestRepository @Inject constructor(
             "currentHospitalId must not be blank"
         }
 
+        val profile = profileDao.getProfileOnce()
+        val profileGrade = profile?.grade?.trim().orEmpty()
+        require(profileGrade.isNotBlank()) {
+            "A valid nursing grade is required in your profile before submitting a transfer request"
+        }
+
         val preferenceJson = serializePreferences(rankedPreferences)
         val nowMs = System.currentTimeMillis()
 
@@ -99,6 +107,7 @@ class TransferRequestRepository @Inject constructor(
             requestStatus = TransferRequestStatus.PENDING.name,
             currentHospitalId = currentHospitalId,
             preferenceHospitalIdsJson = preferenceJson,
+            grade = profileGrade,
             matchCycleId = null,
             matchType = null,
             matchStatus = null,
@@ -175,8 +184,9 @@ class TransferRequestRepository @Inject constructor(
     private fun TransferActiveCacheEntity.toDomain(): TransferRequest? {
         val statusRaw = requestStatus?.trim()?.uppercase()
         val hospitalId = currentHospitalId?.trim()
+        val gradeClean = grade?.trim()
 
-        if (statusRaw.isNullOrEmpty() || hospitalId.isNullOrEmpty()) return null
+        if (statusRaw.isNullOrEmpty() || hospitalId.isNullOrEmpty() || gradeClean.isNullOrEmpty()) return null
 
         val requestStatus = runCatching {
             TransferRequestStatus.valueOf(statusRaw)
@@ -193,6 +203,7 @@ class TransferRequestRepository @Inject constructor(
             requestStatus = requestStatus,
             currentHospitalId = hospitalId,
             rankedPreferences = prefs,
+            grade = gradeClean,
             syncStatus = cacheSyncStatus,
             updatedAt = this.updatedAt
         )

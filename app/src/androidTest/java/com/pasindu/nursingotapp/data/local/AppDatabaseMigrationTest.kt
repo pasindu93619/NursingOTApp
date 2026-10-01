@@ -521,6 +521,60 @@ class AppDatabaseMigrationTest {
     }
 
     @Test
+    fun migrate15To16PreservesTransferCacheAndAddsGradeColumn() {
+        helper.createDatabase(TEST_DB, 15).apply {
+            execSQL(
+                """
+                INSERT INTO transfer_active_cache (
+                    id, requestId, requestStatus, currentHospitalId,
+                    preferenceHospitalIdsJson, matchCycleId, matchType,
+                    matchStatus, matchPayloadJson, syncStatus, updatedAt
+                ) VALUES (
+                    1, 'req-mig-15', 'PENDING', 'MOH2026-0001',
+                    '["MOH2026-0002"]', NULL, NULL,
+                    NULL, NULL, 'SYNCED', 1710000000000
+                )
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            16,
+            true,
+            AppDatabase.MIGRATION_15_16
+        ).use { db ->
+            db.query(
+                """
+                SELECT id,
+                       requestId,
+                       requestStatus,
+                       currentHospitalId,
+                       preferenceHospitalIdsJson,
+                       grade,
+                       syncStatus,
+                       updatedAt
+                FROM transfer_active_cache
+                WHERE id = 1
+                """.trimIndent()
+            ).use { cursor ->
+                assertEquals(1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+                assertEquals("req-mig-15", cursor.getString(1))
+                assertEquals("PENDING", cursor.getString(2))
+                assertEquals("MOH2026-0001", cursor.getString(3))
+                assertEquals("[\"MOH2026-0002\"]", cursor.getString(4))
+                // Newly added column defaults to null for pre-existing rows
+                assertTrue(cursor.isNull(5))
+                assertEquals("SYNCED", cursor.getString(6))
+                assertEquals(1710000000000L, cursor.getLong(7))
+            }
+        }
+    }
+
+    @Test
     fun migrate10To11PreservesSalarySteps() {
         helper.createDatabase(TEST_DB, 10).apply {
             execSQL(

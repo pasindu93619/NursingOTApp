@@ -50,7 +50,7 @@ import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
         PaySheetDocumentEntity::class,
         TransferActiveCacheEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -313,6 +313,12 @@ abstract class AppDatabase : RoomDatabase() {
                         PRIMARY KEY(`id`)
                     )
                 """.trimIndent())
+            }
+        }
+
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `transfer_active_cache` ADD COLUMN `grade` TEXT")
             }
         }
 

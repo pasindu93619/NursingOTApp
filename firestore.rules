@@ -9,7 +9,8 @@ service cloud.firestore {
      * Self-declared identity may be created/updated only by the
      * authenticated Firebase user who owns the document.
      *
-     * The client can never create or promote an identity to VERIFIED.
+     * The client can never create or promote an identity to VERIFIED,
+     * and cannot write verifiedServiceNo or verifiedGrade.
      */
     match /transferIdentities/{userId} {
       allow read: if request.auth != null
@@ -20,7 +21,8 @@ service cloud.firestore {
         && request.resource.data.firebaseUid == request.auth.uid
         && request.resource.data.verificationMethod == 'SELF_DECLARED'
         && !request.resource.data.keys().hasAny([
-          'verifiedServiceNo'
+          'verifiedServiceNo',
+          'verifiedGrade'
         ]);
 
       allow update: if request.auth != null
@@ -30,7 +32,8 @@ service cloud.firestore {
         && resource.data.verificationMethod == 'SELF_DECLARED'
         && request.resource.data.verificationMethod == 'SELF_DECLARED'
         && !request.resource.data.keys().hasAny([
-          'verifiedServiceNo'
+          'verifiedServiceNo',
+          'verifiedGrade'
         ]);
     }
 
@@ -42,6 +45,104 @@ service cloud.firestore {
      */
     match /transferProfiles/{serviceNo} {
       allow read, write: if false;
+    }
+
+    /*
+     * Nurse's active Mutual Transfer request.
+     *
+     * Privacy & Security invariants:
+     * - Global collection queries (listing) are denied to prevent pool enumeration.
+     * - A nurse can ONLY get/read their own request.
+     * - A client can create a request ONLY with initial status 'SEARCHING', locked=false, and no matchId.
+     * - A client CANNOT forge locked=true, currentMatchId, or create MATCHED/MATCH_PENDING requests.
+     * - Preferences and hospital are client-controlled while not locked.
+     * - Status can only remain 'SEARCHING' or transition to 'WITHDRAWN' by client.
+     * - Grade is matching metadata; same-grade is NOT enforced as a hard rule.
+     * - Deletion/withdrawal is allowed only when the request is not locked in an active match.
+     */
+    match /transferRequests/{userId} {
+      allow get: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow list: if false;
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.status == 'SEARCHING'
+        && request.resource.data.locked == false
+        && request.resource.data.currentMatchId == null
+        && request.resource.data.currentHospitalId is string
+        && request.resource.data.currentHospitalId.size() > 0
+        && request.resource.data.preferenceHospitalIds is list
+        && request.resource.data.preferenceHospitalIds.size() >= 1
+        && request.resource.data.preferenceHospitalIds.size() <= 3
+        && request.resource.data.grade is string
+        && request.resource.data.grade.size() > 0;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == request.auth.uid
+        && resource.data.locked == false
+        && request.resource.data.locked == false
+        && request.resource.data.currentMatchId == resource.data.currentMatchId
+        && (request.resource.data.status == 'SEARCHING' || request.resource.data.status == 'WITHDRAWN')
+        && request.resource.data.currentHospitalId is string
+        && request.resource.data.currentHospitalId.size() > 0
+        && request.resource.data.preferenceHospitalIds is list
+        && request.resource.data.preferenceHospitalIds.size() >= 1
+        && request.resource.data.preferenceHospitalIds.size() <= 3
+        && request.resource.data.grade is string
+        && request.resource.data.grade.size() > 0;
+
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.locked == false;
+    }
+
+    /*
+     * Authoritative Mutual Transfer Matches.
+     *
+     * Invariants:
+     * - Created, locked, and finalized exclusively by the trusted matching engine (Cloudflare Worker).
+     * - Clients CANNOT create or delete match documents.
+     * - Global collection queries (listing) are denied to prevent snooping.
+     * - A nurse can get/read a match ONLY if they are nurseAUid or nurseBUid.
+     * - Participants CANNOT change participants, match status, createdAt, expiresAt, or grade metadata.
+     * - Participants may ONLY update their own acceptance/rejection flag.
+     * - Same-grade is NOT enforced by the rules; cross-grade matching remains eligible.
+     */
+    match /matches/{matchId} {
+      allow get: if request.auth != null
+        && (request.auth.uid == resource.data.nurseAUid || request.auth.uid == resource.data.nurseBUid);
+
+      allow list: if false;
+
+      allow create, delete: if false;
+
+      allow update: if request.auth != null
+        && (
+          (
+            request.auth.uid == resource.data.nurseAUid
+            && request.resource.data.nurseAUid == resource.data.nurseAUid
+            && request.resource.data.nurseBUid == resource.data.nurseBUid
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.expiresAt == resource.data.expiresAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedByA', 'rejectedByA', 'updatedAt'])
+          )
+          ||
+          (
+            request.auth.uid == resource.data.nurseBUid
+            && request.resource.data.nurseAUid == resource.data.nurseAUid
+            && request.resource.data.nurseBUid == resource.data.nurseBUid
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.expiresAt == resource.data.expiresAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedByB', 'rejectedByB', 'updatedAt'])
+          )
+        );
     }
 
     /*

@@ -1,6 +1,8 @@
 package com.pasindu.nursingotapp.transfer.data
 
+import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
+import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
 import com.pasindu.nursingotapp.transfer.data.model.CacheSyncStatus
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
@@ -51,17 +53,44 @@ class TransferRequestRepositoryTest {
         }
     }
 
+    private class FakeProfileDao(var currentProfile: ProfileEntity? = null) : ProfileDao {
+        private val _flow = MutableStateFlow<ProfileEntity?>(currentProfile)
+
+        override suspend fun upsert(profile: ProfileEntity) {
+            currentProfile = profile
+            _flow.value = profile
+        }
+
+        override fun observeProfile(): Flow<ProfileEntity?> = _flow
+
+        override suspend fun getProfileOnce(): ProfileEntity? = currentProfile
+    }
+
     // ---------------------------------------------------------------------------
     // Subject under test
     // ---------------------------------------------------------------------------
 
     private lateinit var fakeDao: FakeTransferActiveCacheDao
+    private lateinit var fakeProfileDao: FakeProfileDao
     private lateinit var repository: TransferRequestRepository
 
     @Before
     fun setUp() {
         fakeDao = FakeTransferActiveCacheDao()
-        repository = TransferRequestRepository(fakeDao)
+        fakeProfileDao = FakeProfileDao(
+            ProfileEntity(
+                id = 1,
+                fullName = "Nurse Perera",
+                serviceNo = "SN-9876",
+                unit = "Ward 4",
+                paySheetNo = "PS-100",
+                grade = "Grade I",
+                basicSalary = 105000.0,
+                otRate = 450.0,
+                updatedAt = 1000L
+            )
+        )
+        repository = TransferRequestRepository(fakeDao, fakeProfileDao)
     }
 
     // ---------------------------------------------------------------------------
@@ -365,5 +394,108 @@ class TransferRequestRepositoryTest {
         val result = repository.deserializePreferences("""["MOH2026-0001"]""")
         assertNotNull(result)
         assertEquals(listOf("MOH2026-0001"), result!!.hospitalIds)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Grade Bridge tests (Phase 1.5.3C-1)
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `saveRequest reads grade from ProfileEntity and stores it in entity`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0100"))
+        )
+
+        val stored = fakeDao.lastUpserted
+        assertNotNull(stored)
+        assertEquals("Grade I", stored!!.grade)
+    }
+
+    @Test
+    fun `observeActiveRequest emits TransferRequest containing profile grade`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0100"))
+        )
+
+        val request = repository.observeActiveRequest().first()
+        assertNotNull(request)
+        assertEquals("Grade I", request!!.grade)
+    }
+
+    @Test
+    fun `getActiveRequest returns domain object containing profile grade`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0100"))
+        )
+
+        val request = repository.getActiveRequest()
+        assertNotNull(request)
+        assertEquals("Grade I", request!!.grade)
+    }
+
+    @Test
+    fun `updateRequest preserves or updates grade from profile`() = runTest {
+        // Initial save with Grade I
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0100"))
+        )
+        assertEquals("Grade I", fakeDao.lastUpserted!!.grade)
+
+        // Nurse gets promoted to Special Grade
+        fakeProfileDao.currentProfile = fakeProfileDao.currentProfile!!.copy(grade = "Special Grade")
+
+        // Update request preferences
+        repository.updateRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0200"))
+        )
+
+        assertEquals("Special Grade", fakeDao.lastUpserted!!.grade)
+        val request = repository.getActiveRequest()
+        assertNotNull(request)
+        assertEquals("Special Grade", request!!.grade)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `saveRequest throws when profile is missing`() = runTest {
+        fakeProfileDao.currentProfile = null
+
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0100"))
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `saveRequest throws when profile grade is blank`() = runTest {
+        fakeProfileDao.currentProfile = fakeProfileDao.currentProfile!!.copy(grade = "   ")
+
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0001",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0100"))
+        )
+    }
+
+    @Test
+    fun `observeActiveRequest emits null if cached entity has blank grade`() = runTest {
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                id = 1,
+                requestId = "req-legacy",
+                requestStatus = TransferRequestStatus.PENDING.name,
+                currentHospitalId = "MOH2026-0001",
+                preferenceHospitalIdsJson = """["MOH2026-0100"]""",
+                grade = null, // Old cached row without grade
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 1000L
+            )
+        )
+
+        val request = repository.observeActiveRequest().first()
+        assertNull("Request with missing grade must not be emitted as active", request)
     }
 }

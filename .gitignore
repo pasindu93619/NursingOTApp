@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Cloudflare Wrangler local state
+cloudflare-worker/.wrangler/

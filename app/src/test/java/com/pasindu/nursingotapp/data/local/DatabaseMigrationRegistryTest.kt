@@ -12,7 +12,7 @@ class DatabaseMigrationRegistryTest {
         assertEquals(
             "Latest Room schema version",
             DatabaseMigrationRegistry.CURRENT_DATABASE_VERSION,
-            15
+            16
         )
     }
 
@@ -37,7 +37,8 @@ class DatabaseMigrationRegistryTest {
                 "11->12",
                 "12->13",
                 "13->14",
-                "14->15"
+                "14->15",
+                "15->16"
             ),
             migrationKeys
         )

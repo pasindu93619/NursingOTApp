@@ -2,7 +2,9 @@ package com.pasindu.nursingotapp.transfer.ui
 
 import android.content.Context
 import android.content.ContextWrapper
+import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
+import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
 import com.pasindu.nursingotapp.transfer.data.HospitalReferenceRepository
 import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
@@ -68,8 +70,22 @@ class TransferRequestViewModelTest {
         }
     }
 
+    private class FakeProfileDao(var currentProfile: ProfileEntity? = null) : ProfileDao {
+        private val _flow = MutableStateFlow<ProfileEntity?>(currentProfile)
+
+        override suspend fun upsert(profile: ProfileEntity) {
+            currentProfile = profile
+            _flow.value = profile
+        }
+
+        override fun observeProfile(): Flow<ProfileEntity?> = _flow
+
+        override suspend fun getProfileOnce(): ProfileEntity? = currentProfile
+    }
+
     private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakeDao: FakeTransferActiveCacheDao
+    private lateinit var fakeProfileDao: FakeProfileDao
     private lateinit var repository: TransferRequestRepository
     private lateinit var dummyHospitalRepo: HospitalReferenceRepository
 
@@ -77,7 +93,20 @@ class TransferRequestViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeDao = FakeTransferActiveCacheDao()
-        repository = TransferRequestRepository(fakeDao)
+        fakeProfileDao = FakeProfileDao(
+            ProfileEntity(
+                id = 1,
+                fullName = "Nurse Silva",
+                serviceNo = "SN-54321",
+                unit = "Surgical ICU",
+                paySheetNo = "PS-500",
+                grade = "Grade II",
+                basicSalary = 98000.0,
+                otRate = 420.0,
+                updatedAt = 1000L
+            )
+        )
+        repository = TransferRequestRepository(fakeDao, fakeProfileDao)
 
         // Provide a dummy ContextWrapper that satisfies the constructor without triggering asset loading
         val dummyContext: Context = ContextWrapper(null)
@@ -245,5 +274,22 @@ class TransferRequestViewModelTest {
         assertFalse(successCallbackInvoked)
         assertNotNull(viewModel.submitError.value)
         assertTrue(viewModel.submitError.value!!.contains("RankedPreferences requires at least 1 hospital ID"))
+    }
+
+    @Test
+    fun `7c - missing profile grade surfaces error without calling onSuccess`() = runTest {
+        val viewModel = createViewModel()
+        fakeProfileDao.currentProfile = null
+
+        var successCallbackInvoked = false
+        viewModel.submitRequest(
+            currentHospitalId = "MOH2026-0001",
+            preferenceHospitalIds = listOf("MOH2026-0100"),
+            onSuccess = { successCallbackInvoked = true }
+        )
+
+        assertFalse("onSuccess must NOT be called when profile grade is missing", successCallbackInvoked)
+        assertNotNull(viewModel.submitError.value)
+        assertTrue(viewModel.submitError.value!!.contains("A valid nursing grade is required in your profile"))
     }
 }

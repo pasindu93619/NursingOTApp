@@ -89,6 +89,12 @@ data class TransferRequest(
     /** Ranked list of preferred transfer destination hospitals. */
     val rankedPreferences: RankedPreferences,
 
+    /**
+     * Professional grade of the nurse (e.g. "Grade I", "Grade II", "Grade III", "Special Grade").
+     * Must be non-blank. Sourced authoritatively from the nurse's local profile.
+     */
+    val grade: String,
+
     /** Room cache synchronisation state. */
     val syncStatus: CacheSyncStatus,
 
@@ -97,4 +103,10 @@ data class TransferRequest(
      * Updated on every [TransferRequestRepository.saveRequest] call.
      */
     val updatedAt: Long
-)
+) {
+    init {
+        require(grade.isNotBlank()) {
+            "TransferRequest requires a non-blank nursing grade"
+        }
+    }
+}
