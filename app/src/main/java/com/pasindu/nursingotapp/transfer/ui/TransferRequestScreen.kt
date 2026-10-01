@@ -107,12 +107,30 @@ fun TransferRequestScreen(
     hospitalDirectoryError: String? = null,
     onRetryHospitalDirectory: () -> Unit = {},
     onBack: () -> Unit,
-    onSubmit: (String, List<String>) -> Unit
+    onSubmit: (String, List<String>) -> Unit,
+    activeRequest: com.pasindu.nursingotapp.transfer.data.model.TransferRequest? = null
 ) {
     var currentHospital by remember { mutableStateOf<HospitalReference?>(null) }
     val preferences = remember { mutableStateListOf<HospitalReference>() }
     var pickerMode by remember { mutableStateOf<PickerMode?>(null) }
     var showProfileNotice by remember { mutableStateOf(false) }
+
+    var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(activeRequest, hospitalOptions) {
+        if (!initializedFromActiveRequest && activeRequest != null && hospitalOptions.isNotEmpty()) {
+            val current = hospitalOptions.find { it.hospitalId == activeRequest.currentHospitalId }
+            if (current != null && currentHospital == null) {
+                currentHospital = current
+            }
+            if (preferences.isEmpty()) {
+                val prefHospitals = activeRequest.rankedPreferences.hospitalIds.mapNotNull { id ->
+                    hospitalOptions.find { it.hospitalId == id }
+                }
+                preferences.addAll(prefHospitals)
+            }
+            initializedFromActiveRequest = true
+        }
+    }
 
     val canSubmit = currentHospital != null && preferences.isNotEmpty()
     val progress = when {
@@ -154,13 +172,13 @@ fun TransferRequestScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Mutual Transfer",
+                            if (activeRequest != null) "Edit Transfer Request" else "Mutual Transfer",
                             color = TextPrimary,
                             fontSize = 21.sp,
                             fontWeight = FontWeight.Black
                         )
                         Text(
-                            "Build your preferred transfer route",
+                            if (activeRequest != null) "Update your posting or ranked preferences" else "Build your preferred transfer route",
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
@@ -553,7 +571,7 @@ fun TransferRequestScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Start searching for a match",
+                        if (activeRequest != null) "Save changes & update pool" else "Start searching for a match",
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.Black
                     )

@@ -19,9 +19,9 @@ import kotlinx.coroutines.launch
  * and wires the nurse's active transfer request into Room via
  * [TransferRequestRepository].
  *
- * Phase 1.5.3A additions:
+ * Phase 1.5.3 additions:
  * - Observes the active request from Room and exposes it as [activeRequest].
- * - Provides [submitRequest] to save/update a request in Room.
+ * - Provides [submitRequest] to save/update a request in Room with success/failure handling.
  * - Provides [withdrawRequest] to clear the active request from Room.
  * - Exposes [submitError] for error messaging.
  *
@@ -47,7 +47,7 @@ class TransferRequestViewModel @Inject constructor(
     val loadError: StateFlow<String?> = _loadError.asStateFlow()
 
     // ---------------------------------------------------------------------------
-    // Active transfer request (Phase 1.5.3A)
+    // Active transfer request (Phase 1.5.3A & 1.5.3B)
     // ---------------------------------------------------------------------------
 
     private val _activeRequest = MutableStateFlow<TransferRequest?>(null)
@@ -96,7 +96,7 @@ class TransferRequestViewModel @Inject constructor(
     }
 
     // ---------------------------------------------------------------------------
-    // Active request observation (Phase 1.5.3A)
+    // Active request observation
     // ---------------------------------------------------------------------------
 
     private fun observeActiveRequest() {
@@ -108,7 +108,7 @@ class TransferRequestViewModel @Inject constructor(
     }
 
     // ---------------------------------------------------------------------------
-    // Submit / save request (Phase 1.5.3A)
+    // Submit / save / update request
     // ---------------------------------------------------------------------------
 
     /**
@@ -117,12 +117,14 @@ class TransferRequestViewModel @Inject constructor(
      * @param currentHospitalId Canonical hospitalId of the nurse's current posting.
      * @param preferenceHospitalIds Ranked list of preferred hospital IDs.
      *   Order is preserved exactly: index 0 = 1st preference.
+     * @param onSuccess Invoked on the main dispatcher only when persistence succeeds.
      *
      * Validation failures and Room errors are surfaced via [submitError].
      */
     fun submitRequest(
         currentHospitalId: String,
-        preferenceHospitalIds: List<String>
+        preferenceHospitalIds: List<String>,
+        onSuccess: () -> Unit = {}
     ) {
         if (_isSubmitting.value) return
 
@@ -133,6 +135,8 @@ class TransferRequestViewModel @Inject constructor(
             runCatching {
                 val prefs = RankedPreferences(preferenceHospitalIds)
                 transferRequestRepository.saveRequest(currentHospitalId, prefs)
+            }.onSuccess {
+                onSuccess()
             }.onFailure { error ->
                 _submitError.value =
                     error.message ?: "Unable to save transfer request"
@@ -143,7 +147,7 @@ class TransferRequestViewModel @Inject constructor(
     }
 
     // ---------------------------------------------------------------------------
-    // Withdraw / clear request (Phase 1.5.3A)
+    // Withdraw / clear request
     // ---------------------------------------------------------------------------
 
     /**
@@ -151,13 +155,17 @@ class TransferRequestViewModel @Inject constructor(
      *
      * After this call [activeRequest] will emit `null`.
      * Errors are surfaced via [submitError].
+     *
+     * @param onSuccess Invoked on the main dispatcher only when clear succeeds.
      */
-    fun withdrawRequest() {
+    fun withdrawRequest(onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             _submitError.value = null
 
             runCatching {
                 transferRequestRepository.clearRequest()
+            }.onSuccess {
+                onSuccess()
             }.onFailure { error ->
                 _submitError.value =
                     error.message ?: "Unable to withdraw transfer request"

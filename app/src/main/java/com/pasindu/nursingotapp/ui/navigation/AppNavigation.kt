@@ -49,6 +49,7 @@ import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferPoolStatusScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestViewModel
 import com.pasindu.nursingotapp.ui.theme.AppBackground
@@ -80,6 +81,9 @@ fun AppNavigation() {
     val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
     val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
     val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
+    val activeTransferRequest by transferRequestViewModel.activeRequest.collectAsState()
+    val transferIsSubmitting by transferRequestViewModel.isSubmitting.collectAsState()
+    val transferSubmitError by transferRequestViewModel.submitError.collectAsState()
     val context = LocalContext.current
     val animDuration = NursingMotion.pageTransitionDurationMs
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -89,7 +93,13 @@ fun AppNavigation() {
     fun navigateTo(route: String) {
         if (currentRoute == route) return
 
-        navController.navigate(route) {
+        val targetRoute = if (route == "transfer_request" && activeTransferRequest != null) {
+            "transfer_pool_status"
+        } else {
+            route
+        }
+
+        navController.navigate(targetRoute) {
             launchSingleTop = true
             restoreState = false
         }
@@ -200,12 +210,44 @@ fun AppNavigation() {
                     hospitalDirectoryError = transferHospitalLoadError,
                     onRetryHospitalDirectory = transferRequestViewModel::retry,
                     onBack = { navController.popBackStack() },
+                    activeRequest = activeTransferRequest,
                     onSubmit = { currentHospitalId, preferenceHospitalIds ->
                         transferRequestViewModel.submitRequest(
                             currentHospitalId = currentHospitalId,
-                            preferenceHospitalIds = preferenceHospitalIds
+                            preferenceHospitalIds = preferenceHospitalIds,
+                            onSuccess = {
+                                navController.navigate("transfer_pool_status") {
+                                    popUpTo("transfer_request") { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
                         )
                     }
+                )
+            }
+            composable("transfer_pool_status") {
+                TransferPoolStatusScreen(
+                    activeRequest = activeTransferRequest,
+                    hospitalOptions = transferHospitalOptions,
+                    isLoadingHospitals = transferHospitalLoading,
+                    loadError = transferHospitalLoadError,
+                    isSubmitting = transferIsSubmitting,
+                    submitError = transferSubmitError,
+                    onBack = { navController.popBackStack() },
+                    onEditRequest = {
+                        navController.navigate("transfer_request") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onWithdrawRequest = {
+                        transferRequestViewModel.withdrawRequest()
+                    },
+                    onCreateNewRequest = {
+                        navController.navigate("transfer_request") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onRetryHospitals = transferRequestViewModel::retry
                 )
             }
             composable("profile") {
