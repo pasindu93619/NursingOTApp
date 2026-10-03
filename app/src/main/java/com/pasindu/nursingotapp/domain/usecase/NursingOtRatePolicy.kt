@@ -3,12 +3,9 @@ package com.pasindu.nursingotapp.domain.usecase
 /**
  * Fixed Nursing Service overtime rates used by NursingOTApp.
  *
- * These are the rates supplied for the Nursing Service:
- * Grade III Rs. 283/hour
- * Grade II Rs. 338/hour
- * Grade I Rs. 416/hour
- * Supra Grade Rs. 483/hour
- * Special Grade Rs. 571/hour
+ * Persisted profiles may contain legacy grade labels such as "III".
+ * The canonical labels remain unchanged so salary-table matching and
+ * stored profile data are not rewritten just to fix presentation lookup.
  */
 object NursingOtRatePolicy {
     const val GRADE_III = "Grade III"
@@ -31,7 +28,20 @@ object NursingOtRatePolicy {
         SPECIAL_GRADE
     )
 
-    fun rateForGrade(grade: String): Double? = when (grade.trim()) {
+    /**
+     * Converts both current canonical labels and known legacy labels to the
+     * canonical Nursing Service grade used by the policy table.
+     */
+    fun canonicalGrade(value: String): String? = when (value.trim().uppercase()) {
+        "III", "GRADE III", "GRADE 3" -> GRADE_III
+        "II", "GRADE II", "GRADE 2" -> GRADE_II
+        "I", "GRADE I", "GRADE 1" -> GRADE_I
+        "SUPRA", "SUPRA GRADE" -> SUPRA_GRADE
+        "SPECIAL", "SPECIAL GRADE" -> SPECIAL_GRADE
+        else -> null
+    }
+
+    fun rateForGrade(grade: String): Double? = when (canonicalGrade(grade)) {
         GRADE_III -> RATE_GRADE_III
         GRADE_II -> RATE_GRADE_II
         GRADE_I -> RATE_GRADE_I

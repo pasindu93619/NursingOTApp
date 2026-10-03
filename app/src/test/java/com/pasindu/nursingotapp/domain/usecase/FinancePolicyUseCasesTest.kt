@@ -45,7 +45,10 @@ class FinancePolicyUseCasesTest {
         )
         val salaryDao = FakeSalaryDao(listOf(salary))
 
-        val matched = MatchSalaryStepUseCase(salaryDao)(testProfile())
+        val matched = MatchSalaryStepUseCase(salaryDao)(
+            grade = testProfile().grade,
+            currentBasicSalary = testProfile().basicSalary
+        )
         assertNotNull(matched)
         ApplyFinancePolicyRatesUseCase(
             MatchSalaryStepUseCase(salaryDao),
