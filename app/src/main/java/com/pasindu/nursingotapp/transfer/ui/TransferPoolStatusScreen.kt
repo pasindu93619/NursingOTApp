@@ -163,7 +163,8 @@ fun TransferPoolStatusScreen(
     onEditRequest: () -> Unit,
     onWithdrawRequest: () -> Unit,
     onCreateNewRequest: () -> Unit,
-    onRetryHospitals: () -> Unit = {}
+    onRetryHospitals: () -> Unit = {},
+    onOpenMatch: () -> Unit = {}
 ) {
     var showWithdrawDialog by remember { mutableStateOf(false) }
 
@@ -188,7 +189,8 @@ fun TransferPoolStatusScreen(
                 onBack = onBack,
                 onEdit = onEditRequest,
                 onWithdrawClick = { showWithdrawDialog = true },
-                onRetryHospitals = onRetryHospitals
+                onRetryHospitals = onRetryHospitals,
+                onOpenMatch = onOpenMatch
             )
         }
 
@@ -216,7 +218,8 @@ private fun ActivePoolMissionControlView(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onWithdrawClick: () -> Unit,
-    onRetryHospitals: () -> Unit
+    onRetryHospitals: () -> Unit,
+    onOpenMatch: () -> Unit = {}
 ) {
     val currentHospital = remember(request.currentHospitalId, hospitals) {
         hospitals.find { it.hospitalId == request.currentHospitalId }
@@ -318,6 +321,77 @@ private fun ActivePoolMissionControlView(
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                }
+            }
+        }
+
+        // 2.5 MATCH FOUND BANNER (When requestStatus == MATCHED)
+        if (request.requestStatus == TransferRequestStatus.MATCHED) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Emerald),
+                    border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.35f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.25f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    "COMPATIBLE PARTNER FOUND!",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    "A reciprocal match has been identified and locked.",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 11.5.sp
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = onOpenMatch,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = Emerald
+                            )
+                        ) {
+                            Text(
+                                "View & Respond to Match",
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

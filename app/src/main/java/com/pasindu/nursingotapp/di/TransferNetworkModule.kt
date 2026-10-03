@@ -52,6 +52,6 @@ object TransferNetworkConfigModule {
     @Named("transfer_worker_base_url")
     fun provideTransferWorkerBaseUrl(): String {
         // Can be configured per build flavor or default Cloudflare Worker endpoint
-        return "https://nursing-transfer-worker.pasindu-apps.workers.dev"
+        return "https://nursing-transfer-worker.pasindu93pavithra.workers.dev"
     }
 }

@@ -249,7 +249,12 @@ fun AppNavigation() {
                             launchSingleTop = true
                         }
                     },
-                    onRetryHospitals = transferRequestViewModel::retry
+                    onRetryHospitals = transferRequestViewModel::retry,
+                    onOpenMatch = {
+                        navController.navigate("transfer_match") {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
             composable("transfer_match") {
