@@ -193,7 +193,8 @@ export function candidateRequestFromDoc(doc: FirestoreRawDocument): CandidateReq
     currentMatchId: getNullableString(fields.currentMatchId),
     currentHospitalId: getString(fields.currentHospitalId),
     preferenceHospitalIds: getArrayStrings(fields.preferenceHospitalIds),
-    grade: getString(fields.grade)
+    grade: getString(fields.grade),
+    updateTime: doc.updateTime
   };
 }
 
@@ -217,6 +218,10 @@ export class FirestoreClient {
     this.baseUrl = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents`;
   }
 
+  public getProjectId(): string {
+    return this.projectId;
+  }
+
   private async getAuthHeader(): Promise<string> {
     try {
       const token = await this.tokenProvider();
@@ -229,6 +234,44 @@ export class FirestoreClient {
       const msg = err instanceof Error ? err.message : "Failed to obtain access token";
       throw new FirestoreError(`Authentication error: ${msg}`);
     }
+  }
+
+  /**
+   * Reads a single match document.
+   * Returns null if HTTP 404 (document not found).
+   */
+  async getMatchDoc(matchId: string): Promise<FirestoreRawDocument | null> {
+    if (!matchId || matchId.trim().length === 0) {
+      throw new FirestoreError("matchId must not be empty");
+    }
+    const authHeader = await this.getAuthHeader();
+    const url = `${this.baseUrl}/matches/${encodeURIComponent(matchId.trim())}`;
+    let response: Response;
+    try {
+      response = await this.transport(url, {
+        method: "GET",
+        headers: {
+          Authorization: authHeader,
+          Accept: "application/json"
+        }
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network failure";
+      throw new FirestoreError(`Transport error while reading match: ${msg}`);
+    }
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      throw new FirestoreError(`Failed to read match document: HTTP ${response.status}`, response.status);
+    }
+    let rawDoc: FirestoreRawDocument;
+    try {
+      rawDoc = (await response.json()) as FirestoreRawDocument;
+    } catch {
+      throw new FirestoreError("Invalid JSON returned by Firestore");
+    }
+    return rawDoc;
   }
 
   /**

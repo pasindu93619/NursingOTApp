@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+import com.pasindu.nursingotapp.transfer.worker.TransferSyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,23 +15,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Loads the canonical 2026 hospital reference data for the Mutual Transfer UI
- * and wires the nurse's active transfer request into Room via
- * [TransferRequestRepository].
- *
- * Phase 1.5.3 additions:
- * - Observes the active request from Room and exposes it as [activeRequest].
- * - Provides [submitRequest] to save/update a request in Room with success/failure handling.
- * - Provides [withdrawRequest] to clear the active request from Room.
- * - Exposes [submitError] for error messaging.
- *
- * The hospital reference loading, search, and ranking behaviour is unchanged.
- */
 @HiltViewModel
 class TransferRequestViewModel @Inject constructor(
     private val hospitalReferenceRepository: HospitalReferenceRepository,
-    private val transferRequestRepository: TransferRequestRepository
+    private val transferRequestRepository: TransferRequestRepository,
+    private val syncScheduler: TransferSyncScheduler? = null
 ) : ViewModel() {
 
     // ---------------------------------------------------------------------------
@@ -136,6 +125,12 @@ class TransferRequestViewModel @Inject constructor(
                 val prefs = RankedPreferences(preferenceHospitalIds)
                 transferRequestRepository.saveRequest(currentHospitalId, prefs)
             }.onSuccess {
+                // Schedule WorkManager resilient offline-first sync
+                syncScheduler?.scheduleSync()
+                // Also trigger immediate background sync attempt if device is already online
+                viewModelScope.launch {
+                    runCatching { transferRequestRepository.syncActiveRequest() }
+                }
                 onSuccess()
             }.onFailure { error ->
                 _submitError.value =

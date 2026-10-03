@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-strip-types --test test/auth.test.ts",
+    "test": "node --experimental-strip-types --test test/auth.test.ts test/matching.test.ts test/firestore.test.ts test/serviceAccountAuth.test.ts test/matchingService.test.ts test/respondMatch.test.ts",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },

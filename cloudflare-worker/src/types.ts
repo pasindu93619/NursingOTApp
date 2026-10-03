@@ -4,9 +4,11 @@
 export interface Env {
   FIREBASE_PROJECT_ID?: string;
   ENVIRONMENT?: string;
-  // Future service-account secrets for Firestore REST:
+  // Service-account secrets for Firestore REST:
   FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL?: string;
   FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY?: string;
+  // Match configuration:
+  MATCH_EXPIRATION_HOURS?: string;
 }
 
 /**
@@ -60,4 +62,18 @@ export interface GoogleJwk {
 
 export interface GoogleJwksResponse {
   keys: GoogleJwk[];
+}
+
+// Request payload for match decision (accept/reject)
+export interface MatchDecisionRequest {
+  matchId: string;
+  decision: "ACCEPT" | "REJECT";
+}
+
+// Response payload after processing a decision
+export interface MatchDecisionResponse {
+  matchId: string;
+  newStatus: string; // PENDING_CONFIRMATION | CONFIRMED | CANCELLED
+  expiresAt: string;
+  decisionApplied: boolean;
 }

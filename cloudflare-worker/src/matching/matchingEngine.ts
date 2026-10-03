@@ -21,6 +21,7 @@ export interface CandidateRequest {
   currentHospitalId: string;
   preferenceHospitalIds: string[];
   grade: string;
+  updateTime?: string;
 }
 
 export interface DirectMatch {

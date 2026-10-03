@@ -1326,7 +1326,7 @@ private fun CompactTransferRulesCard() {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "Pair-wise reciprocity • Same-grade criteria",
+                            "Pair-wise reciprocity • Grade-aware priority",
                             color = TextSecondary,
                             fontSize = 9.5.sp
                         )
@@ -1349,7 +1349,7 @@ private fun CompactTransferRulesCard() {
                 Column(modifier = Modifier.padding(top = 12.dp)) {
                     Text(
                         "• Direct Reciprocal Match: Pair-wise exchange only (Nurse A ⇄ Nurse B). Both nurses must desire each other's hospital.\n" +
-                            "• Same Clinical Grade: Candidates are matched within their registered nursing grade.\n" +
+                            "• Grade-Aware Matching: Compatible same-grade candidates are prioritized when available. If no compatible same-grade candidate is available, compatible candidates from other grades remain eligible.\n" +
                             "• Real-Time Control: You can modify ranked destinations or cancel at any time.\n" +
                             "• Immediate Pool Withdrawal: Cancelling unpublishes your entry immediately.",
                         color = TextSecondary,

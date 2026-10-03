@@ -49,6 +49,8 @@ import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferPoolStatusScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestViewModel
@@ -248,6 +250,25 @@ fun AppNavigation() {
                         }
                     },
                     onRetryHospitals = transferRequestViewModel::retry
+                )
+            }
+            composable("transfer_match") {
+                val matchViewModel: TransferMatchViewModel = hiltViewModel()
+                val matchUiState by matchViewModel.uiState.collectAsState()
+                TransferMatchScreen(
+                    uiState = matchUiState,
+                    onBack = { navController.popBackStack() },
+                    onAcceptMatch = { matchId ->
+                        matchViewModel.acceptMatch(matchId)
+                    },
+                    onRejectMatch = { matchId ->
+                        matchViewModel.rejectMatch(matchId) {
+                            navController.popBackStack()
+                        }
+                    },
+                    onRetry = {
+                        matchViewModel.resetState()
+                    }
                 )
             }
             composable("profile") {
