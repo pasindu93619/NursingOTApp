@@ -167,14 +167,64 @@ class TransferRequestRepository @Inject constructor(
         val rds = remoteDataSource ?: return WorkerSyncResult.NetworkError("Remote data source not configured")
         val api = workerApiClient ?: return WorkerSyncResult.NetworkError("Worker API client not configured")
 
-        // 1. Obtain Firebase User ID
         val userId = tp.getCurrentUserId()
             ?: run {
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get user ID")
             }
 
-        // 2. Publish/update transfer request to Firestore
+        // Read server-owned state before publishing local SEARCHING data.
+        val remoteState = rds.fetchTransferRequest(userId).getOrElse { error ->
+            dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
+            return WorkerSyncResult.NetworkError(
+                "Failed to read transfer request state from server: ${error.message}",
+                error
+            )
+        }
+
+        if (
+            remoteState?.status.equals(TransferRequestStatus.MATCHED.name, ignoreCase = true) &&
+            remoteState?.locked == true &&
+            !remoteState.currentMatchId.isNullOrBlank()
+        ) {
+            val matchId = remoteState.currentMatchId!!
+            val remoteMatch = rds.fetchMatchDoc(matchId).getOrElse { error ->
+                dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
+                return WorkerSyncResult.NetworkError(
+                    "Match was found on server but could not be read: ${error.message}",
+                    error
+                )
+            }
+
+            if (remoteMatch == null) {
+                dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
+                return WorkerSyncResult.NetworkError(
+                    "Server request is MATCHED but match document $matchId is missing"
+                )
+            }
+
+            val matchJson = json.encodeToString(remoteMatch.match)
+            val updated = entity.copy(
+                requestId = userId,
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                matchCycleId = matchId,
+                matchType = "DIRECT_2_WAY",
+                matchStatus = remoteMatch.status.ifBlank { "PENDING_CONFIRMATION" },
+                matchPayloadJson = matchJson,
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = System.currentTimeMillis()
+            )
+            dao.upsert(updated)
+
+            return WorkerSyncResult.MatchFound(
+                matchId = matchId,
+                match = remoteMatch.match,
+                createdAt = remoteMatch.createdAt,
+                expiresAt = remoteMatch.expiresAt
+            )
+        }
+
+        // Server is not currently matched: publish SEARCHING and invoke the authoritative Worker.
         val publishResult = rds.publishTransferRequest(userId, domain)
         if (publishResult.isFailure) {
             val err = publishResult.exceptionOrNull()
@@ -185,14 +235,12 @@ class TransferRequestRepository @Inject constructor(
             )
         }
 
-        // 3. Obtain Firebase ID token
         val token = tp.getFirebaseIdToken()
             ?: run {
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get ID token")
             }
 
-        // 4. Trigger Cloudflare Worker matching engine
         val workerResult = api.findAndLockMatch(token)
 
         when (workerResult) {
@@ -211,18 +259,15 @@ class TransferRequestRepository @Inject constructor(
                 dao.upsert(updated)
             }
             is WorkerSyncResult.NoMatch -> {
-                val updated = entity.copy(
-                    requestId = userId,
-                    syncStatus = CacheSyncStatus.SYNCED.name
+                dao.upsert(
+                    entity.copy(
+                        requestId = userId,
+                        syncStatus = CacheSyncStatus.SYNCED.name
+                    )
                 )
-                dao.upsert(updated)
             }
-            is WorkerSyncResult.Conflict -> {
-                dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
-            }
-            is WorkerSyncResult.AuthError -> {
-                dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
-            }
+            is WorkerSyncResult.Conflict,
+            is WorkerSyncResult.AuthError,
             is WorkerSyncResult.NetworkError -> {
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
             }
