@@ -69,6 +69,9 @@ class TransferRequestRepositoryTest {
         override fun observeProfile(): Flow<ProfileEntity?> = _flow
 
         override suspend fun getProfileOnce(): ProfileEntity? = currentProfile
+
+        fun copyForGrade(newGrade: String): FakeProfileDao =
+            FakeProfileDao(currentProfile?.copy(grade = newGrade))
     }
 
     // ---------------------------------------------------------------------------
@@ -105,6 +108,7 @@ class TransferRequestRepositoryTest {
         private val remoteMatch: RemoteMatchState?
     ) : TransferRemoteDataSource {
         var publishCalls = 0
+        var lastPublishedRequest: com.pasindu.nursingotapp.transfer.data.model.TransferRequest? = null
 
         override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
             Result.success(remoteRequest)
@@ -117,6 +121,7 @@ class TransferRequestRepositoryTest {
             request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
         ): Result<Unit> {
             publishCalls++
+            lastPublishedRequest = request
             return Result.success(Unit)
         }
 
@@ -343,6 +348,46 @@ class TransferRequestRepositoryTest {
         val result = repository.getActiveRequest()
         assertNotNull(result)
         assertEquals("MOH2026-0010", result!!.currentHospitalId)
+    }
+
+    @Test
+    fun `syncActiveRequest repairs stale cached grade from current profile before publishing`() = runTest {
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                id = 1,
+                requestId = null,
+                requestStatus = TransferRequestStatus.PENDING.name,
+                currentHospitalId = "MOH2026-0010",
+                preferenceHospitalIdsJson = """["MOH2026-0332"]""",
+                grade = "",
+                matchCycleId = null,
+                matchType = null,
+                matchStatus = null,
+                matchPayloadJson = null,
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 1000L
+            )
+        )
+
+        val remote = FakeRemoteDataSource(
+            remoteRequest = null,
+            remoteMatch = null
+        )
+        val worker = FakeWorkerApiClient()
+
+        repository = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao.copyForGrade("Grade III"),
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = remote,
+            workerApiClient = worker
+        )
+
+        val result = repository.syncActiveRequest()
+
+        assertTrue(result is WorkerSyncResult.NoMatch)
+        assertEquals("Grade III", fakeDao.getOnce()!!.grade)
+        assertEquals("Grade III", remote.lastPublishedRequest!!.grade)
     }
 
     @Test
