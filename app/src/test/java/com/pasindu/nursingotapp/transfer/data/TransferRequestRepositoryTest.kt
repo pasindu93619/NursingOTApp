@@ -391,6 +391,52 @@ class TransferRequestRepositoryTest {
     }
 
     @Test
+    fun `syncActiveRequest skips redundant publish when remote is SEARCHING and local cache is SYNCED`() = runTest {
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                id = 1,
+                requestId = "nurse-a",
+                requestStatus = TransferRequestStatus.PENDING.name,
+                currentHospitalId = "MOH2026-0010",
+                preferenceHospitalIdsJson = """["MOH2026-0332"]""",
+                grade = "Grade III",
+                matchCycleId = null,
+                matchType = null,
+                matchStatus = null,
+                matchPayloadJson = null,
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 1000L
+            )
+        )
+
+        val remote = FakeRemoteDataSource(
+            remoteRequest = RemoteTransferRequestState(
+                status = "SEARCHING",
+                locked = false,
+                currentMatchId = null,
+                updatedAt = 2000L
+            ),
+            remoteMatch = null
+        )
+        val worker = FakeWorkerApiClient()
+
+        repository = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao.copyForGrade("Grade III"),
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = remote,
+            workerApiClient = worker
+        )
+
+        val result = repository.syncActiveRequest()
+
+        assertTrue(result is WorkerSyncResult.NoMatch)
+        assertEquals(0, remote.publishCalls)
+        assertEquals(1, worker.findAndLockCalls)
+        assertEquals(CacheSyncStatus.SYNCED.name, fakeDao.getOnce()!!.syncStatus)
+    }
+
+    @Test
     fun `syncActiveRequest ingests an already matched remote request without republishing`() = runTest {
         repository.saveRequest(
             currentHospitalId = "MOH2026-0010",
