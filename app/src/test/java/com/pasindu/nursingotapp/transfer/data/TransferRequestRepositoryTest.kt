@@ -6,7 +6,12 @@ import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
 import com.pasindu.nursingotapp.transfer.data.model.CacheSyncStatus
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
+import com.pasindu.nursingotapp.transfer.data.model.Decision
+import com.pasindu.nursingotapp.transfer.data.model.DecisionRequest
+import com.pasindu.nursingotapp.transfer.data.model.DecisionResponse
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
+import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
+import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -73,6 +78,52 @@ class TransferRequestRepositoryTest {
     private lateinit var fakeDao: FakeTransferActiveCacheDao
     private lateinit var fakeProfileDao: FakeProfileDao
     private lateinit var repository: TransferRequestRepository
+
+    private class FakeTokenProvider : TransferTokenProvider {
+        override suspend fun getFirebaseIdToken(forceRefresh: Boolean): String = "test-token"
+        override suspend fun getCurrentUserId(): String = "nurse-a"
+    }
+
+    private class FakeWorkerApiClient : TransferWorkerApiClient {
+        var findAndLockCalls = 0
+
+        override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
+            findAndLockCalls++
+            return WorkerSyncResult.NoMatch("worker should not be called when remote match exists")
+        }
+
+        override suspend fun respondToMatch(
+            firebaseIdToken: String,
+            payload: DecisionRequest
+        ): DecisionResponse {
+            error("Not used by this test")
+        }
+    }
+
+    private class FakeRemoteDataSource(
+        private val remoteRequest: RemoteTransferRequestState?,
+        private val remoteMatch: RemoteMatchState?
+    ) : TransferRemoteDataSource {
+        var publishCalls = 0
+
+        override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+            Result.success(remoteRequest)
+
+        override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+            Result.success(remoteMatch)
+
+        override suspend fun publishTransferRequest(
+            userId: String,
+            request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+        ): Result<Unit> {
+            publishCalls++
+            return Result.success(Unit)
+        }
+
+        override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
+            Result.success(Unit)
+    }
+
 
     @Before
     fun setUp() {
@@ -292,6 +343,68 @@ class TransferRequestRepositoryTest {
         val result = repository.getActiveRequest()
         assertNotNull(result)
         assertEquals("MOH2026-0010", result!!.currentHospitalId)
+    }
+
+    @Test
+    fun `syncActiveRequest ingests an already matched remote request without republishing`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0010",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0332"))
+        )
+
+        val remoteMatch = RemoteMatchState(
+            matchId = "match-123",
+            match = WorkerDirectMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "MOH2026-0010",
+                nurseBCurrentHospitalId = "MOH2026-0332",
+                nurseADestinationHospitalId = "MOH2026-0332",
+                nurseBDestinationHospitalId = "MOH2026-0010",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "SAME_GRADE_PRIORITY"
+            ),
+            status = "PENDING_CONFIRMATION",
+            createdAt = "2026-10-07T10:00:00Z",
+            expiresAt = "2026-10-09T10:00:00Z"
+        )
+
+        val remote = FakeRemoteDataSource(
+            remoteRequest = RemoteTransferRequestState(
+                status = "MATCHED",
+                locked = true,
+                currentMatchId = "match-123",
+                updatedAt = System.currentTimeMillis()
+            ),
+            remoteMatch = remoteMatch
+        )
+        val worker = FakeWorkerApiClient()
+
+        repository = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = remote,
+            workerApiClient = worker
+        )
+
+        val result = repository.syncActiveRequest()
+
+        assertTrue(result is WorkerSyncResult.MatchFound)
+        assertEquals(0, remote.publishCalls)
+        assertEquals(0, worker.findAndLockCalls)
+
+        val stored = fakeDao.getOnce()
+        assertNotNull(stored)
+        assertEquals(TransferRequestStatus.MATCHED.name, stored!!.requestStatus)
+        assertEquals("match-123", stored.matchCycleId)
+        assertEquals("PENDING_CONFIRMATION", stored.matchStatus)
+        assertEquals(CacheSyncStatus.SYNCED.name, stored.syncStatus)
     }
 
     // ---------------------------------------------------------------------------
