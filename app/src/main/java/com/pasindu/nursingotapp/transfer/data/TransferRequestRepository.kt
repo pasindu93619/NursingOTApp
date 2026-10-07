@@ -1,5 +1,7 @@
 package com.pasindu.nursingotapp.transfer.data
 
+import android.util.Log
+
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
@@ -36,6 +38,10 @@ class TransferRequestRepository @Inject constructor(
     private val remoteDataSource: TransferRemoteDataSource? = null,
     private val workerApiClient: TransferWorkerApiClient? = null
 ) {
+
+    companion object {
+        private const val TAG = "TransferSync"
+    }
 
     // ---------------------------------------------------------------------------
     // JSON configuration — plain array, no surrounding whitespace.
@@ -169,18 +175,33 @@ class TransferRequestRepository @Inject constructor(
 
         val userId = tp.getCurrentUserId()
             ?: run {
+                Log.e(TAG, "Authentication failure: Unable to get user ID")
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get user ID")
             }
 
+        Log.d(TAG, "syncActiveRequest: authenticated uid=$userId")
+
         // Read server-owned state before publishing local SEARCHING data.
         val remoteState = rds.fetchTransferRequest(userId).getOrElse { error ->
+            Log.e(
+                TAG,
+                "Firestore fetchTransferRequest FAILED: ${error.javaClass.simpleName}: ${error.message}",
+                error
+            )
             dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
             return WorkerSyncResult.NetworkError(
                 "Failed to read transfer request state from server: ${error.message}",
                 error
             )
         }
+
+        Log.d(
+            TAG,
+            "Firestore fetchTransferRequest OK: exists=${remoteState != null}, " +
+                "status=${remoteState?.status}, locked=${remoteState?.locked}, " +
+                "matchId=${remoteState?.currentMatchId != null}"
+        )
 
         if (
             remoteState?.status.equals(TransferRequestStatus.MATCHED.name, ignoreCase = true) &&
@@ -225,9 +246,20 @@ class TransferRequestRepository @Inject constructor(
         }
 
         // Server is not currently matched: publish SEARCHING and invoke the authoritative Worker.
+        Log.d(
+            TAG,
+            "Publishing transfer request: current=${domain.currentHospitalId}, " +
+                "preferences=${domain.rankedPreferences.hospitalIds.size}, grade=${domain.grade}"
+        )
         val publishResult = rds.publishTransferRequest(userId, domain)
         if (publishResult.isFailure) {
             val err = publishResult.exceptionOrNull()
+            Log.e(
+                TAG,
+                "Firestore publishTransferRequest FAILED: " +
+                    "${err?.javaClass?.simpleName}: ${err?.message}",
+                err
+            )
             dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
             return WorkerSyncResult.NetworkError(
                 "Failed to publish request to server: ${err?.message}",
@@ -235,13 +267,19 @@ class TransferRequestRepository @Inject constructor(
             )
         }
 
+        Log.d(TAG, "Firestore publishTransferRequest OK")
+
         val token = tp.getFirebaseIdToken()
             ?: run {
+                Log.e(TAG, "Firebase ID token acquisition FAILED")
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get ID token")
             }
 
+        Log.d(TAG, "Firebase ID token acquired successfully")
+        Log.d(TAG, "Calling Cloudflare matching Worker")
         val workerResult = api.findAndLockMatch(token)
+        Log.d(TAG, "Cloudflare matching Worker returned: ${workerResult::class.simpleName}")
 
         when (workerResult) {
             is WorkerSyncResult.MatchFound -> {
