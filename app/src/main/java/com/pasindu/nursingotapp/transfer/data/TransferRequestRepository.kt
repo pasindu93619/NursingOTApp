@@ -271,29 +271,48 @@ class TransferRequestRepository @Inject constructor(
             )
         }
 
-        // Server is not currently matched: publish SEARCHING and invoke the authoritative Worker.
-        Log.d(
-            TAG,
-            "Publishing transfer request: current=${domain.currentHospitalId}, " +
-                "preferences=${domain.rankedPreferences.hospitalIds.size}, grade=${domain.grade}"
-        )
-        val publishResult = rds.publishTransferRequest(userId, domain)
-        if (publishResult.isFailure) {
-            val err = publishResult.exceptionOrNull()
-            Log.e(
+        /*
+         * Server is not currently matched.
+         *
+         * Do not rewrite an already-SYNCED SEARCHING document on every
+         * polling cycle. Every Firestore write changes updateTime and can
+         * invalidate the Worker atomic precondition while the other nurse
+         * is being matched. Publish only when the local request is pending
+         * or changed, or when the server has no request yet.
+         */
+        val shouldPublishRemote = remoteState == null ||
+            !remoteState.status.equals(TransferRequestStatus.SEARCHING.name, ignoreCase = true) ||
+            entity.syncStatus.trim().uppercase() != CacheSyncStatus.SYNCED.name
+
+        if (shouldPublishRemote) {
+            Log.d(
                 TAG,
-                "Firestore publishTransferRequest FAILED: " +
-                    "${err?.javaClass?.simpleName}: ${err?.message}",
-                err
+                "Publishing transfer request: current=${domain.currentHospitalId}, " +
+                    "preferences=${domain.rankedPreferences.hospitalIds.size}, grade=${domain.grade}"
             )
-            dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
-            return WorkerSyncResult.NetworkError(
-                "Failed to publish request to server: ${err?.message}",
-                err
+            val publishResult = rds.publishTransferRequest(userId, domain)
+            if (publishResult.isFailure) {
+                val err = publishResult.exceptionOrNull()
+                Log.e(
+                    TAG,
+                    "Firestore publishTransferRequest FAILED: " +
+                        "${err?.javaClass?.simpleName}: ${err?.message}",
+                    err
+                )
+                dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
+                return WorkerSyncResult.NetworkError(
+                    "Failed to publish request to server: ${err?.message}",
+                    err
+                )
+            }
+            Log.d(TAG, "Firestore publishTransferRequest OK")
+        } else {
+            Log.d(
+                TAG,
+                "Remote request already SEARCHING and local cache is SYNCED; " +
+                    "skipping redundant Firestore write before matching"
             )
         }
-
-        Log.d(TAG, "Firestore publishTransferRequest OK")
 
         val token = tp.getFirebaseIdToken()
             ?: run {
