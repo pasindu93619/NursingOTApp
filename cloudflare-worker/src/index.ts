@@ -172,6 +172,22 @@ export default {
 
         return jsonResponse(result, 200);
       } catch (err: unknown) {
+        console.error("[MATCHING_FIND_AND_LOCK_ERROR]", {
+          name: err instanceof Error ? err.name : "UnknownError",
+          message: err instanceof Error ? err.message : String(err),
+          statusCode:
+            typeof err === "object" &&
+            err !== null &&
+            "statusCode" in err
+              ? (err as { statusCode?: unknown }).statusCode
+              : undefined,
+          errorCode:
+            typeof err === "object" &&
+            err !== null &&
+            "code" in err
+              ? (err as { code?: unknown }).code
+              : undefined
+        });
         if (err instanceof AuthError) {
           return errorResponse("Unauthorized", err.message, err.statusCode);
         }
