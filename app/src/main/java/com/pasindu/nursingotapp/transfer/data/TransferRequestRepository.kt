@@ -160,8 +160,34 @@ class TransferRequestRepository @Inject constructor(
      * 6. On failure: does NOT delete Room request; retains local data and marks ERROR.
      */
     suspend fun syncActiveRequest(): WorkerSyncResult {
-        val entity = dao.getOnce() ?: return WorkerSyncResult.NoMatch("No active local transfer request")
-        val domain = entity.toDomain() ?: return WorkerSyncResult.NoMatch("Invalid local transfer request")
+        val cachedEntity = dao.getOnce()
+            ?: return WorkerSyncResult.NoMatch("No active local transfer request")
+
+        /*
+         * The ProfileEntity is the authoritative local source for the nurse's
+         * selected nursing grade. Older Room transfer-cache rows can pre-date
+         * the grade bridge and therefore contain a blank/stale grade.
+         *
+         * Reconcile the cached grade before converting to the domain model so
+         * the request published to Firestore always reflects the current
+         * profile selection (for example, "Grade III").
+         */
+        val profileGrade = profileDao.getProfileOnce()?.grade?.trim().orEmpty()
+        val entity = if (
+            profileGrade.isNotBlank() &&
+            !profileGrade.equals(cachedEntity.grade?.trim(), ignoreCase = false)
+        ) {
+            cachedEntity.copy(
+                grade = profileGrade,
+                syncStatus = CacheSyncStatus.PENDING.name,
+                updatedAt = System.currentTimeMillis()
+            ).also { dao.upsert(it) }
+        } else {
+            cachedEntity
+        }
+
+        val domain = entity.toDomain()
+            ?: return WorkerSyncResult.NoMatch("Invalid local transfer request")
 
         if (domain.requestStatus == TransferRequestStatus.COMPLETED ||
             domain.requestStatus == TransferRequestStatus.WITHDRAWN
