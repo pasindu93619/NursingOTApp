@@ -13,6 +13,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -55,6 +56,26 @@ class TransferRequestViewModel @Inject constructor(
     init {
         loadHospitals()
         observeActiveRequest()
+        startAutomaticMatchPolling()
+    }
+
+    /**
+     * Keeps an active SEARCHING request synchronized with the server while this
+     * ViewModel is alive. The server is authoritative; syncActiveRequest() first
+     * checks for a remote MATCHED state before publishing local SEARCHING data.
+     */
+    private fun startAutomaticMatchPolling() {
+        viewModelScope.launch {
+            while (true) {
+                val request = _activeRequest.value
+                if (request != null && request.requestStatus == com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.PENDING) {
+                    runCatching {
+                        transferRequestRepository.syncActiveRequest()
+                    }
+                }
+                delay(15_000L)
+            }
+        }
     }
 
     // ---------------------------------------------------------------------------
