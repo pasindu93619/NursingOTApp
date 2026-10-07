@@ -137,7 +137,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
 
   // Test 11: Google JSON escaped-newline PEM representation
   test("11 - PEM private key import accepts literal \\n sequences", async () => {
-    const escapedPemPrivateKey = testPemPrivateKey.replace(/\n/g, "\\\\n");
+    const escapedPemPrivateKey = testPemPrivateKey.replace(/\n/g, "\\n");
 
     const importedKey = await importPemPrivateKey(escapedPemPrivateKey);
     assert.ok(importedKey);
@@ -146,7 +146,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
   });
 
   // Test 12-15: OAuth request format and contents
-  test("11-14 - OAuth request uses POST, form-urlencoded, grant_type, and assertion", async () => {
+  test("12-15 - OAuth request uses POST, form-urlencoded, grant_type, and assertion", async () => {
     let capturedMethod = "";
     let capturedContentType = "";
     let capturedBody = "";
