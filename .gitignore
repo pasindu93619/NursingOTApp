@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Cloudflare Wrangler local state
+cloudflare-worker/.wrangler/
+
+# Local/generated debugging and dependency files
+*.log
+.kotlin/errors/
+functions/node_modules/
+*.before_repair

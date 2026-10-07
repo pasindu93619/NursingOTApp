@@ -22,6 +22,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -47,6 +48,12 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
+import com.pasindu.nursingotapp.transfer.ui.TransferPoolStatusScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferRequestViewModel
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
@@ -72,6 +79,13 @@ private val rootDestinations = listOf(
 fun AppNavigation() {
     val navController = rememberNavController()
     val viewModel: NursingViewModel = hiltViewModel()
+    val transferRequestViewModel: TransferRequestViewModel = hiltViewModel()
+    val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
+    val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
+    val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
+    val activeTransferRequest by transferRequestViewModel.activeRequest.collectAsState()
+    val transferIsSubmitting by transferRequestViewModel.isSubmitting.collectAsState()
+    val transferSubmitError by transferRequestViewModel.submitError.collectAsState()
     val context = LocalContext.current
     val animDuration = NursingMotion.pageTransitionDurationMs
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -81,7 +95,13 @@ fun AppNavigation() {
     fun navigateTo(route: String) {
         if (currentRoute == route) return
 
-        navController.navigate(route) {
+        val targetRoute = if (route == "transfer_request" && activeTransferRequest != null) {
+            "transfer_pool_status"
+        } else {
+            route
+        }
+
+        navController.navigate(targetRoute) {
             launchSingleTop = true
             restoreState = false
         }
@@ -178,11 +198,92 @@ fun AppNavigation() {
                     onBack = { navController.popBackStack() }
                 )
             }
+            composable("transfer_identity") {
+                TransferIdentityScreen(
+                    onCompleted = { navController.navigate("home") { launchSingleTop = true } },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("transfer_request") {
+                TransferRequestScreen(
+                    profile = viewModel.userProfile.value,
+                    hospitalOptions = transferHospitalOptions,
+                    hospitalDirectoryLoading = transferHospitalLoading,
+                    hospitalDirectoryError = transferHospitalLoadError,
+                    onRetryHospitalDirectory = transferRequestViewModel::retry,
+                    onBack = { navController.popBackStack() },
+                    activeRequest = activeTransferRequest,
+                    onSubmit = { currentHospitalId, preferenceHospitalIds ->
+                        transferRequestViewModel.submitRequest(
+                            currentHospitalId = currentHospitalId,
+                            preferenceHospitalIds = preferenceHospitalIds,
+                            onSuccess = {
+                                navController.navigate("transfer_pool_status") {
+                                    popUpTo("transfer_request") { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                    }
+                )
+            }
+            composable("transfer_pool_status") {
+                TransferPoolStatusScreen(
+                    activeRequest = activeTransferRequest,
+                    hospitalOptions = transferHospitalOptions,
+                    isLoadingHospitals = transferHospitalLoading,
+                    loadError = transferHospitalLoadError,
+                    isSubmitting = transferIsSubmitting,
+                    submitError = transferSubmitError,
+                    onBack = { navController.popBackStack() },
+                    onEditRequest = {
+                        navController.navigate("transfer_request") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onWithdrawRequest = {
+                        transferRequestViewModel.withdrawRequest()
+                    },
+                    onCreateNewRequest = {
+                        navController.navigate("transfer_request") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onRetryHospitals = transferRequestViewModel::retry,
+                    onOpenMatch = {
+                        navController.navigate("transfer_match") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable("transfer_match") {
+                val matchViewModel: TransferMatchViewModel = hiltViewModel()
+                val matchUiState by matchViewModel.uiState.collectAsState()
+                TransferMatchScreen(
+                    uiState = matchUiState,
+                    onBack = { navController.popBackStack() },
+                    onAcceptMatch = { matchId ->
+                        matchViewModel.acceptMatch(matchId)
+                    },
+                    onRejectMatch = { matchId ->
+                        matchViewModel.rejectMatch(matchId) {
+                            navController.popBackStack()
+                        }
+                    },
+                    onRetry = {
+                        matchViewModel.resetState()
+                    }
+                )
+            }
             composable("profile") {
                 ProfileScreen(
                     viewModel = viewModel,
                     onNavigateToClaimPeriod = { _, _ ->
-                        navController.popBackStack("claim_period", inclusive = false)
+                        navController.navigate("claim_period") {
+                            popUpTo("profile") { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

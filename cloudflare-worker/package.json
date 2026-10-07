@@ -1,0 +1,20 @@
+{
+  "name": "nursing-super-app-worker",
+  "version": "1.0.0",
+  "description": "Trusted backend boundary for Nursing Super App Mutual Transfer",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/auth.test.ts test/matching.test.ts test/firestore.test.ts test/serviceAccountAuth.test.ts test/matchingService.test.ts test/respondMatch.test.ts",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "cloudflare-worker",
+    "firebase-auth",
+    "mutual-transfer"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true
+}

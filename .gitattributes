@@ -1,0 +1,4 @@
+# Binary handling for compressed hospital reference assets
+*.gz -text
+app/src/main/assets/hospitals_2026/*.gz binary
+app/src/main/assets/hospitals_2026/*.gz.data binary

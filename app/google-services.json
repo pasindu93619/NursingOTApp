@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "232082868069",
+    "project_id": "nursing-super-app",
+    "storage_bucket": "nursing-super-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:232082868069:android:eda8e063ce49469e1d838c",
+        "android_client_info": {
+          "package_name": "com.pasindu.nursingotapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_q5UDQGXqSkJmDDX79QRSzMbk10qN2Zc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

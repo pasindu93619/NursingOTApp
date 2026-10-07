@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.AlertDialog
@@ -90,6 +91,7 @@ import com.pasindu.nursingotapp.ui.theme.TextSecondary
 private val HomeBlueSoft = Color(0xFFEAF6FF)
 private val HomePurpleSoft = Color(0xFFF3EEFF)
 private val HomeMintSoft = Color(0xFFEAFBF5)
+private val TransferPurpleSoft = Color(0xFFF3EEFF)
 private val HomeAmberSoft = Color(0xFFFFF6E7)
 private val HomeInk = Color(0xFF12204A)
 
@@ -153,6 +155,7 @@ fun HomeScreen(
         item { QuickAccessGrid(actions) { action ->
             if (action.route == "claim_period" && userProfile == null) onNavigate("profile") else onNavigate(action.route)
         } }
+        item { MutualTransferHomeCard(onClick = { onNavigate("transfer_request") }) }
         item { FocusCard(commandState, onNavigate) }
         item { SectionTitle("Your tools", "Everything else stays one tap away") }
         item { SecondaryToolsGrid(onNavigate) }
@@ -410,6 +413,63 @@ private fun QuickAccessTile(action: HomeAction, modifier: Modifier, onClick: () 
             Spacer(Modifier.width(9.dp))
             Text(action.title, color = HomeInk, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Icon(Icons.Default.ChevronRight, null, tint = action.accent.copy(alpha = 0.72f), modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun MutualTransferHomeCard(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().shadow(3.dp, RoundedCornerShape(22.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                Modifier.size(46.dp),
+                CircleShape,
+                TransferPurpleSoft
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.SwapHoriz,
+                        null,
+                        tint = AiAccentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Mutual Transfer",
+                    color = HomeInk,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    "Find a compatible nurse for a direct hospital exchange",
+                    color = TextSecondary,
+                    fontSize = 9.sp,
+                    lineHeight = 13.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Flagship workspace • Direct 2-way MVP",
+                    color = AiAccentColor,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                "Open Mutual Transfer",
+                tint = AiAccentColor,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
