@@ -109,6 +109,13 @@ class TransferSyncBridgeTest {
             publishedRequest = null
             return Result.success(Unit)
         }
+
+        override suspend fun fetchTransferRequest(userId: String): Result<com.pasindu.nursingotapp.transfer.data.RemoteTransferRequestState?> =
+            Result.success(null)
+
+        override suspend fun fetchMatchDoc(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.RemoteMatchState?> =
+            Result.success(null)
+
     }
 
     private class FakeWorkerApiClient : TransferWorkerApiClient {
