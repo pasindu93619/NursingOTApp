@@ -115,7 +115,11 @@ service cloud.firestore {
      */
     match /matches/{matchId} {
       allow get: if request.auth != null
-        && (request.auth.uid == resource.data.nurseAUid || request.auth.uid == resource.data.nurseBUid);
+        && (
+          request.auth.uid == resource.data.nurseAUid
+          || request.auth.uid == resource.data.nurseBUid
+          || (resource.data.keys().hasAny(['nurseCUid']) && request.auth.uid == resource.data.nurseCUid)
+        );
 
       allow list: if false;
 
@@ -143,6 +147,74 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedByB', 'rejectedByB', 'updatedAt'])
           )
         );
+
+      /*
+       * Mutual Transfer Chat Messages Subcollection.
+       *
+       * Privacy, Security, & Workflow Invariants:
+       * - Scoped strictly to /matches/{matchId}/messages/{messageId}.
+       * - Only authenticated participants (A, B, and C if 3-way) of the parent match may read or create.
+       * - Reads allowed for participants across active, confirmed, cancelled, and expired states.
+       * - Message creation allowed ONLY when parent match.status == 'CHAT_OPEN'.
+       * - Message creation allowed ONLY before match authoritative chatDeadline has passed.
+       * - Sender identity enforced: senderUid must match request.auth.uid.
+       * - matchId and messageId must match the document path.
+       * - Text must be a string, non-empty after trimming, <= 500 characters, no attachments.
+       * - senderHospitalId and senderGrade must be valid strings.
+       * - Timestamp is strictly bound to server time (request.time).
+       * - Messages are strictly immutable: updates and deletions are denied.
+       */
+      match /messages/{messageId} {
+        function getMatchData() {
+          return get(/databases/$(database)/documents/matches/$(matchId)).data;
+        }
+
+        function isMatchParticipant(matchData) {
+          return request.auth != null && (
+            request.auth.uid == matchData.nurseAUid ||
+            request.auth.uid == matchData.nurseBUid ||
+            (matchData.keys().hasAny(['nurseCUid']) && request.auth.uid == matchData.nurseCUid)
+          );
+        }
+
+        function isBeforeDeadline(matchData) {
+          return matchData.keys().hasAny(['chatDeadline'])
+            ? (
+                matchData.chatDeadline is string
+                  ? request.time < timestamp.dateString(matchData.chatDeadline)
+                  : request.time < matchData.chatDeadline
+              )
+            : (
+                matchData.expiresAt is string
+                  ? request.time < timestamp.dateString(matchData.expiresAt)
+                  : request.time < matchData.expiresAt
+              );
+        }
+
+        allow read: if isMatchParticipant(getMatchData());
+
+        allow create: if isMatchParticipant(getMatchData())
+          && getMatchData().status == 'CHAT_OPEN'
+          && isBeforeDeadline(getMatchData())
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.matchId == matchId
+          && request.resource.data.messageId == messageId
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.text.matches('.*\\S.*')
+          && request.resource.data.senderHospitalId is string
+          && request.resource.data.senderHospitalId.size() > 0
+          && request.resource.data.senderGrade is string
+          && request.resource.data.senderGrade.size() > 0
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.keys().hasOnly([
+            'messageId', 'matchId', 'senderUid', 'senderHospitalId',
+            'senderGrade', 'text', 'createdAt'
+          ]);
+
+        allow update, delete: if false;
+      }
     }
 
     /*

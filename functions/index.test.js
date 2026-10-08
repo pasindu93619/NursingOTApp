@@ -176,7 +176,11 @@ function evalTransferRequestUpdate(auth, userId, existing, next) {
 }
 
 function evalMatchGet(auth, matchDoc) {
-  return auth != null && (auth.uid === matchDoc.nurseAUid || auth.uid === matchDoc.nurseBUid);
+  return auth != null && (
+    auth.uid === matchDoc.nurseAUid ||
+    auth.uid === matchDoc.nurseBUid ||
+    (matchDoc.nurseCUid != null && auth.uid === matchDoc.nurseCUid)
+  );
 }
 
 function evalMatchList() {
@@ -209,6 +213,63 @@ function evalMatchUpdate(auth, existing, next) {
     return affectedKeys.every(k => allowed.includes(k));
   }
 
+  return false;
+}
+
+function evalMessageRead(auth, matchDoc) {
+  if (auth == null) return false;
+  return (
+    auth.uid === matchDoc.nurseAUid ||
+    auth.uid === matchDoc.nurseBUid ||
+    (matchDoc.nurseCUid != null && auth.uid === matchDoc.nurseCUid)
+  );
+}
+
+function evalMessageCreate(auth, matchId, messageId, matchDoc, requestTime, resourceData) {
+  if (auth == null) return false;
+  const isParticipant = (
+    auth.uid === matchDoc.nurseAUid ||
+    auth.uid === matchDoc.nurseBUid ||
+    (matchDoc.nurseCUid != null && auth.uid === matchDoc.nurseCUid)
+  );
+  if (!isParticipant) return false;
+
+  if (matchDoc.status !== "CHAT_OPEN") return false;
+
+  const deadline = matchDoc.chatDeadline || matchDoc.expiresAt;
+  const deadlineTime = new Date(deadline).getTime();
+  const reqTimeMs = new Date(requestTime).getTime();
+  if (reqTimeMs >= deadlineTime) return false;
+
+  if (resourceData.senderUid !== auth.uid) return false;
+  if (resourceData.matchId !== matchId) return false;
+  if (resourceData.messageId !== messageId) return false;
+
+  if (typeof resourceData.text !== "string") return false;
+  if (resourceData.text.length === 0 || resourceData.text.length > 500) return false;
+  if (!/.*\S.*/.test(resourceData.text)) return false;
+
+  if (typeof resourceData.senderHospitalId !== "string" || resourceData.senderHospitalId.length === 0) return false;
+  if (typeof resourceData.senderGrade !== "string" || resourceData.senderGrade.length === 0) return false;
+
+  if (resourceData.createdAt !== requestTime) return false;
+
+  const allowedKeys = [
+    "messageId", "matchId", "senderUid", "senderHospitalId",
+    "senderGrade", "text", "createdAt"
+  ];
+  const keys = Object.keys(resourceData);
+  if (keys.length !== allowedKeys.length) return false;
+  if (!keys.every(k => allowedKeys.includes(k))) return false;
+
+  return true;
+}
+
+function evalMessageUpdate() {
+  return false;
+}
+
+function evalMessageDelete() {
   return false;
 }
 
@@ -386,4 +447,223 @@ test("same-grade is NOT enforced by firestore rules contract", () => {
   assert.equal(rulesContent.includes("nurseAGrade == nurseBGrade"), false);
   assert.equal(rulesContent.includes("grade =="), false);
   assert.ok(rulesContent.includes("grade is string")); // Grade is verified as string metadata
+});
+
+// =============================================================================
+// Mutual Transfer Chat Security Rules Test Suite (30 Verification Tests)
+// =============================================================================
+
+const mockMatch2Way = {
+  nurseAUid: "nurse-A",
+  nurseBUid: "nurse-B",
+  status: "CHAT_OPEN",
+  chatDeadline: "2026-10-12T12:00:00.000Z",
+  expiresAt: "2026-10-12T12:00:00.000Z"
+};
+
+const mockMatch3Way = {
+  nurseAUid: "nurse-A",
+  nurseBUid: "nurse-B",
+  nurseCUid: "nurse-C",
+  status: "CHAT_OPEN",
+  chatDeadline: "2026-10-12T12:00:00.000Z",
+  expiresAt: "2026-10-12T12:00:00.000Z"
+};
+
+const validReqTime = "2026-10-09T12:00:00.000Z";
+
+function makeValidMessage(senderUid, matchId = "match-1", messageId = "msg-1") {
+  return {
+    messageId,
+    matchId,
+    senderUid,
+    senderHospitalId: "MOH-001",
+    senderGrade: "Grade I",
+    text: "Hello from transfer participant!",
+    createdAt: validReqTime
+  };
+}
+
+// 2-WAY Tests
+test("1 - 2-Way: Participant A can read messages", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-A" }, mockMatch2Way), true);
+});
+
+test("2 - 2-Way: Participant B can read messages", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-B" }, mockMatch2Way), true);
+});
+
+test("3 - 2-Way: Participant A can create message", () => {
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), true);
+});
+
+test("4 - 2-Way: Participant B can create message", () => {
+  const msg = makeValidMessage("nurse-B");
+  assert.equal(evalMessageCreate({ uid: "nurse-B" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), true);
+});
+
+test("5 - 2-Way: Non-participant X cannot read messages", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-X" }, mockMatch2Way), false);
+  assert.equal(evalMessageRead(null, mockMatch2Way), false);
+});
+
+test("6 - 2-Way: Non-participant X cannot create message", () => {
+  const msg = makeValidMessage("nurse-X");
+  assert.equal(evalMessageCreate({ uid: "nurse-X" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+// 3-WAY Tests
+test("7 - 3-Way: Participant A can read and create message", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-A" }, mockMatch3Way), true);
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch3Way, validReqTime, msg), true);
+});
+
+test("8 - 3-Way: Participant B can read and create message", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-B" }, mockMatch3Way), true);
+  const msg = makeValidMessage("nurse-B");
+  assert.equal(evalMessageCreate({ uid: "nurse-B" }, "match-1", "msg-1", mockMatch3Way, validReqTime, msg), true);
+});
+
+test("9 - 3-Way: Participant C can read and create message", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-C" }, mockMatch3Way), true);
+  const msg = makeValidMessage("nurse-C");
+  assert.equal(evalMessageCreate({ uid: "nurse-C" }, "match-1", "msg-1", mockMatch3Way, validReqTime, msg), true);
+});
+
+test("10 - 3-Way: Non-participant X cannot read or create message", () => {
+  assert.equal(evalMessageRead({ uid: "nurse-X" }, mockMatch3Way), false);
+  const msg = makeValidMessage("nurse-X");
+  assert.equal(evalMessageCreate({ uid: "nurse-X" }, "match-1", "msg-1", mockMatch3Way, validReqTime, msg), false);
+});
+
+// WORKFLOW STATE Tests
+test("11 - State: PENDING_CONFIRMATION create is denied", () => {
+  const match = { ...mockMatch2Way, status: "PENDING_CONFIRMATION" };
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", match, validReqTime, msg), false);
+});
+
+test("12 - State: CHAT_OPEN create is allowed", () => {
+  const match = { ...mockMatch2Way, status: "CHAT_OPEN" };
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", match, validReqTime, msg), true);
+});
+
+test("13 - State: CONFIRMED create is denied", () => {
+  const match = { ...mockMatch2Way, status: "CONFIRMED" };
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", match, validReqTime, msg), false);
+});
+
+test("14 - State: CANCELLED create is denied", () => {
+  const match = { ...mockMatch2Way, status: "CANCELLED" };
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", match, validReqTime, msg), false);
+});
+
+test("15 - State: EXPIRED create is denied", () => {
+  const match = { ...mockMatch2Way, status: "EXPIRED" };
+  const msg = makeValidMessage("nurse-A");
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", match, validReqTime, msg), false);
+});
+
+// DEADLINE Tests
+test("16 - Deadline: Before chatDeadline create is allowed", () => {
+  const beforeTime = "2026-10-12T11:59:59.000Z";
+  const msg = { ...makeValidMessage("nurse-A"), createdAt: beforeTime };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, beforeTime, msg), true);
+});
+
+test("17 - Deadline: At or after chatDeadline create is denied", () => {
+  const exactTime = "2026-10-12T12:00:00.000Z";
+  const afterTime = "2026-10-12T12:00:01.000Z";
+  const msgExact = { ...makeValidMessage("nurse-A"), createdAt: exactTime };
+  const msgAfter = { ...makeValidMessage("nurse-A"), createdAt: afterTime };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, exactTime, msgExact), false);
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, afterTime, msgAfter), false);
+});
+
+// VALIDATION Tests
+test("18 - Validation: Empty text is denied", () => {
+  const msg = { ...makeValidMessage("nurse-A"), text: "" };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("19 - Validation: Whitespace-only text is denied", () => {
+  const msg1 = { ...makeValidMessage("nurse-A"), text: "   " };
+  const msg2 = { ...makeValidMessage("nurse-A"), text: "\t\n  " };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg1), false);
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg2), false);
+});
+
+test("20 - Validation: 500 characters text is allowed", () => {
+  const text500 = "a".repeat(500);
+  const msg = { ...makeValidMessage("nurse-A"), text: text500 };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), true);
+});
+
+test("21 - Validation: 501 characters text is denied", () => {
+  const text501 = "a".repeat(501);
+  const msg = { ...makeValidMessage("nurse-A"), text: text501 };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("22 - Validation: Wrong senderUid (spoofing) is denied", () => {
+  const msg = { ...makeValidMessage("nurse-B") }; // caller is nurse-A but claims nurse-B
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("23 - Validation: Wrong matchId in payload is denied", () => {
+  const msg = { ...makeValidMessage("nurse-A"), matchId: "different-match-id" };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("24 - Validation: Wrong messageId in payload is denied", () => {
+  const msg = { ...makeValidMessage("nurse-A"), messageId: "different-msg-id" };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("25 - Validation: Missing required field is denied", () => {
+  const msg = makeValidMessage("nurse-A");
+  delete msg.senderHospitalId;
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("26 - Validation: Extra unexpected field is denied", () => {
+  const msg = { ...makeValidMessage("nurse-A"), extraAttachmentUrl: "http://malicious.com" };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("27 - Immutability: Message update is denied", () => {
+  assert.equal(evalMessageUpdate(), false);
+});
+
+test("28 - Immutability: Message delete is denied", () => {
+  assert.equal(evalMessageDelete(), false);
+});
+
+// TIMESTAMP Tests
+test("29 - Timestamp: Client-controlled arbitrary createdAt is denied", () => {
+  const forgedTimestamp = "1999-01-01T00:00:00.000Z";
+  const msg = { ...makeValidMessage("nurse-A"), createdAt: forgedTimestamp };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), false);
+});
+
+test("30 - Timestamp: Server-bound request.time createdAt is accepted", () => {
+  const msg = { ...makeValidMessage("nurse-A"), createdAt: validReqTime };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), true);
+});
+
+test("31 - Parent Match Rule: Participant C recognized for get", () => {
+  assert.equal(evalMatchGet({ uid: "nurse-C" }, mockMatch3Way), true);
+  assert.equal(evalMatchGet({ uid: "nurse-X" }, mockMatch3Way), false);
+});
+
+test("32 - Security rules content contains messages subcollection with immutable flags", () => {
+  assert.ok(rulesContent.includes("match /messages/{messageId}"));
+  assert.ok(rulesContent.includes("allow update, delete: if false;"));
+  assert.ok(rulesContent.includes("isBeforeDeadline"));
+  assert.ok(rulesContent.includes("status == 'CHAT_OPEN'"));
 });
