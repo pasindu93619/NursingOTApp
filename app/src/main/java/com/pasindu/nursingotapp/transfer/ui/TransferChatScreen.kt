@@ -424,7 +424,12 @@ private fun TransferChatHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (matchType == "THREE_WAY") "3-Way Transfer Team" else "Mutual Transfer Chat",
+                        when {
+                            serverStatus == "CONFIRMED" -> "Transfer Agreement Record"
+                            serverStatus == "CANCELLED" || serverStatus == "EXPIRED" -> "Transfer Chat • Closed"
+                            matchType == "THREE_WAY" -> "3-Way Transfer Team"
+                            else -> "Mutual Transfer Chat"
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Slate
