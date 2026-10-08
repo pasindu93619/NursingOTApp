@@ -468,7 +468,6 @@ describe("Server-Side Matching & Concurrency-Safe Locking (C4 Step 3)", () => {
     assert.deepEqual(write1.update.fields.currentMatchId, { stringValue: "match-atomic-123" });
     assert.deepEqual(write1.update.fields.status, { stringValue: "MATCHED" });
     assert.deepEqual(write1.currentDocument, {
-      exists: true,
       updateTime: "2026-10-02T10:00:00.123Z"
     });
 
@@ -480,7 +479,6 @@ describe("Server-Side Matching & Concurrency-Safe Locking (C4 Step 3)", () => {
     assert.deepEqual(write2.update.fields.currentMatchId, { stringValue: "match-atomic-123" });
     assert.deepEqual(write2.update.fields.status, { stringValue: "MATCHED" });
     assert.deepEqual(write2.currentDocument, {
-      exists: true,
       updateTime: "2026-10-02T10:00:00.456Z"
     });
 
