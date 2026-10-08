@@ -281,7 +281,7 @@ class TransferRequestRepository @Inject constructor(
          * or changed, or when the server has no request yet.
          */
         val shouldPublishRemote = remoteState == null ||
-            !remoteState.status.equals(TransferRequestStatus.SEARCHING.name, ignoreCase = true) ||
+            !remoteState.status.equals("SEARCHING", ignoreCase = true) ||
             entity.syncStatus.trim().uppercase() != CacheSyncStatus.SYNCED.name
 
         if (shouldPublishRemote) {
