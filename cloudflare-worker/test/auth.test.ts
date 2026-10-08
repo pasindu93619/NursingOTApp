@@ -139,14 +139,30 @@ test("Cloudflare Worker Firebase Auth Test Suite", async (t) => {
       (err: Error) => err.message.includes("Cryptographic verification failed")
     );
 
-    // Also test through the worker API (with jwksProvider injected into verify)
-    const req = new Request("https://worker.local/api/auth/check", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${tamperedToken}` }
-    });
-    // In worker API, it will fetch from mock/JWKS; even with Google JWKS, tampered token fails
-    const res = await worker.fetch(req, env);
-    assert.equal(res.status, 401);
+    // Also test through the worker API with mocked globalThis.fetch returning publicJwk
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = (async (url: string | URL | Request) => {
+        if (String(url).includes("jwk")) {
+          return new Response(JSON.stringify({ keys: [publicJwk] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return new Response("Not found", { status: 404 });
+      }) as typeof fetch;
+
+      resetJwksCache();
+      const req = new Request("https://worker.local/api/auth/check", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tamperedToken}` }
+      });
+      const res = await worker.fetch(req, env);
+      assert.equal(res.status, 401);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetJwksCache();
+    }
   });
 
   // ---------------------------------------------------------------------------

@@ -275,9 +275,20 @@ export async function respondToMatch(
       ? [nurseAUid, nurseBUid, nurseCUid]
       : [nurseAUid, nurseBUid];
 
-    const participantDocs = await Promise.all(
-      participantUids.map(uid => firestoreClient.getRequestDoc(uid).catch(() => null))
-    );
+    const participantDocs: (CandidateRequest | null)[] = [];
+    for (const uid of participantUids) {
+      try {
+        const doc = await firestoreClient.getRequestDoc(uid);
+        participantDocs.push(doc);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        throw new MatchServiceError(
+          `Failed to read participant request ${uid} during cancellation: ${msg}`,
+          500,
+          "PARTICIPANT_READ_FAILED"
+        );
+      }
+    }
 
     for (const doc of participantDocs) {
       if (doc && doc.currentMatchId === matchId) {
@@ -623,6 +634,18 @@ async function findAndLockMatchInternal(
     );
     if (existingMatch) {
       return existingMatch;
+    }
+
+    const referencedMatchDoc = await firestoreClient.getMatchDoc(caller.currentMatchId.trim());
+    if (referencedMatchDoc) {
+      const matchStatus = readStringField(referencedMatchDoc.fields ?? {}, "status")?.toUpperCase();
+      if (matchStatus === "COMPLETED") {
+        throw new MatchServiceError(
+          "Caller transfer has already been completed",
+          409,
+          "MATCH_ALREADY_COMPLETED"
+        );
+      }
     }
 
     // Stale or terminal match: reset caller request to SEARCHING and unlock
@@ -1083,4 +1106,136 @@ export async function findAndLockMatch(
     },
     true
   );
+}
+
+export interface SweepExpiredMatchesOptions {
+  batchSize?: number;
+  now?: () => Date;
+}
+
+export interface SweepExpiredMatchesResult {
+  scanned: number;
+  expired: number;
+  unlockedParticipants: number;
+  errors: number;
+}
+
+/**
+ * Sweeps active PENDING_CONFIRMATION matches that have passed their expiration deadline.
+ * Marks expired matches as EXPIRED and unlocks/resets their participants back to SEARCHING.
+ *
+ * Invariants:
+ * - Scans only PENDING_CONFIRMATION matches where now > expiresAt.
+ * - Atomically marks match EXPIRED and resets participants (A, B, and C if 3-way).
+ * - Preconditions guard participants against race conditions; never overrides newer matches.
+ * - Safe error handling: skips/logs errors per match without halting the entire sweep.
+ */
+export async function sweepExpiredMatches(
+  firestoreClient: FirestoreClient,
+  options?: SweepExpiredMatchesOptions
+): Promise<SweepExpiredMatchesResult> {
+  const batchSize = options?.batchSize ?? 100;
+  const now = options?.now ? options.now() : new Date();
+
+  const pendingMatches = await firestoreClient.queryPendingConfirmationMatches(batchSize);
+
+  let scanned = 0;
+  let expired = 0;
+  let unlockedParticipants = 0;
+  let errors = 0;
+
+  for (const rawMatch of pendingMatches) {
+    scanned += 1;
+    try {
+      const matchName = rawMatch.name;
+      const matchId = matchName ? matchName.split("/").pop() || "" : "";
+      if (!matchId) continue;
+
+      const fields = rawMatch.fields ?? {};
+      const status = readStringField(fields, "status")?.toUpperCase();
+      if (status !== "PENDING_CONFIRMATION") continue;
+
+      const expiresAtStr = readStringField(fields, "expiresAt");
+      if (!expiresAtStr) continue;
+
+      const expiresAt = new Date(expiresAtStr);
+      if (now.getTime() <= expiresAt.getTime()) {
+        // Not expired yet
+        continue;
+      }
+
+      // Match has expired
+      const nurseAUid = readStringField(fields, "nurseAUid");
+      const nurseBUid = readStringField(fields, "nurseBUid");
+      const nurseCUid = readStringField(fields, "nurseCUid");
+
+      const participantUids: string[] = [];
+      if (nurseAUid) participantUids.push(nurseAUid);
+      if (nurseBUid) participantUids.push(nurseBUid);
+      if (nurseCUid) participantUids.push(nurseCUid);
+
+      const writeMatch: FirestoreWrite = {
+        update: {
+          name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
+          fields: {
+            status: { stringValue: "EXPIRED" },
+            updatedAt: { integerValue: Date.now().toString() }
+          }
+        },
+        updateMask: { fieldPaths: ["status", "updatedAt"] },
+        currentDocument: rawMatch.updateTime
+          ? { updateTime: rawMatch.updateTime }
+          : { exists: true }
+      };
+
+      const writes: FirestoreWrite[] = [writeMatch];
+      let participantsToUnlockCount = 0;
+
+      for (const uid of participantUids) {
+        try {
+          const doc = await firestoreClient.getRequestDoc(uid);
+          if (doc && doc.currentMatchId === matchId) {
+            participantsToUnlockCount += 1;
+            writes.push({
+              update: {
+                name: getTransferRequestDocPath(firestoreClient.getProjectId(), doc.firebaseUid),
+                fields: {
+                  locked: { booleanValue: false },
+                  currentMatchId: { nullValue: null },
+                  status: { stringValue: "SEARCHING" },
+                  updatedAt: { integerValue: Date.now().toString() }
+                }
+              },
+              updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+              currentDocument: doc.updateTime
+                ? { updateTime: doc.updateTime }
+                : { exists: true }
+            });
+          }
+        } catch (readErr: unknown) {
+          throw new MatchServiceError(
+            `Failed to read participant request ${uid} during expiry sweep: ${readErr instanceof Error ? readErr.message : "Unknown error"}`,
+            500,
+            "PARTICIPANT_READ_FAILED"
+          );
+        }
+      }
+
+      await firestoreClient.commitAtomicMatch(writes);
+      expired += 1;
+      unlockedParticipants += participantsToUnlockCount;
+    } catch (err: unknown) {
+      errors += 1;
+      console.error("[SWEEP_EXPIRED_MATCH_ERROR]", {
+        message: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
+  return {
+    scanned,
+    expired,
+    unlockedParticipants,
+    errors
+  };
 }

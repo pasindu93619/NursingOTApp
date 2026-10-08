@@ -9,6 +9,17 @@ export interface Env {
   FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY?: string;
   // Match configuration:
   MATCH_EXPIRATION_HOURS?: string;
+  CANDIDATE_LIMIT?: string;
+}
+
+export interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
+
+export interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
 }
 
 /**

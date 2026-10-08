@@ -81,7 +81,14 @@ export async function getGoogleJwks(customFetch?: typeof fetch): Promise<GoogleJ
   }
 
   const fetcher = customFetch || fetch;
-  const res = await fetcher(GOOGLE_JWKS_URL);
+  let res: Response;
+  try {
+    res = await fetcher(GOOGLE_JWKS_URL);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Network failure";
+    throw new AuthError(`Unable to fetch Google JWKS public keys: ${msg}`, 502);
+  }
+
   if (!res.ok) {
     throw new AuthError("Unable to fetch Google JWKS public keys", 502);
   }

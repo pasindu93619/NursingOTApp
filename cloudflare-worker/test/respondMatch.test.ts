@@ -55,6 +55,9 @@ function createMockTransport(
     const handler = routes[key] || routes[url.pathname];
 
     if (!handler) {
+      if (req.method === "GET" && url.pathname.includes("/transferRequests/")) {
+        return new Response("Not found", { status: 404 });
+      }
       throw new Error(`Unexpected outgoing HTTP request in test: ${req.method} ${req.url}`);
     }
 
@@ -1228,5 +1231,34 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/respond", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  test("16 - Rejection throws PARTICIPANT_READ_FAILED when participant document read fails", async () => {
+    const matchDoc = createMockMatchDoc("match-rej-fail", "nurse-a", "nurse-b");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-rej-fail`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response("Internal Server Error", { status: 500 })
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-rej-fail", "REJECT", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 500);
+        assert.equal(matchErr.code, "PARTICIPANT_READ_FAILED");
+        return true;
+      }
+    );
   });
 });

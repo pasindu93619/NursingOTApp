@@ -1,4 +1,4 @@
-import type { Env, AuthCheckResponse } from "./types.ts";
+import type { Env, AuthCheckResponse, ScheduledEvent, ExecutionContext } from "./types.ts";
 import {
   AuthError,
   extractBearerToken,
@@ -7,7 +7,12 @@ import {
 import { FirestoreClient } from "./firestore/firestoreClient.ts";
 import { createServiceAccountTokenProvider } from "./auth/serviceAccountAuth.ts";
 import type { MatchDecisionRequest } from "./types.ts";
-import { findAndLockMatch, respondToMatch, MatchServiceError } from "./matching/matchingService.ts";
+import {
+  findAndLockMatch,
+  respondToMatch,
+  sweepExpiredMatches,
+  MatchServiceError
+} from "./matching/matchingService.ts";
 
 const DEFAULT_PROJECT_ID = "nursing-super-app";
 
@@ -173,8 +178,17 @@ export default {
           );
         }
 
+        let candidateLimit: number | undefined;
+        if (env.CANDIDATE_LIMIT && env.CANDIDATE_LIMIT.trim().length > 0) {
+          const parsed = parseInt(env.CANDIDATE_LIMIT.trim(), 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            candidateLimit = parsed;
+          }
+        }
+
         const result = await findAndLockMatch(callerUid, firestoreClient, {
-          expirationHours
+          expirationHours,
+          candidateLimit
         });
 
         return jsonResponse(result, 200);
@@ -206,7 +220,57 @@ export default {
       }
     }
 
+    // 6. Manual / Triggered Expiry Sweep Endpoint
+    if (pathname === "/api/matching/sweep-expired") {
+      if (request.method !== "POST") {
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
+      }
+      try {
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
+        }
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+
+        const result = await sweepExpiredMatches(firestoreClient);
+        return jsonResponse(result, 200);
+      } catch (err: unknown) {
+        if (err instanceof MatchServiceError) {
+          return errorResponse(err.code, err.message, err.statusCode);
+        }
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
     // Default 404
     return errorResponse("NotFound", `Endpoint '${pathname}' not found`, 404);
+  },
+
+  async scheduled(event: ScheduledEvent, env: Env, ctx?: ExecutionContext): Promise<void> {
+    const runSweep = async () => {
+      try {
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          console.error("[SCHEDULED_SWEEP_CONFIG_ERROR] Failed to resolve token provider");
+          return;
+        }
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const result = await sweepExpiredMatches(firestoreClient);
+        console.log("[SCHEDULED_SWEEP_COMPLETED]", result);
+      } catch (err: unknown) {
+        console.error("[SCHEDULED_SWEEP_ERROR]", {
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
+    };
+
+    if (ctx && typeof ctx.waitUntil === "function") {
+      ctx.waitUntil(runSweep());
+    } else {
+      await runSweep();
+    }
   }
 };

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import worker from "../src/index.ts";
 import {
   findAndLockMatch,
+  sweepExpiredMatches,
   MatchServiceError,
   type FindAndLockMatchSuccess,
   type FindAndLockNoMatch
@@ -95,6 +96,92 @@ function createMockRawDoc(
         }
       },
       grade: { stringValue: grade }
+    }
+  };
+}
+
+function createMock2WayMatchDoc(
+  matchId: string,
+  nurseAUid: string,
+  nurseBUid: string,
+  nurseACurrentHospitalId = "HOSP-001",
+  nurseBCurrentHospitalId = "HOSP-002",
+  nurseADestinationHospitalId = "HOSP-002",
+  nurseBDestinationHospitalId = "HOSP-001",
+  options: {
+    status?: string;
+    expiresAt?: string;
+    updateTime?: string;
+  } = {}
+): FirestoreRawDocument {
+  return {
+    name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/${matchId}`,
+    updateTime: options.updateTime ?? "2026-10-02T10:00:00.000Z",
+    fields: {
+      nurseAUid: { stringValue: nurseAUid },
+      nurseBUid: { stringValue: nurseBUid },
+      nurseACurrentHospitalId: { stringValue: nurseACurrentHospitalId },
+      nurseBCurrentHospitalId: { stringValue: nurseBCurrentHospitalId },
+      nurseADestinationHospitalId: { stringValue: nurseADestinationHospitalId },
+      nurseBDestinationHospitalId: { stringValue: nurseBDestinationHospitalId },
+      nurseAGrade: { stringValue: "Grade I" },
+      nurseBGrade: { stringValue: "Grade I" },
+      isSameGrade: { booleanValue: true },
+      nurseAPreferenceRank: { integerValue: "1" },
+      nurseBPreferenceRank: { integerValue: "1" },
+      combinedPreferenceRank: { integerValue: "2" },
+      priorityReason: { stringValue: "Direct 2-way match" },
+      status: { stringValue: options.status ?? "PENDING_CONFIRMATION" },
+      createdAt: { stringValue: "2026-10-02T10:00:00.000Z" },
+      expiresAt: { stringValue: options.expiresAt ?? new Date(Date.now() + 48 * 3600 * 1000).toISOString() },
+      updatedAt: { stringValue: options.updateTime ?? "2026-10-02T10:00:00.000Z" }
+    }
+  };
+}
+
+function createMock3WayMatchDoc(
+  matchId: string,
+  nurseAUid: string,
+  nurseBUid: string,
+  nurseCUid: string,
+  nurseACurrentHospitalId = "HOSP-001",
+  nurseBCurrentHospitalId = "HOSP-002",
+  nurseCCurrentHospitalId = "HOSP-003",
+  nurseADestinationHospitalId = "HOSP-002",
+  nurseBDestinationHospitalId = "HOSP-003",
+  nurseCDestinationHospitalId = "HOSP-001",
+  options: {
+    status?: string;
+    expiresAt?: string;
+    updateTime?: string;
+  } = {}
+): FirestoreRawDocument {
+  return {
+    name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/${matchId}`,
+    updateTime: options.updateTime ?? "2026-10-02T10:00:00.000Z",
+    fields: {
+      nurseAUid: { stringValue: nurseAUid },
+      nurseBUid: { stringValue: nurseBUid },
+      nurseCUid: { stringValue: nurseCUid },
+      nurseACurrentHospitalId: { stringValue: nurseACurrentHospitalId },
+      nurseBCurrentHospitalId: { stringValue: nurseBCurrentHospitalId },
+      nurseCCurrentHospitalId: { stringValue: nurseCCurrentHospitalId },
+      nurseADestinationHospitalId: { stringValue: nurseADestinationHospitalId },
+      nurseBDestinationHospitalId: { stringValue: nurseBDestinationHospitalId },
+      nurseCDestinationHospitalId: { stringValue: nurseCDestinationHospitalId },
+      nurseAGrade: { stringValue: "Grade I" },
+      nurseBGrade: { stringValue: "Grade I" },
+      nurseCGrade: { stringValue: "Grade I" },
+      isAllSameGrade: { booleanValue: true },
+      nurseAPreferenceRank: { integerValue: "1" },
+      nurseBPreferenceRank: { integerValue: "1" },
+      nurseCPreferenceRank: { integerValue: "1" },
+      combinedPreferenceRank: { integerValue: "3" },
+      priorityReason: { stringValue: "All-same-grade 3-way cycle" },
+      status: { stringValue: options.status ?? "PENDING_CONFIRMATION" },
+      createdAt: { stringValue: "2026-10-02T10:00:00.000Z" },
+      expiresAt: { stringValue: options.expiresAt ?? new Date(Date.now() + 48 * 3600 * 1000).toISOString() },
+      updatedAt: { stringValue: options.updateTime ?? "2026-10-02T10:00:00.000Z" }
     }
   };
 }
@@ -1704,5 +1791,291 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     assert.equal(queryCalls, 2, "Must query second batch");
     assert.equal(offsetsReceived[0], undefined);
     assert.equal(offsetsReceived[1], 100, "Second batch must request offset 100");
+  });
+
+  // 33. Referencing a COMPLETED match fails with 409 MATCH_ALREADY_COMPLETED and never resets caller
+  test("33 - Referencing a COMPLETED match returns 409 MATCH_ALREADY_COMPLETED and never resets caller", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      status: "MATCHED",
+      locked: true,
+      currentMatchId: "completed-match-999"
+    });
+
+    const completedMatchDoc = createMock3WayMatchDoc(
+      "completed-match-999",
+      "nurse-a",
+      "nurse-b",
+      "nurse-c",
+      "HOSP-001",
+      "HOSP-002",
+      "HOSP-003",
+      "HOSP-002",
+      "HOSP-003",
+      "HOSP-001",
+      { status: "COMPLETED" }
+    );
+
+    let commitCalled = false;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/completed-match-999`]: () =>
+        new Response(JSON.stringify(completedMatchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        commitCalled = true;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    await assert.rejects(
+      async () => {
+        await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 409);
+        assert.equal(matchErr.code, "MATCH_ALREADY_COMPLETED");
+        return true;
+      }
+    );
+
+    assert.equal(commitCalled, false, "Must never commit a reset write for COMPLETED match caller");
+  });
+
+  // 34. Candidate limit configured via env / options is respected
+  test("34 - Worker respects candidate limit when searching candidates", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I");
+    let limitReceived = 0;
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: async (req: Request) => {
+        const body = (await req.json()) as { structuredQuery: { limit: number } };
+        limitReceived = body.structuredQuery.limit;
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48, candidateLimit: 50 });
+    assert.equal(result.matched, false);
+    assert.equal(limitReceived, 50, "StructuredQuery limit must reflect configured candidateLimit");
+  });
+
+  // 35. Server-side sweepExpiredMatches marks expired matches as EXPIRED and unlocks participants
+  test("35 - sweepExpiredMatches marks expired matches as EXPIRED and releases participants", async () => {
+    const now = new Date("2026-10-03T12:00:00Z");
+
+    // Match 1: 2-way expired
+    const expiredMatch2Way = createMock2WayMatchDoc(
+      "expired-match-1",
+      "nurse-a",
+      "nurse-b",
+      "HOSP-001",
+      "HOSP-002",
+      "HOSP-002",
+      "HOSP-001",
+      {
+        status: "PENDING_CONFIRMATION",
+        expiresAt: "2026-10-03T10:00:00Z" // Expired 2 hours ago
+      }
+    );
+
+    // Match 2: 3-way expired
+    const expiredMatch3Way = createMock3WayMatchDoc(
+      "expired-match-2",
+      "nurse-c",
+      "nurse-d",
+      "nurse-e",
+      "HOSP-003",
+      "HOSP-004",
+      "HOSP-005",
+      "HOSP-004",
+      "HOSP-005",
+      "HOSP-003",
+      {
+        status: "PENDING_CONFIRMATION",
+        expiresAt: "2026-10-03T11:00:00Z" // Expired 1 hour ago
+      }
+    );
+
+    // Match 3: Still active / not expired
+    const activeMatch = createMock2WayMatchDoc(
+      "active-match-3",
+      "nurse-x",
+      "nurse-y",
+      "HOSP-006",
+      "HOSP-007",
+      "HOSP-007",
+      "HOSP-006",
+      {
+        status: "PENDING_CONFIRMATION",
+        expiresAt: "2026-10-03T14:00:00Z" // Expires in 2 hours
+      }
+    );
+
+    const docA = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      status: "MATCHED",
+      locked: true,
+      currentMatchId: "expired-match-1"
+    });
+    const docB = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-001"], "Grade I", {
+      status: "MATCHED",
+      locked: true,
+      currentMatchId: "expired-match-1"
+    });
+    const docC = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-004"], "Grade I", {
+      status: "MATCHED",
+      locked: true,
+      currentMatchId: "expired-match-2"
+    });
+    const docD = createMockRawDoc("nurse-d", "HOSP-004", ["HOSP-005"], "Grade I", {
+      status: "MATCHED",
+      locked: true,
+      currentMatchId: "expired-match-2"
+    });
+    // Participant E has moved on to a newer match (must NOT be reset)
+    const docE = createMockRawDoc("nurse-e", "HOSP-005", ["HOSP-003"], "Grade I", {
+      status: "MATCHED",
+      locked: true,
+      currentMatchId: "newer-match-777"
+    });
+
+    const committedWrites: FirestoreWrite[][] = [];
+
+    const transport = createMockTransport({
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(
+          JSON.stringify([
+            { document: expiredMatch2Way },
+            { document: expiredMatch3Way },
+            { document: activeMatch }
+          ]),
+          { status: 200 }
+        ),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-c`]: () =>
+        new Response(JSON.stringify(docC), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-d`]: () =>
+        new Response(JSON.stringify(docD), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-e`]: () =>
+        new Response(JSON.stringify(docE), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites.push(body.writes);
+        return new Response(JSON.stringify({ commitTime: "2026-10-03T12:00:01Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const sweepResult = await sweepExpiredMatches(client, { now: () => now });
+
+    assert.equal(sweepResult.scanned, 3);
+    assert.equal(sweepResult.expired, 2);
+    // Unlocked: A, B (from match 1) + C, D (from match 2, E was skipped because of newer match)
+    assert.equal(sweepResult.unlockedParticipants, 4);
+    assert.equal(sweepResult.errors, 0);
+
+    assert.equal(committedWrites.length, 2, "Must commit 2 batches (one per expired match)");
+
+    // Batch 1: match 1 status -> EXPIRED, nurse-a unlocked, nurse-b unlocked
+    assert.equal(committedWrites[0].length, 3);
+    const match1Write = committedWrites[0][0];
+    assert.equal(match1Write.update?.fields?.status?.stringValue, "EXPIRED");
+
+    // Batch 2: match 2 status -> EXPIRED, nurse-c unlocked, nurse-d unlocked (E skipped)
+    assert.equal(committedWrites[1].length, 3);
+    const match2Write = committedWrites[1][0];
+    assert.equal(match2Write.update?.fields?.status?.stringValue, "EXPIRED");
+  });
+
+  // 36. Endpoint POST /api/matching/sweep-expired executes sweep successfully
+  test("36 - Endpoint POST /api/matching/sweep-expired triggers sweep successfully", async () => {
+    const originalFetch = globalThis.fetch;
+    let queryCalled = false;
+
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes(":runQuery")) {
+        queryCalled = true;
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      throw new Error(`Unexpected URL in test: ${url}`);
+    }) as typeof fetch;
+
+    try {
+      const request = new Request("https://worker.local/api/matching/sweep-expired", {
+        method: "POST"
+      });
+
+      const response = await worker.fetch(request, {
+        FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        MATCH_EXPIRATION_HOURS: "48"
+      });
+
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { scanned: number; expired: number };
+      assert.equal(body.scanned, 0);
+      assert.equal(body.expired, 0);
+      assert.equal(queryCalled, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  // 37. sweepExpiredMatches handles participant read error gracefully without crashing sweep
+  test("37 - sweepExpiredMatches records errors when participant read fails", async () => {
+    const now = new Date("2026-10-03T12:00:00Z");
+    const expiredMatch = createMock2WayMatchDoc(
+      "expired-match-err",
+      "nurse-a",
+      "nurse-b",
+      "HOSP-001",
+      "HOSP-002",
+      "HOSP-002",
+      "HOSP-001",
+      {
+        status: "PENDING_CONFIRMATION",
+        expiresAt: "2026-10-03T10:00:00Z"
+      }
+    );
+
+    const transport = createMockTransport({
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify([{ document: expiredMatch }]), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response("Internal Server Error", { status: 500 })
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const sweepResult = await sweepExpiredMatches(client, { now: () => now });
+    assert.equal(sweepResult.scanned, 1);
+    assert.equal(sweepResult.expired, 0);
+    assert.equal(sweepResult.errors, 1, "Must increment error counter when participant read fails");
   });
 });

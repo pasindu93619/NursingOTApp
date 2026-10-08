@@ -359,7 +359,13 @@ export class FirestoreClient {
           ]
         }
       },
-      limit
+      limit,
+      orderBy: [
+        {
+          field: { fieldPath: "__name__" },
+          direction: "ASCENDING"
+        }
+      ]
     };
 
     if (offset > 0) {
@@ -408,6 +414,76 @@ export class FirestoreClient {
     }
 
     return candidates;
+  }
+
+  /**
+   * Queries matches with status == 'PENDING_CONFIRMATION'.
+   * Used by server-side expiry sweep.
+   */
+  async queryPendingConfirmationMatches(limit = 100): Promise<FirestoreRawDocument[]> {
+    const authHeader = await this.getAuthHeader();
+    const url = `${this.baseUrl}:runQuery`;
+
+    const structuredQuery: Record<string, unknown> = {
+      from: [{ collectionId: "matches" }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: "status" },
+          op: "EQUAL",
+          value: { stringValue: "PENDING_CONFIRMATION" }
+        }
+      },
+      limit,
+      orderBy: [
+        {
+          field: { fieldPath: "__name__" },
+          direction: "ASCENDING"
+        }
+      ]
+    };
+
+    const body = { structuredQuery };
+
+    let response: Response;
+    try {
+      response = await this.transport(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network failure";
+      throw new FirestoreError(`Transport error while querying pending matches: ${msg}`);
+    }
+
+    if (!response.ok) {
+      throw new FirestoreError(
+        `Failed to query pending matches: HTTP ${response.status}`,
+        response.status
+      );
+    }
+
+    let items: FirestoreRunQueryItem[];
+    try {
+      items = (await response.json()) as FirestoreRunQueryItem[];
+    } catch {
+      throw new FirestoreError("Invalid JSON returned by Firestore query");
+    }
+
+    const matchDocs: FirestoreRawDocument[] = [];
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (item.document) {
+          matchDocs.push(item.document);
+        }
+      }
+    }
+
+    return matchDocs;
   }
 
   /**
