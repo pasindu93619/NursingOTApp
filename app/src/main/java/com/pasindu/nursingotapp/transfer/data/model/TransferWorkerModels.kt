@@ -137,8 +137,8 @@ data class DecisionResponse(
 /**
  * Enum of possible decisions supported by Cloudflare Worker.
  * Initial stage: ACCEPT / REJECT
- * Chat finalization stage: CONFIRM / REJECT
+ * Chat finalization stage: CONFIRM / REJECT / LEAVE
  */
 @Serializable
-enum class Decision { ACCEPT, REJECT, CONFIRM }
+enum class Decision { ACCEPT, REJECT, CONFIRM, LEAVE }
 

@@ -1473,5 +1473,495 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
       }
     );
   });
-});
 
+  // =========================================================================
+  // Phase 1.5.4: Final Transfer Chat Decision State Machine (CONFIRM & LEAVE)
+  // =========================================================================
+
+  // 5. 2-way: A confirms (pending B confirmation, status remains CHAT_OPEN)
+  test("PW-5: 2-way: Participant A confirms, match remains CHAT_OPEN awaiting Participant B", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockMatchDoc("match-chat-2way-1", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true
+    });
+    matchDoc.fields.confirmedByA = { booleanValue: false };
+    matchDoc.fields.confirmedByB = { booleanValue: false };
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-2way-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-chat-2way-1", "CONFIRM", client);
+
+    assert.equal(result.matchId, "match-chat-2way-1");
+    assert.equal(result.newStatus, "CHAT_OPEN");
+    assert.equal(result.decisionApplied, true);
+
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.confirmedByA?.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.status, undefined, "Status field must not change to CONFIRMED yet");
+  });
+
+  // 6. 2-way: B confirms after A confirmed -> transitions to CONFIRMED
+  test("PW-6: 2-way: Participant B confirms after A confirmed, match transitions to CONFIRMED", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockMatchDoc("match-chat-2way-2", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true
+    });
+    matchDoc.fields.confirmedByA = { booleanValue: true };
+    matchDoc.fields.confirmedByB = { booleanValue: false };
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-2way-2`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-chat-2way-2", "CONFIRM", client);
+
+    assert.equal(result.matchId, "match-chat-2way-2");
+    assert.equal(result.newStatus, "CONFIRMED");
+    assert.equal(result.decisionApplied, true);
+
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.confirmedByB?.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.status?.stringValue, "CONFIRMED");
+  });
+
+  // 7. 2-way: A leaves team in CHAT_OPEN -> transitions to CANCELLED and unlocks both
+  test("PW-7: 2-way: Participant A LEAVE in CHAT_OPEN transitions to CANCELLED and unlocks both participants", async () => {
+    let capturedWrites: { writes: Array<{ update: { name: string; fields: Record<string, { booleanValue?: boolean; stringValue?: string; nullValue?: null }> } }> } | null = null;
+    const matchDoc = createMockMatchDoc("match-chat-2way-leave", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true
+    });
+
+    const docA = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-a" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-chat-2way-leave" }
+      }
+    };
+    const docB = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-b" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-chat-2way-leave" }
+      }
+    };
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-2way-leave`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-chat-2way-leave", "LEAVE", client);
+
+    assert.equal(result.matchId, "match-chat-2way-leave");
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(result.decisionApplied, true);
+
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes.length, 3);
+    assert.equal(capturedWrites.writes[0].update.fields.status?.stringValue, "CANCELLED");
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByA?.booleanValue, true);
+    assert.equal(capturedWrites.writes[1].update.fields.locked?.booleanValue, false);
+    assert.equal(capturedWrites.writes[1].update.fields.status?.stringValue, "SEARCHING");
+    assert.equal(capturedWrites.writes[2].update.fields.locked?.booleanValue, false);
+    assert.equal(capturedWrites.writes[2].update.fields.status?.stringValue, "SEARCHING");
+  });
+
+  // 8. 2-way: B leaves team after A already confirmed -> cancels and unlocks both
+  test("PW-8: 2-way: Participant B LEAVE after Participant A already confirmed cancels and unlocks both", async () => {
+    let capturedWrites: { writes: Array<{ update: { name: string; fields: Record<string, { booleanValue?: boolean; stringValue?: string; nullValue?: null }> } }> } | null = null;
+    const matchDoc = createMockMatchDoc("match-chat-2way-b-leave", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true
+    });
+    matchDoc.fields.confirmedByA = { booleanValue: true };
+    matchDoc.fields.confirmedByB = { booleanValue: false };
+
+    const docA = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-a" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-chat-2way-b-leave" }
+      }
+    };
+    const docB = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-b" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-chat-2way-b-leave" }
+      }
+    };
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-2way-b-leave`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-chat-2way-b-leave", "LEAVE", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(result.decisionApplied, true);
+
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByB?.booleanValue, true);
+    assert.equal(capturedWrites.writes[1].update.fields.locked?.booleanValue, false);
+    assert.equal(capturedWrites.writes[2].update.fields.locked?.booleanValue, false);
+  });
+
+  // 9. 3-way: A confirms -> remains CHAT_OPEN; B confirms -> remains CHAT_OPEN; C confirms -> CONFIRMED
+  test("PW-9: 3-way: Sequential confirmation across A, B, and C transitions to CONFIRMED only when all 3 confirm", async () => {
+    // Step 1: A confirms
+    const matchDoc1 = createMockThreeWayMatchDoc("match-3way-seq", "nurse-a", "nurse-b", "nurse-c", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true,
+      acceptedByC: true
+    });
+    matchDoc1.fields.confirmedByA = { booleanValue: false };
+    matchDoc1.fields.confirmedByB = { booleanValue: false };
+    matchDoc1.fields.confirmedByC = { booleanValue: false };
+
+    let capturedWrites1: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const transport1 = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3way-seq`]: () =>
+        new Response(JSON.stringify(matchDoc1), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites1 = await req.json() as typeof capturedWrites1;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+    const client1 = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport: transport1 });
+    const resA = await respondToMatch("nurse-a", "match-3way-seq", "CONFIRM", client1);
+    assert.equal(resA.newStatus, "CHAT_OPEN");
+    assert.equal(capturedWrites1?.writes[0].update.fields.confirmedByA?.booleanValue, true);
+
+    // Step 2: B confirms (A already confirmed)
+    const matchDoc2 = createMockThreeWayMatchDoc("match-3way-seq", "nurse-a", "nurse-b", "nurse-c", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true,
+      acceptedByC: true
+    });
+    matchDoc2.fields.confirmedByA = { booleanValue: true };
+    matchDoc2.fields.confirmedByB = { booleanValue: false };
+    matchDoc2.fields.confirmedByC = { booleanValue: false };
+
+    let capturedWrites2: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const transport2 = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3way-seq`]: () =>
+        new Response(JSON.stringify(matchDoc2), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites2 = await req.json() as typeof capturedWrites2;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+    const client2 = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport: transport2 });
+    const resB = await respondToMatch("nurse-b", "match-3way-seq", "CONFIRM", client2);
+    assert.equal(resB.newStatus, "CHAT_OPEN");
+    assert.equal(capturedWrites2?.writes[0].update.fields.confirmedByB?.booleanValue, true);
+
+    // Step 3: C confirms (A and B already confirmed)
+    const matchDoc3 = createMockThreeWayMatchDoc("match-3way-seq", "nurse-a", "nurse-b", "nurse-c", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true,
+      acceptedByC: true
+    });
+    matchDoc3.fields.confirmedByA = { booleanValue: true };
+    matchDoc3.fields.confirmedByB = { booleanValue: true };
+    matchDoc3.fields.confirmedByC = { booleanValue: false };
+
+    let capturedWrites3: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const transport3 = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3way-seq`]: () =>
+        new Response(JSON.stringify(matchDoc3), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites3 = await req.json() as typeof capturedWrites3;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+    const client3 = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport: transport3 });
+    const resC = await respondToMatch("nurse-c", "match-3way-seq", "CONFIRM", client3);
+    assert.equal(resC.newStatus, "CONFIRMED");
+    assert.equal(capturedWrites3?.writes[0].update.fields.confirmedByC?.booleanValue, true);
+    assert.equal(capturedWrites3?.writes[0].update.fields.status?.stringValue, "CONFIRMED");
+  });
+
+  // 10. 3-way: A and B confirmed, C leaves team -> cancels match and unlocks A, B, and C
+  test("PW-10: 3-way: Participant C LEAVE after A and B confirmed cancels match and atomically unlocks all 3", async () => {
+    let capturedWrites: { writes: Array<{ update: { name: string; fields: Record<string, { booleanValue?: boolean; stringValue?: string; nullValue?: null }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3way-leave", "nurse-a", "nurse-b", "nurse-c", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true,
+      acceptedByC: true
+    });
+    matchDoc.fields.confirmedByA = { booleanValue: true };
+    matchDoc.fields.confirmedByB = { booleanValue: true };
+    matchDoc.fields.confirmedByC = { booleanValue: false };
+
+    const docA = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-a" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-3way-leave" }
+      }
+    };
+    const docB = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-b" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-3way-leave" }
+      }
+    };
+    const docC = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-c`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-c" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-3way-leave" }
+      }
+    };
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3way-leave`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-c`]: () =>
+        new Response(JSON.stringify(docC), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-c", "match-3way-leave", "LEAVE", client);
+
+    assert.equal(result.matchId, "match-3way-leave");
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(result.decisionApplied, true);
+
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes.length, 4, "Must write match doc + 3 participant unlock docs");
+    assert.equal(capturedWrites.writes[0].update.fields.status?.stringValue, "CANCELLED");
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByC?.booleanValue, true);
+    // All three participants unlocked
+    assert.equal(capturedWrites.writes[1].update.fields.locked?.booleanValue, false);
+    assert.equal(capturedWrites.writes[1].update.fields.status?.stringValue, "SEARCHING");
+    assert.equal(capturedWrites.writes[2].update.fields.locked?.booleanValue, false);
+    assert.equal(capturedWrites.writes[2].update.fields.status?.stringValue, "SEARCHING");
+    assert.equal(capturedWrites.writes[3].update.fields.locked?.booleanValue, false);
+    assert.equal(capturedWrites.writes[3].update.fields.status?.stringValue, "SEARCHING");
+  });
+
+  // 11. LEAVE in PENDING_CONFIRMATION returns 400 INVALID_DECISION
+  test("PW-11: Attempting LEAVE in PENDING_CONFIRMATION throws 400 INVALID_DECISION", async () => {
+    const matchDoc = createMockMatchDoc("match-pending-leave", "nurse-a", "nurse-b", {
+      status: "PENDING_CONFIRMATION"
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-pending-leave`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-pending-leave", "LEAVE", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 400);
+        assert.equal(matchErr.code, "INVALID_DECISION");
+        return true;
+      }
+    );
+  });
+
+  // 12. Decision on already CONFIRMED match returns 409 INVALID_STATUS
+  test("PW-12: Decision on already CONFIRMED match throws 409 INVALID_STATUS", async () => {
+    const matchDoc = createMockMatchDoc("match-already-confirmed", "nurse-a", "nurse-b", {
+      status: "CONFIRMED"
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-already-confirmed`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-already-confirmed", "CONFIRM", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 409);
+        assert.equal(matchErr.code, "INVALID_STATUS");
+        return true;
+      }
+    );
+  });
+
+  // 13. Decision on already CANCELLED match returns 409 INVALID_STATUS
+  test("PW-13: Decision on already CANCELLED match throws 409 INVALID_STATUS", async () => {
+    const matchDoc = createMockMatchDoc("match-already-cancelled", "nurse-a", "nurse-b", {
+      status: "CANCELLED"
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-already-cancelled`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-already-cancelled", "LEAVE", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 409);
+        assert.equal(matchErr.code, "INVALID_STATUS");
+        return true;
+      }
+    );
+  });
+
+  // 14. Decision on expired match in CHAT_OPEN throws 410 EXPIRED
+  test("PW-14: Decision on expired match in CHAT_OPEN throws 410 EXPIRED", async () => {
+    const pastDate = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-chat-expired", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      expiresAt: pastDate
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-expired`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-chat-expired", "CONFIRM", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 410);
+        assert.equal(matchErr.code, "EXPIRED");
+        return true;
+      }
+    );
+  });
+
+  // 15. Concurrent LEAVE / CONFIRM conflict recovers cleanly
+  test("PW-15: Concurrency retry recovers cleanly when competing caller already confirmed", async () => {
+    const matchDocBefore = createMockMatchDoc("match-chat-race", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true,
+      updateTime: "2026-10-02T12:00:00.000Z"
+    });
+    matchDocBefore.fields.confirmedByA = { booleanValue: true };
+    matchDocBefore.fields.confirmedByB = { booleanValue: false };
+
+    const matchDocAfter = createMockMatchDoc("match-chat-race", "nurse-a", "nurse-b", {
+      status: "CONFIRMED",
+      acceptedByA: true,
+      acceptedByB: true,
+      updateTime: "2026-10-02T12:00:01.000Z"
+    });
+    matchDocAfter.fields.confirmedByA = { booleanValue: true };
+    matchDocAfter.fields.confirmedByB = { booleanValue: true };
+
+    let getCount = 0;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-race`]: () => {
+        getCount++;
+        return new Response(JSON.stringify(getCount === 1 ? matchDocBefore : matchDocAfter), { status: 200 });
+      },
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        return new Response(
+          JSON.stringify({ error: { code: 409, message: "Precondition failed: updateTime mismatch", status: "ABORTED" } }),
+          { status: 409 }
+        );
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-chat-race", "CONFIRM", client);
+
+    assert.equal(result.matchId, "match-chat-race");
+    assert.equal(result.newStatus, "CONFIRMED");
+    assert.equal(result.decisionApplied, true);
+  });
+});

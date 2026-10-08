@@ -130,7 +130,7 @@ export const SLIDING_WINDOW_HOURS = 24; // 24 hours after first response
 export async function respondToMatch(
   callerUid: string,
   matchId: string,
-  decision: "ACCEPT" | "REJECT" | "CONFIRM",
+  decision: "ACCEPT" | "REJECT" | "CONFIRM" | "LEAVE",
   firestoreClient: FirestoreClient,
   retryCount = 1
 ): Promise<MatchDecisionResponse> {
@@ -234,14 +234,17 @@ export async function respondToMatch(
 
   // 4. Verify participant response eligibility per state
   if (status === "PENDING_CONFIRMATION") {
+    if (decision === "LEAVE") {
+      throw new MatchServiceError("Cannot LEAVE before chat is open; use REJECT instead", 400, "INVALID_DECISION");
+    }
     const alreadyAccepted = getBool(acceptedKey);
     const alreadyRejected = getBool(rejectedKey);
     if (alreadyAccepted || alreadyRejected) {
       throw new MatchServiceError("Participant has already responded", 409, "ALREADY_RESPONDED");
     }
   } else if (status === "CHAT_OPEN") {
-    if (decision === "REJECT") {
-      // Allowed to reject/cancel in CHAT_OPEN
+    if (decision === "REJECT" || decision === "LEAVE") {
+      // Allowed to reject/leave in CHAT_OPEN
     } else {
       // CONFIRM or ACCEPT
       const alreadyConfirmed = getBool(confirmedKey);
@@ -262,7 +265,7 @@ export async function respondToMatch(
   };
   const updateMaskFieldPaths: string[] = ["updatedAt"];
 
-  if (decision === "REJECT") {
+  if (decision === "REJECT" || decision === "LEAVE") {
     newStatus = "CANCELLED";
     matchFieldsToUpdate[rejectedKey] = { booleanValue: true };
     matchFieldsToUpdate[acceptedKey] = { booleanValue: false };
@@ -458,7 +461,7 @@ export async function respondToMatch(
 
           if (
             (decision === "ACCEPT" && freshAccepted) ||
-            (decision === "REJECT" && freshRejected) ||
+            ((decision === "REJECT" || decision === "LEAVE") && freshRejected) ||
             (decision === "CONFIRM" && freshConfirmed)
           ) {
             return {
@@ -481,7 +484,7 @@ export async function respondToMatch(
               decisionApplied:
                 (decision === "ACCEPT" && (freshStatus === "CHAT_OPEN" || freshStatus === "CONFIRMED")) ||
                 (decision === "CONFIRM" && freshStatus === "CONFIRMED") ||
-                (decision === "REJECT" && freshStatus === "CANCELLED")
+                ((decision === "REJECT" || decision === "LEAVE") && freshStatus === "CANCELLED")
             };
           }
 

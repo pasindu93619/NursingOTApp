@@ -78,7 +78,7 @@ export interface GoogleJwksResponse {
 // Request payload for match decision (accept/reject/confirm)
 export interface MatchDecisionRequest {
   matchId: string;
-  decision: "ACCEPT" | "REJECT" | "CONFIRM";
+  decision: "ACCEPT" | "REJECT" | "CONFIRM" | "LEAVE";
 }
 
 // Response payload after processing a decision

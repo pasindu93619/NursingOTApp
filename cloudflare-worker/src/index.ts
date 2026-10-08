@@ -126,6 +126,9 @@ export default {
         if (!decisionReq.matchId || !decisionReq.decision) {
           return errorResponse("InvalidRequest", "matchId and decision are required", 400);
         }
+        if (!["ACCEPT", "REJECT", "CONFIRM", "LEAVE"].includes(decisionReq.decision)) {
+          return errorResponse("InvalidRequest", `Invalid decision: ${decisionReq.decision}`, 400);
+        }
         const result = await respondToMatch(callerUid, decisionReq.matchId, decisionReq.decision, firestoreClient);
         return jsonResponse(result, 200);
       } catch (err: unknown) {
