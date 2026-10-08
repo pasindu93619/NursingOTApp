@@ -424,16 +424,26 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(8.dp, heroShape)
             .clickable(onClick = onClick),
         shape = heroShape,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = Slate),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
+                    .width(6.dp)
+                    .height(224.dp)
+                    .background(ClinicalPrimaryColor)
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 17.dp, vertical = 17.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -441,24 +451,24 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 ) {
                     Surface(
                         shape = RoundedCornerShape(50.dp),
-                        color = Color.White.copy(alpha = 0.15f)
+                        color = Emerald
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
                                 modifier = Modifier.size(7.dp),
                                 shape = CircleShape,
-                                color = Emerald
+                                color = Color.White
                             ) {}
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                "MUTUAL TRANSFER • FLAGSHIP",
+                                "MUTUAL TRANSFER",
                                 color = Color.White,
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 1.1.sp
+                                letterSpacing = 1.05.sp
                             )
                         }
                     }
@@ -468,7 +478,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                     Surface(
                         modifier = Modifier.size(38.dp),
                         shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.13f)
+                        color = ClinicalPrimaryColor
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -483,19 +493,9 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                 Spacer(Modifier.height(14.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(ClinicalPrimaryColor)
-                )
-
-                Spacer(Modifier.height(12.dp))
-
                 Text(
                     "FIND YOUR MOVE",
-                    color = Color.White.copy(alpha = 0.74f),
+                    color = MedicalBlue,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.8.sp
@@ -511,7 +511,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "A simple, preference-based direct exchange built for Sri Lankan government nurses.",
-                    color = Color.White.copy(alpha = 0.82f),
+                    color = Color.White.copy(alpha = 0.86f),
                     fontSize = 10.5.sp,
                     lineHeight = 15.sp,
                     fontWeight = FontWeight.Medium
@@ -532,14 +532,13 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                     Surface(
                         modifier = Modifier.size(42.dp),
                         shape = CircleShape,
-                        color = Color.White,
-                        shadowElevation = 2.dp
+                        color = Purple
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Default.SwapHoriz,
                                 contentDescription = "Two-way hospital exchange",
-                                tint = AiAccentColor,
+                                tint = Color.White,
                                 modifier = Modifier.size(23.dp)
                             )
                         }
@@ -558,8 +557,8 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TransferTrustChip("Direct 2-way")
-                    TransferTrustChip("Preference-based")
+                    TransferTrustChip("DIRECT 2-WAY", ClinicalPrimaryColor)
+                    TransferTrustChip("PREFERENCE-BASED", Purple)
                     Spacer(Modifier.weight(1f))
                     Icon(
                         Icons.Default.ChevronRight,
@@ -568,6 +567,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                         modifier = Modifier.size(23.dp)
                     )
                 }
+            }
         }
     }
 }
@@ -581,8 +581,7 @@ private fun TransferJourneyNode(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
-        color = Color.White.copy(alpha = 0.13f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+        color = SurfaceWhite
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
@@ -591,13 +590,13 @@ private fun TransferJourneyNode(
             Surface(
                 modifier = Modifier.size(32.dp),
                 shape = RoundedCornerShape(11.dp),
-                color = Color.White.copy(alpha = 0.14f)
+                color = SurfaceMuted
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         icon,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = ClinicalPrimaryColor,
                         modifier = Modifier.size(17.dp)
                     )
                 }
@@ -605,7 +604,7 @@ private fun TransferJourneyNode(
             Spacer(Modifier.width(7.dp))
             Text(
                 label,
-                color = Color.White.copy(alpha = 0.92f),
+                color = Slate,
                 fontSize = 7.5.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.55.sp,
@@ -617,16 +616,16 @@ private fun TransferJourneyNode(
 }
 
 @Composable
-private fun TransferTrustChip(text: String) {
+private fun TransferTrustChip(text: String, accent: Color) {
     Surface(
         shape = RoundedCornerShape(50.dp),
-        color = Color.White.copy(alpha = 0.11f)
+        color = accent
     ) {
         Text(
             text,
-            color = Color.White.copy(alpha = 0.88f),
+            color = Color.White,
             fontSize = 7.5.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Black,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
         )
     }
