@@ -134,6 +134,7 @@ export async function respondToMatch(
 
   const nurseAUid = getString("nurseAUid");
   const nurseBUid = getString("nurseBUid");
+  const nurseCUid = getString("nurseCUid");
   const status = getString("status");
   const expiresAtStr = getString("expiresAt");
   const updateTime = rawMatch.updateTime;
@@ -142,11 +143,56 @@ export async function respondToMatch(
     throw new MatchServiceError("Malformed match document", 500, "MALFORMED_MATCH_DOC");
   }
 
-  // 2. Verify caller is a participant
-  const isParticipantA = callerUid === nurseAUid;
-  const isParticipantB = callerUid === nurseBUid;
-  if (!isParticipantA && !isParticipantB) {
-    throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+  // Detect whether match is 3-way or 2-way.
+  // A match is 3-way if nurseCUid is present or if any participant C flag exists.
+  const hasParticipantC =
+    Boolean(nurseCUid) ||
+    fields.acceptedByC !== undefined ||
+    fields.rejectedByC !== undefined;
+
+  let isParticipantA = false;
+  let isParticipantB = false;
+  let isParticipantC = false;
+  let acceptedKey: string;
+  let rejectedKey: string;
+
+  if (hasParticipantC) {
+    // In a 3-way match, nurseCUid must be valid and decision booleans must be present
+    const acceptedByC = getBool("acceptedByC");
+    const rejectedByC = getBool("rejectedByC");
+    if (!nurseCUid || acceptedByC === undefined || rejectedByC === undefined) {
+      throw new MatchServiceError("Malformed 3-way match document", 500, "MALFORMED_MATCH_DOC");
+    }
+
+    isParticipantA = callerUid === nurseAUid;
+    isParticipantB = callerUid === nurseBUid;
+    isParticipantC = callerUid === nurseCUid;
+
+    if (!isParticipantA && !isParticipantB && !isParticipantC) {
+      throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+    }
+
+    if (isParticipantA) {
+      acceptedKey = "acceptedByA";
+      rejectedKey = "rejectedByA";
+    } else if (isParticipantB) {
+      acceptedKey = "acceptedByB";
+      rejectedKey = "rejectedByB";
+    } else {
+      acceptedKey = "acceptedByC";
+      rejectedKey = "rejectedByC";
+    }
+  } else {
+    // 2-Way match
+    isParticipantA = callerUid === nurseAUid;
+    isParticipantB = callerUid === nurseBUid;
+
+    if (!isParticipantA && !isParticipantB) {
+      throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+    }
+
+    acceptedKey = isParticipantA ? "acceptedByA" : "acceptedByB";
+    rejectedKey = isParticipantA ? "rejectedByA" : "rejectedByB";
   }
 
   // 3. Verify match is actionable
@@ -161,8 +207,6 @@ export async function respondToMatch(
   }
 
   // 4. Verify participant has not already responded
-  const acceptedKey = isParticipantA ? "acceptedByA" : "acceptedByB";
-  const rejectedKey = isParticipantA ? "rejectedByA" : "rejectedByB";
   const alreadyAccepted = getBool(acceptedKey);
   const alreadyRejected = getBool(rejectedKey);
   if (alreadyAccepted || alreadyRejected) {
@@ -174,15 +218,35 @@ export async function respondToMatch(
   if (decision === "REJECT") {
     newStatus = "CANCELLED";
   } else {
-    // ACCEPT: check opponent's decision
-    const opponentAcceptedKey = isParticipantA ? "acceptedByB" : "acceptedByA";
-    const opponentRejectedKey = isParticipantA ? "rejectedByB" : "rejectedByA";
-    const opponentAccepted = getBool(opponentAcceptedKey);
-    const opponentRejected = getBool(opponentRejectedKey);
-    if (opponentRejected) {
-      newStatus = "CANCELLED"; // should not happen due to precondition but safe
-    } else if (opponentAccepted) {
-      newStatus = "CONFIRMED";
+    // ACCEPT decision
+    if (hasParticipantC) {
+      // 3-Way match: check other two participants' decisions
+      const otherAccepted = [
+        isParticipantA ? true : Boolean(getBool("acceptedByA")),
+        isParticipantB ? true : Boolean(getBool("acceptedByB")),
+        isParticipantC ? true : Boolean(getBool("acceptedByC"))
+      ];
+      const otherRejected =
+        Boolean(getBool("rejectedByA")) ||
+        Boolean(getBool("rejectedByB")) ||
+        Boolean(getBool("rejectedByC"));
+
+      if (otherRejected) {
+        newStatus = "CANCELLED";
+      } else if (otherAccepted[0] && otherAccepted[1] && otherAccepted[2]) {
+        newStatus = "CONFIRMED";
+      }
+    } else {
+      // 2-Way match: check opponent's decision
+      const opponentAcceptedKey = isParticipantA ? "acceptedByB" : "acceptedByA";
+      const opponentRejectedKey = isParticipantA ? "rejectedByB" : "rejectedByA";
+      const opponentAccepted = getBool(opponentAcceptedKey);
+      const opponentRejected = getBool(opponentRejectedKey);
+      if (opponentRejected) {
+        newStatus = "CANCELLED";
+      } else if (opponentAccepted) {
+        newStatus = "CONFIRMED";
+      }
     }
   }
 

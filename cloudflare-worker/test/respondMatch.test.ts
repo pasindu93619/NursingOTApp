@@ -97,6 +97,60 @@ function createMockMatchDoc(
   };
 }
 
+function createMockThreeWayMatchDoc(
+  matchId: string,
+  nurseAUid: string,
+  nurseBUid: string,
+  nurseCUid: string,
+  options: {
+    status?: string;
+    acceptedByA?: boolean;
+    acceptedByB?: boolean;
+    acceptedByC?: boolean;
+    rejectedByA?: boolean;
+    rejectedByB?: boolean;
+    rejectedByC?: boolean;
+    expiresAt?: string;
+    updateTime?: string;
+    omitAcceptedByC?: boolean;
+    omitRejectedByC?: boolean;
+    omitNurseCUid?: boolean;
+  } = {}
+): FirestoreRawDocument {
+  const expiresAt = options.expiresAt ?? new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+  const fields: Record<string, { stringValue?: string; booleanValue?: boolean }> = {
+    nurseAUid: { stringValue: nurseAUid },
+    nurseBUid: { stringValue: nurseBUid },
+    nurseACurrentHospitalId: { stringValue: "HOSP-001" },
+    nurseBCurrentHospitalId: { stringValue: "HOSP-002" },
+    nurseCCurrentHospitalId: { stringValue: "HOSP-003" },
+    status: { stringValue: options.status ?? "PENDING_CONFIRMATION" },
+    acceptedByA: { booleanValue: options.acceptedByA ?? false },
+    acceptedByB: { booleanValue: options.acceptedByB ?? false },
+    rejectedByA: { booleanValue: options.rejectedByA ?? false },
+    rejectedByB: { booleanValue: options.rejectedByB ?? false },
+    expiresAt: { stringValue: expiresAt },
+    createdAt: { stringValue: "2026-10-02T10:00:00.000Z" },
+    updatedAt: { stringValue: options.updateTime ?? "2026-10-02T12:00:00.000Z" }
+  };
+
+  if (!options.omitNurseCUid) {
+    fields.nurseCUid = { stringValue: nurseCUid };
+  }
+  if (!options.omitAcceptedByC) {
+    fields.acceptedByC = { booleanValue: options.acceptedByC ?? false };
+  }
+  if (!options.omitRejectedByC) {
+    fields.rejectedByC = { booleanValue: options.rejectedByC ?? false };
+  }
+
+  return {
+    name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/${matchId}`,
+    updateTime: options.updateTime ?? "2026-10-02T12:00:00.000Z",
+    fields
+  };
+}
+
 describe("Server-Side Match Decision Accept/Reject Suite", () => {
   // 1. Valid ACCEPT by Nurse A
   test("1 - Valid ACCEPT by first participant returns PENDING_CONFIRMATION", async () => {
@@ -363,6 +417,426 @@ describe("Server-Side Match Decision Accept/Reject Suite", () => {
         return true;
       }
     );
+  });
+
+  // =========================================================================
+  // 3-Way Match Decision Tests (Phase 1.5.4)
+  // =========================================================================
+
+  // 16. 3-way A accepts: acceptedByA = true, status remains PENDING_CONFIRMATION
+  test("16 - 3-way A accepts: sets acceptedByA=true, remains PENDING_CONFIRMATION", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-3w-1", "ACCEPT", client);
+
+    assert.equal(result.matchId, "match-3w-1");
+    assert.equal(result.newStatus, "PENDING_CONFIRMATION");
+    assert.equal(result.decisionApplied, true);
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.acceptedByA.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByA.booleanValue, false);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "PENDING_CONFIRMATION");
+  });
+
+  // 17. 3-way B accepts: acceptedByB = true, status remains PENDING_CONFIRMATION
+  test("17 - 3-way B accepts: sets acceptedByB=true, remains PENDING_CONFIRMATION", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-3w-1", "ACCEPT", client);
+
+    assert.equal(result.matchId, "match-3w-1");
+    assert.equal(result.newStatus, "PENDING_CONFIRMATION");
+    assert.equal(result.decisionApplied, true);
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.acceptedByB.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByB.booleanValue, false);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "PENDING_CONFIRMATION");
+  });
+
+  // 18. 3-way C accepts: acceptedByC = true, status remains PENDING_CONFIRMATION
+  test("18 - 3-way C accepts: sets acceptedByC=true, remains PENDING_CONFIRMATION", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-c", "match-3w-1", "ACCEPT", client);
+
+    assert.equal(result.matchId, "match-3w-1");
+    assert.equal(result.newStatus, "PENDING_CONFIRMATION");
+    assert.equal(result.decisionApplied, true);
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.acceptedByC.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByC.booleanValue, false);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "PENDING_CONFIRMATION");
+  });
+
+  // 19. All three accept: A, B already accepted, C accepts -> transitions to CONFIRMED
+  test("19 - 3-way all three accept: C accepts when A and B accepted -> transitions to CONFIRMED", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      acceptedByA: true,
+      acceptedByB: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-c", "match-3w-1", "ACCEPT", client);
+
+    assert.equal(result.matchId, "match-3w-1");
+    assert.equal(result.newStatus, "CONFIRMED");
+    assert.equal(result.decisionApplied, true);
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.acceptedByC.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "CONFIRMED");
+  });
+
+  // 20. Partial acceptance (only A and B accepted) remains PENDING_CONFIRMATION
+  test("20 - Partial 3-way acceptance (A and B only) remains PENDING_CONFIRMATION", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      acceptedByA: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-3w-1", "ACCEPT", client);
+
+    assert.equal(result.newStatus, "PENDING_CONFIRMATION");
+  });
+
+  // 21. A rejects 3-way match -> transitions to CANCELLED
+  test("21 - 3-way A rejects: sets rejectedByA=true, transitions to CANCELLED", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-3w-1", "REJECT", client);
+
+    assert.equal(result.matchId, "match-3w-1");
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(result.decisionApplied, true);
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByA.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.acceptedByA.booleanValue, false);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "CANCELLED");
+  });
+
+  // 22. B rejects 3-way match -> transitions to CANCELLED
+  test("22 - 3-way B rejects: sets rejectedByB=true, transitions to CANCELLED", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-3w-1", "REJECT", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByB.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "CANCELLED");
+  });
+
+  // 23. C rejects 3-way match -> transitions to CANCELLED
+  test("23 - 3-way C rejects: sets rejectedByC=true, transitions to CANCELLED", async () => {
+    let capturedWrites: { writes: Array<{ update: { fields: Record<string, { booleanValue?: boolean; stringValue?: string }> } }> } | null = null;
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        capturedWrites = await req.json() as typeof capturedWrites;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-c", "match-3w-1", "REJECT", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.ok(capturedWrites);
+    assert.equal(capturedWrites.writes[0].update.fields.rejectedByC.booleanValue, true);
+    assert.equal(capturedWrites.writes[0].update.fields.status.stringValue, "CANCELLED");
+  });
+
+  // 24. Non-participant cannot accept 3-way match (403 NON_PARTICIPANT)
+  test("24 - Non-participant caller cannot accept 3-way match, throws 403 NON_PARTICIPANT", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("intruder-x", "match-3w-1", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "NON_PARTICIPANT");
+        assert.equal(err.statusCode, 403);
+        return true;
+      }
+    );
+  });
+
+  // 25. Non-participant cannot reject 3-way match (403 NON_PARTICIPANT)
+  test("25 - Non-participant caller cannot reject 3-way match, throws 403 NON_PARTICIPANT", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("intruder-x", "match-3w-1", "REJECT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "NON_PARTICIPANT");
+        assert.equal(err.statusCode, 403);
+        return true;
+      }
+    );
+  });
+
+  // 26. Missing acceptedByC does NOT count as accepted; throws 500 MALFORMED_MATCH_DOC
+  test("26 - Missing acceptedByC in 3-way match throws 500 MALFORMED_MATCH_DOC", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      omitAcceptedByC: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-c", "match-3w-1", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "MALFORMED_MATCH_DOC");
+        assert.equal(err.statusCode, 500);
+        return true;
+      }
+    );
+  });
+
+  // 27. Missing rejectedByC in 3-way match throws 500 MALFORMED_MATCH_DOC
+  test("27 - Missing rejectedByC in 3-way match throws 500 MALFORMED_MATCH_DOC", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      omitRejectedByC: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-c", "match-3w-1", "REJECT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "MALFORMED_MATCH_DOC");
+        assert.equal(err.statusCode, 500);
+        return true;
+      }
+    );
+  });
+
+  // 28. Missing nurseCUid when C flags present throws 500 MALFORMED_MATCH_DOC
+  test("28 - Missing nurseCUid when C flags are present throws 500 MALFORMED_MATCH_DOC", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      omitNurseCUid: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-3w-1", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "MALFORMED_MATCH_DOC");
+        assert.equal(err.statusCode, 500);
+        return true;
+      }
+    );
+  });
+
+  // 29. Repeated acceptance by same participant in 3-way throws 409 ALREADY_RESPONDED
+  test("29 - Repeated acceptance by already accepted participant in 3-way throws 409 ALREADY_RESPONDED", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      acceptedByC: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-c", "match-3w-1", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "ALREADY_RESPONDED");
+        assert.equal(err.statusCode, 409);
+        return true;
+      }
+    );
+  });
+
+  // 30. Concurrent modification on commit for 3-way decision throws FIRESTORE_COMMIT_FAILED
+  test("30 - Concurrent modification on 3-way decision commit throws FIRESTORE_COMMIT_FAILED", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ error: "Precondition failed" }), { status: 409 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-c", "match-3w-1", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "FIRESTORE_COMMIT_FAILED");
+        assert.equal(err.statusCode, 409);
+        return true;
+      }
+    );
+  });
+
+  // 31. Expired 3-way match cannot be accepted, throws 410 EXPIRED
+  test("31 - Decision on expired 3-way match throws 410 EXPIRED", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      expiresAt: expiredTime
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-c", "match-3w-1", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "EXPIRED");
+        assert.equal(err.statusCode, 410);
+        return true;
+      }
+    );
+  });
+
+  // 32. Rejection by C when another has already accepted cancels the match
+  test("32 - Rejection by C cancels 3-way match even when A and B previously accepted", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-3w-1", "nurse-a", "nurse-b", "nurse-c", {
+      acceptedByA: true,
+      acceptedByB: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-c", "match-3w-1", "REJECT", client);
+
+    assert.equal(result.matchId, "match-3w-1");
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(result.decisionApplied, true);
   });
 });
 
