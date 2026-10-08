@@ -846,7 +846,7 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
         when (serverStatus) {
             "CHAT_OPEN" -> {
                 stageLabel = "Stage 4 of 5 • Team Chat"
-                badgeBgColor = MatchBlueSoft
+                badgeBgColor = TransferBlueSoft
                 badgeTextColor = MedicalBlue
 
                 step2Completed = true
@@ -867,7 +867,7 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
             }
             "CONFIRMED" -> {
                 stageLabel = "Stage 5 of 5 • Confirmed"
-                badgeBgColor = MatchMintSoft
+                badgeBgColor = TransferMintSoft
                 badgeTextColor = Emerald
 
                 step2Completed = true
@@ -930,7 +930,7 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
             }
             "ACCEPTED" -> {
                 stageLabel = "Stage 3 of 5 • Match Found"
-                badgeBgColor = MatchMintSoft
+                badgeBgColor = TransferMintSoft
                 badgeTextColor = Emerald
 
                 step2Completed = true
@@ -951,7 +951,7 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
             }
             else -> {
                 stageLabel = "Stage 3 of 5 • Match Found"
-                badgeBgColor = MatchMintSoft
+                badgeBgColor = TransferMintSoft
                 badgeTextColor = Emerald
 
                 step2Completed = true
@@ -1206,7 +1206,7 @@ private fun MatchReadinessCard(
             Surface(
                 modifier = Modifier.size(40.dp),
                 shape = CircleShape,
-                color = if (isMatched) MatchMintSoft else TransferMintSoft
+                color = TransferMintSoft
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
