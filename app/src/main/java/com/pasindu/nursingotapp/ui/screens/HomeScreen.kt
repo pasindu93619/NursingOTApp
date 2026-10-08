@@ -426,8 +426,8 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = heroShape,
-        colors = CardDefaults.cardColors(containerColor = Slate),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color(0xFFEDE9FE)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -437,7 +437,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 modifier = Modifier
                     .width(6.dp)
                     .height(224.dp)
-                    .background(ClinicalPrimaryColor)
+                    .background(Purple)
             )
 
             Column(
@@ -451,7 +451,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 ) {
                     Surface(
                         shape = RoundedCornerShape(50.dp),
-                        color = Emerald
+                        color = Purple
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
@@ -478,7 +478,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                     Surface(
                         modifier = Modifier.size(38.dp),
                         shape = CircleShape,
-                        color = ClinicalPrimaryColor
+                        color = Purple
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -495,7 +495,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                 Text(
                     "FIND YOUR MOVE",
-                    color = ClinicalPrimaryColor,
+                    color = Purple,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.8.sp
@@ -503,7 +503,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 Spacer(Modifier.height(3.dp))
                 Text(
                     "Exchange your hospital\nwith the right nurse.",
-                    color = Color.White,
+                    color = Slate,
                     fontSize = 25.sp,
                     lineHeight = 29.sp,
                     fontWeight = FontWeight.Black
@@ -511,7 +511,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "A simple, preference-based direct exchange built for Sri Lankan government nurses.",
-                    color = Color.White.copy(alpha = 0.86f),
+                    color = TextSecondary,
                     fontSize = 10.5.sp,
                     lineHeight = 15.sp,
                     fontWeight = FontWeight.Medium
@@ -557,13 +557,13 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TransferTrustChip("DIRECT 2-WAY", ClinicalPrimaryColor)
-                    TransferTrustChip("PREFERENCE-BASED", Purple)
+                    TransferTrustChip("DIRECT 2-WAY", Purple)
+                    TransferTrustChip("PREFERENCE-BASED", ClinicalPrimaryColor)
                     Spacer(Modifier.weight(1f))
                     Icon(
                         Icons.Default.ChevronRight,
                         contentDescription = "Open Mutual Transfer",
-                        tint = Color.White,
+                        tint = Slate,
                         modifier = Modifier.size(23.dp)
                     )
                 }
