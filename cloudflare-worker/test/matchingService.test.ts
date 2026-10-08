@@ -2009,13 +2009,33 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     assert.equal(match2Write.update?.fields?.status?.stringValue, "EXPIRED");
   });
 
-  // 36. Endpoint POST /api/matching/sweep-expired executes sweep successfully
-  test("36 - Endpoint POST /api/matching/sweep-expired triggers sweep successfully", async () => {
+  // 36. Endpoint POST /api/matching/sweep-expired rejects unauthorized callers with 401
+  test("36 - Endpoint POST /api/matching/sweep-expired rejects unauthorized callers with 401", async () => {
+    const request = new Request("https://worker.local/api/matching/sweep-expired", {
+      method: "POST"
+    });
+
+    const response = await worker.fetch(request, {
+      FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      MATCH_EXPIRATION_HOURS: "48"
+    });
+
+    assert.equal(response.status, 401);
+    const body = (await response.json()) as { error: string };
+    assert.equal(body.error, "Unauthorized");
+  });
+
+  // 36b. Endpoint POST /api/matching/sweep-expired succeeds when authenticated with valid token
+  test("36b - Endpoint POST /api/matching/sweep-expired executes sweep when authenticated", async () => {
+    const token = await createSignedTestJwt(defaultHeader, defaultPayload, keyPair.privateKey);
     const originalFetch = globalThis.fetch;
     let queryCalled = false;
 
     globalThis.fetch = (async (input: string | URL | Request) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes("service_accounts/v1/jwk")) {
+        return new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 });
+      }
       if (url.includes(":runQuery")) {
         queryCalled = true;
         return new Response(JSON.stringify([]), { status: 200 });
@@ -2025,7 +2045,10 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
 
     try {
       const request = new Request("https://worker.local/api/matching/sweep-expired", {
-        method: "POST"
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
       const response = await worker.fetch(request, {

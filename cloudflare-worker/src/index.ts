@@ -220,13 +220,17 @@ export default {
       }
     }
 
-    // 6. Manual / Triggered Expiry Sweep Endpoint
+    // 6. Manual / Triggered Expiry Sweep Endpoint (Protected)
     if (pathname === "/api/matching/sweep-expired") {
       if (request.method !== "POST") {
         return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
       }
       try {
+        const authHeader = request.headers.get("Authorization");
+        const token = extractBearerToken(authHeader);
         const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        await verifyFirebaseIdToken(token, { projectId });
+
         const tokenProviderResult = resolveTokenProvider(env);
         if (tokenProviderResult instanceof Response) {
           return tokenProviderResult;
@@ -236,6 +240,9 @@ export default {
         const result = await sweepExpiredMatches(firestoreClient);
         return jsonResponse(result, 200);
       } catch (err: unknown) {
+        if (err instanceof AuthError) {
+          return errorResponse("Unauthorized", err.message, err.statusCode);
+        }
         if (err instanceof MatchServiceError) {
           return errorResponse(err.code, err.message, err.statusCode);
         }

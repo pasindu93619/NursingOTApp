@@ -10,3 +10,6 @@ ENVIRONMENT = "production"
 # SECRETS (Do NOT commit real values to git! Set via: wrangler secret put <NAME>)
 # - FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL: Google Cloud service account email
 # - FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY: Google Cloud service account private key (PEM)
+
+[triggers]
+crons = ["0 * * * *"]
