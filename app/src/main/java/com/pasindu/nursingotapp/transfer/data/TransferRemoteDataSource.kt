@@ -1,6 +1,9 @@
 package com.pasindu.nursingotapp.transfer.data
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import java.time.Instant
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import kotlinx.coroutines.tasks.await
@@ -52,12 +55,31 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
 
         if (!snapshot.exists()) return@runCatching null
 
+        val updatedAt = readUpdatedAtMillis(snapshot)
+
         RemoteTransferRequestState(
             status = snapshot.getString("status").orEmpty(),
             locked = snapshot.getBoolean("locked") ?: false,
             currentMatchId = snapshot.getString("currentMatchId"),
-            updatedAt = snapshot.getLong("updatedAt")
+            updatedAt = updatedAt
         )
+    }
+
+    /**
+     * Transfer-request updatedAt has existed in numeric and ISO-8601 string
+     * form while the server-side matching bridge was being hardened.
+     *
+     * Read both representations so an older document cannot break the
+     * synchronization loop. New Worker writes use numeric epoch millis.
+     */
+    private fun readUpdatedAtMillis(snapshot: DocumentSnapshot): Long? {
+        return when (val value = snapshot.get("updatedAt")) {
+            is Number -> value.toLong()
+            is Timestamp -> value.toDate().time
+            is String -> value.toLongOrNull()
+                ?: runCatching { Instant.parse(value).toEpochMilli() }.getOrNull()
+            else -> null
+        }
     }
 
     override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> = runCatching {
