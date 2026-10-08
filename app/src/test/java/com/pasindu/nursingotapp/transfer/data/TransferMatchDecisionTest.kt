@@ -435,4 +435,85 @@ class TransferMatchDecisionTest {
         assertEquals("Worker timeout 504", (state as TransferMatchUiState.Error).message)
         assertFalse(viewModel.isSubmitting.value)
     }
+
+    // 10. 3-Way Match Models & Serialization
+    @Test
+    fun workerThreeWayMatch_serializationAndDeserialization_preservesAllFields() {
+        val threeWayMatch = com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch(
+            nurseAUid = "user-A",
+            nurseBUid = "user-B",
+            nurseCUid = "user-C",
+            nurseACurrentHospitalId = "HOSP-001",
+            nurseBCurrentHospitalId = "HOSP-002",
+            nurseCCurrentHospitalId = "HOSP-003",
+            nurseADestinationHospitalId = "HOSP-002",
+            nurseBDestinationHospitalId = "HOSP-003",
+            nurseCDestinationHospitalId = "HOSP-001",
+            nurseAGrade = "Grade I",
+            nurseBGrade = "Grade I",
+            nurseCGrade = "Grade I",
+            isAllSameGrade = true,
+            nurseAPreferenceRank = 1,
+            nurseBPreferenceRank = 1,
+            nurseCPreferenceRank = 1,
+            combinedPreferenceRank = 3,
+            priorityReason = "3-way circular match (A -> B -> C -> A)"
+        )
+
+        val jsonStr = json.encodeToString(threeWayMatch)
+        assertTrue(jsonStr.contains(""""nurseAUid":"user-A""""))
+        assertTrue(jsonStr.contains(""""nurseCUid":"user-C""""))
+        assertTrue(jsonStr.contains(""""isAllSameGrade":true"""))
+
+        val decoded = json.decodeFromString<com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch>(jsonStr)
+        assertEquals("user-A", decoded.nurseAUid)
+        assertEquals("user-B", decoded.nurseBUid)
+        assertEquals("user-C", decoded.nurseCUid)
+        assertEquals("HOSP-001", decoded.nurseACurrentHospitalId)
+        assertEquals("HOSP-002", decoded.nurseBCurrentHospitalId)
+        assertEquals("HOSP-003", decoded.nurseCCurrentHospitalId)
+        assertTrue(decoded.isAllSameGrade)
+        assertEquals(3, decoded.combinedPreferenceRank)
+    }
+
+    @Test
+    fun workerMatchResponse_threeWayMatch_deserializesCorrectly() {
+        val rawJson = """
+            {
+                "matched": true,
+                "matchId": "MATCH-3WAY-999",
+                "matchType": "THREE_WAY",
+                "threeWayMatch": {
+                    "nurseAUid": "user-A",
+                    "nurseBUid": "user-B",
+                    "nurseCUid": "user-C",
+                    "nurseACurrentHospitalId": "HOSP-001",
+                    "nurseBCurrentHospitalId": "HOSP-002",
+                    "nurseCCurrentHospitalId": "HOSP-003",
+                    "nurseADestinationHospitalId": "HOSP-002",
+                    "nurseBDestinationHospitalId": "HOSP-003",
+                    "nurseCDestinationHospitalId": "HOSP-001",
+                    "nurseAGrade": "Grade I",
+                    "nurseBGrade": "Grade I",
+                    "nurseCGrade": "Grade I",
+                    "isAllSameGrade": true,
+                    "nurseAPreferenceRank": 1,
+                    "nurseBPreferenceRank": 1,
+                    "nurseCPreferenceRank": 1,
+                    "combinedPreferenceRank": 3,
+                    "priorityReason": "3-way circular cycle"
+                },
+                "createdAt": "2026-10-08T12:00:00Z",
+                "expiresAt": "2026-10-10T12:00:00Z"
+            }
+        """.trimIndent()
+
+        val parsed = json.decodeFromString<com.pasindu.nursingotapp.transfer.data.model.WorkerMatchResponse>(rawJson)
+        assertTrue(parsed.matched)
+        assertEquals("MATCH-3WAY-999", parsed.matchId)
+        assertEquals("THREE_WAY", parsed.matchType)
+        assertNotNull(parsed.threeWayMatch)
+        assertEquals("user-C", parsed.threeWayMatch?.nurseCUid)
+        assertEquals(3, parsed.threeWayMatch?.combinedPreferenceRank)
+    }
 }

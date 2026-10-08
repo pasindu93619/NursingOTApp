@@ -256,12 +256,16 @@ class TransferRequestRepository @Inject constructor(
                 )
             }
 
-            val matchJson = json.encodeToString(remoteMatch.match)
+            val matchJson = if (remoteMatch.matchType == "THREE_WAY" && remoteMatch.threeWayMatch != null) {
+                json.encodeToString(remoteMatch.threeWayMatch)
+            } else {
+                json.encodeToString(remoteMatch.match)
+            }
             val updated = entity.copy(
                 requestId = userId,
                 requestStatus = TransferRequestStatus.MATCHED.name,
                 matchCycleId = matchId,
-                matchType = "DIRECT_2_WAY",
+                matchType = remoteMatch.matchType,
                 matchStatus = remoteMatch.status.ifBlank { "PENDING_CONFIRMATION" },
                 matchPayloadJson = matchJson,
                 syncStatus = CacheSyncStatus.SYNCED.name,
@@ -271,7 +275,9 @@ class TransferRequestRepository @Inject constructor(
 
             return WorkerSyncResult.MatchFound(
                 matchId = matchId,
-                match = remoteMatch.match,
+                matchType = remoteMatch.matchType,
+                directMatch = remoteMatch.directMatch,
+                threeWayMatch = remoteMatch.threeWayMatch,
                 createdAt = remoteMatch.createdAt,
                 expiresAt = remoteMatch.expiresAt
             )
@@ -349,12 +355,16 @@ class TransferRequestRepository @Inject constructor(
 
         when (workerResult) {
             is WorkerSyncResult.MatchFound -> {
-                val matchJson = json.encodeToString(workerResult.match)
+                val matchJson = if (workerResult.matchType == "THREE_WAY" && workerResult.threeWayMatch != null) {
+                    json.encodeToString(workerResult.threeWayMatch)
+                } else {
+                    json.encodeToString(workerResult.match)
+                }
                 val updated = entity.copy(
                     requestId = userId,
                     requestStatus = TransferRequestStatus.MATCHED.name,
                     matchCycleId = workerResult.matchId,
-                    matchType = "DIRECT_2_WAY",
+                    matchType = workerResult.matchType,
                     matchStatus = "PENDING_CONFIRMATION",
                     matchPayloadJson = matchJson,
                     syncStatus = CacheSyncStatus.SYNCED.name,
@@ -400,7 +410,7 @@ class TransferRequestRepository @Inject constructor(
 
     /**
      * Submits an ACCEPT or REJECT decision for the current active match to the Cloudflare Worker.
-     * Updates the local Room cache with the new status upon success.
+     * Updates the local Room cache with the authoritative status upon success.
      */
     suspend fun respondToMatch(matchId: String, decision: Decision): Result<DecisionResponse> {
         val tp = tokenProvider ?: return Result.failure(IllegalStateException("Token provider not configured"))

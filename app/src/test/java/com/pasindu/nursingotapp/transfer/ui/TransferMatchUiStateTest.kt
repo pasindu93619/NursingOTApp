@@ -71,4 +71,22 @@ class TransferMatchUiStateTest {
         assertTrue(stateError is TransferMatchUiState.Error)
         assertEquals("Network failure", (stateError as TransferMatchUiState.Error).message)
     }
+
+    @Test
+    fun sampleThreeWayMatchUiModel_initializesWithExpectedDefaults() {
+        val model = createSampleThreeWayMatchUiModel()
+
+        assertEquals("MATCH-3WAY-2026-0001", model.matchId)
+        assertEquals("THREE_WAY", model.matchType)
+        assertTrue(model.isSameGrade)
+        assertNotNull(model.participant2)
+        assertNotNull(model.participant3)
+        assertEquals("NURSE 2", model.participant2?.roleLabel)
+        assertEquals("NURSE 3", model.participant3?.roleLabel)
+        assertEquals("MOH2026-0045", model.participant2?.hospitalId)
+        assertEquals("MOH2026-0080", model.participant3?.hospitalId)
+        assertEquals(MatchDecisionStatus.PENDING, model.myStatus)
+        assertEquals(MatchDecisionStatus.PENDING, model.participant2?.status)
+        assertEquals(MatchDecisionStatus.PENDING, model.participant3?.status)
+    }
 }

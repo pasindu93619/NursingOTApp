@@ -5,9 +5,12 @@ import com.pasindu.nursingotapp.transfer.data.model.DecisionRequest
 import com.pasindu.nursingotapp.transfer.data.model.DecisionResponse
 import com.pasindu.nursingotapp.transfer.data.model.WorkerMatchResponse
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
+import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -100,13 +103,49 @@ class HttpTransferWorkerApiClient @Inject constructor(
                             )
                         }
 
-                        if (response.matched && response.match != null && response.matchId != null) {
-                            WorkerSyncResult.MatchFound(
-                                matchId = response.matchId,
-                                match = response.match,
-                                createdAt = response.createdAt ?: "",
-                                expiresAt = response.expiresAt ?: ""
-                            )
+                        if (response.matched && response.matchId != null) {
+                            val is3Way = response.matchType == "THREE_WAY" || response.threeWayMatch != null
+                            if (is3Way) {
+                                val match3Way = response.threeWayMatch ?: runCatching {
+                                    json.decodeFromString<WorkerThreeWayMatch>(responseBody.let {
+                                        val element = json.parseToJsonElement(it)
+                                        element.toString()
+                                    })
+                                }.getOrNull()
+
+                                // If threeWayMatch wasn't explicitly in threeWayMatch field, try decoding "match" as WorkerThreeWayMatch
+                                val final3Way = match3Way ?: runCatching {
+                                    val element = json.parseToJsonElement(responseBody)
+                                    val matchElement = element.jsonObject["match"]
+                                    if (matchElement != null) {
+                                        json.decodeFromJsonElement<WorkerThreeWayMatch>(matchElement)
+                                    } else null
+                                }.getOrNull()
+
+                                if (final3Way != null) {
+                                    WorkerSyncResult.MatchFound(
+                                        matchId = response.matchId,
+                                        matchType = "THREE_WAY",
+                                        threeWayMatch = final3Way,
+                                        createdAt = response.createdAt ?: "",
+                                        expiresAt = response.expiresAt ?: ""
+                                    )
+                                } else {
+                                    WorkerSyncResult.NetworkError("Received THREE_WAY match response with invalid 3-way payload")
+                                }
+                            } else if (response.match != null) {
+                                WorkerSyncResult.MatchFound(
+                                    matchId = response.matchId,
+                                    matchType = "DIRECT_2_WAY",
+                                    directMatch = response.match,
+                                    createdAt = response.createdAt ?: "",
+                                    expiresAt = response.expiresAt ?: ""
+                                )
+                            } else {
+                                WorkerSyncResult.NoMatch(
+                                    response.message ?: "No compatible mutual transfer candidate found"
+                                )
+                            }
                         } else {
                             WorkerSyncResult.NoMatch(
                                 response.message ?: "No compatible mutual transfer candidate found"

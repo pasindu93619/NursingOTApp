@@ -85,13 +85,7 @@ class TransferMatchViewModel @Inject constructor(
         currentUserId: String,
         hospitals: List<com.pasindu.nursingotapp.transfer.data.model.HospitalReference>
     ): TransferMatchUiModel {
-        val match = match
-        val isOfficerA = currentUserId == match.nurseAUid
-
-        val myHospitalId = if (isOfficerA) match.nurseACurrentHospitalId else match.nurseBCurrentHospitalId
-        val partnerHospitalId = if (isOfficerA) match.nurseBCurrentHospitalId else match.nurseACurrentHospitalId
-        val myGrade = if (isOfficerA) match.nurseAGrade else match.nurseBGrade
-        val partnerGrade = if (isOfficerA) match.nurseBGrade else match.nurseAGrade
+        val expiryMs = runCatching { Instant.parse(expiresAt).toEpochMilli() }.getOrNull()
 
         fun hospitalName(id: String): String =
             hospitals.firstOrNull { it.hospitalId == id }?.name?.takeIf { it.isNotBlank() }
@@ -106,7 +100,82 @@ class TransferMatchViewModel @Inject constructor(
             ).joinToString(" • ").ifBlank { "Sri Lanka" }
         }
 
-        val expiryMs = runCatching { Instant.parse(expiresAt).toEpochMilli() }.getOrNull()
+        if (matchType == "THREE_WAY" && threeWayMatch != null) {
+            val tw = threeWayMatch
+            // A -> B -> C -> A
+            // Determine user orientation:
+            val (youCurrentHosp, youGrade) = when (currentUserId) {
+                tw.nurseAUid -> tw.nurseACurrentHospitalId to tw.nurseAGrade
+                tw.nurseBUid -> tw.nurseBCurrentHospitalId to tw.nurseBGrade
+                else -> tw.nurseCCurrentHospitalId to tw.nurseCGrade
+            }
+
+            // Nurse 2 is the nurse at your desired destination:
+            // If You are A: Nurse 2 is B (destination B's hosp), Nurse 3 is C (destination C's hosp)
+            // If You are B: Nurse 2 is C (destination C's hosp), Nurse 3 is A (destination A's hosp)
+            // If You are C: Nurse 2 is A (destination A's hosp), Nurse 3 is B (destination B's hosp)
+            val (n2Id, n2Hosp, n2Grade) = when (currentUserId) {
+                tw.nurseAUid -> Triple(tw.nurseBUid, tw.nurseBCurrentHospitalId, tw.nurseBGrade)
+                tw.nurseBUid -> Triple(tw.nurseCUid, tw.nurseCCurrentHospitalId, tw.nurseCGrade)
+                else -> Triple(tw.nurseAUid, tw.nurseACurrentHospitalId, tw.nurseAGrade)
+            }
+
+            val (n3Id, n3Hosp, n3Grade) = when (currentUserId) {
+                tw.nurseAUid -> Triple(tw.nurseCUid, tw.nurseCCurrentHospitalId, tw.nurseCGrade)
+                tw.nurseBUid -> Triple(tw.nurseAUid, tw.nurseACurrentHospitalId, tw.nurseAGrade)
+                else -> Triple(tw.nurseBUid, tw.nurseBCurrentHospitalId, tw.nurseBGrade)
+            }
+
+            val p2 = TransferParticipantUiModel(
+                roleLabel = "NURSE 2",
+                roleTitle = "Your Destination Post",
+                hospitalId = n2Hosp,
+                hospitalName = hospitalName(n2Hosp),
+                hospitalLocation = hospitalLocation(n2Hosp),
+                grade = n2Grade,
+                isCurrentUser = false,
+                status = MatchDecisionStatus.PENDING
+            )
+
+            val p3 = TransferParticipantUiModel(
+                roleLabel = "NURSE 3",
+                roleTitle = "Connecting Post",
+                hospitalId = n3Hosp,
+                hospitalName = hospitalName(n3Hosp),
+                hospitalLocation = hospitalLocation(n3Hosp),
+                grade = n3Grade,
+                isCurrentUser = false,
+                status = MatchDecisionStatus.PENDING
+            )
+
+            return TransferMatchUiModel(
+                matchId = matchId,
+                myHospitalId = youCurrentHosp,
+                myHospitalName = hospitalName(youCurrentHosp),
+                myHospitalLocation = hospitalLocation(youCurrentHosp),
+                myGrade = youGrade,
+                partnerHospitalId = n2Hosp,
+                partnerHospitalName = hospitalName(n2Hosp),
+                partnerHospitalLocation = hospitalLocation(n2Hosp),
+                partnerGrade = n2Grade,
+                isSameGrade = tw.isAllSameGrade,
+                matchType = "THREE_WAY",
+                compatibilityReason = tw.priorityReason,
+                expiresAtMs = expiryMs,
+                myStatus = MatchDecisionStatus.PENDING,
+                partnerStatus = MatchDecisionStatus.PENDING,
+                participant2 = p2,
+                participant3 = p3
+            )
+        }
+
+        val direct = match
+        val isOfficerA = currentUserId == direct.nurseAUid
+
+        val myHospitalId = if (isOfficerA) direct.nurseACurrentHospitalId else direct.nurseBCurrentHospitalId
+        val partnerHospitalId = if (isOfficerA) direct.nurseBCurrentHospitalId else direct.nurseACurrentHospitalId
+        val myGrade = if (isOfficerA) direct.nurseAGrade else direct.nurseBGrade
+        val partnerGrade = if (isOfficerA) direct.nurseBGrade else direct.nurseAGrade
 
         return TransferMatchUiModel(
             matchId = matchId,
@@ -118,9 +187,9 @@ class TransferMatchViewModel @Inject constructor(
             partnerHospitalName = hospitalName(partnerHospitalId),
             partnerHospitalLocation = hospitalLocation(partnerHospitalId),
             partnerGrade = partnerGrade,
-            isSameGrade = match.isSameGrade,
+            isSameGrade = direct.isSameGrade,
             matchType = "DIRECT_2_WAY",
-            compatibilityReason = match.priorityReason,
+            compatibilityReason = direct.priorityReason,
             expiresAtMs = expiryMs,
             myStatus = MatchDecisionStatus.PENDING,
             partnerStatus = MatchDecisionStatus.PENDING
