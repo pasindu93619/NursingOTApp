@@ -7,6 +7,7 @@ import {
   type FindAndLockMatchSuccess,
   type FindAndLockNoMatch
 } from "../src/matching/matchingService.ts";
+import type { ThreeWayMatch, DirectMatch } from "../src/matching/matchingEngine.ts";
 import {
   FirestoreClient,
   FirestoreError,
@@ -1153,5 +1154,391 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  // =========================================================================
+  // 3-Way Matching Service Integration Tests (Phase 1.5.4)
+  // =========================================================================
+
+  // 24. Direct 2-way match remains preferred over 3-way cycle when both are available
+  test("24 - Direct 2-way match remains preferred when both 2-way and 3-way are possible", async () => {
+    // Caller: HOSP-001 -> wants HOSP-002
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00Z"
+    });
+    // Nurse B: HOSP-002 -> wants HOSP-001 (Direct 2-way!) AND HOSP-003
+    const nurseBDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-001", "HOSP-003"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00Z"
+    });
+    // Nurse C: HOSP-003 -> wants HOSP-001 (would also form A -> B -> C -> A 3-way cycle)
+    const nurseCDoc = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-001"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00Z"
+    });
+
+    const queryItems: FirestoreRunQueryItem[] = [
+      { document: nurseBDoc },
+      { document: nurseCDoc }
+    ];
+
+    let capturedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify(queryItems), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        capturedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:01Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, {
+      expirationHours: 48,
+      generateMatchId: () => "match-direct-priority"
+    });
+
+    assert.equal(result.matched, true);
+    const success = result as FindAndLockMatchSuccess;
+    assert.equal(success.matchType, "DIRECT_2_WAY");
+    assert.equal((success.match as DirectMatch).nurseBUid, "nurse-b");
+    assert.equal(capturedWrites.length, 3, "2-way direct match must produce exactly 3 writes");
+  });
+
+  // 25. Valid 3-way cycle creates exactly four atomic writes locking A, B, C and match doc
+  test("25 - Valid 3-way cycle creates exactly four atomic writes and locks A, B, C", async () => {
+    // A: HOSP-001 -> wants HOSP-002
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00.111Z"
+    });
+    // B: HOSP-002 -> wants HOSP-003 (NOT HOSP-001, so NO 2-way match)
+    const nurseBDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-003"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00.222Z"
+    });
+    // C: HOSP-003 -> wants HOSP-001 (closes cycle C -> A)
+    const nurseCDoc = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-001"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00.333Z"
+    });
+
+    const queryItems: FirestoreRunQueryItem[] = [
+      { document: nurseBDoc },
+      { document: nurseCDoc }
+    ];
+
+    let capturedWrites: FirestoreWrite[] = [];
+    const fixedNow = new Date("2026-10-02T12:00:00.000Z");
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify(queryItems), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        capturedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:01Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, {
+      now: () => fixedNow,
+      expirationHours: 48,
+      generateMatchId: () => "match-3way-test"
+    });
+
+    assert.equal(result.matched, true);
+    const success = result as FindAndLockMatchSuccess;
+    assert.equal(success.matchType, "THREE_WAY");
+    assert.equal(success.matchId, "match-3way-test");
+    assert.equal(success.createdAt, "2026-10-02T12:00:00.000Z");
+    assert.equal(success.expiresAt, "2026-10-04T12:00:00.000Z"); // 48h expiration
+
+    // 4 atomic writes check
+    assert.equal(capturedWrites.length, 4, "Must create exactly 4 atomic writes");
+
+    // Write 1: Caller A locked
+    const writeA = capturedWrites[0];
+    assert.ok(writeA.update.name.endsWith("/transferRequests/nurse-a"));
+    assert.deepEqual(writeA.update.fields.locked, { booleanValue: true });
+    assert.deepEqual(writeA.update.fields.status, { stringValue: "MATCHED" });
+    assert.deepEqual(writeA.update.fields.currentMatchId, { stringValue: "match-3way-test" });
+    assert.deepEqual(writeA.currentDocument, { updateTime: "2026-10-02T10:00:00.111Z" });
+
+    // Write 2: Candidate B locked
+    const writeB = capturedWrites[1];
+    assert.ok(writeB.update.name.endsWith("/transferRequests/nurse-b"));
+    assert.deepEqual(writeB.update.fields.locked, { booleanValue: true });
+    assert.deepEqual(writeB.update.fields.status, { stringValue: "MATCHED" });
+    assert.deepEqual(writeB.update.fields.currentMatchId, { stringValue: "match-3way-test" });
+    assert.deepEqual(writeB.currentDocument, { updateTime: "2026-10-02T10:00:00.222Z" });
+
+    // Write 3: Candidate C locked
+    const writeC = capturedWrites[2];
+    assert.ok(writeC.update.name.endsWith("/transferRequests/nurse-c"));
+    assert.deepEqual(writeC.update.fields.locked, { booleanValue: true });
+    assert.deepEqual(writeC.update.fields.status, { stringValue: "MATCHED" });
+    assert.deepEqual(writeC.update.fields.currentMatchId, { stringValue: "match-3way-test" });
+    assert.deepEqual(writeC.currentDocument, { updateTime: "2026-10-02T10:00:00.333Z" });
+
+    // Write 4: Match document with all A/B/C fields
+    const writeMatch = capturedWrites[3];
+    assert.ok(writeMatch.update.name.endsWith("/matches/match-3way-test"));
+    assert.deepEqual(writeMatch.update.fields.nurseAUid, { stringValue: "nurse-a" });
+    assert.deepEqual(writeMatch.update.fields.nurseBUid, { stringValue: "nurse-b" });
+    assert.deepEqual(writeMatch.update.fields.nurseCUid, { stringValue: "nurse-c" });
+    assert.deepEqual(writeMatch.update.fields.nurseACurrentHospitalId, { stringValue: "HOSP-001" });
+    assert.deepEqual(writeMatch.update.fields.nurseBCurrentHospitalId, { stringValue: "HOSP-002" });
+    assert.deepEqual(writeMatch.update.fields.nurseCCurrentHospitalId, { stringValue: "HOSP-003" });
+    assert.deepEqual(writeMatch.update.fields.nurseADestinationHospitalId, { stringValue: "HOSP-002" });
+    assert.deepEqual(writeMatch.update.fields.nurseBDestinationHospitalId, { stringValue: "HOSP-003" });
+    assert.deepEqual(writeMatch.update.fields.nurseCDestinationHospitalId, { stringValue: "HOSP-001" });
+    assert.deepEqual(writeMatch.update.fields.nurseAGrade, { stringValue: "Grade I" });
+    assert.deepEqual(writeMatch.update.fields.nurseBGrade, { stringValue: "Grade I" });
+    assert.deepEqual(writeMatch.update.fields.nurseCGrade, { stringValue: "Grade I" });
+    assert.deepEqual(writeMatch.update.fields.isAllSameGrade, { booleanValue: true });
+    assert.deepEqual(writeMatch.update.fields.acceptedByA, { booleanValue: false });
+    assert.deepEqual(writeMatch.update.fields.acceptedByB, { booleanValue: false });
+    assert.deepEqual(writeMatch.update.fields.acceptedByC, { booleanValue: false });
+    assert.deepEqual(writeMatch.update.fields.rejectedByA, { booleanValue: false });
+    assert.deepEqual(writeMatch.update.fields.rejectedByB, { booleanValue: false });
+    assert.deepEqual(writeMatch.update.fields.rejectedByC, { booleanValue: false });
+    assert.deepEqual(writeMatch.update.fields.status, { stringValue: "PENDING_CONFIRMATION" });
+    assert.deepEqual(writeMatch.currentDocument, { exists: false });
+  });
+
+  // 26. Cross-grade 3-way cycle is allowed and preserves grade details
+  test("26 - Cross-grade 3-way cycle is accepted and isAllSameGrade is false", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I");
+    const nurseBDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-003"], "Grade II");
+    const nurseCDoc = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-001"], "Grade III");
+
+    const queryItems: FirestoreRunQueryItem[] = [
+      { document: nurseBDoc },
+      { document: nurseCDoc }
+    ];
+
+    let capturedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify(queryItems), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        capturedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:01Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+    assert.equal(result.matched, true);
+    const success = result as FindAndLockMatchSuccess;
+    const match = success.match as ThreeWayMatch;
+    assert.equal(match.isAllSameGrade, false);
+    assert.equal(match.nurseAGrade, "Grade I");
+    assert.equal(match.nurseBGrade, "Grade II");
+    assert.equal(match.nurseCGrade, "Grade III");
+    assert.deepEqual(capturedWrites[3].update.fields.isAllSameGrade, { booleanValue: false });
+  });
+
+  // 27. Four-way cycle is never passed to service as a valid 3-way match
+  test("27 - Four-way cycle A->B->C->D->A returns matched: false", async () => {
+    // A -> B -> C -> D -> A (no 3-way subset closes)
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I");
+    const nurseBDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-003"], "Grade I");
+    const nurseCDoc = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-004"], "Grade I");
+    const nurseDDoc = createMockRawDoc("nurse-d", "HOSP-004", ["HOSP-001"], "Grade I");
+
+    const queryItems: FirestoreRunQueryItem[] = [
+      { document: nurseBDoc },
+      { document: nurseCDoc },
+      { document: nurseDDoc }
+    ];
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify(queryItems), { status: 200 })
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+    assert.equal(result.matched, false);
+  });
+
+  // 28. Concurrent modification of participant B or C aborts atomic commit and triggers conflict recovery
+  test("28 - Concurrent modification of participant in 3-way commit aborts atomically and recovers", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00Z"
+    });
+    const nurseBDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-003"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00Z"
+    });
+    const nurseCDoc = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-001"], "Grade I", {
+      updateTime: "2026-10-02T10:00:00Z"
+    });
+
+    const matchedCallerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      updateTime: "2026-10-02T10:00:02Z",
+      locked: true,
+      currentMatchId: "winning-3way-match",
+      status: "MATCHED"
+    });
+
+    const winningMatchDoc = {
+      name: `${TEST_PROJECT_ID}/databases/(default)/documents/matches/winning-3way-match`,
+      updateTime: "2026-10-02T10:00:02Z",
+      fields: {
+        nurseAUid: { stringValue: "nurse-a" },
+        nurseBUid: { stringValue: "nurse-b" },
+        nurseCUid: { stringValue: "nurse-c" },
+        nurseACurrentHospitalId: { stringValue: "HOSP-001" },
+        nurseBCurrentHospitalId: { stringValue: "HOSP-002" },
+        nurseCCurrentHospitalId: { stringValue: "HOSP-003" },
+        nurseADestinationHospitalId: { stringValue: "HOSP-002" },
+        nurseBDestinationHospitalId: { stringValue: "HOSP-003" },
+        nurseCDestinationHospitalId: { stringValue: "HOSP-001" },
+        nurseAGrade: { stringValue: "Grade I" },
+        nurseBGrade: { stringValue: "Grade I" },
+        nurseCGrade: { stringValue: "Grade I" },
+        isAllSameGrade: { booleanValue: true },
+        nurseAPreferenceRank: { integerValue: "1" },
+        nurseBPreferenceRank: { integerValue: "1" },
+        nurseCPreferenceRank: { integerValue: "1" },
+        combinedPreferenceRank: { integerValue: "3" },
+        priorityReason: { stringValue: "All-same-grade 3-way cycle" },
+        status: { stringValue: "PENDING_CONFIRMATION" },
+        createdAt: { stringValue: "2026-10-02T10:00:02Z" },
+        expiresAt: { stringValue: "2026-10-04T10:00:02Z" }
+      }
+    };
+
+    let callerReadCount = 0;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () => {
+        callerReadCount += 1;
+        return new Response(
+          JSON.stringify(callerReadCount === 1 ? callerDoc : matchedCallerDoc),
+          { status: 200 }
+        );
+      },
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify([{ document: nurseBDoc }, { document: nurseCDoc }]), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 409,
+              message: "Document was updated concurrently (Precondition failed)",
+              status: "ABORTED"
+            }
+          }),
+          { status: 409 }
+        ),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/winning-3way-match`]: () =>
+        new Response(JSON.stringify(winningMatchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+    assert.equal(result.matched, true);
+    const success = result as FindAndLockMatchSuccess;
+    assert.equal(success.matchId, "winning-3way-match");
+    assert.equal(success.matchType, "THREE_WAY");
+    assert.equal((success.match as ThreeWayMatch).nurseCUid, "nurse-c");
+  });
+
+  // 29. Caller already MATCHED with a 3-way match recovers cleanly on initial invocation (no duplicate match)
+  test("29 - Already MATCHED caller pointing to a 3-way match recovers cleanly on first read", async () => {
+    const matchedCallerDoc = createMockRawDoc("nurse-c", "HOSP-003", ["HOSP-001"], "Grade I", {
+      locked: true,
+      currentMatchId: "existing-3way-match-123",
+      status: "MATCHED"
+    });
+
+    const existingMatchDoc = {
+      name: `${TEST_PROJECT_ID}/databases/(default)/documents/matches/existing-3way-match-123`,
+      updateTime: "2026-10-02T10:00:00Z",
+      fields: {
+        nurseAUid: { stringValue: "nurse-a" },
+        nurseBUid: { stringValue: "nurse-b" },
+        nurseCUid: { stringValue: "nurse-c" },
+        nurseACurrentHospitalId: { stringValue: "HOSP-001" },
+        nurseBCurrentHospitalId: { stringValue: "HOSP-002" },
+        nurseCCurrentHospitalId: { stringValue: "HOSP-003" },
+        nurseADestinationHospitalId: { stringValue: "HOSP-002" },
+        nurseBDestinationHospitalId: { stringValue: "HOSP-003" },
+        nurseCDestinationHospitalId: { stringValue: "HOSP-001" },
+        nurseAGrade: { stringValue: "Grade I" },
+        nurseBGrade: { stringValue: "Grade I" },
+        nurseCGrade: { stringValue: "Grade I" },
+        isAllSameGrade: { booleanValue: true },
+        nurseAPreferenceRank: { integerValue: "1" },
+        nurseBPreferenceRank: { integerValue: "1" },
+        nurseCPreferenceRank: { integerValue: "1" },
+        combinedPreferenceRank: { integerValue: "3" },
+        priorityReason: { stringValue: "All-same-grade 3-way cycle" },
+        status: { stringValue: "PENDING_CONFIRMATION" },
+        createdAt: { stringValue: "2026-10-02T10:00:00Z" },
+        expiresAt: { stringValue: "2026-10-04T10:00:00Z" }
+      }
+    };
+
+    let commitCalled = false;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-c`]: () =>
+        new Response(JSON.stringify(matchedCallerDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/existing-3way-match-123`]: () =>
+        new Response(JSON.stringify(existingMatchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        commitCalled = true;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:01Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-c", client, { expirationHours: 48 });
+    assert.equal(result.matched, true);
+    const success = result as FindAndLockMatchSuccess;
+    assert.equal(success.matchType, "THREE_WAY");
+    assert.equal(success.matchId, "existing-3way-match-123");
+    assert.equal((success.match as ThreeWayMatch).nurseAUid, "nurse-a");
+    assert.equal((success.match as ThreeWayMatch).nurseBUid, "nurse-b");
+    assert.equal((success.match as ThreeWayMatch).nurseCUid, "nurse-c");
+    assert.equal(commitCalled, false, "Must never attempt a new commit when recovering existing match");
   });
 });

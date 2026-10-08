@@ -8,8 +8,10 @@ import {
 import type { MatchDecisionResponse } from "../types.ts";
 import {
   findBestMatch,
+  findBestThreeWayCycle,
   type CandidateRequest,
-  type DirectMatch
+  type DirectMatch,
+  type ThreeWayMatch
 } from "./matchingEngine.ts";
 
 export class MatchServiceError extends Error {
@@ -27,7 +29,8 @@ export class MatchServiceError extends Error {
 export interface FindAndLockMatchSuccess {
   matched: true;
   matchId: string;
-  match: DirectMatch;
+  matchType?: "DIRECT_2_WAY" | "THREE_WAY";
+  match: DirectMatch | ThreeWayMatch;
   createdAt: string;
   expiresAt: string;
 }
@@ -227,7 +230,7 @@ export async function respondToMatch(
  * 2. Queries searching candidates without grade-based exclusionary filtering.
  * 3. Uses deterministic pure matching engine (same-grade prioritized, cross-grade eligible).
  * 4. Executes concurrency-safe atomic lock via Firestore :commit with precondition updateTime.
- * 5. Guarantees zero partial locking: if either nurse or match doc fails, entire commit aborts.
+ * 5. Guarantees zero partial locking: if any participant or match doc fails, entire commit aborts.
  */
 function readStringField(
   fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
@@ -262,6 +265,7 @@ function readIntegerField(
 /**
  * Reconstructs an already-created active match after a concurrent caller lost
  * the Firestore commit race. This is recovery only; it never fabricates a match.
+ * Supports both 2-way and 3-way match documents.
  */
 async function recoverExistingMatch(
   callerUid: string,
@@ -280,20 +284,98 @@ async function recoverExistingMatch(
   const fields = rawMatch.fields ?? {};
   const nurseAUid = readStringField(fields, "nurseAUid");
   const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseCUid = readStringField(fields, "nurseCUid");
   const nurseACurrentHospitalId = readStringField(fields, "nurseACurrentHospitalId");
   const nurseBCurrentHospitalId = readStringField(fields, "nurseBCurrentHospitalId");
+  const nurseCCurrentHospitalId = readStringField(fields, "nurseCCurrentHospitalId");
   const nurseADestinationHospitalId = readStringField(fields, "nurseADestinationHospitalId");
   const nurseBDestinationHospitalId = readStringField(fields, "nurseBDestinationHospitalId");
+  const nurseCDestinationHospitalId = readStringField(fields, "nurseCDestinationHospitalId");
   const nurseAGrade = readStringField(fields, "nurseAGrade");
   const nurseBGrade = readStringField(fields, "nurseBGrade");
+  const nurseCGrade = readStringField(fields, "nurseCGrade");
   const isSameGrade = readBooleanField(fields, "isSameGrade");
+  const isAllSameGrade = readBooleanField(fields, "isAllSameGrade");
   const nurseAPreferenceRank = readIntegerField(fields, "nurseAPreferenceRank");
   const nurseBPreferenceRank = readIntegerField(fields, "nurseBPreferenceRank");
+  const nurseCPreferenceRank = readIntegerField(fields, "nurseCPreferenceRank");
   const combinedPreferenceRank = readIntegerField(fields, "combinedPreferenceRank");
   const priorityReason = readStringField(fields, "priorityReason");
   const createdAt = readStringField(fields, "createdAt");
   const expiresAt = readStringField(fields, "expiresAt");
 
+  const is3Way = Boolean(nurseCUid);
+
+  if (is3Way) {
+    if (
+      !nurseAUid ||
+      !nurseBUid ||
+      !nurseCUid ||
+      !nurseACurrentHospitalId ||
+      !nurseBCurrentHospitalId ||
+      !nurseCCurrentHospitalId ||
+      !nurseADestinationHospitalId ||
+      !nurseBDestinationHospitalId ||
+      !nurseCDestinationHospitalId ||
+      !nurseAGrade ||
+      !nurseBGrade ||
+      !nurseCGrade ||
+      isAllSameGrade === undefined ||
+      nurseAPreferenceRank === undefined ||
+      nurseBPreferenceRank === undefined ||
+      nurseCPreferenceRank === undefined ||
+      combinedPreferenceRank === undefined ||
+      !priorityReason ||
+      !createdAt ||
+      !expiresAt
+    ) {
+      throw new MatchServiceError(
+        "Referenced match document is malformed",
+        500,
+        "MALFORMED_MATCH_DOC"
+      );
+    }
+
+    if (callerUid !== nurseAUid && callerUid !== nurseBUid && callerUid !== nurseCUid) {
+      throw new MatchServiceError(
+        "Caller is not a participant of the referenced match",
+        409,
+        "MATCH_STATE_INCOMPLETE"
+      );
+    }
+
+    const match: ThreeWayMatch = {
+      nurseAUid,
+      nurseBUid,
+      nurseCUid,
+      nurseACurrentHospitalId,
+      nurseBCurrentHospitalId,
+      nurseCCurrentHospitalId,
+      nurseADestinationHospitalId,
+      nurseBDestinationHospitalId,
+      nurseCDestinationHospitalId,
+      nurseAGrade,
+      nurseBGrade,
+      nurseCGrade,
+      isAllSameGrade,
+      nurseAPreferenceRank,
+      nurseBPreferenceRank,
+      nurseCPreferenceRank,
+      combinedPreferenceRank,
+      priorityReason
+    };
+
+    return {
+      matched: true,
+      matchId,
+      matchType: "THREE_WAY",
+      match,
+      createdAt,
+      expiresAt
+    };
+  }
+
+  // 2-Way Match recovery
   if (
     !nurseAUid ||
     !nurseBUid ||
@@ -345,6 +427,7 @@ async function recoverExistingMatch(
   return {
     matched: true,
     matchId,
+    matchType: "DIRECT_2_WAY",
     match,
     createdAt,
     expiresAt
@@ -404,24 +487,8 @@ async function findAndLockMatchInternal(
       (!candidate.currentMatchId || candidate.currentMatchId.trim().length === 0)
   );
 
-  const bestMatch = findBestMatch(caller, pool);
-  if (!bestMatch) {
-    return {
-      matched: false,
-      message: "No compatible match found"
-    };
-  }
-
-  const candidate = pool.find(
-    candidateRequest =>
-      candidateRequest.firebaseUid.trim() === bestMatch.nurseBUid.trim()
-  );
-  if (!candidate) {
-    return {
-      matched: false,
-      message: "Candidate no longer in pool"
-    };
-  }
+  // 1. Direct 2-Way matching has ABSOLUTE priority
+  const best2WayMatch = findBestMatch(caller, pool);
 
   const matchId = options.generateMatchId
     ? options.generateMatchId()
@@ -433,7 +500,177 @@ async function findAndLockMatchInternal(
   const expiresAtIso = expiresAt.toISOString();
   const projectId = firestoreClient.getProjectId();
 
-  const writeCaller: FirestoreWrite = {
+  if (best2WayMatch) {
+    const candidate = pool.find(
+      candidateRequest =>
+        candidateRequest.firebaseUid.trim() === best2WayMatch.nurseBUid.trim()
+    );
+    if (!candidate) {
+      return {
+        matched: false,
+        message: "Candidate no longer in pool"
+      };
+    }
+
+    const writeCaller: FirestoreWrite = {
+      update: {
+        name: getTransferRequestDocPath(projectId, cleanCallerUid),
+        fields: {
+          locked: { booleanValue: true },
+          currentMatchId: { stringValue: matchId },
+          status: { stringValue: "MATCHED" },
+          updatedAt: { integerValue: now.getTime().toString() }
+        }
+      },
+      updateMask: {
+        fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+      },
+      currentDocument: caller.updateTime
+        ? { updateTime: caller.updateTime }
+        : { exists: true }
+    };
+
+    const writeCandidate: FirestoreWrite = {
+      update: {
+        name: getTransferRequestDocPath(projectId, best2WayMatch.nurseBUid),
+        fields: {
+          locked: { booleanValue: true },
+          currentMatchId: { stringValue: matchId },
+          status: { stringValue: "MATCHED" },
+          updatedAt: { integerValue: now.getTime().toString() }
+        }
+      },
+      updateMask: {
+        fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+      },
+      currentDocument: candidate.updateTime
+        ? { updateTime: candidate.updateTime }
+        : { exists: true }
+    };
+
+    const writeMatch: FirestoreWrite = {
+      update: {
+        name: getMatchDocPath(projectId, matchId),
+        fields: {
+          nurseAUid: { stringValue: best2WayMatch.nurseAUid },
+          nurseBUid: { stringValue: best2WayMatch.nurseBUid },
+          nurseACurrentHospitalId: { stringValue: best2WayMatch.nurseACurrentHospitalId },
+          nurseBCurrentHospitalId: { stringValue: best2WayMatch.nurseBCurrentHospitalId },
+          nurseADestinationHospitalId: { stringValue: best2WayMatch.nurseADestinationHospitalId },
+          nurseBDestinationHospitalId: { stringValue: best2WayMatch.nurseBDestinationHospitalId },
+          nurseAGrade: { stringValue: best2WayMatch.nurseAGrade },
+          nurseBGrade: { stringValue: best2WayMatch.nurseBGrade },
+          isSameGrade: { booleanValue: best2WayMatch.isSameGrade },
+          nurseAPreferenceRank: { integerValue: best2WayMatch.nurseAPreferenceRank.toString() },
+          nurseBPreferenceRank: { integerValue: best2WayMatch.nurseBPreferenceRank.toString() },
+          combinedPreferenceRank: { integerValue: best2WayMatch.combinedPreferenceRank.toString() },
+          priorityReason: { stringValue: best2WayMatch.priorityReason },
+          status: { stringValue: "PENDING_CONFIRMATION" },
+          acceptedByA: { booleanValue: false },
+          acceptedByB: { booleanValue: false },
+          rejectedByA: { booleanValue: false },
+          rejectedByB: { booleanValue: false },
+          createdAt: { stringValue: nowIso },
+          expiresAt: { stringValue: expiresAtIso },
+          updatedAt: { integerValue: now.getTime().toString() }
+        }
+      },
+      currentDocument: {
+        exists: false
+      }
+    };
+
+    try {
+      await firestoreClient.commitAtomicMatch([writeCaller, writeCandidate, writeMatch]);
+    } catch (err: unknown) {
+      if (err instanceof FirestoreError) {
+        const isConcurrencyConflict =
+          err.statusCode === 409 ||
+          err.code === "ABORTED" ||
+          err.code === "FAILED_PRECONDITION";
+
+        if (isConcurrencyConflict) {
+          const latestCaller = await firestoreClient.getRequestDoc(cleanCallerUid);
+          if (
+            latestCaller?.locked &&
+            latestCaller.currentMatchId &&
+            latestCaller.currentMatchId.trim().length > 0 &&
+            latestCaller.status.trim().toUpperCase() === "MATCHED"
+          ) {
+            return recoverExistingMatch(
+              cleanCallerUid,
+              latestCaller.currentMatchId.trim(),
+              firestoreClient
+            );
+          }
+
+          if (allowConflictRetry) {
+            await new Promise<void>(resolve => {
+              setTimeout(resolve, conflictRetryDelayMs(cleanCallerUid));
+            });
+
+            return findAndLockMatchInternal(
+              cleanCallerUid,
+              firestoreClient,
+              options,
+              false
+            );
+          }
+
+          throw new MatchServiceError(
+            "Concurrent modification conflict detected while locking transfer match",
+            409,
+            "MATCH_CONFLICT"
+          );
+        }
+
+        throw new MatchServiceError(
+          `Failed to commit match: ${err.message}`,
+          err.statusCode || 500,
+          "FIRESTORE_COMMIT_FAILED"
+        );
+      }
+
+      const msg = err instanceof Error ? err.message : "Internal error";
+      throw new MatchServiceError(`Commit error: ${msg}`, 500, "INTERNAL_ERROR");
+    }
+
+    return {
+      matched: true,
+      matchId,
+      matchType: "DIRECT_2_WAY",
+      match: best2WayMatch,
+      createdAt: nowIso,
+      expiresAt: expiresAtIso
+    };
+  }
+
+  // 2. Only if NO direct 2-way match, search for a valid 3-way cycle
+  const best3WayCycle = findBestThreeWayCycle(caller, pool);
+  if (!best3WayCycle) {
+    return {
+      matched: false,
+      message: "No compatible match found"
+    };
+  }
+
+  const candidateB = pool.find(
+    candidateRequest =>
+      candidateRequest.firebaseUid.trim() === best3WayCycle.nurseBUid.trim()
+  );
+  const candidateC = pool.find(
+    candidateRequest =>
+      candidateRequest.firebaseUid.trim() === best3WayCycle.nurseCUid.trim()
+  );
+
+  if (!candidateB || !candidateC) {
+    return {
+      matched: false,
+      message: "Candidate no longer in pool"
+    };
+  }
+
+  const writeCaller3Way: FirestoreWrite = {
     update: {
       name: getTransferRequestDocPath(projectId, cleanCallerUid),
       fields: {
@@ -451,9 +688,9 @@ async function findAndLockMatchInternal(
       : { exists: true }
   };
 
-  const writeCandidate: FirestoreWrite = {
+  const writeCandidateB: FirestoreWrite = {
     update: {
-      name: getTransferRequestDocPath(projectId, bestMatch.nurseBUid),
+      name: getTransferRequestDocPath(projectId, best3WayCycle.nurseBUid),
       fields: {
         locked: { booleanValue: true },
         currentMatchId: { stringValue: matchId },
@@ -464,33 +701,58 @@ async function findAndLockMatchInternal(
     updateMask: {
       fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
     },
-    currentDocument: candidate.updateTime
-      ? { updateTime: candidate.updateTime }
+    currentDocument: candidateB.updateTime
+      ? { updateTime: candidateB.updateTime }
       : { exists: true }
   };
 
-  const writeMatch: FirestoreWrite = {
+  const writeCandidateC: FirestoreWrite = {
+    update: {
+      name: getTransferRequestDocPath(projectId, best3WayCycle.nurseCUid),
+      fields: {
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: matchId },
+        status: { stringValue: "MATCHED" },
+        updatedAt: { integerValue: now.getTime().toString() }
+      }
+    },
+    updateMask: {
+      fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+    },
+    currentDocument: candidateC.updateTime
+      ? { updateTime: candidateC.updateTime }
+      : { exists: true }
+  };
+
+  const writeMatch3Way: FirestoreWrite = {
     update: {
       name: getMatchDocPath(projectId, matchId),
       fields: {
-        nurseAUid: { stringValue: bestMatch.nurseAUid },
-        nurseBUid: { stringValue: bestMatch.nurseBUid },
-        nurseACurrentHospitalId: { stringValue: bestMatch.nurseACurrentHospitalId },
-        nurseBCurrentHospitalId: { stringValue: bestMatch.nurseBCurrentHospitalId },
-        nurseADestinationHospitalId: { stringValue: bestMatch.nurseADestinationHospitalId },
-        nurseBDestinationHospitalId: { stringValue: bestMatch.nurseBDestinationHospitalId },
-        nurseAGrade: { stringValue: bestMatch.nurseAGrade },
-        nurseBGrade: { stringValue: bestMatch.nurseBGrade },
-        isSameGrade: { booleanValue: bestMatch.isSameGrade },
-        nurseAPreferenceRank: { integerValue: bestMatch.nurseAPreferenceRank.toString() },
-        nurseBPreferenceRank: { integerValue: bestMatch.nurseBPreferenceRank.toString() },
-        combinedPreferenceRank: { integerValue: bestMatch.combinedPreferenceRank.toString() },
-        priorityReason: { stringValue: bestMatch.priorityReason },
+        nurseAUid: { stringValue: best3WayCycle.nurseAUid },
+        nurseBUid: { stringValue: best3WayCycle.nurseBUid },
+        nurseCUid: { stringValue: best3WayCycle.nurseCUid },
+        nurseACurrentHospitalId: { stringValue: best3WayCycle.nurseACurrentHospitalId },
+        nurseBCurrentHospitalId: { stringValue: best3WayCycle.nurseBCurrentHospitalId },
+        nurseCCurrentHospitalId: { stringValue: best3WayCycle.nurseCCurrentHospitalId },
+        nurseADestinationHospitalId: { stringValue: best3WayCycle.nurseADestinationHospitalId },
+        nurseBDestinationHospitalId: { stringValue: best3WayCycle.nurseBDestinationHospitalId },
+        nurseCDestinationHospitalId: { stringValue: best3WayCycle.nurseCDestinationHospitalId },
+        nurseAGrade: { stringValue: best3WayCycle.nurseAGrade },
+        nurseBGrade: { stringValue: best3WayCycle.nurseBGrade },
+        nurseCGrade: { stringValue: best3WayCycle.nurseCGrade },
+        isAllSameGrade: { booleanValue: best3WayCycle.isAllSameGrade },
+        nurseAPreferenceRank: { integerValue: best3WayCycle.nurseAPreferenceRank.toString() },
+        nurseBPreferenceRank: { integerValue: best3WayCycle.nurseBPreferenceRank.toString() },
+        nurseCPreferenceRank: { integerValue: best3WayCycle.nurseCPreferenceRank.toString() },
+        combinedPreferenceRank: { integerValue: best3WayCycle.combinedPreferenceRank.toString() },
+        priorityReason: { stringValue: best3WayCycle.priorityReason },
         status: { stringValue: "PENDING_CONFIRMATION" },
         acceptedByA: { booleanValue: false },
         acceptedByB: { booleanValue: false },
+        acceptedByC: { booleanValue: false },
         rejectedByA: { booleanValue: false },
         rejectedByB: { booleanValue: false },
+        rejectedByC: { booleanValue: false },
         createdAt: { stringValue: nowIso },
         expiresAt: { stringValue: expiresAtIso },
         updatedAt: { integerValue: now.getTime().toString() }
@@ -502,7 +764,12 @@ async function findAndLockMatchInternal(
   };
 
   try {
-    await firestoreClient.commitAtomicMatch([writeCaller, writeCandidate, writeMatch]);
+    await firestoreClient.commitAtomicMatch([
+      writeCaller3Way,
+      writeCandidateB,
+      writeCandidateC,
+      writeMatch3Way
+    ]);
   } catch (err: unknown) {
     if (err instanceof FirestoreError) {
       const isConcurrencyConflict =
@@ -511,8 +778,6 @@ async function findAndLockMatchInternal(
         err.code === "FAILED_PRECONDITION";
 
       if (isConcurrencyConflict) {
-        // First recover the winner if another worker committed the match between
-        // our initial read and the failed atomic commit.
         const latestCaller = await firestoreClient.getRequestDoc(cleanCallerUid);
         if (
           latestCaller?.locked &&
@@ -527,8 +792,6 @@ async function findAndLockMatchInternal(
           );
         }
 
-        // Firestore REST :commit is not automatically retried like a client
-        // transaction. Retry exactly once with fresh reads/preconditions.
         if (allowConflictRetry) {
           await new Promise<void>(resolve => {
             setTimeout(resolve, conflictRetryDelayMs(cleanCallerUid));
@@ -563,7 +826,8 @@ async function findAndLockMatchInternal(
   return {
     matched: true,
     matchId,
-    match: bestMatch,
+    matchType: "THREE_WAY",
+    match: best3WayCycle,
     createdAt: nowIso,
     expiresAt: expiresAtIso
   };
