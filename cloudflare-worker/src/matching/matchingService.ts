@@ -230,35 +230,147 @@ export async function respondToMatch(
  * 4. Executes concurrency-safe atomic lock via Firestore :commit with precondition updateTime.
  * 5. Guarantees zero partial locking: if either nurse or match doc fails, entire commit aborts.
  */
-export async function findAndLockMatch(
+function readStringField(
+  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  key: string
+): string | undefined {
+  const value = fields[key];
+  return value && typeof value === "object" && "stringValue" in value
+    ? value.stringValue
+    : undefined;
+}
+
+function readBooleanField(
+  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  key: string
+): boolean | undefined {
+  const value = fields[key];
+  return value && typeof value === "object" && "booleanValue" in value
+    ? value.booleanValue
+    : undefined;
+}
+
+function readIntegerField(
+  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  key: string
+): number | undefined {
+  const value = fields[key];
+  if (!value || typeof value !== "object" || !("integerValue" in value)) return undefined;
+  const parsed = Number(value.integerValue);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+/**
+ * Reconstructs an already-created active match after a concurrent caller lost
+ * the Firestore commit race. This is recovery only; it never fabricates a match.
+ */
+async function recoverExistingMatch(
   callerUid: string,
-  firestoreClient: FirestoreClient,
-  options?: FindAndLockMatchOptions
-): Promise<FindAndLockResult> {
-  // Expiration duration must be explicitly configured.
-  // Invariant: No implicit 48-hour or 72-hour default is permitted.
-  const expirationHours = options?.expirationHours;
-  if (
-    expirationHours === undefined ||
-    expirationHours === null ||
-    typeof expirationHours !== "number" ||
-    isNaN(expirationHours) ||
-    expirationHours <= 0
-  ) {
+  matchId: string,
+  firestoreClient: FirestoreClient
+): Promise<FindAndLockMatchSuccess> {
+  const rawMatch = await firestoreClient.getMatchDoc(matchId);
+  if (!rawMatch) {
     throw new MatchServiceError(
-      "Match expiration duration must be explicitly configured (no implicit 48h/72h default permitted)",
-      500,
-      "CONFIG_ERROR"
+      "Caller is marked MATCHED but the referenced match document is missing",
+      409,
+      "MATCH_STATE_INCOMPLETE"
     );
   }
 
-  if (!callerUid || callerUid.trim().length === 0) {
-    throw new MatchServiceError("callerUid must not be empty", 400, "INVALID_UID");
+  const fields = rawMatch.fields ?? {};
+  const nurseAUid = readStringField(fields, "nurseAUid");
+  const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseACurrentHospitalId = readStringField(fields, "nurseACurrentHospitalId");
+  const nurseBCurrentHospitalId = readStringField(fields, "nurseBCurrentHospitalId");
+  const nurseADestinationHospitalId = readStringField(fields, "nurseADestinationHospitalId");
+  const nurseBDestinationHospitalId = readStringField(fields, "nurseBDestinationHospitalId");
+  const nurseAGrade = readStringField(fields, "nurseAGrade");
+  const nurseBGrade = readStringField(fields, "nurseBGrade");
+  const isSameGrade = readBooleanField(fields, "isSameGrade");
+  const nurseAPreferenceRank = readIntegerField(fields, "nurseAPreferenceRank");
+  const nurseBPreferenceRank = readIntegerField(fields, "nurseBPreferenceRank");
+  const combinedPreferenceRank = readIntegerField(fields, "combinedPreferenceRank");
+  const priorityReason = readStringField(fields, "priorityReason");
+  const createdAt = readStringField(fields, "createdAt");
+  const expiresAt = readStringField(fields, "expiresAt");
+
+  if (
+    !nurseAUid ||
+    !nurseBUid ||
+    !nurseACurrentHospitalId ||
+    !nurseBCurrentHospitalId ||
+    !nurseADestinationHospitalId ||
+    !nurseBDestinationHospitalId ||
+    !nurseAGrade ||
+    !nurseBGrade ||
+    isSameGrade === undefined ||
+    nurseAPreferenceRank === undefined ||
+    nurseBPreferenceRank === undefined ||
+    combinedPreferenceRank === undefined ||
+    !priorityReason ||
+    !createdAt ||
+    !expiresAt
+  ) {
+    throw new MatchServiceError(
+      "Referenced match document is malformed",
+      500,
+      "MALFORMED_MATCH_DOC"
+    );
   }
 
+  if (callerUid !== nurseAUid && callerUid !== nurseBUid) {
+    throw new MatchServiceError(
+      "Caller is not a participant of the referenced match",
+      409,
+      "MATCH_STATE_INCOMPLETE"
+    );
+  }
+
+  const match: DirectMatch = {
+    nurseAUid,
+    nurseBUid,
+    nurseACurrentHospitalId,
+    nurseBCurrentHospitalId,
+    nurseADestinationHospitalId,
+    nurseBDestinationHospitalId,
+    nurseAGrade,
+    nurseBGrade,
+    isSameGrade,
+    nurseAPreferenceRank,
+    nurseBPreferenceRank,
+    combinedPreferenceRank,
+    priorityReason
+  };
+
+  return {
+    matched: true,
+    matchId,
+    match,
+    createdAt,
+    expiresAt
+  };
+}
+
+function conflictRetryDelayMs(callerUid: string): number {
+  // Small deterministic jitter avoids synchronized retry bursts without using randomness.
+  let hash = 0;
+  for (let index = 0; index < callerUid.length; index += 1) {
+    hash = (hash * 31 + callerUid.charCodeAt(index)) >>> 0;
+  }
+  return 75 + (hash % 101);
+}
+
+async function findAndLockMatchInternal(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  options: FindAndLockMatchOptions,
+  allowConflictRetry: boolean
+): Promise<FindAndLockResult> {
   const cleanCallerUid = callerUid.trim();
 
-  // 1. Fetch caller's transfer request
+  // Always re-read the caller before matching. This is also the recovery point
+  // after a competing worker has already won the race.
   const caller = await firestoreClient.getRequestDoc(cleanCallerUid);
   if (!caller) {
     throw new MatchServiceError(
@@ -268,22 +380,31 @@ export async function findAndLockMatch(
     );
   }
 
-  // 2. Validate caller eligibility
+  if (
+    caller.locked &&
+    caller.currentMatchId &&
+    caller.currentMatchId.trim().length > 0 &&
+    caller.status.trim().toUpperCase() === "MATCHED"
+  ) {
+    return recoverExistingMatch(
+      cleanCallerUid,
+      caller.currentMatchId.trim(),
+      firestoreClient
+    );
+  }
+
   validateCallerRequest(caller);
 
-  // 3. Fetch searching candidate pool (cross-grade candidates included)
-  const candidateLimit = options?.candidateLimit ?? 100;
+  const candidateLimit = options.candidateLimit ?? 100;
   const rawCandidates = await firestoreClient.querySearchingCandidates(candidateLimit);
 
-  // Filter out caller and any locked/matched requests
   const pool = rawCandidates.filter(
-    c =>
-      c.firebaseUid.trim() !== cleanCallerUid &&
-      !c.locked &&
-      (!c.currentMatchId || c.currentMatchId.trim().length === 0)
+    candidate =>
+      candidate.firebaseUid.trim() !== cleanCallerUid &&
+      !candidate.locked &&
+      (!candidate.currentMatchId || candidate.currentMatchId.trim().length === 0)
   );
 
-  // 4. Evaluate candidates deterministically using pure matching engine
   const bestMatch = findBestMatch(caller, pool);
   if (!bestMatch) {
     return {
@@ -292,8 +413,10 @@ export async function findAndLockMatch(
     };
   }
 
-  // 5. Locate candidate doc for precondition check
-  const candidate = pool.find(c => c.firebaseUid.trim() === bestMatch.nurseBUid.trim());
+  const candidate = pool.find(
+    candidateRequest =>
+      candidateRequest.firebaseUid.trim() === bestMatch.nurseBUid.trim()
+  );
   if (!candidate) {
     return {
       matched: false,
@@ -301,20 +424,16 @@ export async function findAndLockMatch(
     };
   }
 
-  // 6. Generate match identifiers and timestamps
-  const matchId = options?.generateMatchId
+  const matchId = options.generateMatchId
     ? options.generateMatchId()
     : crypto.randomUUID();
 
-  const now = options?.now ? options.now() : new Date();
+  const now = options.now ? options.now() : new Date();
   const nowIso = now.toISOString();
-
-  const expiresAt = new Date(now.getTime() + expirationHours * 3600 * 1000);
+  const expiresAt = new Date(now.getTime() + options.expirationHours! * 3600 * 1000);
   const expiresAtIso = expiresAt.toISOString();
-
   const projectId = firestoreClient.getProjectId();
 
-  // 7. Build atomic writes with preconditions
   const writeCaller: FirestoreWrite = {
     update: {
       name: getTransferRequestDocPath(projectId, cleanCallerUid),
@@ -385,26 +504,63 @@ export async function findAndLockMatch(
     }
   };
 
-  // 8. Commit writes atomically
   try {
     await firestoreClient.commitAtomicMatch([writeCaller, writeCandidate, writeMatch]);
   } catch (err: unknown) {
     if (err instanceof FirestoreError) {
-      if (err.statusCode === 409 || err.statusCode === 400) {
+      const isConcurrencyConflict =
+        err.statusCode === 409 ||
+        err.code === "ABORTED" ||
+        err.code === "FAILED_PRECONDITION";
+
+      if (isConcurrencyConflict) {
+        // First recover the winner if another worker committed the match between
+        // our initial read and the failed atomic commit.
+        const latestCaller = await firestoreClient.getRequestDoc(cleanCallerUid);
+        if (
+          latestCaller?.locked &&
+          latestCaller.currentMatchId &&
+          latestCaller.currentMatchId.trim().length > 0 &&
+          latestCaller.status.trim().toUpperCase() === "MATCHED"
+        ) {
+          return recoverExistingMatch(
+            cleanCallerUid,
+            latestCaller.currentMatchId.trim(),
+            firestoreClient
+          );
+        }
+
+        // Firestore REST :commit is not automatically retried like a client
+        // transaction. Retry exactly once with fresh reads/preconditions.
+        if (allowConflictRetry) {
+          await new Promise<void>(resolve => {
+            setTimeout(resolve, conflictRetryDelayMs(cleanCallerUid));
+          });
+
+          return findAndLockMatchInternal(
+            cleanCallerUid,
+            firestoreClient,
+            options,
+            false
+          );
+        }
+
         throw new MatchServiceError(
           "Concurrent modification conflict detected while locking transfer match",
           409,
           "MATCH_CONFLICT"
         );
       }
+
       throw new MatchServiceError(
-        `Failed to commit match: ${err.message}`,
+        \`Failed to commit match: \${err.message}\`,
         err.statusCode || 500,
         "FIRESTORE_COMMIT_FAILED"
       );
     }
+
     const msg = err instanceof Error ? err.message : "Internal error";
-    throw new MatchServiceError(`Commit error: ${msg}`, 500, "INTERNAL_ERROR");
+    throw new MatchServiceError(\`Commit error: \${msg}\`, 500, "INTERNAL_ERROR");
   }
 
   return {
@@ -414,4 +570,41 @@ export async function findAndLockMatch(
     createdAt: nowIso,
     expiresAt: expiresAtIso
   };
+}
+
+export async function findAndLockMatch(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  options?: FindAndLockMatchOptions
+): Promise<FindAndLockResult> {
+  // Expiration duration must be explicitly configured.
+  // Invariant: No implicit 48-hour or 72-hour default is permitted.
+  const expirationHours = options?.expirationHours;
+  if (
+    expirationHours === undefined ||
+    expirationHours === null ||
+    typeof expirationHours !== "number" ||
+    isNaN(expirationHours) ||
+    expirationHours <= 0
+  ) {
+    throw new MatchServiceError(
+      "Match expiration duration must be explicitly configured (no implicit 48h/72h default permitted)",
+      500,
+      "CONFIG_ERROR"
+    );
+  }
+
+  if (!callerUid || callerUid.trim().length === 0) {
+    throw new MatchServiceError("callerUid must not be empty", 400, "INVALID_UID");
+  }
+
+  return findAndLockMatchInternal(
+    callerUid,
+    firestoreClient,
+    {
+      ...options,
+      expirationHours
+    },
+    true
+  );
 }
