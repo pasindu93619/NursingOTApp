@@ -838,6 +838,253 @@ describe("Server-Side Match Decision Accept/Reject Suite", () => {
     assert.equal(result.newStatus, "CANCELLED");
     assert.equal(result.decisionApplied, true);
   });
+
+  // 33. 2-way rejection releases both participants
+  test("33 - 2-way rejection releases both participants when currentMatchId matches", async () => {
+    const matchDoc = createMockMatchDoc("match-release-2w", "nurse-a", "nurse-b");
+    const nurseADoc = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-a" },
+        currentHospitalId: { stringValue: "HOSP-001" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-002" }] } },
+        grade: { stringValue: "Grade I" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-release-2w" }
+      }
+    };
+    const nurseBDoc = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-b" },
+        currentHospitalId: { stringValue: "HOSP-002" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-001" }] } },
+        grade: { stringValue: "Grade II" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-release-2w" }
+      }
+    };
+
+    let committedWrites: any[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-release-2w`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(nurseADoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(nurseBDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: any[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-release-2w", "REJECT", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(committedWrites.length, 3, "Must include 1 match write and 2 participant release writes");
+    // Verify match doc write
+    assert.equal(committedWrites[0].update.fields.status.stringValue, "CANCELLED");
+    // Verify nurse A release write
+    assert.equal(committedWrites[1].update.fields.status.stringValue, "SEARCHING");
+    assert.equal(committedWrites[1].update.fields.locked.booleanValue, false);
+    assert.equal(committedWrites[1].update.fields.currentMatchId.nullValue, null);
+    // Verify nurse B release write
+    assert.equal(committedWrites[2].update.fields.status.stringValue, "SEARCHING");
+    assert.equal(committedWrites[2].update.fields.locked.booleanValue, false);
+    assert.equal(committedWrites[2].update.fields.currentMatchId.nullValue, null);
+  });
+
+  // 34. 3-way rejection releases all three participants
+  test("34 - 3-way rejection releases all three participants", async () => {
+    const matchDoc = createMockThreeWayMatchDoc("match-release-3w", "nurse-a", "nurse-b", "nurse-c");
+    const createParticipant = (uid: string) => ({
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/${uid}`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: uid },
+        currentHospitalId: { stringValue: "HOSP-001" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-002" }] } },
+        grade: { stringValue: "Grade I" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-release-3w" }
+      }
+    });
+
+    let committedWrites: any[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-release-3w`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(createParticipant("nurse-a")), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(createParticipant("nurse-b")), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-c`]: () =>
+        new Response(JSON.stringify(createParticipant("nurse-c")), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: any[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-c", "match-release-3w", "REJECT", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(committedWrites.length, 4, "Must include 1 match write and 3 participant release writes");
+    for (let i = 1; i <= 3; i++) {
+      assert.equal(committedWrites[i].update.fields.status.stringValue, "SEARCHING");
+      assert.equal(committedWrites[i].update.fields.locked.booleanValue, false);
+      assert.equal(committedWrites[i].update.fields.currentMatchId.nullValue, null);
+    }
+  });
+
+  // 35. Stale release cannot unlock participant belonging to a newer match
+  test("35 - Stale release cannot unlock participant belonging to a newer match", async () => {
+    const matchDoc = createMockMatchDoc("match-stale-check", "nurse-a", "nurse-b");
+    const nurseADoc = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-a" },
+        currentHospitalId: { stringValue: "HOSP-001" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-002" }] } },
+        grade: { stringValue: "Grade I" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-stale-check" }
+      }
+    };
+    const nurseBDocNewer = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-b" },
+        currentHospitalId: { stringValue: "HOSP-002" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-001" }] } },
+        grade: { stringValue: "Grade I" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "brand-new-match-999" } // Pointing to a newer match!
+      }
+    };
+
+    let committedWrites: any[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-stale-check`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(nurseADoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(nurseBDocNewer), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: any[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-stale-check", "REJECT", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    // Only match write and nurse A write should be included; nurse B must NOT be unlocked!
+    assert.equal(committedWrites.length, 2, "Must NOT unlock nurse B who belongs to a newer match");
+    assert.equal(committedWrites[1].update.name.includes("nurse-a"), true);
+  });
+
+  // 36. Race recovery when match doc was already CANCELLED concurrently
+  test("36 - Race recovery returns CANCELLED when match is already cancelled by competing response", async () => {
+    const pendingMatchDoc = createMockMatchDoc("match-race-1", "nurse-a", "nurse-b");
+    const cancelledMatchDoc = createMockMatchDoc("match-race-1", "nurse-a", "nurse-b", {
+      status: "CANCELLED",
+      rejectedByB: true,
+      updateTime: "2026-10-02T12:01:00.000Z"
+    });
+
+    let getMatchCalls = 0;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-race-1`]: () => {
+        getMatchCalls += 1;
+        return new Response(JSON.stringify(getMatchCalls === 1 ? pendingMatchDoc : cancelledMatchDoc), { status: 200 });
+      },
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify({ fields: { firebaseUid: { stringValue: "nurse-a" }, currentMatchId: { stringValue: "match-race-1" } } }), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify({ fields: { firebaseUid: { stringValue: "nurse-b" }, currentMatchId: { stringValue: "match-race-1" } } }), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ error: { code: 409, message: "Conflict", status: "ABORTED" } }), { status: 409 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-race-1", "REJECT", client);
+
+    assert.equal(result.matchId, "match-race-1");
+    assert.equal(result.newStatus, "CANCELLED");
+  });
+
+  // 37. Rejection preserves cross-grade eligibility
+  test("37 - Rejection preserves cross-grade participant eligibility", async () => {
+    const matchDoc = createMockMatchDoc("match-crossgrade-rel", "nurse-a", "nurse-b");
+    const nurseADoc = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-a" },
+        currentHospitalId: { stringValue: "HOSP-001" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-002" }] } },
+        grade: { stringValue: "Grade I" },
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-crossgrade-rel" }
+      }
+    };
+    const nurseBDoc = {
+      name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`,
+      updateTime: "2026-10-02T12:00:00.000Z",
+      fields: {
+        firebaseUid: { stringValue: "nurse-b" },
+        currentHospitalId: { stringValue: "HOSP-002" },
+        preferenceHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-001" }] } },
+        grade: { stringValue: "Grade II" }, // Different grade!
+        status: { stringValue: "MATCHED" },
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: "match-crossgrade-rel" }
+      }
+    };
+
+    let committedWrites: any[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-crossgrade-rel`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(nurseADoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(nurseBDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: any[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:30:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-crossgrade-rel", "REJECT", client);
+
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(committedWrites.length, 3);
+    // Grade II candidate is restored to SEARCHING without grade exclusion
+    assert.equal(committedWrites[2].update.fields.status.stringValue, "SEARCHING");
+    assert.equal(committedWrites[2].update.fields.locked.booleanValue, false);
+  });
 });
 
 describe("Cloudflare Worker Endpoint: POST /api/matching/respond", () => {

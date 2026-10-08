@@ -113,7 +113,8 @@ export async function respondToMatch(
   callerUid: string,
   matchId: string,
   decision: "ACCEPT" | "REJECT",
-  firestoreClient: FirestoreClient
+  firestoreClient: FirestoreClient,
+  retryCount = 1
 ): Promise<MatchDecisionResponse> {
   // 1. Load match document
   const rawMatch = await firestoreClient.getMatchDoc(matchId);
@@ -267,11 +268,82 @@ export async function respondToMatch(
       : { exists: true }
   };
 
+  const writes: FirestoreWrite[] = [writeMatch];
+
+  if (newStatus === "CANCELLED") {
+    const participantUids = hasParticipantC && nurseCUid
+      ? [nurseAUid, nurseBUid, nurseCUid]
+      : [nurseAUid, nurseBUid];
+
+    const participantDocs = await Promise.all(
+      participantUids.map(uid => firestoreClient.getRequestDoc(uid).catch(() => null))
+    );
+
+    for (const doc of participantDocs) {
+      if (doc && doc.currentMatchId === matchId) {
+        writes.push({
+          update: {
+            name: getTransferRequestDocPath(firestoreClient.getProjectId(), doc.firebaseUid),
+            fields: {
+              locked: { booleanValue: false },
+              currentMatchId: { nullValue: null },
+              status: { stringValue: "SEARCHING" },
+              updatedAt: { integerValue: Date.now().toString() }
+            }
+          },
+          updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+          currentDocument: doc.updateTime
+            ? { updateTime: doc.updateTime }
+            : { exists: true }
+        });
+      }
+    }
+  }
+
   // 7. Commit atomically
   try {
-    await firestoreClient.commitAtomicMatch([writeMatch]);
+    await firestoreClient.commitAtomicMatch(writes);
   } catch (err: unknown) {
     if (err instanceof FirestoreError) {
+      const isConcurrencyConflict =
+        err.statusCode === 409 ||
+        err.code === "ABORTED" ||
+        err.code === "FAILED_PRECONDITION";
+
+      if (isConcurrencyConflict) {
+        const freshRawMatch = await firestoreClient.getMatchDoc(matchId).catch(() => null);
+        if (freshRawMatch) {
+          const freshFields = freshRawMatch.fields ?? {};
+          const freshStatus = readStringField(freshFields, "status") ?? "PENDING_CONFIRMATION";
+          const freshExpiresAt = readStringField(freshFields, "expiresAt") ?? expiresAtStr;
+          const freshAccepted = readBooleanField(freshFields, acceptedKey);
+          const freshRejected = readBooleanField(freshFields, rejectedKey);
+
+          if ((decision === "ACCEPT" && freshAccepted) || (decision === "REJECT" && freshRejected)) {
+            return {
+              matchId,
+              newStatus: freshStatus,
+              expiresAt: freshExpiresAt,
+              decisionApplied: true
+            };
+          }
+
+          if (freshStatus === "CANCELLED" || freshStatus === "CONFIRMED") {
+            return {
+              matchId,
+              newStatus: freshStatus,
+              expiresAt: freshExpiresAt,
+              decisionApplied:
+                (decision === "ACCEPT" && freshStatus === "CONFIRMED") ||
+                (decision === "REJECT" && freshStatus === "CANCELLED")
+            };
+          }
+
+          if (retryCount > 0) {
+            return respondToMatch(callerUid, matchId, decision, firestoreClient, retryCount - 1);
+          }
+        }
+      }
       throw new MatchServiceError(`Failed to commit decision: ${err.message}`, err.statusCode || 500, "FIRESTORE_COMMIT_FAILED");
     }
     const msg = err instanceof Error ? err.message : "Internal error";
@@ -334,18 +406,30 @@ function readIntegerField(
 async function recoverExistingMatch(
   callerUid: string,
   matchId: string,
-  firestoreClient: FirestoreClient
-): Promise<FindAndLockMatchSuccess> {
+  firestoreClient: FirestoreClient,
+  now?: Date
+): Promise<FindAndLockMatchSuccess | null> {
   const rawMatch = await firestoreClient.getMatchDoc(matchId);
   if (!rawMatch) {
-    throw new MatchServiceError(
-      "Caller is marked MATCHED but the referenced match document is missing",
-      409,
-      "MATCH_STATE_INCOMPLETE"
-    );
+    return null;
   }
 
   const fields = rawMatch.fields ?? {};
+  const status = readStringField(fields, "status")?.toUpperCase();
+  const expiresAt = readStringField(fields, "expiresAt");
+  const currentTime = now ?? new Date();
+  const isExpired = expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
+
+  if (
+    status === "CANCELLED" ||
+    status === "COMPLETED" ||
+    status === "EXPIRED" ||
+    isExpired ||
+    (status !== undefined && status !== "PENDING_CONFIRMATION" && status !== "CONFIRMED")
+  ) {
+    return null;
+  }
+
   const nurseAUid = readStringField(fields, "nurseAUid");
   const nurseBUid = readStringField(fields, "nurseBUid");
   const nurseCUid = readStringField(fields, "nurseCUid");
@@ -366,7 +450,6 @@ async function recoverExistingMatch(
   const combinedPreferenceRank = readIntegerField(fields, "combinedPreferenceRank");
   const priorityReason = readStringField(fields, "priorityReason");
   const createdAt = readStringField(fields, "createdAt");
-  const expiresAt = readStringField(fields, "expiresAt");
 
   const is3Way = Boolean(nurseCUid);
 
@@ -532,17 +615,77 @@ async function findAndLockMatchInternal(
     caller.currentMatchId.trim().length > 0 &&
     caller.status.trim().toUpperCase() === "MATCHED"
   ) {
-    return recoverExistingMatch(
+    const existingMatch = await recoverExistingMatch(
       cleanCallerUid,
       caller.currentMatchId.trim(),
-      firestoreClient
+      firestoreClient,
+      options.now ? options.now() : undefined
     );
+    if (existingMatch) {
+      return existingMatch;
+    }
+
+    // Stale or terminal match: reset caller request to SEARCHING and unlock
+    const staleMatchId = caller.currentMatchId.trim();
+    const resetWrite: FirestoreWrite = {
+      update: {
+        name: getTransferRequestDocPath(firestoreClient.getProjectId(), cleanCallerUid),
+        fields: {
+          locked: { booleanValue: false },
+          currentMatchId: { nullValue: null },
+          status: { stringValue: "SEARCHING" },
+          updatedAt: { integerValue: Date.now().toString() }
+        }
+      },
+      updateMask: {
+        fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+      },
+      currentDocument: caller.updateTime
+        ? { updateTime: caller.updateTime }
+        : { exists: true }
+    };
+
+    try {
+      await firestoreClient.commitAtomicMatch([resetWrite]);
+      caller.locked = false;
+      caller.currentMatchId = null;
+      caller.status = "SEARCHING";
+    } catch {
+      const rechecked = await firestoreClient.getRequestDoc(cleanCallerUid);
+      if (rechecked) {
+        if (
+          rechecked.locked &&
+          rechecked.currentMatchId &&
+          rechecked.currentMatchId.trim() !== staleMatchId
+        ) {
+          const recoveredNewer = await recoverExistingMatch(
+            cleanCallerUid,
+            rechecked.currentMatchId.trim(),
+            firestoreClient,
+            options.now ? options.now() : undefined
+          );
+          if (recoveredNewer) return recoveredNewer;
+        }
+        Object.assign(caller, rechecked);
+      }
+    }
   }
 
   validateCallerRequest(caller);
 
   const candidateLimit = options.candidateLimit ?? 100;
-  const rawCandidates = await firestoreClient.querySearchingCandidates(candidateLimit);
+  const batchSize = 100;
+  const rawCandidates: CandidateRequest[] = [];
+  let offset = 0;
+
+  while (rawCandidates.length < candidateLimit) {
+    const currentBatchLimit = Math.min(batchSize, candidateLimit - rawCandidates.length);
+    const batch = await firestoreClient.querySearchingCandidates(currentBatchLimit, offset);
+    if (!batch || batch.length === 0) break;
+    rawCandidates.push(...batch);
+    if (batch.length < currentBatchLimit) break;
+    offset += batch.length;
+  }
 
   const pool = rawCandidates.filter(
     candidate =>
@@ -661,11 +804,15 @@ async function findAndLockMatchInternal(
             latestCaller.currentMatchId.trim().length > 0 &&
             latestCaller.status.trim().toUpperCase() === "MATCHED"
           ) {
-            return recoverExistingMatch(
+            const recovered = await recoverExistingMatch(
               cleanCallerUid,
               latestCaller.currentMatchId.trim(),
-              firestoreClient
+              firestoreClient,
+              options.now ? options.now() : undefined
             );
+            if (recovered) {
+              return recovered;
+            }
           }
 
           if (allowConflictRetry) {
@@ -849,11 +996,15 @@ async function findAndLockMatchInternal(
           latestCaller.currentMatchId.trim().length > 0 &&
           latestCaller.status.trim().toUpperCase() === "MATCHED"
         ) {
-          return recoverExistingMatch(
+          const recovered = await recoverExistingMatch(
             cleanCallerUid,
             latestCaller.currentMatchId.trim(),
-            firestoreClient
+            firestoreClient,
+            options.now ? options.now() : undefined
           );
+          if (recovered) {
+            return recovered;
+          }
         }
 
         if (allowConflictRetry) {

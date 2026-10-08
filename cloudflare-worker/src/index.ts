@@ -37,6 +37,23 @@ function errorResponse(error: string, message: string, status = 400): Response {
   );
 }
 
+function resolveTokenProvider(env: Env): (() => Promise<string>) | Response {
+  if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    return createServiceAccountTokenProvider({
+      clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+      privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
+    });
+  }
+  if (env.ENVIRONMENT === "production") {
+    return errorResponse(
+      "ConfigError",
+      "Firebase service account credentials missing in production environment",
+      500
+    );
+  }
+  return async () => "mock-access-token";
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     // 1. Handle CORS pre-flight
@@ -93,16 +110,11 @@ export default {
         const callerUid = verifiedResult.uid;
 
         // Token provider for Firestore Client
-        let tokenProvider: () => Promise<string>;
-        if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-          tokenProvider = createServiceAccountTokenProvider({
-            clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
-            privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
-          });
-        } else {
-          tokenProvider = async () => "mock-access-token";
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider });
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
 
         const body = await request.json();
         const decisionReq = body as MatchDecisionRequest;
@@ -138,16 +150,11 @@ export default {
         const callerUid = verifiedResult.uid;
 
         // Token provider for Firestore Client
-        let tokenProvider: () => Promise<string>;
-        if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-          tokenProvider = createServiceAccountTokenProvider({
-            clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
-            privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
-          });
-        } else {
-          tokenProvider = async () => "mock-access-token";
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider });
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
 
         if (!env.MATCH_EXPIRATION_HOURS || env.MATCH_EXPIRATION_HOURS.trim().length === 0) {
           return errorResponse(

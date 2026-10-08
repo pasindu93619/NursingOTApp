@@ -332,37 +332,41 @@ export class FirestoreClient {
    * Invariant: Does NOT enforce grade equality in the query.
    * Cross-grade candidates remain eligible in accordance with project rules.
    */
-  async querySearchingCandidates(limit = 100): Promise<CandidateRequest[]> {
+  async querySearchingCandidates(limit = 100, offset = 0): Promise<CandidateRequest[]> {
     const authHeader = await this.getAuthHeader();
     const url = `${this.baseUrl}:runQuery`;
 
-    const body = {
-      structuredQuery: {
-        from: [{ collectionId: "transferRequests" }],
-        where: {
-          compositeFilter: {
-            op: "AND",
-            filters: [
-              {
-                fieldFilter: {
-                  field: { fieldPath: "status" },
-                  op: "EQUAL",
-                  value: { stringValue: "SEARCHING" }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: "locked" },
-                  op: "EQUAL",
-                  value: { booleanValue: false }
-                }
+    const structuredQuery: Record<string, unknown> = {
+      from: [{ collectionId: "transferRequests" }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            {
+              fieldFilter: {
+                field: { fieldPath: "status" },
+                op: "EQUAL",
+                value: { stringValue: "SEARCHING" }
               }
-            ]
-          }
-        },
-        limit
-      }
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: "locked" },
+                op: "EQUAL",
+                value: { booleanValue: false }
+              }
+            }
+          ]
+        }
+      },
+      limit
     };
+
+    if (offset > 0) {
+      structuredQuery.offset = offset;
+    }
+
+    const body = { structuredQuery };
 
     let response: Response;
     try {

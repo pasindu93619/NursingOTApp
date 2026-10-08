@@ -546,8 +546,8 @@ describe("Server-Side Matching & Concurrency-Safe Locking (C4 Step 3)", () => {
         combinedPreferenceRank: { integerValue: "2" },
         priorityReason: { stringValue: "Same-grade match (Grade I), combined preference rank 2 (A: #1, B: #1)" },
         status: { stringValue: "PENDING_CONFIRMATION" },
-        createdAt: { stringValue: "2026-10-02T10:00:02Z" },
-        expiresAt: { stringValue: "2026-10-04T10:00:02Z" }
+        createdAt: { stringValue: new Date().toISOString() },
+        expiresAt: { stringValue: new Date(Date.now() + 48 * 3600 * 1000).toISOString() }
       }
     };
 
@@ -1432,8 +1432,8 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
         combinedPreferenceRank: { integerValue: "3" },
         priorityReason: { stringValue: "All-same-grade 3-way cycle" },
         status: { stringValue: "PENDING_CONFIRMATION" },
-        createdAt: { stringValue: "2026-10-02T10:00:02Z" },
-        expiresAt: { stringValue: "2026-10-04T10:00:02Z" }
+        createdAt: { stringValue: new Date().toISOString() },
+        expiresAt: { stringValue: new Date(Date.now() + 48 * 3600 * 1000).toISOString() }
       }
     };
 
@@ -1508,8 +1508,8 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
         combinedPreferenceRank: { integerValue: "3" },
         priorityReason: { stringValue: "All-same-grade 3-way cycle" },
         status: { stringValue: "PENDING_CONFIRMATION" },
-        createdAt: { stringValue: "2026-10-02T10:00:00Z" },
-        expiresAt: { stringValue: "2026-10-04T10:00:00Z" }
+        createdAt: { stringValue: new Date().toISOString() },
+        expiresAt: { stringValue: new Date(Date.now() + 48 * 3600 * 1000).toISOString() }
       }
     };
 
@@ -1540,5 +1540,169 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     assert.equal((success.match as ThreeWayMatch).nurseBUid, "nurse-b");
     assert.equal((success.match as ThreeWayMatch).nurseCUid, "nurse-c");
     assert.equal(commitCalled, false, "Must never attempt a new commit when recovering existing match");
+  });
+
+  // 30. Stale CANCELLED match resets caller and allows new matching
+  test("30 - Stale CANCELLED match resets caller to SEARCHING and proceeds to match", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      locked: true,
+      currentMatchId: "stale-cancelled-123",
+      status: "MATCHED"
+    });
+    const candidateDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-001"], "Grade I", {
+      status: "SEARCHING",
+      locked: false
+    });
+    const staleCancelledMatchDoc = {
+      name: `${TEST_PROJECT_ID}/databases/(default)/documents/matches/stale-cancelled-123`,
+      fields: {
+        nurseAUid: { stringValue: "nurse-a" },
+        nurseBUid: { stringValue: "nurse-x" },
+        status: { stringValue: "CANCELLED" },
+        createdAt: { stringValue: "2026-10-01T10:00:00Z" },
+        expiresAt: { stringValue: new Date(Date.now() + 48 * 3600 * 1000).toISOString() }
+      }
+    };
+
+    let resetCommitted = false;
+    let matchCommitted = false;
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/stale-cancelled-123`]: () =>
+        new Response(JSON.stringify(staleCancelledMatchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify([{ document: candidateDoc }]), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: any[] };
+        if (body.writes.length === 1 && body.writes[0].updateMask.fieldPaths.includes("currentMatchId")) {
+          resetCommitted = true;
+          return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:01Z" }), { status: 200 });
+        }
+        matchCommitted = true;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:02Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+    assert.equal(result.matched, true);
+    assert.equal(resetCommitted, true, "Must commit reset of stale caller");
+    assert.equal(matchCommitted, true, "Must commit new match");
+    assert.equal((result as FindAndLockMatchSuccess).match.nurseBUid, "nurse-b");
+  });
+
+  // 31. Stale EXPIRED match resets caller and allows new matching
+  test("31 - Stale EXPIRED match resets caller to SEARCHING and proceeds to match", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
+      locked: true,
+      currentMatchId: "stale-expired-456",
+      status: "MATCHED"
+    });
+    const candidateDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-001"], "Grade I", {
+      status: "SEARCHING",
+      locked: false
+    });
+    const staleExpiredMatchDoc = {
+      name: `${TEST_PROJECT_ID}/databases/(default)/documents/matches/stale-expired-456`,
+      fields: {
+        nurseAUid: { stringValue: "nurse-a" },
+        nurseBUid: { stringValue: "nurse-x" },
+        status: { stringValue: "PENDING_CONFIRMATION" },
+        createdAt: { stringValue: "2026-09-01T10:00:00Z" },
+        expiresAt: { stringValue: "2026-09-03T10:00:00Z" } // Expired long ago
+      }
+    };
+
+    let resetCommitted = false;
+    let matchCommitted = false;
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/stale-expired-456`]: () =>
+        new Response(JSON.stringify(staleExpiredMatchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify([{ document: candidateDoc }]), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: any[] };
+        if (body.writes.length === 1 && body.writes[0].updateMask.fieldPaths.includes("currentMatchId")) {
+          resetCommitted = true;
+          return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:01Z" }), { status: 200 });
+        }
+        matchCommitted = true;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:02Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+    assert.equal(result.matched, true);
+    assert.equal(resetCommitted, true, "Must commit reset of expired caller");
+    assert.equal(matchCommitted, true, "Must commit new match");
+  });
+
+  // 32. Candidate pool retrieval queries subsequent batches with offset beyond 100 boundary
+  test("32 - Candidate pool retrieval queries beyond 100 items using bounded batch pagination", async () => {
+    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I");
+    // Candidate in second batch (offset 100)
+    const matchingCandidate = createMockRawDoc("nurse-target", "HOSP-002", ["HOSP-001"], "Grade I", {
+      status: "SEARCHING",
+      locked: false
+    });
+
+    // 100 non-matching candidates in first batch
+    const firstBatchDocs = Array.from({ length: 100 }, (_, i) => ({
+      document: createMockRawDoc(`nurse-filler-${i}`, "HOSP-999", ["HOSP-888"], "Grade I", {
+        status: "SEARCHING",
+        locked: false
+      })
+    }));
+
+    let queryCalls = 0;
+    const offsetsReceived: (number | undefined)[] = [];
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: async (req: Request) => {
+        queryCalls += 1;
+        const body = (await req.json()) as { structuredQuery: { limit: number; offset?: number } };
+        offsetsReceived.push(body.structuredQuery.offset);
+
+        if (queryCalls === 1) {
+          // First batch: 100 items
+          return new Response(JSON.stringify(firstBatchDocs), { status: 200 });
+        }
+        // Second batch: return the matching candidate
+        return new Response(JSON.stringify([{ document: matchingCandidate }]), { status: 200 });
+      },
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:01Z" }), { status: 200 })
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48, candidateLimit: 150 });
+    assert.equal(result.matched, true);
+    assert.equal((result as FindAndLockMatchSuccess).match.nurseBUid, "nurse-target");
+    assert.equal(queryCalls, 2, "Must query second batch");
+    assert.equal(offsetsReceived[0], undefined);
+    assert.equal(offsetsReceived[1], 100, "Second batch must request offset 100");
   });
 });
