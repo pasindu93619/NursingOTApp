@@ -420,7 +420,39 @@ export class FirestoreClient {
     const authHeader = await this.getAuthHeader();
     const url = `${this.baseUrl}:commit`;
 
-    const body = { writes };
+    // Firestore REST Write.currentDocument is a protobuf oneof: exactly one of
+    // exists or updateTime may be present. Normalize every write at the transport
+    // boundary so callers cannot accidentally send an invalid oneof or stray fields.
+    const normalizedWrites = writes.map((write): FirestoreWrite => {
+      const normalized: FirestoreWrite = {};
+
+      if (write.update) {
+        normalized.update = {
+          name: write.update.name,
+          fields: write.update.fields
+        };
+      }
+
+      if (write.updateMask) {
+        normalized.updateMask = {
+          fieldPaths: [...write.updateMask.fieldPaths]
+        };
+      }
+
+      if (write.currentDocument?.updateTime) {
+        normalized.currentDocument = {
+          updateTime: write.currentDocument.updateTime
+        };
+      } else if (write.currentDocument?.exists !== undefined) {
+        normalized.currentDocument = {
+          exists: write.currentDocument.exists
+        };
+      }
+
+      return normalized;
+    });
+
+    const body = { writes: normalizedWrites };
 
     let response: Response;
     try {
