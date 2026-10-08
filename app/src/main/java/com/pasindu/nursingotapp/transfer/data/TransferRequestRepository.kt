@@ -77,6 +77,12 @@ class TransferRequestRepository @Inject constructor(
         dao.getOnce()?.toDomain()
 
     /**
+     * Returns the authenticated Firebase UID used to orient a server-created
+     * mutual-transfer match to the signed-in nurse.
+     */
+    suspend fun getCurrentUserId(): String? = tokenProvider?.getCurrentUserId()
+
+    /**
      * Persists a new or updated transfer request to Room.
      *
      * Sets [CacheSyncStatus.PENDING] on every write so that a future Firestore
