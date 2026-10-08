@@ -121,11 +121,12 @@ export const SLIDING_WINDOW_HOURS = 24; // 24 hours after first response
  *        chatDeadline is established (now + 72h) and expiresAt is updated to chatDeadline.
  *      - Otherwise remains PENDING_CONFIRMATION awaiting remaining responses.
  * 2. CHAT_OPEN:
- *    - REJECT -> CANCELLED (releases all participants to SEARCHING)
- *    - CONFIRM (or ACCEPT):
+ *    - REJECT / LEAVE -> CANCELLED (releases all participants to SEARCHING)
+ *    - CONFIRM only:
  *      - Marks caller's confirmedBy flag.
  *      - If all participants confirm -> transitions to CONFIRMED.
  *      - Otherwise remains CHAT_OPEN awaiting remaining confirmations.
+ *    - ACCEPT is invalid here; accepting a match is never final confirmation.
  */
 export async function respondToMatch(
   callerUid: string,
@@ -224,6 +225,25 @@ export async function respondToMatch(
   // 3. Verify match is actionable
   if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") {
     throw new MatchServiceError("Match is not awaiting confirmation or chat finalization", 409, "INVALID_STATUS");
+  }
+
+  // Enforce the two distinct decision stages at the trusted backend boundary.
+  // Stage 1: ACCEPT/REJECT while the proposed match is pending.
+  // Stage 2: CONFIRM/REJECT/LEAVE after the coordination chat opens.
+  // Never reinterpret ACCEPT as final agreement, or CONFIRM as initial acceptance.
+  if (status === "PENDING_CONFIRMATION" && decision === "CONFIRM") {
+    throw new MatchServiceError(
+      "Final confirmation is available only after all nurses accept and the chat opens",
+      400,
+      "INVALID_DECISION"
+    );
+  }
+  if (status === "CHAT_OPEN" && decision === "ACCEPT") {
+    throw new MatchServiceError(
+      "The match has already been accepted; use CONFIRM after discussion to finalize it",
+      400,
+      "INVALID_DECISION"
+    );
   }
 
   const now = new Date();
