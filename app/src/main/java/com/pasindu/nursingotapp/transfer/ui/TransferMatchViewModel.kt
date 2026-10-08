@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.transfer.data.HospitalReferenceRepository
 import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
-import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import java.time.Instant
 import com.pasindu.nursingotapp.transfer.data.model.Decision
@@ -62,8 +61,12 @@ class TransferMatchViewModel @Inject constructor(
                                 "No active mutual-transfer match is available."
                             )
                         }
-                        is WorkerSyncResult.NetworkError,
-                        is WorkerSyncResult.AuthError,
+                        is WorkerSyncResult.NetworkError -> {
+                            _uiState.value = TransferMatchUiState.Error(syncResult.message)
+                        }
+                        is WorkerSyncResult.AuthError -> {
+                            _uiState.value = TransferMatchUiState.Error(syncResult.message)
+                        }
                         is WorkerSyncResult.Conflict -> {
                             _uiState.value = TransferMatchUiState.Error(syncResult.message)
                         }
