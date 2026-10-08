@@ -280,9 +280,24 @@ class TransferRequestRepository @Inject constructor(
          * is being matched. Publish only when the local request is pending
          * or changed, or when the server has no request yet.
          */
+        /*
+         * A transient Worker conflict must not force the Android client to
+         * rewrite an already-searching server request. Rewriting that
+         * document changes Firestore updateTime and can race the Worker
+         * precondition. Publish only for a missing/non-searching server
+         * request, an explicitly pending local change, or a local edit that
+         * is newer than the server's known updatedAt.
+         */
+        val localSyncStatus = entity.syncStatus.trim().uppercase()
+        val localHasPendingChanges = localSyncStatus == CacheSyncStatus.PENDING.name
+        val localChangedSinceRemote = remoteState?.updatedAt?.let { remoteUpdatedAt ->
+            entity.updatedAt > remoteUpdatedAt
+        } == true
+
         val shouldPublishRemote = remoteState == null ||
             !remoteState.status.equals("SEARCHING", ignoreCase = true) ||
-            entity.syncStatus.trim().uppercase() != CacheSyncStatus.SYNCED.name
+            localHasPendingChanges ||
+            localChangedSinceRemote
 
         if (shouldPublishRemote) {
             Log.d(
