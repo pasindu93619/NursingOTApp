@@ -347,7 +347,7 @@ private fun ActivePoolMissionControlView(
 
                 val buttonLabel = when (request.matchStatus?.trim()?.uppercase()) {
                     "CHAT_OPEN" -> "Open Team Chat"
-                    "CONFIRMED" -> "Open Team Chat"
+                    "CONFIRMED" -> "View Final Agreement"
                     "CANCELLED" -> "View Details"
                     "EXPIRED" -> "View Details"
                     else -> "View & Respond to Match"
