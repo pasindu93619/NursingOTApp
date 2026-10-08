@@ -195,10 +195,9 @@ export async function respondToMatch(
       }
     },
     updateMask: { fieldPaths: [acceptedKey, rejectedKey, "status", "updatedAt"] },
-    currentDocument: {
-      exists: true,
-      ...(updateTime ? { updateTime } : {})
-    }
+    currentDocument: updateTime
+      ? { updateTime }
+      : { exists: true }
   };
 
   // 7. Commit atomically
@@ -447,10 +446,9 @@ async function findAndLockMatchInternal(
     updateMask: {
       fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
     },
-    currentDocument: {
-      exists: true,
-      ...(caller.updateTime ? { updateTime: caller.updateTime } : {})
-    }
+    currentDocument: caller.updateTime
+      ? { updateTime: caller.updateTime }
+      : { exists: true }
   };
 
   const writeCandidate: FirestoreWrite = {
@@ -466,10 +464,9 @@ async function findAndLockMatchInternal(
     updateMask: {
       fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
     },
-    currentDocument: {
-      exists: true,
-      ...(candidate.updateTime ? { updateTime: candidate.updateTime } : {})
-    }
+    currentDocument: candidate.updateTime
+      ? { updateTime: candidate.updateTime }
+      : { exists: true }
   };
 
   const writeMatch: FirestoreWrite = {
