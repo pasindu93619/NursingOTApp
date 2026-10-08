@@ -170,7 +170,7 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile).shadow(7.dp, RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = ClinicalPrimaryColor),
+        colors = CardDefaults.cardColors(containerColor = Slate),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -482,6 +482,16 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                 }
 
                 Spacer(Modifier.height(14.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(ClinicalPrimaryColor)
+                )
+
+                Spacer(Modifier.height(12.dp))
 
                 Text(
                     "FIND YOUR MOVE",
