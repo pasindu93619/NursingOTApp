@@ -417,7 +417,7 @@ export class FirestoreClient {
   }
 
   /**
-   * Queries matches with status == 'PENDING_CONFIRMATION'.
+   * Queries matches with status IN ['PENDING_CONFIRMATION', 'CHAT_OPEN'].
    * Used by server-side expiry sweep.
    */
   async queryPendingConfirmationMatches(limit = 100): Promise<FirestoreRawDocument[]> {
@@ -429,8 +429,15 @@ export class FirestoreClient {
       where: {
         fieldFilter: {
           field: { fieldPath: "status" },
-          op: "EQUAL",
-          value: { stringValue: "PENDING_CONFIRMATION" }
+          op: "IN",
+          value: {
+            arrayValue: {
+              values: [
+                { stringValue: "PENDING_CONFIRMATION" },
+                { stringValue: "CHAT_OPEN" }
+              ]
+            }
+          }
         }
       },
       limit,

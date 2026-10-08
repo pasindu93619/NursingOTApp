@@ -106,13 +106,31 @@ function validateCallerRequest(caller: CandidateRequest): void {
   }
 }
 
+export const CHAT_DURATION_HOURS = 72; // 3 days for CHAT_OPEN phase
+export const SLIDING_WINDOW_HOURS = 24; // 24 hours after first response
+
 /**
- * Responds to a matched transfer request with an ACCEPT or REJECT decision.
+ * Responds to a matched transfer request with an ACCEPT, REJECT, or CONFIRM decision.
+ *
+ * Workflow State Machine:
+ * 1. PENDING_CONFIRMATION:
+ *    - REJECT -> CANCELLED (releases all participants to SEARCHING)
+ *    - ACCEPT:
+ *      - If first accept, sliding window triggers: firstResponseAt recorded, expiresAt tightened to min(expiresAt, now + 24h).
+ *      - If all participants accept (2 in 2-way, 3 in 3-way) -> transitions to CHAT_OPEN.
+ *        chatDeadline is established (now + 72h) and expiresAt is updated to chatDeadline.
+ *      - Otherwise remains PENDING_CONFIRMATION awaiting remaining responses.
+ * 2. CHAT_OPEN:
+ *    - REJECT -> CANCELLED (releases all participants to SEARCHING)
+ *    - CONFIRM (or ACCEPT):
+ *      - Marks caller's confirmedBy flag.
+ *      - If all participants confirm -> transitions to CONFIRMED.
+ *      - Otherwise remains CHAT_OPEN awaiting remaining confirmations.
  */
 export async function respondToMatch(
   callerUid: string,
   matchId: string,
-  decision: "ACCEPT" | "REJECT",
+  decision: "ACCEPT" | "REJECT" | "CONFIRM",
   firestoreClient: FirestoreClient,
   retryCount = 1
 ): Promise<MatchDecisionResponse> {
@@ -138,6 +156,8 @@ export async function respondToMatch(
   const nurseCUid = getString("nurseCUid");
   const status = getString("status");
   const expiresAtStr = getString("expiresAt");
+  const firstResponseAtStr = getString("firstResponseAt");
+  const chatDeadlineStr = getString("chatDeadline");
   const updateTime = rawMatch.updateTime;
 
   if (!nurseAUid || !nurseBUid || !status || !expiresAtStr) {
@@ -156,6 +176,7 @@ export async function respondToMatch(
   let isParticipantC = false;
   let acceptedKey: string;
   let rejectedKey: string;
+  let confirmedKey: string;
 
   if (hasParticipantC) {
     // In a 3-way match, nurseCUid must be valid and decision booleans must be present
@@ -176,12 +197,15 @@ export async function respondToMatch(
     if (isParticipantA) {
       acceptedKey = "acceptedByA";
       rejectedKey = "rejectedByA";
+      confirmedKey = "confirmedByA";
     } else if (isParticipantB) {
       acceptedKey = "acceptedByB";
       rejectedKey = "rejectedByB";
+      confirmedKey = "confirmedByB";
     } else {
       acceptedKey = "acceptedByC";
       rejectedKey = "rejectedByC";
+      confirmedKey = "confirmedByC";
     }
   } else {
     // 2-Way match
@@ -194,11 +218,12 @@ export async function respondToMatch(
 
     acceptedKey = isParticipantA ? "acceptedByA" : "acceptedByB";
     rejectedKey = isParticipantA ? "rejectedByA" : "rejectedByB";
+    confirmedKey = isParticipantA ? "confirmedByA" : "confirmedByB";
   }
 
   // 3. Verify match is actionable
-  if (status !== "PENDING_CONFIRMATION") {
-    throw new MatchServiceError("Match is not awaiting confirmation", 409, "INVALID_STATUS");
+  if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") {
+    throw new MatchServiceError("Match is not awaiting confirmation or chat finalization", 409, "INVALID_STATUS");
   }
 
   const now = new Date();
@@ -207,47 +232,150 @@ export async function respondToMatch(
     throw new MatchServiceError("Match deadline has expired", 410, "EXPIRED");
   }
 
-  // 4. Verify participant has not already responded
-  const alreadyAccepted = getBool(acceptedKey);
-  const alreadyRejected = getBool(rejectedKey);
-  if (alreadyAccepted || alreadyRejected) {
-    throw new MatchServiceError("Participant has already responded", 409, "ALREADY_RESPONDED");
+  // 4. Verify participant response eligibility per state
+  if (status === "PENDING_CONFIRMATION") {
+    const alreadyAccepted = getBool(acceptedKey);
+    const alreadyRejected = getBool(rejectedKey);
+    if (alreadyAccepted || alreadyRejected) {
+      throw new MatchServiceError("Participant has already responded", 409, "ALREADY_RESPONDED");
+    }
+  } else if (status === "CHAT_OPEN") {
+    if (decision === "REJECT") {
+      // Allowed to reject/cancel in CHAT_OPEN
+    } else {
+      // CONFIRM or ACCEPT
+      const alreadyConfirmed = getBool(confirmedKey);
+      if (alreadyConfirmed) {
+        throw new MatchServiceError("Participant has already confirmed", 409, "ALREADY_CONFIRMED");
+      }
+    }
   }
 
-  // 5. Determine new status after this decision
-  let newStatus = "PENDING_CONFIRMATION";
+  // 5. Determine new status, deadlines, and flags
+  let newStatus = status;
+  let newExpiresAtStr = expiresAtStr;
+  let newFirstResponseAtStr = firstResponseAtStr;
+  let newChatDeadlineStr = chatDeadlineStr;
+
+  const matchFieldsToUpdate: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }> = {
+    updatedAt: { integerValue: Date.now().toString() }
+  };
+  const updateMaskFieldPaths: string[] = ["updatedAt"];
+
   if (decision === "REJECT") {
     newStatus = "CANCELLED";
-  } else {
-    // ACCEPT decision
+    matchFieldsToUpdate[rejectedKey] = { booleanValue: true };
+    matchFieldsToUpdate[acceptedKey] = { booleanValue: false };
+    matchFieldsToUpdate.status = { stringValue: newStatus };
+    updateMaskFieldPaths.push(rejectedKey, acceptedKey, "status");
+  } else if (status === "PENDING_CONFIRMATION") {
+    // ACCEPT decision in PENDING_CONFIRMATION
+    matchFieldsToUpdate[acceptedKey] = { booleanValue: true };
+    matchFieldsToUpdate[rejectedKey] = { booleanValue: false };
+    updateMaskFieldPaths.push(acceptedKey, rejectedKey);
+
+    // Sliding window check: If this is the first response, set firstResponseAt and tighten deadline
+    const anyPriorResponse =
+      (isParticipantA ? false : Boolean(getBool("acceptedByA"))) ||
+      (isParticipantB ? false : Boolean(getBool("acceptedByB"))) ||
+      (hasParticipantC && !isParticipantC ? Boolean(getBool("acceptedByC")) : false);
+
+    if (!firstResponseAtStr && !anyPriorResponse) {
+      newFirstResponseAtStr = now.toISOString();
+      matchFieldsToUpdate.firstResponseAt = { stringValue: newFirstResponseAtStr };
+      updateMaskFieldPaths.push("firstResponseAt");
+
+      const slidingDeadline = new Date(now.getTime() + SLIDING_WINDOW_HOURS * 3600 * 1000);
+      if (slidingDeadline < expiresAt) {
+        newExpiresAtStr = slidingDeadline.toISOString();
+        matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
+        updateMaskFieldPaths.push("expiresAt");
+      }
+    }
+
+    // Check if all participants have now accepted
+    let allAccepted = false;
     if (hasParticipantC) {
-      // 3-Way match: check other two participants' decisions
-      const otherAccepted = [
-        isParticipantA ? true : Boolean(getBool("acceptedByA")),
-        isParticipantB ? true : Boolean(getBool("acceptedByB")),
-        isParticipantC ? true : Boolean(getBool("acceptedByC"))
-      ];
-      const otherRejected =
+      const acceptedA = isParticipantA ? true : Boolean(getBool("acceptedByA"));
+      const acceptedB = isParticipantB ? true : Boolean(getBool("acceptedByB"));
+      const acceptedC = isParticipantC ? true : Boolean(getBool("acceptedByC"));
+      const anyRejected =
         Boolean(getBool("rejectedByA")) ||
         Boolean(getBool("rejectedByB")) ||
         Boolean(getBool("rejectedByC"));
 
-      if (otherRejected) {
+      if (anyRejected) {
         newStatus = "CANCELLED";
-      } else if (otherAccepted[0] && otherAccepted[1] && otherAccepted[2]) {
-        newStatus = "CONFIRMED";
+      } else if (acceptedA && acceptedB && acceptedC) {
+        allAccepted = true;
       }
     } else {
-      // 2-Way match: check opponent's decision
-      const opponentAcceptedKey = isParticipantA ? "acceptedByB" : "acceptedByA";
-      const opponentRejectedKey = isParticipantA ? "rejectedByB" : "rejectedByA";
-      const opponentAccepted = getBool(opponentAcceptedKey);
-      const opponentRejected = getBool(opponentRejectedKey);
-      if (opponentRejected) {
+      const acceptedA = isParticipantA ? true : Boolean(getBool("acceptedByA"));
+      const acceptedB = isParticipantB ? true : Boolean(getBool("acceptedByB"));
+      const anyRejected = Boolean(getBool("rejectedByA")) || Boolean(getBool("rejectedByB"));
+
+      if (anyRejected) {
         newStatus = "CANCELLED";
-      } else if (opponentAccepted) {
-        newStatus = "CONFIRMED";
+      } else if (acceptedA && acceptedB) {
+        allAccepted = true;
       }
+    }
+
+    if (newStatus !== "CANCELLED") {
+      if (allAccepted) {
+        // Transition to CHAT_OPEN
+        newStatus = "CHAT_OPEN";
+        const chatDeadline = new Date(now.getTime() + CHAT_DURATION_HOURS * 3600 * 1000);
+        newChatDeadlineStr = chatDeadline.toISOString();
+        newExpiresAtStr = newChatDeadlineStr;
+
+        matchFieldsToUpdate.status = { stringValue: newStatus };
+        matchFieldsToUpdate.chatDeadline = { stringValue: newChatDeadlineStr };
+        matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
+        matchFieldsToUpdate.confirmedByA = { booleanValue: false };
+        matchFieldsToUpdate.confirmedByB = { booleanValue: false };
+        updateMaskFieldPaths.push("status", "chatDeadline", "expiresAt", "confirmedByA", "confirmedByB");
+
+        if (hasParticipantC) {
+          matchFieldsToUpdate.confirmedByC = { booleanValue: false };
+          updateMaskFieldPaths.push("confirmedByC");
+        }
+      } else {
+        newStatus = "PENDING_CONFIRMATION";
+        matchFieldsToUpdate.status = { stringValue: newStatus };
+        updateMaskFieldPaths.push("status");
+      }
+    } else {
+      matchFieldsToUpdate.status = { stringValue: newStatus };
+      updateMaskFieldPaths.push("status");
+    }
+  } else if (status === "CHAT_OPEN") {
+    // Decision is CONFIRM or ACCEPT in CHAT_OPEN
+    matchFieldsToUpdate[confirmedKey] = { booleanValue: true };
+    updateMaskFieldPaths.push(confirmedKey);
+
+    let allConfirmed = false;
+    if (hasParticipantC) {
+      const confirmedA = isParticipantA ? true : Boolean(getBool("confirmedByA"));
+      const confirmedB = isParticipantB ? true : Boolean(getBool("confirmedByB"));
+      const confirmedC = isParticipantC ? true : Boolean(getBool("confirmedByC"));
+      if (confirmedA && confirmedB && confirmedC) {
+        allConfirmed = true;
+      }
+    } else {
+      const confirmedA = isParticipantA ? true : Boolean(getBool("confirmedByA"));
+      const confirmedB = isParticipantB ? true : Boolean(getBool("confirmedByB"));
+      if (confirmedA && confirmedB) {
+        allConfirmed = true;
+      }
+    }
+
+    if (allConfirmed) {
+      newStatus = "CONFIRMED";
+      matchFieldsToUpdate.status = { stringValue: newStatus };
+      updateMaskFieldPaths.push("status");
+    } else {
+      newStatus = "CHAT_OPEN";
     }
   }
 
@@ -255,14 +383,9 @@ export async function respondToMatch(
   const writeMatch: FirestoreWrite = {
     update: {
       name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
-      fields: {
-        [acceptedKey]: { booleanValue: decision === "ACCEPT" },
-        [rejectedKey]: { booleanValue: decision === "REJECT" },
-        status: { stringValue: newStatus },
-        updatedAt: { integerValue: Date.now().toString() }
-      }
+      fields: matchFieldsToUpdate
     },
-    updateMask: { fieldPaths: [acceptedKey, rejectedKey, "status", "updatedAt"] },
+    updateMask: { fieldPaths: updateMaskFieldPaths },
     currentDocument: updateTime
       ? { updateTime }
       : { exists: true }
@@ -326,15 +449,24 @@ export async function respondToMatch(
         if (freshRawMatch) {
           const freshFields = freshRawMatch.fields ?? {};
           const freshStatus = readStringField(freshFields, "status") ?? "PENDING_CONFIRMATION";
-          const freshExpiresAt = readStringField(freshFields, "expiresAt") ?? expiresAtStr;
+          const freshExpiresAt = readStringField(freshFields, "expiresAt") ?? newExpiresAtStr;
+          const freshChatDeadline = readStringField(freshFields, "chatDeadline") ?? newChatDeadlineStr;
+          const freshFirstResponseAt = readStringField(freshFields, "firstResponseAt") ?? newFirstResponseAtStr;
           const freshAccepted = readBooleanField(freshFields, acceptedKey);
           const freshRejected = readBooleanField(freshFields, rejectedKey);
+          const freshConfirmed = readBooleanField(freshFields, confirmedKey);
 
-          if ((decision === "ACCEPT" && freshAccepted) || (decision === "REJECT" && freshRejected)) {
+          if (
+            (decision === "ACCEPT" && freshAccepted) ||
+            (decision === "REJECT" && freshRejected) ||
+            (decision === "CONFIRM" && freshConfirmed)
+          ) {
             return {
               matchId,
               newStatus: freshStatus,
               expiresAt: freshExpiresAt,
+              chatDeadline: freshChatDeadline,
+              firstResponseAt: freshFirstResponseAt,
               decisionApplied: true
             };
           }
@@ -344,8 +476,11 @@ export async function respondToMatch(
               matchId,
               newStatus: freshStatus,
               expiresAt: freshExpiresAt,
+              chatDeadline: freshChatDeadline,
+              firstResponseAt: freshFirstResponseAt,
               decisionApplied:
-                (decision === "ACCEPT" && freshStatus === "CONFIRMED") ||
+                (decision === "ACCEPT" && (freshStatus === "CHAT_OPEN" || freshStatus === "CONFIRMED")) ||
+                (decision === "CONFIRM" && freshStatus === "CONFIRMED") ||
                 (decision === "REJECT" && freshStatus === "CANCELLED")
             };
           }
@@ -364,7 +499,9 @@ export async function respondToMatch(
   return {
     matchId,
     newStatus,
-    expiresAt: expiresAtStr,
+    expiresAt: newExpiresAtStr,
+    chatDeadline: newChatDeadlineStr,
+    firstResponseAt: newFirstResponseAtStr,
     decisionApplied: true
   };
 }
@@ -436,7 +573,10 @@ async function recoverExistingMatch(
     status === "COMPLETED" ||
     status === "EXPIRED" ||
     isExpired ||
-    (status !== undefined && status !== "PENDING_CONFIRMATION" && status !== "CONFIRMED")
+    (status !== undefined &&
+      status !== "PENDING_CONFIRMATION" &&
+      status !== "CHAT_OPEN" &&
+      status !== "CONFIRMED")
   ) {
     return null;
   }
@@ -1121,11 +1261,11 @@ export interface SweepExpiredMatchesResult {
 }
 
 /**
- * Sweeps active PENDING_CONFIRMATION matches that have passed their expiration deadline.
+ * Sweeps active PENDING_CONFIRMATION and CHAT_OPEN matches that have passed their expiration deadline.
  * Marks expired matches as EXPIRED and unlocks/resets their participants back to SEARCHING.
  *
  * Invariants:
- * - Scans only PENDING_CONFIRMATION matches where now > expiresAt.
+ * - Scans PENDING_CONFIRMATION and CHAT_OPEN matches where now > expiresAt.
  * - Atomically marks match EXPIRED and resets participants (A, B, and C if 3-way).
  * - Preconditions guard participants against race conditions; never overrides newer matches.
  * - Safe error handling: skips/logs errors per match without halting the entire sweep.
@@ -1153,7 +1293,7 @@ export async function sweepExpiredMatches(
 
       const fields = rawMatch.fields ?? {};
       const status = readStringField(fields, "status")?.toUpperCase();
-      if (status !== "PENDING_CONFIRMATION") continue;
+      if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") continue;
 
       const expiresAtStr = readStringField(fields, "expiresAt");
       if (!expiresAtStr) continue;

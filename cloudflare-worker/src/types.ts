@@ -75,16 +75,18 @@ export interface GoogleJwksResponse {
   keys: GoogleJwk[];
 }
 
-// Request payload for match decision (accept/reject)
+// Request payload for match decision (accept/reject/confirm)
 export interface MatchDecisionRequest {
   matchId: string;
-  decision: "ACCEPT" | "REJECT";
+  decision: "ACCEPT" | "REJECT" | "CONFIRM";
 }
 
 // Response payload after processing a decision
 export interface MatchDecisionResponse {
   matchId: string;
-  newStatus: string; // PENDING_CONFIRMATION | CONFIRMED | CANCELLED
+  newStatus: string; // PENDING_CONFIRMATION | CHAT_OPEN | CONFIRMED | CANCELLED
   expiresAt: string;
+  chatDeadline?: string;
+  firstResponseAt?: string;
   decisionApplied: boolean;
 }
