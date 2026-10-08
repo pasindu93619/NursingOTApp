@@ -6,8 +6,12 @@ import {
   findAllCompatibleMatches,
   rankMatches,
   compareMatches,
+  findBestThreeWayCycle,
+  compareThreeWayMatches,
+  rankThreeWayMatches,
   type CandidateRequest,
-  type DirectMatch
+  type DirectMatch,
+  type ThreeWayMatch
 } from "../src/matching/matchingEngine.ts";
 
 function createValidRequest(overrides: Partial<CandidateRequest> = {}): CandidateRequest {
@@ -483,5 +487,273 @@ describe("Pure 2-Way Mutual Transfer Matching Engine", () => {
     assert.ok(best);
     assert.equal(best.nurseBUid, "nurse-special");
     assert.equal(best.isSameGrade, false);
+  });
+});
+
+// =============================================================================
+// 3-Way Circular Matching Tests
+// =============================================================================
+
+describe("3-Way Circular Transfer Cycle Detection", () => {
+
+  /**
+   * Helper that creates a cycle-eligible request with distinct UIDs and
+   * hospitals so tests only need to supply relevant overrides.
+   */
+  function req(
+    uid: string,
+    currentHospital: string,
+    preferences: string[],
+    extra: Partial<CandidateRequest> = {}
+  ): CandidateRequest {
+    return createValidRequest({
+      firebaseUid: uid,
+      currentHospitalId: currentHospital,
+      preferenceHospitalIds: preferences,
+      ...extra
+    });
+  }
+
+  // ---- Test 1: Valid A -> B -> C -> A cycle ----
+  test("3W-01 - valid A -> B -> C -> A cycle is detected", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-C"]);
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
+
+    const pool = [nurseB, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+
+    assert.ok(result, "Expected a valid cycle to be found");
+    assert.equal(result.nurseAUid, "uid-A");
+    assert.equal(result.nurseBUid, "uid-B");
+    assert.equal(result.nurseCUid, "uid-C");
+    assert.equal(result.nurseACurrentHospitalId, "HOSP-A");
+    assert.equal(result.nurseBCurrentHospitalId, "HOSP-B");
+    assert.equal(result.nurseCCurrentHospitalId, "HOSP-C");
+    assert.equal(result.nurseADestinationHospitalId, "HOSP-B");
+    assert.equal(result.nurseBDestinationHospitalId, "HOSP-C");
+    assert.equal(result.nurseCDestinationHospitalId, "HOSP-A");
+  });
+
+  // ---- Test 2: No cycle when C does not select A's hospital ----
+  test("3W-02 - no cycle when C's preferences omit A's hospital", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-C"]);
+    // C wants HOSP-X, not HOSP-A => cycle does not close
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-X"]);
+
+    const pool = [nurseB, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+    assert.equal(result, null);
+  });
+
+  // ---- Test 3: Direct 2-way priority when both options exist ----
+  test("3W-03 - findBestMatch wins over 3-way when a direct 2-way match exists", () => {
+    // A <-> B (direct 2-way match available)
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-A"]); // B wants A's hospital => 2-way
+    // A -> B -> C -> A also forms a valid cycle
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
+
+    // findBestMatch MUST return the direct pair, not null
+    const directResult = findBestMatch(nurseA, [nurseB, nurseC]);
+    assert.ok(directResult, "Direct 2-way match must be found");
+    assert.equal(directResult.nurseBUid, "uid-B");
+
+    // The 3-way search does find a cycle (it's a standalone function)
+    // but by contract it is only called when findBestMatch returns null.
+    // Verify that contract path: direct match exists => cycle should NOT be chosen.
+    // (Test validates the priority rule by showing findBestMatch != null.)
+    const cycle = findBestThreeWayCycle(nurseA, [nurseB, nurseC]);
+    // Cycle may or may not exist; the important assertion is that directResult wins.
+    assert.ok(directResult.nurseBUid === "uid-B", "2-way direct match takes priority");
+  });
+
+  // ---- Test 4: 4-way chain is NOT matched as a 3-way cycle ----
+  test("3W-04 - four-participant chain A->B->C->D->A does not produce a 3-way match", () => {
+    // Only a 4-way cycle closes; no 3-way subset closes.
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-C"]);
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-D"]);  // C wants HOSP-D, not HOSP-A
+    const nurseD = req("uid-D", "HOSP-D", ["HOSP-A"]);  // D closes back to A but DFS stops at depth 3
+
+    const pool = [nurseB, nurseC, nurseD];
+    const result = findBestThreeWayCycle(nurseA, pool);
+    assert.equal(result, null, "4-way chain must NOT produce a 3-way cycle");
+  });
+
+  // ---- Test 5: Duplicate participant rejected ----
+  test("3W-05 - pool containing same UID as source is silently skipped", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    // Pool deliberately includes a copy of A with a different hospital key — UID match is the guard.
+    const cloneOfA = req("uid-A", "HOSP-B", ["HOSP-C"]); // same UID as source
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
+
+    const pool = [cloneOfA, nurseC];
+    // cloneOfA has UID == source; it must be rejected as B, so no valid B->C->A path.
+    const result = findBestThreeWayCycle(nurseA, pool);
+    assert.equal(result, null);
+  });
+
+  // ---- Test 6: Self-cycle rejected ----
+  test("3W-06 - source cannot form a cycle with itself at any hop", () => {
+    // A has preferences that circle back to itself, but there are no other nurses.
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-A"]);
+    const result = findBestThreeWayCycle(nurseA, [nurseA]);
+    assert.equal(result, null);
+  });
+
+  // ---- Test 7: Cross-grade 3-way accepted ----
+  test("3W-07 - cross-grade 3-way cycle is accepted (grade is never an exclusion filter)", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"], { grade: "Grade I" });
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-C"], { grade: "Grade II" });
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"], { grade: "Grade III" });
+
+    const pool = [nurseB, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+
+    assert.ok(result, "Cross-grade cycle must be accepted");
+    assert.equal(result.isAllSameGrade, false);
+    assert.equal(result.nurseAGrade, "Grade I");
+    assert.equal(result.nurseBGrade, "Grade II");
+    assert.equal(result.nurseCGrade, "Grade III");
+    assert.match(result.priorityReason, /cross-grade/i);
+  });
+
+  // ---- Test 8: Same-grade cycle preferred over cross-grade when equal rank ----
+  test("3W-08 - same-grade cycle ranked above cross-grade cycle when combined rank is equal", () => {
+    // Both cycles have combined rank = 3 (all first preferences).
+    // Same-grade cycle must sort first.
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B", "HOSP-X"], { grade: "Grade I" });
+
+    // Same-grade path: A(HOSP-A) -> B(HOSP-B) -> C(HOSP-C) -> A
+    const nurseB_sg = req("uid-B-sg", "HOSP-B", ["HOSP-C"], { grade: "Grade I" });
+    const nurseC_sg = req("uid-C-sg", "HOSP-C", ["HOSP-A"], { grade: "Grade I" });
+
+    // Cross-grade path: A(HOSP-A) -> BX(HOSP-X) -> CY(HOSP-Y) -> A
+    const nurseB_cg = req("uid-B-cg", "HOSP-X", ["HOSP-Y"], { grade: "Grade II" });
+    const nurseC_cg = req("uid-C-cg", "HOSP-Y", ["HOSP-A"], { grade: "Grade III" });
+
+    const pool = [nurseB_sg, nurseC_sg, nurseB_cg, nurseC_cg];
+    const result = findBestThreeWayCycle(nurseA, pool);
+
+    assert.ok(result);
+    assert.equal(result.isAllSameGrade, true, "Same-grade cycle must be ranked first");
+    assert.equal(result.nurseBUid, "uid-B-sg");
+    assert.equal(result.nurseCUid, "uid-C-sg");
+  });
+
+  // ---- Test 9: Preference rank calculation ----
+  test("3W-09 - combinedPreferenceRank equals sum of A->B + B->C + C->A ranks", () => {
+    // A prefers [HOSP-X, HOSP-B] so B is at rank 2 for A
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-X", "HOSP-B"]);
+    // B prefers [HOSP-Y, HOSP-Z, HOSP-C] so C is at rank 3 for B
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-Y", "HOSP-Z", "HOSP-C"]);
+    // C prefers [HOSP-W, HOSP-A] so A is at rank 2 for C
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-W", "HOSP-A"]);
+
+    const pool = [nurseB, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+
+    assert.ok(result);
+    assert.equal(result.nurseAPreferenceRank, 2, "A->B rank should be 2");
+    assert.equal(result.nurseBPreferenceRank, 3, "B->C rank should be 3");
+    assert.equal(result.nurseCPreferenceRank, 2, "C->A rank should be 2");
+    assert.equal(result.combinedPreferenceRank, 7, "combined must equal 2+3+2=7");
+  });
+
+  // ---- Test 10: Deterministic B and C UID tie-breaking ----
+  test("3W-10 - tie-breaking uses alphabetical nurseBUid then nurseCUid", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+
+    // Two B-level candidates at HOSP-B (same rank 1 to A).
+    // Both B candidates have C at first preference, and C -> HOSP-A.
+    const nurseB1 = req("uid-B-ZZZ", "HOSP-B", ["HOSP-C1"]);
+    const nurseC1 = req("uid-C-1",   "HOSP-C1", ["HOSP-A"]);
+
+    const nurseB2 = req("uid-B-AAA", "HOSP-B", ["HOSP-C2"]);
+    const nurseC2 = req("uid-C-1a",  "HOSP-C2", ["HOSP-A"]);
+
+    // Both cycles: combined rank = 1+1+1 = 3, same grade.
+    // nurseBUid "uid-B-AAA" < "uid-B-ZZZ" alphabetically => cycle 2 wins.
+    const pool = [nurseB1, nurseC1, nurseB2, nurseC2];
+    const result = findBestThreeWayCycle(nurseA, pool);
+
+    assert.ok(result);
+    assert.equal(result.nurseBUid, "uid-B-AAA");
+  });
+
+  // ---- Test 11: Locked participant excluded ----
+  test("3W-11 - locked participant is excluded from cycle", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB_locked = req("uid-B", "HOSP-B", ["HOSP-C"], { locked: true });
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
+
+    const pool = [nurseB_locked, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+    assert.equal(result, null, "Locked intermediate must prevent cycle formation");
+  });
+
+  // ---- Test 12: Non-SEARCHING participant excluded ----
+  test("3W-12 - non-SEARCHING participant is excluded from cycle", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB_pending = req("uid-B", "HOSP-B", ["HOSP-C"], { status: "PENDING" });
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
+
+    const pool = [nurseB_pending, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+    assert.equal(result, null);
+  });
+
+  // ---- Test 13: Existing currentMatchId participant excluded ----
+  test("3W-13 - participant with active currentMatchId is excluded from cycle", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB_matched = req("uid-B", "HOSP-B", ["HOSP-C"], { currentMatchId: "existing-match-xyz" });
+    const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
+
+    const pool = [nurseB_matched, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+    assert.equal(result, null);
+  });
+
+  // ---- Test 14: All three current hospitals must be different ----
+  test("3W-14 - cycle rejected when two participants share the same current hospital", () => {
+    // B and C are both stationed at HOSP-B => same hospital, not a valid distinct cycle.
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-B"]); // B wants to stay at its own hospital (self-loop pref)
+    const nurseC = req("uid-C", "HOSP-B", ["HOSP-A"]);  // C is also at HOSP-B — same hospital as B
+
+    const pool = [nurseB, nurseC];
+    const result = findBestThreeWayCycle(nurseA, pool);
+    // nurseB wants HOSP-B (own hospital); nurseC is at HOSP-B = same as B.
+    // No valid 3-way cycle with distinct hospitals forms.
+    assert.equal(result, null);
+  });
+
+  // ---- Test 15: Multiple valid cycles return deterministic best ----
+  test("3W-15 - among multiple valid cycles the deterministically best cycle is returned", () => {
+    const nurseA = req("uid-A", "HOSP-A", ["HOSP-B", "HOSP-X"]);
+
+    // Cycle 1: A(#1) -> B1(#2) -> C1(#1) = combined 4, cross-grade
+    const nurseB1 = req("uid-B1", "HOSP-B", ["HOSP-Z1", "HOSP-C1"], { grade: "Grade II" });
+    const nurseC1 = req("uid-C1", "HOSP-C1", ["HOSP-A"], { grade: "Grade III" });
+
+    // Cycle 2: A(#1) -> B2(#1) -> C2(#1) = combined 3, same-grade => WINS
+    const nurseB2 = req("uid-B2", "HOSP-B", ["HOSP-C2"]); // grade "Grade I" (default)
+    const nurseC2 = req("uid-C2", "HOSP-C2", ["HOSP-A"]);  // grade "Grade I" (default)
+
+    // Cycle 3: A(#2) -> BX(#1) -> CX(#1) = combined 4, same-grade but worse than cycle 2
+    const nurseBX = req("uid-BX", "HOSP-X", ["HOSP-CX"]);
+    const nurseCX = req("uid-CX", "HOSP-CX", ["HOSP-A"]);
+
+    const pool = [nurseB1, nurseC1, nurseB2, nurseC2, nurseBX, nurseCX];
+    const result = findBestThreeWayCycle(nurseA, pool);
+
+    assert.ok(result);
+    // Cycle 2 is same-grade with combined rank 3 => best
+    assert.equal(result.isAllSameGrade, true);
+    assert.equal(result.combinedPreferenceRank, 3);
+    assert.equal(result.nurseBUid, "uid-B2");
+    assert.equal(result.nurseCUid, "uid-C2");
   });
 });

@@ -251,3 +251,258 @@ export function findBestMatch(
   const ranked = findAllCompatibleMatches(source, pool);
   return ranked.length > 0 ? ranked[0] : null;
 }
+
+// =============================================================================
+// 3-Way Circular Matching Engine
+// =============================================================================
+// Pure deterministic domain module with zero external dependencies and zero I/O.
+//
+// Business Rules:
+// 1. Direct 2-way matching has ABSOLUTE priority; findBestThreeWayCycle is only
+//    invoked when findBestMatch(source, pool) returns null.
+// 2. A valid 3-way cycle is: A -> B -> C -> A.
+// 3. DFS depth is hard-capped at 3 nurses; no 4-way cycles are evaluated.
+// 4. Same-grade cycles are prioritized; cross-grade cycles remain eligible.
+// 5. Grade is NEVER an exclusion filter.
+// 6. All eligibility checks from the 2-way engine apply to each participant.
+// =============================================================================
+
+/**
+ * Represents a valid 3-way circular mutual transfer cycle A -> B -> C -> A.
+ *
+ * Naming follows the existing DirectMatch convention where "nurseA" is the
+ * request initiator and nurses B and C are the subsequent cycle participants.
+ */
+export interface ThreeWayMatch {
+  nurseAUid: string;
+  nurseBUid: string;
+  nurseCUid: string;
+
+  nurseACurrentHospitalId: string;
+  nurseBCurrentHospitalId: string;
+  nurseCCurrentHospitalId: string;
+
+  /** A travels to B's current hospital */
+  nurseADestinationHospitalId: string;
+  /** B travels to C's current hospital */
+  nurseBDestinationHospitalId: string;
+  /** C travels to A's current hospital */
+  nurseCDestinationHospitalId: string;
+
+  nurseAGrade: string;
+  nurseBGrade: string;
+  nurseCGrade: string;
+
+  /** true iff all three grades are equal (case-insensitive) */
+  isAllSameGrade: boolean;
+
+  /** 1-based rank of A's preference for B's hospital */
+  nurseAPreferenceRank: number;
+  /** 1-based rank of B's preference for C's hospital */
+  nurseBPreferenceRank: number;
+  /** 1-based rank of C's preference for A's hospital */
+  nurseCPreferenceRank: number;
+
+  /** nurseAPreferenceRank + nurseBPreferenceRank + nurseCPreferenceRank */
+  combinedPreferenceRank: number;
+
+  priorityReason: string;
+}
+
+/**
+ * Determines whether a candidate is eligible to participate in a cycle hop.
+ *
+ * Mirrors the individual-request checks from evaluateDirectPair without
+ * requiring a second candidate (since the cross-check between two participants
+ * is handled at the DFS path level).
+ *
+ * Returns null when eligible; returns a rejection reason string otherwise.
+ */
+function isCandidateEligibleForCycle(candidate: CandidateRequest): string | null {
+  const validationError = validateCandidateRequest(candidate);
+  if (validationError) return validationError;
+
+  if (candidate.status.trim().toUpperCase() !== "SEARCHING") {
+    return `Candidate request status is '${candidate.status}', expected 'SEARCHING'`;
+  }
+  if (candidate.locked) {
+    return "Candidate request is already locked";
+  }
+  if (candidate.currentMatchId && candidate.currentMatchId.trim().length > 0) {
+    return "Candidate request already has an active matchId";
+  }
+  return null;
+}
+
+/**
+ * Deterministic comparator for ThreeWayMatch, mirroring compareMatches semantics.
+ *
+ * Sort order:
+ * 1. All-three same grade first (`isAllSameGrade: true` before `false`).
+ * 2. Lower combined preference rank ascending.
+ * 3. Lower A->B preference rank ascending.
+ * 4. Alphabetical nurseBUid tie-breaker.
+ * 5. Alphabetical nurseCUid tie-breaker.
+ */
+export function compareThreeWayMatches(a: ThreeWayMatch, b: ThreeWayMatch): number {
+  // 1. All-same-grade priority
+  if (a.isAllSameGrade !== b.isAllSameGrade) {
+    return a.isAllSameGrade ? -1 : 1;
+  }
+
+  // 2. Combined preference rank (lower is better)
+  if (a.combinedPreferenceRank !== b.combinedPreferenceRank) {
+    return a.combinedPreferenceRank - b.combinedPreferenceRank;
+  }
+
+  // 3. A->B individual rank
+  if (a.nurseAPreferenceRank !== b.nurseAPreferenceRank) {
+    return a.nurseAPreferenceRank - b.nurseAPreferenceRank;
+  }
+
+  // 4. Deterministic nurseBUid tie-breaker
+  const bCmp = a.nurseBUid.localeCompare(b.nurseBUid);
+  if (bCmp !== 0) return bCmp;
+
+  // 5. Deterministic nurseCUid tie-breaker
+  return a.nurseCUid.localeCompare(b.nurseCUid);
+}
+
+/**
+ * Sorts an array of 3-way matches deterministically.
+ */
+export function rankThreeWayMatches(matches: ThreeWayMatch[]): ThreeWayMatch[] {
+  return [...matches].sort(compareThreeWayMatches);
+}
+
+/**
+ * Finds the best valid 3-way cycle for the given source nurse in the pool.
+ *
+ * The search follows a strict DFS limited to depth 3 (A -> B -> C -> A).
+ * It uses a hospital-to-candidates index for O(1) hop lookups.
+ *
+ * Returns null when no valid cycle exists.
+ *
+ * IMPORTANT: Callers MUST first call findBestMatch(source, pool). This
+ * function should only be invoked when findBestMatch returns null, to
+ * preserve the absolute 2-way priority business rule.
+ */
+export function findBestThreeWayCycle(
+  source: CandidateRequest,
+  pool: CandidateRequest[]
+): ThreeWayMatch | null {
+  // Validate source up-front (same checks applied to every participant)
+  if (isCandidateEligibleForCycle(source) !== null) return null;
+
+  const sourceUid = source.firebaseUid.trim();
+  const sourceHospital = source.currentHospitalId.trim();
+  const sourcePrefs = source.preferenceHospitalIds.map(h => h.trim());
+
+  // Build a hospital -> eligible candidates index for O(1) hop lookups.
+  // Only include candidates that pass basic eligibility (status, lock, matchId, grade, hospital).
+  const hospitalIndex = new Map<string, CandidateRequest[]>();
+  for (const candidate of pool) {
+    if (isCandidateEligibleForCycle(candidate) !== null) continue;
+    const hospId = candidate.currentHospitalId.trim();
+    const existing = hospitalIndex.get(hospId);
+    if (existing) {
+      existing.push(candidate);
+    } else {
+      hospitalIndex.set(hospId, [candidate]);
+    }
+  }
+
+  const validCycles: ThreeWayMatch[] = [];
+
+  // --- Depth 1: A -> B ---
+  // For each hospital that A wants, look up candidates stationed there.
+  for (let rankAIdx = 0; rankAIdx < sourcePrefs.length; rankAIdx++) {
+    const bHospital = sourcePrefs[rankAIdx];
+    if (!bHospital) continue;
+
+    const bCandidates = hospitalIndex.get(bHospital) ?? [];
+
+    for (const candidateB of bCandidates) {
+      const bUid = candidateB.firebaseUid.trim();
+      const bHosp = candidateB.currentHospitalId.trim();
+
+      // Reject source as B
+      if (bUid === sourceUid) continue;
+      // Reject same current hospital (already guaranteed by index, but explicit)
+      if (bHosp === sourceHospital) continue;
+
+      const bPrefs = candidateB.preferenceHospitalIds.map(h => h.trim());
+
+      // --- Depth 2: B -> C ---
+      for (let rankBIdx = 0; rankBIdx < bPrefs.length; rankBIdx++) {
+        const cHospital = bPrefs[rankBIdx];
+        if (!cHospital) continue;
+
+        // C must be at a hospital different from both A's and B's
+        if (cHospital === sourceHospital) continue;
+        if (cHospital === bHosp) continue;
+
+        const cCandidates = hospitalIndex.get(cHospital) ?? [];
+
+        for (const candidateC of cCandidates) {
+          const cUid = candidateC.firebaseUid.trim();
+          const cHosp = candidateC.currentHospitalId.trim();
+
+          // Reject duplicates
+          if (cUid === sourceUid) continue;
+          if (cUid === bUid) continue;
+          // Reject same current hospitals
+          if (cHosp === sourceHospital) continue;
+          if (cHosp === bHosp) continue;
+
+          // --- Depth 3 (Cycle Closure): C -> A ---
+          // C must have A's current hospital in their preferences.
+          const cPrefs = candidateC.preferenceHospitalIds.map(h => h.trim());
+          const rankCIdx = cPrefs.indexOf(sourceHospital);
+          if (rankCIdx === -1) continue; // Cycle does not close back to A
+
+          // Valid cycle found: A -> B -> C -> A
+          const rankA = rankAIdx + 1; // 1-based
+          const rankB = rankBIdx + 1; // 1-based
+          const rankC = rankCIdx + 1; // 1-based
+          const combinedRank = rankA + rankB + rankC;
+
+          const gradeA = source.grade.trim();
+          const gradeB = candidateB.grade.trim();
+          const gradeC = candidateC.grade.trim();
+          const isAllSameGrade =
+            gradeA.toLowerCase() === gradeB.toLowerCase() &&
+            gradeA.toLowerCase() === gradeC.toLowerCase();
+
+          const priorityReason = isAllSameGrade
+            ? `All-same-grade 3-way cycle (${gradeA}), combined preference rank ${combinedRank} (A: #${rankA}, B: #${rankB}, C: #${rankC})`
+            : `Cross-grade 3-way cycle (${gradeA} / ${gradeB} / ${gradeC}), combined preference rank ${combinedRank} (A: #${rankA}, B: #${rankB}, C: #${rankC})`;
+
+          validCycles.push({
+            nurseAUid: sourceUid,
+            nurseBUid: bUid,
+            nurseCUid: cUid,
+            nurseACurrentHospitalId: sourceHospital,
+            nurseBCurrentHospitalId: bHosp,
+            nurseCCurrentHospitalId: cHosp,
+            nurseADestinationHospitalId: bHosp,
+            nurseBDestinationHospitalId: cHosp,
+            nurseCDestinationHospitalId: sourceHospital,
+            nurseAGrade: gradeA,
+            nurseBGrade: gradeB,
+            nurseCGrade: gradeC,
+            isAllSameGrade,
+            nurseAPreferenceRank: rankA,
+            nurseBPreferenceRank: rankB,
+            nurseCPreferenceRank: rankC,
+            combinedPreferenceRank: combinedRank,
+            priorityReason
+          });
+        }
+      }
+    }
+  }
+
+  if (validCycles.length === 0) return null;
+  return rankThreeWayMatches(validCycles)[0];
+}
