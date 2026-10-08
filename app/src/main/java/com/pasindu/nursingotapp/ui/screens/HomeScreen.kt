@@ -143,6 +143,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item { HomeWelcomeHeader(firstName, initial, userProfile != null) { onNavigate("profile") } }
+        item { MutualTransferHomeHero(onClick = { onNavigate("transfer_request") }) }
         item {
             ShiftSnapshotCard(
                 state = commandState,
@@ -151,7 +152,6 @@ fun HomeScreen(
                 onNavigate = onNavigate
             )
         }
-        item { MutualTransferHomeHero(onClick = { onNavigate("transfer_request") }) }
         item { SectionTitle("Quick access", "The four workspaces you use most") }
         item { QuickAccessGrid(actions) { action ->
             if (action.route == "claim_period" && userProfile == null) onNavigate("profile") else onNavigate(action.route)
