@@ -273,9 +273,16 @@ class TransferMatchViewModel @Inject constructor(
                 },
                 onFailure = { error ->
                     _isSubmitting.value = false
-                    _uiState.value = TransferMatchUiState.Error(
-                        error.message ?: "Failed to accept match. Please try again."
-                    )
+                    // The server may have advanced to CHAT_OPEN after another nurse
+                    // accepted while this screen was stale. Refresh authoritative state
+                    // so the navigation observer can open chat; never retry ACCEPT as CONFIRM.
+                    if (error.message.orEmpty().contains("INVALID_DECISION")) {
+                        loadCurrentMatch()
+                    } else {
+                        _uiState.value = TransferMatchUiState.Error(
+                            error.message ?: "Failed to accept match. Please try again."
+                        )
+                    }
                 }
             )
         }
