@@ -48,6 +48,8 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
@@ -266,13 +268,43 @@ fun AppNavigation() {
                     onAcceptMatch = { matchId ->
                         matchViewModel.acceptMatch(matchId)
                     },
+                    onConfirmMatch = { matchId ->
+                        matchViewModel.confirmMatch(matchId)
+                    },
                     onRejectMatch = { matchId ->
                         matchViewModel.rejectMatch(matchId) {
                             navController.popBackStack()
                         }
                     },
+                    onOpenChat = {
+                        navController.navigate("transfer_chat") {
+                            launchSingleTop = true
+                        }
+                    },
                     onRetry = {
                         matchViewModel.resetState()
+                    }
+                )
+            }
+            composable("transfer_chat") {
+                val chatViewModel: TransferChatViewModel = hiltViewModel()
+                val chatUiState by chatViewModel.uiState.collectAsState()
+                TransferChatScreen(
+                    uiState = chatUiState,
+                    onBack = { navController.popBackStack() },
+                    onSendMessage = { text ->
+                        chatViewModel.sendMessage(text)
+                    },
+                    onConfirmTransfer = {
+                        chatViewModel.confirmTransfer()
+                    },
+                    onLeaveTeam = {
+                        chatViewModel.leaveTeam {
+                            navController.popBackStack()
+                        }
+                    },
+                    onRetry = {
+                        chatViewModel.loadMatchAndObserveChat()
                     }
                 )
             }

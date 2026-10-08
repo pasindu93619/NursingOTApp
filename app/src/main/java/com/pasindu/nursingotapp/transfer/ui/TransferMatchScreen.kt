@@ -239,6 +239,7 @@ fun TransferMatchScreen(
     onAcceptMatch: (matchId: String) -> Unit = {},
     onConfirmMatch: (matchId: String) -> Unit = {},
     onRejectMatch: (matchId: String) -> Unit = {},
+    onOpenChat: () -> Unit = {},
     onRetry: () -> Unit = {}
 ) {
     var showRejectConfirmDialog by remember { mutableStateOf(false) }
@@ -277,6 +278,7 @@ fun TransferMatchScreen(
                 MatchChatOpenView(
                     match = uiState.match,
                     onBack = onBack,
+                    onOpenChat = onOpenChat,
                     onConfirmClick = { onConfirmMatch(uiState.match.matchId) },
                     onRejectClick = { showRejectConfirmDialog = true }
                 )
@@ -1621,6 +1623,7 @@ private fun MatchAcceptedView(
 private fun MatchChatOpenView(
     match: TransferMatchUiModel,
     onBack: () -> Unit,
+    onOpenChat: () -> Unit = {},
     onConfirmClick: () -> Unit,
     onRejectClick: () -> Unit
 ) {
@@ -1667,7 +1670,34 @@ private fun MatchChatOpenView(
             lineHeight = 18.sp
         )
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = onOpenChat,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MedicalBlue),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp)
+        ) {
+            Icon(
+                Icons.Default.SwapHoriz,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "OPEN TEAM CHAT",
+                color = Color.White,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.4.sp
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
 
         if (!match.myConfirmed) {
             Button(
@@ -1788,7 +1818,7 @@ private fun MatchConfirmedView(
         Spacer(Modifier.height(20.dp))
 
         Text(
-            "MUTUAL TRANSFER CONFIRMED",
+            "Mutual Transfer Agreed",
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
             color = Slate,
@@ -1798,7 +1828,7 @@ private fun MatchConfirmedView(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            "All participants have confirmed this mutual transfer. The official Ministry of Health transfer application is fully verified.",
+            "All participating nurses have confirmed this exchange.",
             fontSize = 13.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center,

@@ -329,12 +329,52 @@ private fun ActivePoolMissionControlView(
         // 2.5 MATCH FOUND BANNER (When requestStatus == MATCHED)
         if (request.requestStatus == TransferRequestStatus.MATCHED) {
             item {
+                val bannerTitle = when (request.matchStatus?.trim()?.uppercase()) {
+                    "CHAT_OPEN" -> "TRANSFER TEAM CONNECTED"
+                    "CONFIRMED" -> "TRANSFER AGREED"
+                    "CANCELLED" -> "TRANSFER CANCELLED"
+                    "EXPIRED" -> "TRANSFER EXPIRED"
+                    else -> "COMPATIBLE PARTNER FOUND!"
+                }
+
+                val bannerSubtitle = when (request.matchStatus?.trim()?.uppercase()) {
+                    "CHAT_OPEN" -> "Your team is ready. Open the chat to discuss and agree."
+                    "CONFIRMED" -> "All participating nurses have confirmed this exchange."
+                    "CANCELLED" -> "This transfer team has been cancelled."
+                    "EXPIRED" -> "The response window has ended."
+                    else -> "Review and respond to this proposed exchange."
+                }
+
+                val buttonLabel = when (request.matchStatus?.trim()?.uppercase()) {
+                    "CHAT_OPEN" -> "Open Team Chat"
+                    "CONFIRMED" -> "View Confirmed Match"
+                    "CANCELLED" -> "View Details"
+                    "EXPIRED" -> "View Details"
+                    else -> "View & Respond to Match"
+                }
+
+                val bannerContainerColor = when (request.matchStatus?.trim()?.uppercase()) {
+                    "CHAT_OPEN" -> MedicalBlue
+                    "CONFIRMED" -> Emerald
+                    "CANCELLED" -> CriticalRed
+                    "EXPIRED" -> Slate
+                    else -> Emerald
+                }
+
+                val bannerIcon = when (request.matchStatus?.trim()?.uppercase()) {
+                    "CHAT_OPEN" -> Icons.Default.SwapHoriz
+                    "CONFIRMED" -> Icons.Default.CheckCircle
+                    "CANCELLED" -> Icons.Default.Close
+                    "EXPIRED" -> Icons.Default.Info
+                    else -> Icons.Default.CheckCircle
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .shadow(4.dp, RoundedCornerShape(20.dp)),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Emerald),
+                    colors = CardDefaults.cardColors(containerColor = bannerContainerColor),
                     border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.35f))
                 ) {
                     Column(
@@ -352,7 +392,7 @@ private fun ActivePoolMissionControlView(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        Icons.Default.CheckCircle,
+                                        bannerIcon,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier.size(22.dp)
@@ -361,14 +401,14 @@ private fun ActivePoolMissionControlView(
                             }
                             Column {
                                 Text(
-                                    "COMPATIBLE PARTNER FOUND!",
+                                    bannerTitle,
                                     color = Color.White,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
-                                    "A reciprocal match has been identified and locked.",
+                                    bannerSubtitle,
                                     color = Color.White.copy(alpha = 0.9f),
                                     fontSize = 11.5.sp
                                 )
@@ -383,11 +423,11 @@ private fun ActivePoolMissionControlView(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.White,
-                                contentColor = Emerald
+                                contentColor = bannerContainerColor
                             )
                         ) {
                             Text(
-                                "View & Respond to Match",
+                                buttonLabel,
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -409,7 +449,10 @@ private fun ActivePoolMissionControlView(
 
         // 5. MATCH READINESS STATUS CARD
         item {
-            MatchReadinessCard(preferenceCount = preferredHospitals.size)
+            MatchReadinessCard(
+                request = request,
+                preferenceCount = preferredHospitals.size
+            )
         }
 
         // 6. ORIGIN CARD: "FROM • Your Current Posting"
@@ -752,10 +795,184 @@ private fun MissionControlHeroCard(request: TransferRequest) {
 }
 
 // -----------------------------------------------------------------------------
-// 2. Visual 4-Step Milestone Transfer Journey Card
+// 2. Dynamic Milestone Transfer Journey Card
 // -----------------------------------------------------------------------------
 @Composable
 private fun TransferJourneyStepperCard(request: TransferRequest) {
+    val isMatched = request.requestStatus == TransferRequestStatus.MATCHED
+    val serverStatus = request.matchStatus?.trim()?.uppercase()
+
+    val stageLabel: String
+    val badgeBgColor: Color
+    val badgeTextColor: Color
+
+    val step2Completed: Boolean
+    val step2Active: Boolean
+    val step2Sublabel: String
+
+    val step3Completed: Boolean
+    val step3Active: Boolean
+    val step3Sublabel: String
+
+    val step4Completed: Boolean
+    val step4Active: Boolean
+    val step4Sublabel: String
+
+    val step5Completed: Boolean
+    val step5Active: Boolean
+    val step5Sublabel: String
+
+    if (!isMatched) {
+        stageLabel = "Stage 2 of 5 • In transfer pool"
+        badgeBgColor = TransferBlueSoft
+        badgeTextColor = ClinicalPrimaryColor
+
+        step2Completed = false
+        step2Active = true
+        step2Sublabel = "In Pool"
+
+        step3Completed = false
+        step3Active = false
+        step3Sublabel = "Awaiting"
+
+        step4Completed = false
+        step4Active = false
+        step4Sublabel = "Pending"
+
+        step5Completed = false
+        step5Active = false
+        step5Sublabel = "Final"
+    } else {
+        when (serverStatus) {
+            "CHAT_OPEN" -> {
+                stageLabel = "Stage 4 of 5 • Team Chat"
+                badgeBgColor = MatchBlueSoft
+                badgeTextColor = MedicalBlue
+
+                step2Completed = true
+                step2Active = false
+                step2Sublabel = "Done"
+
+                step3Completed = true
+                step3Active = false
+                step3Sublabel = "Done"
+
+                step4Completed = false
+                step4Active = true
+                step4Sublabel = "Discuss & agree"
+
+                step5Completed = false
+                step5Active = false
+                step5Sublabel = "Final"
+            }
+            "CONFIRMED" -> {
+                stageLabel = "Stage 5 of 5 • Confirmed"
+                badgeBgColor = MatchMintSoft
+                badgeTextColor = Emerald
+
+                step2Completed = true
+                step2Active = false
+                step2Sublabel = "Done"
+
+                step3Completed = true
+                step3Active = false
+                step3Sublabel = "Done"
+
+                step4Completed = true
+                step4Active = false
+                step4Sublabel = "Done"
+
+                step5Completed = true
+                step5Active = true
+                step5Sublabel = "All nurses agreed"
+            }
+            "CANCELLED" -> {
+                stageLabel = "Transfer Cancelled"
+                badgeBgColor = TransferRoseSoft
+                badgeTextColor = CriticalRed
+
+                step2Completed = true
+                step2Active = false
+                step2Sublabel = "Done"
+
+                step3Completed = false
+                step3Active = true
+                step3Sublabel = "Cancelled"
+
+                step4Completed = false
+                step4Active = false
+                step4Sublabel = "Closed"
+
+                step5Completed = false
+                step5Active = false
+                step5Sublabel = "Final"
+            }
+            "EXPIRED" -> {
+                stageLabel = "Transfer Expired"
+                badgeBgColor = SurfaceMuted
+                badgeTextColor = Slate
+
+                step2Completed = true
+                step2Active = false
+                step2Sublabel = "Done"
+
+                step3Completed = false
+                step3Active = true
+                step3Sublabel = "Expired"
+
+                step4Completed = false
+                step4Active = false
+                step4Sublabel = "Closed"
+
+                step5Completed = false
+                step5Active = false
+                step5Sublabel = "Final"
+            }
+            "ACCEPTED" -> {
+                stageLabel = "Stage 3 of 5 • Match Found"
+                badgeBgColor = MatchMintSoft
+                badgeTextColor = Emerald
+
+                step2Completed = true
+                step2Active = false
+                step2Sublabel = "Done"
+
+                step3Completed = false
+                step3Active = true
+                step3Sublabel = "Accepted • Waiting for other nurse(s)"
+
+                step4Completed = false
+                step4Active = false
+                step4Sublabel = "Pending"
+
+                step5Completed = false
+                step5Active = false
+                step5Sublabel = "Final"
+            }
+            else -> {
+                stageLabel = "Stage 3 of 5 • Match Found"
+                badgeBgColor = MatchMintSoft
+                badgeTextColor = Emerald
+
+                step2Completed = true
+                step2Active = false
+                step2Sublabel = "Done"
+
+                step3Completed = false
+                step3Active = true
+                step3Sublabel = "Response required"
+
+                step4Completed = false
+                step4Active = false
+                step4Sublabel = "Pending"
+
+                step5Completed = false
+                step5Active = false
+                step5Sublabel = "Final"
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -779,11 +996,11 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
 
                 Surface(
                     shape = RoundedCornerShape(999.dp),
-                    color = TransferBlueSoft
+                    color = badgeBgColor
                 ) {
                     Text(
-                        "Stage 2 of 4 • Searching",
-                        color = ClinicalPrimaryColor,
+                        stageLabel,
+                        color = badgeTextColor,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -793,58 +1010,67 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
 
             Spacer(Modifier.height(14.dp))
 
-            // 4-Node Visual Stepper Row
+            // Dynamic Milestone Stepper Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Step 1: Your Posting (Completed)
+                // Step 1: Request (Completed)
                 JourneyNode(
                     icon = Icons.Default.Check,
-                    label = "POSTING",
+                    label = "REQUEST",
                     sublabel = "Verified",
                     isActive = false,
                     isCompleted = true,
                     modifier = Modifier.weight(1f)
                 )
 
-                // Connector 1 -> 2
-                JourneyConnector(isCompleted = true)
+                JourneyConnector(isCompleted = step2Completed || step2Active)
 
-                // Step 2: Searching (Active / In-progress)
+                // Step 2: Searching
                 JourneyNode(
                     icon = Icons.Default.Search,
-                    label = "SEARCHING",
-                    sublabel = "In Pool",
-                    isActive = true,
-                    isCompleted = false,
+                    label = "SEARCH",
+                    sublabel = step2Sublabel,
+                    isActive = step2Active,
+                    isCompleted = step2Completed,
                     modifier = Modifier.weight(1f)
                 )
 
-                // Connector 2 -> 3
-                JourneyConnector(isCompleted = false)
+                JourneyConnector(isCompleted = step3Completed || step3Active)
 
-                // Step 3: Compatible Nurse (Future)
+                // Step 3: Match Found
                 JourneyNode(
                     icon = Icons.Default.Person,
-                    label = "PARTNER",
-                    sublabel = "Awaiting",
-                    isActive = false,
-                    isCompleted = false,
+                    label = "MATCH",
+                    sublabel = step3Sublabel,
+                    isActive = step3Active,
+                    isCompleted = step3Completed,
                     modifier = Modifier.weight(1f)
                 )
 
-                // Connector 3 -> 4
-                JourneyConnector(isCompleted = false)
+                JourneyConnector(isCompleted = step4Completed || step4Active)
 
-                // Step 4: Mutual Exchange (Target)
+                // Step 4: Team Chat
                 JourneyNode(
                     icon = Icons.Default.SwapHoriz,
-                    label = "EXCHANGE",
-                    sublabel = "Final",
-                    isActive = false,
-                    isCompleted = false,
+                    label = "CHAT",
+                    sublabel = step4Sublabel,
+                    isActive = step4Active,
+                    isCompleted = step4Completed,
+                    modifier = Modifier.weight(1f)
+                )
+
+                JourneyConnector(isCompleted = step5Completed || step5Active)
+
+                // Step 5: Confirmed Agreement
+                JourneyNode(
+                    icon = Icons.Default.CheckCircle,
+                    label = "AGREED",
+                    sublabel = step5Sublabel,
+                    isActive = step5Active,
+                    isCompleted = step5Completed,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -958,7 +1184,13 @@ private fun JourneyConnector(isCompleted: Boolean) {
 // 3. Match Readiness Status Card
 // -----------------------------------------------------------------------------
 @Composable
-private fun MatchReadinessCard(preferenceCount: Int) {
+private fun MatchReadinessCard(
+    request: TransferRequest,
+    preferenceCount: Int
+) {
+    val isMatched = request.requestStatus == TransferRequestStatus.MATCHED
+    val isCompleted = request.requestStatus == TransferRequestStatus.COMPLETED
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -974,7 +1206,7 @@ private fun MatchReadinessCard(preferenceCount: Int) {
             Surface(
                 modifier = Modifier.size(40.dp),
                 shape = CircleShape,
-                color = TransferMintSoft
+                color = if (isMatched) MatchMintSoft else TransferMintSoft
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -991,7 +1223,17 @@ private fun MatchReadinessCard(preferenceCount: Int) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "MATCHING PROFILE READY",
+                        when {
+                            isCompleted -> "TRANSFER COMPLETED"
+                            isMatched -> when (request.matchStatus?.trim()?.uppercase()) {
+                                "CONFIRMED" -> "TRANSFER AGREED"
+                                "CHAT_OPEN" -> "COMMUNICATION WINDOW OPEN"
+                                "CANCELLED" -> "TRANSFER CANCELLED"
+                                "EXPIRED" -> "TRANSFER EXPIRED"
+                                else -> "RECIPROCAL MATCH FOUND"
+                            }
+                            else -> "MATCHING PROFILE READY"
+                        },
                         color = Emerald,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Black,
@@ -1003,7 +1245,17 @@ private fun MatchReadinessCard(preferenceCount: Int) {
                         color = TransferMintSoft
                     ) {
                         Text(
-                            "100% Complete",
+                            when {
+                                isCompleted -> "Completed"
+                                isMatched -> when (request.matchStatus?.trim()?.uppercase()) {
+                                    "CONFIRMED" -> "Agreed"
+                                    "CHAT_OPEN" -> "Team Chat"
+                                    "CANCELLED" -> "Cancelled"
+                                    "EXPIRED" -> "Expired"
+                                    else -> "Action Required"
+                                }
+                                else -> "100% Complete"
+                            },
                             color = Emerald,
                             fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -1013,7 +1265,17 @@ private fun MatchReadinessCard(preferenceCount: Int) {
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Your request is complete and waiting in the transfer pool.",
+                    when {
+                        isCompleted -> "Mutual transfer process has finalized."
+                        isMatched -> when (request.matchStatus?.trim()?.uppercase()) {
+                            "CONFIRMED" -> "All participating nurses have confirmed this exchange."
+                            "CHAT_OPEN" -> "Your team is ready. Discuss and agree in chat."
+                            "CANCELLED" -> "This transfer team has been cancelled."
+                            "EXPIRED" -> "The response window has ended."
+                            else -> "A reciprocal transfer match is locked. Coordination active."
+                        }
+                        else -> "Your request is active and waiting in the transfer pool."
+                    },
                     color = TransferInk,
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold

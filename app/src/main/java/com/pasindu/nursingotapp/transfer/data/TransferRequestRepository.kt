@@ -513,7 +513,8 @@ class TransferRequestRepository @Inject constructor(
             rankedPreferences = prefs,
             grade = gradeClean,
             syncStatus = cacheSyncStatus,
-            updatedAt = this.updatedAt
+            updatedAt = this.updatedAt,
+            matchStatus = this.matchStatus
         )
     }
 }
