@@ -170,7 +170,7 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile).shadow(7.dp, RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = ClinicalPrimaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -430,30 +430,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(ClinicalAiGradient, heroShape)
-        ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .drawBehind {
-                        val radius = size.minDimension * 0.48f
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.055f),
-                            radius = radius,
-                            center = androidx.compose.ui.geometry.Offset(size.width * 0.92f, size.height * 0.12f)
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.045f),
-                            radius = radius * 0.72f,
-                            center = androidx.compose.ui.geometry.Offset(size.width * 0.08f, size.height * 0.88f)
-                        )
-                    }
-            )
-
-            Column(
+        Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(18.dp)
@@ -581,7 +558,6 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
                         modifier = Modifier.size(23.dp)
                     )
                 }
-            }
         }
     }
 }
