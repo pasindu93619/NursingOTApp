@@ -495,7 +495,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                 Text(
                     "FIND YOUR MOVE",
-                    color = MedicalBlue,
+                    color = ClinicalPrimaryColor,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.8.sp
@@ -581,7 +581,7 @@ private fun TransferJourneyNode(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
-        color = SurfaceWhite
+        color = Color.White
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
