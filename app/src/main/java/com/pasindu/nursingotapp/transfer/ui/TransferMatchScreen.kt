@@ -286,7 +286,8 @@ fun TransferMatchScreen(
             is TransferMatchUiState.Confirmed -> {
                 MatchConfirmedView(
                     match = uiState.match,
-                    onBack = onBack
+                    onBack = onBack,
+                    onOpenChat = onOpenChat
                 )
             }
             is TransferMatchUiState.AlreadyRejected -> {
@@ -1790,7 +1791,8 @@ private fun MatchChatOpenView(
 @Composable
 private fun MatchConfirmedView(
     match: TransferMatchUiModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenChat: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -1838,14 +1840,40 @@ private fun MatchConfirmedView(
         Spacer(Modifier.height(28.dp))
 
         Button(
+            onClick = onOpenChat,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MedicalBlue),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp)
+        ) {
+            Icon(
+                Icons.Default.SwapHoriz,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "OPEN TEAM CHAT",
+                color = Color.White,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.4.sp
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(
             onClick = onBack,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor)
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text("Return to Mission Control", fontWeight = FontWeight.Bold)
+            Text("Return to Mission Control", fontWeight = FontWeight.Bold, color = Slate)
         }
     }
 }

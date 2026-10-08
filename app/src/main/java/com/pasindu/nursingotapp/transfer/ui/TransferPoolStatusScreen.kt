@@ -347,7 +347,7 @@ private fun ActivePoolMissionControlView(
 
                 val buttonLabel = when (request.matchStatus?.trim()?.uppercase()) {
                     "CHAT_OPEN" -> "Open Team Chat"
-                    "CONFIRMED" -> "View Confirmed Match"
+                    "CONFIRMED" -> "Open Team Chat"
                     "CANCELLED" -> "View Details"
                     "EXPIRED" -> "View Details"
                     else -> "View & Respond to Match"
@@ -562,6 +562,60 @@ private fun ActivePoolMissionControlView(
 // -----------------------------------------------------------------------------
 @Composable
 private fun MissionControlHeroCard(request: TransferRequest) {
+    val isMatched = request.requestStatus == TransferRequestStatus.MATCHED
+    val serverStatus = request.matchStatus?.trim()?.uppercase()
+
+    val statusPillText: String
+    val headlineText: String
+    val bodyText: String
+    val statusPillColor: Color
+
+    if (!isMatched) {
+        statusPillText = "ACTIVE IN POOL"
+        headlineText = "Searching for Compatible Partner"
+        bodyText = "Your request is actively broadcasting across the national nursing pool. When a nurse desiring your posting is found, your match will lock."
+        statusPillColor = Emerald
+    } else {
+        when (serverStatus) {
+            "CHAT_OPEN" -> {
+                statusPillText = "TEAM CHAT OPEN"
+                headlineText = "Transfer Team Connected"
+                bodyText = "All participating nurses have accepted. Open the team chat to discuss and finalize the exchange."
+                statusPillColor = MedicalBlue
+            }
+            "CONFIRMED" -> {
+                statusPillText = "TRANSFER AGREED"
+                headlineText = "Transfer Agreed"
+                bodyText = "All participating nurses have confirmed this exchange. Your team agreement is finalized."
+                statusPillColor = Emerald
+            }
+            "CANCELLED" -> {
+                statusPillText = "CANCELLED"
+                headlineText = "Transfer Cancelled"
+                bodyText = "This transfer team has been cancelled. Your request is no longer active in this match."
+                statusPillColor = CriticalRed
+            }
+            "EXPIRED" -> {
+                statusPillText = "EXPIRED"
+                headlineText = "Transfer Expired"
+                bodyText = "The response window for this transfer match has ended."
+                statusPillColor = Slate
+            }
+            "ACCEPTED" -> {
+                statusPillText = "RESPONSE RECORDED"
+                headlineText = "Match Accepted"
+                bodyText = "Your response has been recorded. Waiting for the other participating nurse(s)."
+                statusPillColor = Emerald
+            }
+            else -> {
+                statusPillText = "MATCH FOUND"
+                headlineText = "Compatible Partner Found"
+                bodyText = "Your compatible transfer partner has been found. Review the proposed exchange and respond before the server deadline."
+                statusPillColor = Emerald
+            }
+        }
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "RadarTransition")
 
     // Gentle pulse for radar ring and network nodes
@@ -683,11 +737,11 @@ private fun MissionControlHeroCard(request: TransferRequest) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Pulsing Emerald "ACTIVE IN POOL" pill
+                    // State-aware Status Pill
                     Surface(
                         shape = RoundedCornerShape(999.dp),
-                        color = Emerald.copy(alpha = 0.28f),
-                        border = BorderStroke(1.2.dp, Emerald.copy(alpha = 0.55f))
+                        color = statusPillColor.copy(alpha = 0.28f),
+                        border = BorderStroke(1.2.dp, statusPillColor.copy(alpha = 0.55f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp),
@@ -696,11 +750,11 @@ private fun MissionControlHeroCard(request: TransferRequest) {
                             Surface(
                                 modifier = Modifier.size(7.5.dp),
                                 shape = CircleShape,
-                                color = Emerald
+                                color = statusPillColor
                             ) {}
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                "ACTIVE IN POOL",
+                                statusPillText,
                                 color = Color.White,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Black,
@@ -744,7 +798,7 @@ private fun MissionControlHeroCard(request: TransferRequest) {
 
                 // Headline
                 Text(
-                    "Searching for Compatible Partner",
+                    headlineText,
                     color = Color.White,
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Black,
@@ -754,7 +808,7 @@ private fun MissionControlHeroCard(request: TransferRequest) {
                 Spacer(Modifier.height(6.dp))
 
                 Text(
-                    "Your request is actively broadcasting across the national nursing pool. When a nurse desiring your posting is found, your match will lock.",
+                    bodyText,
                     color = Color.White.copy(alpha = 0.92f),
                     fontSize = 11.5.sp,
                     lineHeight = 16.5.sp,

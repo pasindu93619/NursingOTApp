@@ -253,8 +253,15 @@ fun AppNavigation() {
                     },
                     onRetryHospitals = transferRequestViewModel::retry,
                     onOpenMatch = {
-                        navController.navigate("transfer_match") {
-                            launchSingleTop = true
+                        val status = activeTransferRequest?.matchStatus?.trim()?.uppercase()
+                        if (status == "CHAT_OPEN" || status == "CONFIRMED") {
+                            navController.navigate("transfer_chat") {
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate("transfer_match") {
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )
