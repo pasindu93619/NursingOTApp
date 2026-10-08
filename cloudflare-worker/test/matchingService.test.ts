@@ -467,6 +467,7 @@ describe("Server-Side Matching & Concurrency-Safe Locking (C4 Step 3)", () => {
     assert.deepEqual(write1.update.fields.locked, { booleanValue: true });
     assert.deepEqual(write1.update.fields.currentMatchId, { stringValue: "match-atomic-123" });
     assert.deepEqual(write1.update.fields.status, { stringValue: "MATCHED" });
+    assert.deepEqual(write1.update.fields.updatedAt, { integerValue: fixedNow.getTime().toString() });
     assert.deepEqual(write1.currentDocument, {
       updateTime: "2026-10-02T10:00:00.123Z"
     });
