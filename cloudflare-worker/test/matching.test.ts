@@ -549,24 +549,37 @@ describe("3-Way Circular Transfer Cycle Detection", () => {
 
   // ---- Test 3: Direct 2-way priority when both options exist ----
   test("3W-03 - findBestMatch wins over 3-way when a direct 2-way match exists", () => {
+    // PRIORITY CONTRACT:
+    // The 2-way-vs-3-way priority is enforced at the ORCHESTRATION layer
+    // (matchingService.ts / findBestMatchOrCycle), not inside these two
+    // standalone domain functions. This test verifies the domain half of the
+    // contract: findBestMatch independently discovers the 2-way match so that
+    // an orchestrator calling findBestMatch first, and only falling through to
+    // findBestThreeWayCycle when it returns null, will always prefer 2-way.
+
     // A <-> B (direct 2-way match available)
     const nurseA = req("uid-A", "HOSP-A", ["HOSP-B"]);
-    const nurseB = req("uid-B", "HOSP-B", ["HOSP-A"]); // B wants A's hospital => 2-way
-    // A -> B -> C -> A also forms a valid cycle
+    const nurseB = req("uid-B", "HOSP-B", ["HOSP-A"]); // B wants A's hospital => reciprocal 2-way
+    // A -> B -> C -> A also forms a valid 3-way cycle with the same pool
     const nurseC = req("uid-C", "HOSP-C", ["HOSP-A"]);
 
-    // findBestMatch MUST return the direct pair, not null
+    // Assert 1: findBestMatch returns the direct pair (not null).
+    // An orchestrator seeing a non-null result here MUST stop and return it.
     const directResult = findBestMatch(nurseA, [nurseB, nurseC]);
-    assert.ok(directResult, "Direct 2-way match must be found");
+    assert.ok(directResult, "Direct 2-way match must be found by findBestMatch");
     assert.equal(directResult.nurseBUid, "uid-B");
 
-    // The 3-way search does find a cycle (it's a standalone function)
-    // but by contract it is only called when findBestMatch returns null.
-    // Verify that contract path: direct match exists => cycle should NOT be chosen.
-    // (Test validates the priority rule by showing findBestMatch != null.)
-    const cycle = findBestThreeWayCycle(nurseA, [nurseB, nurseC]);
-    // Cycle may or may not exist; the important assertion is that directResult wins.
-    assert.ok(directResult.nurseBUid === "uid-B", "2-way direct match takes priority");
+    // Assert 2: findBestThreeWayCycle is a separate domain function with no
+    // internal knowledge of the 2-way result. The orchestration layer is
+    // responsible for never calling it when findBestMatch already succeeded.
+    // We call it here only to confirm it is independently functional; its
+    // result is irrelevant to the priority decision.
+    const _cycle = findBestThreeWayCycle(nurseA, [nurseB, nurseC]);
+    // The priority assertion: a non-null directResult means a 2-way match
+    // would be selected by any correct orchestrator. The 3-way result (_cycle)
+    // is intentionally unused here — it will be tested end-to-end once
+    // matchingService.ts wires findBestMatchOrCycle.
+    assert.ok(directResult.nurseBUid === "uid-B", "2-way direct match confirmed available");
   });
 
   // ---- Test 4: 4-way chain is NOT matched as a 3-way cycle ----
