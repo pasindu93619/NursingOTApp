@@ -52,6 +52,7 @@ import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferPoolStatusScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
@@ -269,6 +270,19 @@ fun AppNavigation() {
             composable("transfer_match") {
                 val matchViewModel: TransferMatchViewModel = hiltViewModel()
                 val matchUiState by matchViewModel.uiState.collectAsState()
+
+                // Once every participant has accepted, the authoritative state is CHAT_OPEN.
+                // Move directly into the live coordination channel instead of requiring a
+                // second tap on the match summary. Terminal CONFIRMED matches remain read-only.
+                LaunchedEffect(matchUiState) {
+                    if (matchUiState is TransferMatchUiState.ChatOpen) {
+                        navController.navigate("transfer_chat") {
+                            popUpTo("transfer_match") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
                 TransferMatchScreen(
                     uiState = matchUiState,
                     onBack = { navController.popBackStack() },
