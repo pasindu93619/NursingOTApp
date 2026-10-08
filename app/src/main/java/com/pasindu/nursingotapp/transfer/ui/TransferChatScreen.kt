@@ -110,7 +110,7 @@ fun TransferChatScreen(
 
     val listState = rememberLazyListState()
 
-    // Auto-scroll to latest message
+    // Auto-scroll to latest message when new messages arrive
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.size - 1)
@@ -134,7 +134,7 @@ fun TransferChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
             ) {
-                // Team Action Bar (Confirm / Leave / Status Banner)
+                // Team Action Bar (Confirm / Leave / Status Banner / Return)
                 ChatTeamActionBar(
                     uiState = uiState,
                     onOpenConfirmDialog = { showConfirmDialog = true },
@@ -142,7 +142,7 @@ fun TransferChatScreen(
                     onBack = onBack
                 )
 
-                // Message composer (active only when fully loaded and CHAT_OPEN)
+                // Message composer (active only when fully loaded and authoritative CHAT_OPEN)
                 if (!uiState.isLoading && uiState.serverStatus == "CHAT_OPEN") {
                     ChatMessageInputBar(
                         text = messageText,
@@ -165,18 +165,30 @@ fun TransferChatScreen(
                 .padding(innerPadding)
         ) {
             when {
+                // 1. Initial full-screen loading state
                 uiState.isLoading && uiState.messages.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = MedicalBlue,
-                            modifier = Modifier.size(36.dp),
-                            strokeWidth = 3.dp
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = MedicalBlue,
+                                modifier = Modifier.size(36.dp),
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            Text(
+                                "Connecting to team channel...",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextSecondary
+                            )
+                        }
                     }
                 }
+
+                // 2. Initial load error for active state
                 uiState.error != null && uiState.messages.isEmpty() && !uiState.isTerminal -> {
                     Column(
                         modifier = Modifier
@@ -188,7 +200,7 @@ fun TransferChatScreen(
                         Surface(
                             shape = CircleShape,
                             color = SoftRedPill,
-                            modifier = Modifier.size(54.dp)
+                            modifier = Modifier.size(56.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -199,36 +211,40 @@ fun TransferChatScreen(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(16.dp))
                         Text(
                             "Unable to load chat",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
+                            fontSize = 17.sp,
                             color = Slate
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
                             uiState.error,
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             color = TextSecondary,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
                         )
-                        Spacer(Modifier.height(18.dp))
+                        Spacer(Modifier.height(20.dp))
                         OutlinedButton(
                             onClick = onRetry,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, ClinicalPrimaryColor)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = ClinicalPrimaryColor)
                             Spacer(Modifier.width(6.dp))
-                            Text("Retry", fontWeight = FontWeight.SemiBold)
+                            Text("Retry Connection", fontWeight = FontWeight.SemiBold, color = ClinicalPrimaryColor)
                         }
                     }
                 }
+
+                // 3. Main conversation view
                 else -> {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Team Area Card (Participants & Transfer Cycle)
@@ -251,7 +267,7 @@ fun TransferChatScreen(
                             item {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(14.dp),
                                     color = SurfaceMuted,
                                     border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.6f))
                                 ) {
@@ -285,6 +301,13 @@ fun TransferChatScreen(
                             }
                         }
 
+                        // Empty State Guide when CHAT_OPEN and no messages yet
+                        if (!uiState.isTerminal && uiState.messages.isEmpty()) {
+                            item {
+                                ChatEmptyPromptCard()
+                            }
+                        }
+
                         // Message list
                         items(uiState.messages, key = { it.messageId }) { message ->
                             val isCurrentUser = message.senderUid == uiState.currentUserUid
@@ -304,7 +327,7 @@ fun TransferChatScreen(
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
             title = {
-                Text("Confirm Mutual Transfer", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text("Confirm Mutual Transfer", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Slate)
             },
             text = {
                 Text(
@@ -474,6 +497,8 @@ private fun TeamParticipantsCard(
     matchType: String,
     participants: List<TransferChatParticipant>
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -488,35 +513,67 @@ private fun TeamParticipantsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    if (matchType == "THREE_WAY") "3-WAY CIRCULAR TEAM" else "DIRECT 2-WAY PARTNER",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Slate,
-                    letterSpacing = 0.5.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (matchType == "THREE_WAY") "3-WAY CIRCULAR TEAM" else "DIRECT 2-WAY PARTNER",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Slate,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = SoftBluePill
+                    ) {
+                        Text(
+                            "${participants.size} Nurses",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MedicalBlue,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
 
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = SoftBluePill
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                 ) {
                     Text(
-                        "${participants.size} Nurses",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MedicalBlue,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        if (expanded) "Collapse" else "Details",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ClinicalPrimaryColor
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
 
-            participants.forEachIndexed { index, participant ->
+            // In collapsed mode for 2-way: show only partner or all if <= 2
+            val visibleParticipants = if (expanded || participants.size <= 2) {
+                participants
+            } else {
+                participants.take(2)
+            }
+
+            visibleParticipants.forEachIndexed { index, participant ->
                 ParticipantRow(participant = participant)
-                if (index < participants.size - 1) {
+                if (index < visibleParticipants.size - 1) {
                     Spacer(Modifier.height(8.dp))
                 }
+            }
+
+            if (!expanded && participants.size > 2) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "+${participants.size - 2} more nurse in rotation",
+                    fontSize = 10.5.sp,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
             }
         }
     }
@@ -661,6 +718,59 @@ private fun TerminalStatusInfoBanner(serverStatus: String) {
                 Spacer(Modifier.height(2.dp))
                 Text(desc, fontSize = 11.sp, color = TextSecondary, lineHeight = 15.sp)
             }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Chat Empty Prompt Card (Inviting prompt when CHAT_OPEN and no messages yet)
+// -----------------------------------------------------------------------------
+
+@Composable
+private fun ChatEmptyPromptCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = SurfaceWhite,
+        border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.6f))
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = SoftBluePill,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.LocalHospital,
+                        contentDescription = null,
+                        tint = MedicalBlue,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                "Coordinate Your Transfer",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Slate
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                "Discuss handover timelines, ward assignments, and confirmation prerequisites before locking your mutual transfer.",
+                fontSize = 11.5.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+                lineHeight = 16.sp
+            )
         }
     }
 }
