@@ -553,14 +553,14 @@ async function findAndLockMatchInternal(
       }
 
       throw new MatchServiceError(
-        \`Failed to commit match: \${err.message}\`,
+        `Failed to commit match: ${err.message}`,
         err.statusCode || 500,
         "FIRESTORE_COMMIT_FAILED"
       );
     }
 
     const msg = err instanceof Error ? err.message : "Internal error";
-    throw new MatchServiceError(\`Commit error: \${msg}\`, 500, "INTERNAL_ERROR");
+    throw new MatchServiceError(`Commit error: ${msg}`, 500, "INTERNAL_ERROR");
   }
 
   return {
