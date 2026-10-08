@@ -265,7 +265,7 @@ class TransferChatViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(direct.nurseACurrentHospitalId),
                 grade = direct.nurseAGrade,
                 isCurrentUser = isOfficerA,
-                confirmed = matchFound.confirmedByA
+                confirmed = allParticipantsConfirmed || matchFound.confirmedByA
             )
 
             val pB = TransferChatParticipant(
@@ -277,7 +277,7 @@ class TransferChatViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(direct.nurseBCurrentHospitalId),
                 grade = direct.nurseBGrade,
                 isCurrentUser = !isOfficerA,
-                confirmed = matchFound.confirmedByB
+                confirmed = allParticipantsConfirmed || matchFound.confirmedByB
             )
 
             val participants = listOf(pA, pB)
