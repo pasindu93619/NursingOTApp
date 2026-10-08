@@ -15,11 +15,13 @@ export interface FirestoreClientConfig {
 
 export class FirestoreError extends Error {
   statusCode?: number;
+  code?: string;
 
-  constructor(message: string, statusCode?: number) {
+  constructor(message: string, statusCode?: number, code?: string) {
     super(message);
     this.name = "FirestoreError";
     this.statusCode = statusCode;
+    this.code = code;
   }
 }
 
@@ -437,10 +439,22 @@ export class FirestoreClient {
     }
 
     if (!response.ok) {
-      throw new FirestoreError(
-        `Failed to commit atomic writes: HTTP ${response.status}`,
-        response.status
-      );
+      let message = `Failed to commit atomic writes: HTTP ${response.status}`;
+      let code: string | undefined;
+
+      try {
+        const errorBody = (await response.json()) as {
+          error?: { message?: string; status?: string };
+        };
+        if (errorBody.error?.message) {
+          message = errorBody.error.message;
+        }
+        code = errorBody.error?.status;
+      } catch {
+        // Keep the HTTP status when Firestore does not return JSON.
+      }
+
+      throw new FirestoreError(message, response.status, code);
     }
 
     try {
