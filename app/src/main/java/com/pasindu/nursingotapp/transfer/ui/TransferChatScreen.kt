@@ -255,6 +255,14 @@ fun TransferChatScreen(
                             )
                         }
 
+                        // Explicitly separate initial match acceptance from final agreement.
+                        item {
+                            TransferWorkflowProgressCard(
+                                serverStatus = uiState.serverStatus,
+                                isUserConfirmed = uiState.isUserConfirmed
+                            )
+                        }
+
                         // Terminal status banner if state is finalized or cancelled
                         if (uiState.isTerminal) {
                             item {
@@ -665,6 +673,193 @@ private fun ParticipantRow(participant: TransferChatParticipant) {
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Two-stage Mutual Transfer journey
+// -----------------------------------------------------------------------------
+
+@Composable
+private fun TransferWorkflowProgressCard(
+    serverStatus: String,
+    isUserConfirmed: Boolean
+) {
+    val finalized = serverStatus == "CONFIRMED"
+    val closedWithoutAgreement = serverStatus == "CANCELLED" || serverStatus == "EXPIRED"
+    val stageTwoTitle = when {
+        finalized -> "Final agreement"
+        closedWithoutAgreement -> "Coordination closed"
+        else -> "Chat & confirm"
+    }
+    val stageTwoDescription = when {
+        finalized -> "Everyone confirmed"
+        closedWithoutAgreement -> "No final agreement"
+        isUserConfirmed -> "You confirmed • waiting for others"
+        else -> "Discuss first, then confirm"
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = SurfaceWhite,
+        border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.8f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "TWO-STEP AGREEMENT",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = ClinicalPrimaryColor,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        when {
+                            finalized -> "Transfer agreement finalized"
+                            closedWithoutAgreement -> "This coordination has ended"
+                            else -> "Match accepted — now coordinate"
+                        },
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Slate
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (finalized) SoftGreenPill else if (closedWithoutAgreement) SurfaceMuted else SoftBluePill
+                ) {
+                    Text(
+                        if (finalized) "COMPLETE" else if (closedWithoutAgreement) "CLOSED" else "STEP 2 OF 2",
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (finalized) Emerald else if (closedWithoutAgreement) TextSecondary else ClinicalPrimaryColor
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                WorkflowStageTile(
+                    modifier = Modifier.weight(1f),
+                    number = "1",
+                    title = "Accept match",
+                    description = "All nurses accepted",
+                    completed = true,
+                    active = false
+                )
+                WorkflowStageTile(
+                    modifier = Modifier.weight(1f),
+                    number = "2",
+                    title = stageTwoTitle,
+                    description = stageTwoDescription,
+                    completed = finalized,
+                    active = serverStatus == "CHAT_OPEN"
+                )
+            }
+
+            if (serverStatus == "CHAT_OPEN") {
+                Text(
+                    "Acceptance opens this room; it does not finalize your transfer. Discuss the arrangement here, then use Confirm Mutual Transfer when you are ready.",
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = TextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkflowStageTile(
+    modifier: Modifier,
+    number: String,
+    title: String,
+    description: String,
+    completed: Boolean,
+    active: Boolean
+) {
+    val tileColor = when {
+        completed -> SoftGreenPill
+        active -> SoftBluePill
+        else -> SurfaceMuted
+    }
+    val accent = when {
+        completed -> Emerald
+        active -> MedicalBlue
+        else -> TextSecondary
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = tileColor,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = accent,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (completed) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Completed",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        } else {
+                            Text(
+                                number,
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (completed) "DONE" else if (active) "ACTIVE" else "STEP $number",
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Black,
+                    color = accent
+                )
+            }
+            Text(
+                title,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Slate,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                description,
+                fontSize = 10.sp,
+                lineHeight = 13.sp,
+                color = TextSecondary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
