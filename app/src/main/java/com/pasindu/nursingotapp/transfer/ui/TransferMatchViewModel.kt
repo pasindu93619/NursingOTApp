@@ -51,9 +51,20 @@ class TransferMatchViewModel @Inject constructor(
                                     "Unable to identify the signed-in nurse."
                                 )
                             } else {
-                                _uiState.value = TransferMatchUiState.MatchFound(
-                                    syncResult.toUiModel(userId, hospitals)
-                                )
+                                val uiModel = syncResult.toUiModel(userId, hospitals)
+                                _uiState.value = when (uiModel.serverStatus) {
+                                    "CHAT_OPEN" -> TransferMatchUiState.ChatOpen(uiModel)
+                                    "CONFIRMED" -> TransferMatchUiState.Confirmed(uiModel)
+                                    "CANCELLED" -> TransferMatchUiState.AlreadyRejected(uiModel)
+                                    "EXPIRED" -> TransferMatchUiState.Expired(uiModel)
+                                    else -> {
+                                        if (uiModel.myStatus == MatchDecisionStatus.ACCEPTED) {
+                                            TransferMatchUiState.AlreadyAccepted(uiModel)
+                                        } else {
+                                            TransferMatchUiState.MatchFound(uiModel)
+                                        }
+                                    }
+                                }
                             }
                         }
                         is WorkerSyncResult.NoMatch -> {
@@ -86,6 +97,8 @@ class TransferMatchViewModel @Inject constructor(
         hospitals: List<com.pasindu.nursingotapp.transfer.data.model.HospitalReference>
     ): TransferMatchUiModel {
         val expiryMs = runCatching { Instant.parse(expiresAt).toEpochMilli() }.getOrNull()
+        val firstResponseMs = firstResponseAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+        val chatDeadlineMs = chatDeadline?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
 
         fun hospitalName(id: String): String =
             hospitals.firstOrNull { it.hospitalId == id }?.name?.takeIf { it.isNotBlank() }
@@ -103,17 +116,12 @@ class TransferMatchViewModel @Inject constructor(
         if (matchType == "THREE_WAY" && threeWayMatch != null) {
             val tw = threeWayMatch
             // A -> B -> C -> A
-            // Determine user orientation:
             val (youCurrentHosp, youGrade) = when (currentUserId) {
                 tw.nurseAUid -> tw.nurseACurrentHospitalId to tw.nurseAGrade
                 tw.nurseBUid -> tw.nurseBCurrentHospitalId to tw.nurseBGrade
                 else -> tw.nurseCCurrentHospitalId to tw.nurseCGrade
             }
 
-            // Nurse 2 is the nurse at your desired destination:
-            // If You are A: Nurse 2 is B (destination B's hosp), Nurse 3 is C (destination C's hosp)
-            // If You are B: Nurse 2 is C (destination C's hosp), Nurse 3 is A (destination A's hosp)
-            // If You are C: Nurse 2 is A (destination A's hosp), Nurse 3 is B (destination B's hosp)
             val (n2Id, n2Hosp, n2Grade) = when (currentUserId) {
                 tw.nurseAUid -> Triple(tw.nurseBUid, tw.nurseBCurrentHospitalId, tw.nurseBGrade)
                 tw.nurseBUid -> Triple(tw.nurseCUid, tw.nurseCCurrentHospitalId, tw.nurseCGrade)
@@ -124,6 +132,12 @@ class TransferMatchViewModel @Inject constructor(
                 tw.nurseAUid -> Triple(tw.nurseCUid, tw.nurseCCurrentHospitalId, tw.nurseCGrade)
                 tw.nurseBUid -> Triple(tw.nurseAUid, tw.nurseACurrentHospitalId, tw.nurseAGrade)
                 else -> Triple(tw.nurseBUid, tw.nurseBCurrentHospitalId, tw.nurseBGrade)
+            }
+
+            val myConfirmed = when (currentUserId) {
+                tw.nurseAUid -> confirmedByA
+                tw.nurseBUid -> confirmedByB
+                else -> confirmedByC
             }
 
             val p2 = TransferParticipantUiModel(
@@ -162,8 +176,12 @@ class TransferMatchViewModel @Inject constructor(
                 matchType = "THREE_WAY",
                 compatibilityReason = tw.priorityReason,
                 expiresAtMs = expiryMs,
+                firstResponseAtMs = firstResponseMs,
+                chatDeadlineMs = chatDeadlineMs,
                 myStatus = MatchDecisionStatus.PENDING,
                 partnerStatus = MatchDecisionStatus.PENDING,
+                myConfirmed = myConfirmed,
+                serverStatus = status,
                 participant2 = p2,
                 participant3 = p3
             )
@@ -176,6 +194,8 @@ class TransferMatchViewModel @Inject constructor(
         val partnerHospitalId = if (isOfficerA) direct.nurseBCurrentHospitalId else direct.nurseACurrentHospitalId
         val myGrade = if (isOfficerA) direct.nurseAGrade else direct.nurseBGrade
         val partnerGrade = if (isOfficerA) direct.nurseBGrade else direct.nurseAGrade
+        val myConfirmed = if (isOfficerA) confirmedByA else confirmedByB
+        val partnerConfirmed = if (isOfficerA) confirmedByB else confirmedByA
 
         return TransferMatchUiModel(
             matchId = matchId,
@@ -191,16 +211,33 @@ class TransferMatchViewModel @Inject constructor(
             matchType = "DIRECT_2_WAY",
             compatibilityReason = direct.priorityReason,
             expiresAtMs = expiryMs,
+            firstResponseAtMs = firstResponseMs,
+            chatDeadlineMs = chatDeadlineMs,
             myStatus = MatchDecisionStatus.PENDING,
-            partnerStatus = MatchDecisionStatus.PENDING
+            partnerStatus = MatchDecisionStatus.PENDING,
+            myConfirmed = myConfirmed,
+            partnerConfirmed = partnerConfirmed,
+            serverStatus = status
         )
+    }
+
+    private fun getCurrentMatchModel(): TransferMatchUiModel? {
+        return when (val state = _uiState.value) {
+            is TransferMatchUiState.MatchFound -> state.match
+            is TransferMatchUiState.AlreadyAccepted -> state.match
+            is TransferMatchUiState.ChatOpen -> state.match
+            is TransferMatchUiState.Confirmed -> state.match
+            is TransferMatchUiState.AlreadyRejected -> state.match
+            is TransferMatchUiState.Expired -> state.match
+            else -> null
+        }
     }
 
     fun acceptMatch(matchId: String) {
         if (_isSubmitting.value) return
         _isSubmitting.value = true
 
-        val currentMatch = (_uiState.value as? TransferMatchUiState.MatchFound)?.match
+        val currentMatch = getCurrentMatchModel()
             ?: run {
                 _isSubmitting.value = false
                 _uiState.value = TransferMatchUiState.Error(
@@ -216,11 +253,23 @@ class TransferMatchViewModel @Inject constructor(
             result.fold(
                 onSuccess = { response ->
                     _isSubmitting.value = false
+                    val newExpiryMs = runCatching { Instant.parse(response.expiresAt).toEpochMilli() }.getOrNull()
+                    val newChatDeadlineMs = response.chatDeadline?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+                    val newFirstResponseMs = response.firstResponseAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+
                     val updatedMatch = currentMatch.copy(
                         matchId = response.matchId,
+                        serverStatus = response.newStatus,
+                        expiresAtMs = newExpiryMs ?: currentMatch.expiresAtMs,
+                        chatDeadlineMs = newChatDeadlineMs ?: currentMatch.chatDeadlineMs,
+                        firstResponseAtMs = newFirstResponseMs ?: currentMatch.firstResponseAtMs,
                         myStatus = MatchDecisionStatus.ACCEPTED
                     )
-                    _uiState.value = TransferMatchUiState.AlreadyAccepted(updatedMatch)
+
+                    _uiState.value = when (response.newStatus) {
+                        "CHAT_OPEN" -> TransferMatchUiState.ChatOpen(updatedMatch)
+                        else -> TransferMatchUiState.AlreadyAccepted(updatedMatch)
+                    }
                 },
                 onFailure = { error ->
                     _isSubmitting.value = false
@@ -232,11 +281,51 @@ class TransferMatchViewModel @Inject constructor(
         }
     }
 
+    fun confirmMatch(matchId: String) {
+        if (_isSubmitting.value) return
+        _isSubmitting.value = true
+
+        val currentMatch = getCurrentMatchModel()
+            ?: run {
+                _isSubmitting.value = false
+                _uiState.value = TransferMatchUiState.Error(
+                    "Current match data is not loaded. Please retry."
+                )
+                return
+            }
+
+        _uiState.value = TransferMatchUiState.Loading
+
+        viewModelScope.launch {
+            val result = transferRequestRepository.respondToMatch(matchId, Decision.CONFIRM)
+            result.fold(
+                onSuccess = { response ->
+                    _isSubmitting.value = false
+                    val updatedMatch = currentMatch.copy(
+                        matchId = response.matchId,
+                        serverStatus = response.newStatus,
+                        myConfirmed = true
+                    )
+                    _uiState.value = when (response.newStatus) {
+                        "CONFIRMED" -> TransferMatchUiState.Confirmed(updatedMatch)
+                        else -> TransferMatchUiState.ChatOpen(updatedMatch)
+                    }
+                },
+                onFailure = { error ->
+                    _isSubmitting.value = false
+                    _uiState.value = TransferMatchUiState.Error(
+                        error.message ?: "Failed to confirm match. Please try again."
+                    )
+                }
+            )
+        }
+    }
+
     fun rejectMatch(matchId: String, onComplete: () -> Unit = {}) {
         if (_isSubmitting.value) return
         _isSubmitting.value = true
 
-        val currentMatch = (_uiState.value as? TransferMatchUiState.MatchFound)?.match
+        val currentMatch = getCurrentMatchModel()
             ?: run {
                 _isSubmitting.value = false
                 _uiState.value = TransferMatchUiState.Error(
@@ -254,6 +343,7 @@ class TransferMatchViewModel @Inject constructor(
                     _isSubmitting.value = false
                     val updatedMatch = currentMatch.copy(
                         matchId = response.matchId,
+                        serverStatus = "CANCELLED",
                         myStatus = MatchDecisionStatus.REJECTED
                     )
                     _uiState.value = TransferMatchUiState.AlreadyRejected(updatedMatch)

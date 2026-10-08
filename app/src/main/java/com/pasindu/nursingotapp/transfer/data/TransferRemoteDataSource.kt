@@ -34,13 +34,56 @@ data class RemoteMatchState(
     val status: String,
     val createdAt: String,
     val expiresAt: String,
+    val firstResponseAt: String? = null,
+    val chatDeadline: String? = null,
     val acceptedByA: Boolean = false,
     val acceptedByB: Boolean = false,
     val acceptedByC: Boolean = false,
     val rejectedByA: Boolean = false,
     val rejectedByB: Boolean = false,
-    val rejectedByC: Boolean = false
+    val rejectedByC: Boolean = false,
+    val confirmedByA: Boolean = false,
+    val confirmedByB: Boolean = false,
+    val confirmedByC: Boolean = false
 ) {
+    /**
+     * Backward-compatibility secondary constructor for 2-way call sites passing match directly.
+     */
+    constructor(
+        matchId: String,
+        match: WorkerDirectMatch,
+        status: String,
+        createdAt: String,
+        expiresAt: String,
+        acceptedByA: Boolean = false,
+        acceptedByB: Boolean = false,
+        rejectedByA: Boolean = false,
+        rejectedByB: Boolean = false,
+        firstResponseAt: String? = null,
+        chatDeadline: String? = null,
+        confirmedByA: Boolean = false,
+        confirmedByB: Boolean = false
+    ) : this(
+        matchId = matchId,
+        matchType = "DIRECT_2_WAY",
+        directMatch = match,
+        threeWayMatch = null,
+        status = status,
+        createdAt = createdAt,
+        expiresAt = expiresAt,
+        firstResponseAt = firstResponseAt,
+        chatDeadline = chatDeadline,
+        acceptedByA = acceptedByA,
+        acceptedByB = acceptedByB,
+        acceptedByC = false,
+        rejectedByA = rejectedByA,
+        rejectedByB = rejectedByB,
+        rejectedByC = false,
+        confirmedByA = confirmedByA,
+        confirmedByB = confirmedByB,
+        confirmedByC = false
+    )
+
     // Backward-compatibility accessor for 2-way call sites
     val match: WorkerDirectMatch
         get() = directMatch ?: error("Expected direct 2-way match but was $matchType")
@@ -124,6 +167,12 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
             snapshot.contains("acceptedByC") ||
             snapshot.contains("rejectedByC")
 
+        val firstResponseAt = snapshot.getString("firstResponseAt")
+        val chatDeadline = snapshot.getString("chatDeadline")
+        val confirmedByA = bool("confirmedByA")
+        val confirmedByB = bool("confirmedByB")
+        val confirmedByC = bool("confirmedByC")
+
         if (is3Way) {
             val nurseACurrentHospitalId = string("nurseACurrentHospitalId")
             val nurseBCurrentHospitalId = string("nurseBCurrentHospitalId")
@@ -181,12 +230,17 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
                 status = string("status"),
                 createdAt = string("createdAt"),
                 expiresAt = string("expiresAt"),
+                firstResponseAt = firstResponseAt,
+                chatDeadline = chatDeadline,
                 acceptedByA = acceptedByA,
                 acceptedByB = acceptedByB,
                 acceptedByC = acceptedByC,
                 rejectedByA = rejectedByA,
                 rejectedByB = rejectedByB,
-                rejectedByC = rejectedByC
+                rejectedByC = rejectedByC,
+                confirmedByA = confirmedByA,
+                confirmedByB = confirmedByB,
+                confirmedByC = confirmedByC
             )
         } else {
             val directMatch = WorkerDirectMatch(
@@ -216,10 +270,14 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
                 status = string("status"),
                 createdAt = string("createdAt"),
                 expiresAt = string("expiresAt"),
+                firstResponseAt = firstResponseAt,
+                chatDeadline = chatDeadline,
                 acceptedByA = acceptedByA,
                 acceptedByB = acceptedByB,
                 rejectedByA = rejectedByA,
-                rejectedByB = rejectedByB
+                rejectedByB = rejectedByB,
+                confirmedByA = confirmedByA,
+                confirmedByB = confirmedByB
             )
         }
     }

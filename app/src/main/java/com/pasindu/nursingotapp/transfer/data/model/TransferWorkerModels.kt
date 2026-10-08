@@ -75,8 +75,31 @@ sealed interface WorkerSyncResult {
         val directMatch: WorkerDirectMatch? = null,
         val threeWayMatch: WorkerThreeWayMatch? = null,
         val createdAt: String,
-        val expiresAt: String
+        val expiresAt: String,
+        val status: String = "PENDING_CONFIRMATION",
+        val firstResponseAt: String? = null,
+        val chatDeadline: String? = null,
+        val confirmedByA: Boolean = false,
+        val confirmedByB: Boolean = false,
+        val confirmedByC: Boolean = false
     ) : WorkerSyncResult {
+        /**
+         * Backward-compatibility secondary constructor for call sites passing (matchId, match, createdAt, expiresAt).
+         */
+        constructor(
+            matchId: String,
+            match: WorkerDirectMatch,
+            createdAt: String,
+            expiresAt: String
+        ) : this(
+            matchId = matchId,
+            matchType = "DIRECT_2_WAY",
+            directMatch = match,
+            threeWayMatch = null,
+            createdAt = createdAt,
+            expiresAt = expiresAt
+        )
+
         // Backward-compatibility accessor for existing 2-way call sites
         val match: WorkerDirectMatch
             get() = directMatch ?: error("Expected direct 2-way match but was $matchType")
@@ -87,29 +110,35 @@ sealed interface WorkerSyncResult {
     data class AuthError(val message: String) : WorkerSyncResult
     data class NetworkError(val message: String, val cause: Throwable? = null) : WorkerSyncResult
 }
-    /**
-     * Decision request payload for accept/reject.
-     */
-    @Serializable
-    data class DecisionRequest(
-        val matchId: String,
-        val decision: Decision
-    )
 
-    /**
-     * Decision response payload after server processes the decision.
-     */
-    @Serializable
-    data class DecisionResponse(
-        val matchId: String,
-        val newStatus: String,
-        val expiresAt: String,
-        val decisionApplied: Boolean
-    )
+/**
+ * Decision request payload for initial accept/reject and chat confirmation.
+ */
+@Serializable
+data class DecisionRequest(
+    val matchId: String,
+    val decision: Decision
+)
 
-    /**
-     * Enum of possible decisions.
-     */
-    @Serializable
-    enum class Decision { ACCEPT, REJECT }
+/**
+ * Decision response payload after server processes the decision.
+ * Reflects the backend Phase 2 workflow response contract.
+ */
+@Serializable
+data class DecisionResponse(
+    val matchId: String,
+    val newStatus: String,
+    val expiresAt: String,
+    val chatDeadline: String? = null,
+    val firstResponseAt: String? = null,
+    val decisionApplied: Boolean
+)
+
+/**
+ * Enum of possible decisions supported by Cloudflare Worker.
+ * Initial stage: ACCEPT / REJECT
+ * Chat finalization stage: CONFIRM / REJECT
+ */
+@Serializable
+enum class Decision { ACCEPT, REJECT, CONFIRM }
 

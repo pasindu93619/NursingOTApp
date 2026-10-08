@@ -252,7 +252,7 @@ class TransferSyncBridgeTest {
 
         workerApiClient.result = WorkerSyncResult.MatchFound(
             matchId = "MATCH-2026-9999",
-            match = match,
+            directMatch = match,
             createdAt = "2026-10-02T12:00:00Z",
             expiresAt = "2026-10-04T12:00:00Z"
         )
@@ -361,7 +361,7 @@ class TransferSyncBridgeTest {
 
         workerApiClient.result = WorkerSyncResult.MatchFound(
             matchId = "MATCH-CROSS-1",
-            match = match,
+            directMatch = match,
             createdAt = "2026-10-02T12:00:00Z",
             expiresAt = "2026-10-04T12:00:00Z"
         )

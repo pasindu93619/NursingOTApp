@@ -129,8 +129,12 @@ data class TransferMatchUiModel(
     val matchType: String = "DIRECT_2_WAY",
     val compatibilityReason: String,
     val expiresAtMs: Long? = null,
+    val firstResponseAtMs: Long? = null,
+    val chatDeadlineMs: Long? = null,
     val myStatus: MatchDecisionStatus = MatchDecisionStatus.PENDING,
     val partnerStatus: MatchDecisionStatus = MatchDecisionStatus.PENDING,
+    val myConfirmed: Boolean = false,
+    val partnerConfirmed: Boolean = false,
     val serverStatus: String = "PENDING_CONFIRMATION",
     // 3-way specific participants oriented as: You -> Nurse 2 -> Nurse 3 -> You
     val participant2: TransferParticipantUiModel? = null,
@@ -141,6 +145,8 @@ sealed interface TransferMatchUiState {
     data object Loading : TransferMatchUiState
     data class MatchFound(val match: TransferMatchUiModel) : TransferMatchUiState
     data class AlreadyAccepted(val match: TransferMatchUiModel) : TransferMatchUiState
+    data class ChatOpen(val match: TransferMatchUiModel) : TransferMatchUiState
+    data class Confirmed(val match: TransferMatchUiModel) : TransferMatchUiState
     data class AlreadyRejected(val match: TransferMatchUiModel) : TransferMatchUiState
     data class Expired(val match: TransferMatchUiModel) : TransferMatchUiState
     data class Error(val message: String) : TransferMatchUiState
@@ -231,6 +237,7 @@ fun TransferMatchScreen(
     uiState: TransferMatchUiState = TransferMatchUiState.MatchFound(createSampleMatchUiModel()),
     onBack: () -> Unit,
     onAcceptMatch: (matchId: String) -> Unit = {},
+    onConfirmMatch: (matchId: String) -> Unit = {},
     onRejectMatch: (matchId: String) -> Unit = {},
     onRetry: () -> Unit = {}
 ) {
@@ -266,6 +273,20 @@ fun TransferMatchScreen(
                     onBack = onBack
                 )
             }
+            is TransferMatchUiState.ChatOpen -> {
+                MatchChatOpenView(
+                    match = uiState.match,
+                    onBack = onBack,
+                    onConfirmClick = { onConfirmMatch(uiState.match.matchId) },
+                    onRejectClick = { showRejectConfirmDialog = true }
+                )
+            }
+            is TransferMatchUiState.Confirmed -> {
+                MatchConfirmedView(
+                    match = uiState.match,
+                    onBack = onBack
+                )
+            }
             is TransferMatchUiState.AlreadyRejected -> {
                 MatchRejectedView(
                     match = uiState.match,
@@ -280,12 +301,19 @@ fun TransferMatchScreen(
             }
         }
 
-        if (showRejectConfirmDialog && uiState is TransferMatchUiState.MatchFound) {
+        if (showRejectConfirmDialog && (uiState is TransferMatchUiState.MatchFound || uiState is TransferMatchUiState.ChatOpen)) {
+            val currentMatchId = when (uiState) {
+                is TransferMatchUiState.MatchFound -> uiState.match.matchId
+                is TransferMatchUiState.ChatOpen -> uiState.match.matchId
+                else -> ""
+            }
             RejectMatchConfirmDialog(
                 onDismiss = { showRejectConfirmDialog = false },
                 onConfirm = {
                     showRejectConfirmDialog = false
-                    onRejectMatch(uiState.match.matchId)
+                    if (currentMatchId.isNotBlank()) {
+                        onRejectMatch(currentMatchId)
+                    }
                 }
             )
         }
@@ -1568,6 +1596,209 @@ private fun MatchAcceptedView(
 
         Text(
             "You have accepted this mutual transfer. Once your partner confirms, the official Ministry transfer forms will be ready for download.",
+            fontSize = 13.sp,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp
+        )
+
+        Spacer(Modifier.height(28.dp))
+
+        Button(
+            onClick = onBack,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor)
+        ) {
+            Text("Return to Mission Control", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun MatchChatOpenView(
+    match: TransferMatchUiModel,
+    onBack: () -> Unit,
+    onConfirmClick: () -> Unit,
+    onRejectClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = CircleShape,
+            color = MatchBlueSoft,
+            border = BorderStroke(2.dp, MedicalBlue)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.SwapHoriz,
+                    contentDescription = "Chat Open",
+                    tint = MedicalBlue,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Text(
+            "COMMUNICATION WINDOW OPEN",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Black,
+            color = Slate,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            "All participants have accepted the mutual match. Coordination is active. Once ready, provide your final confirmation to lock in the transfer.",
+            fontSize = 13.sp,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp
+        )
+
+        Spacer(Modifier.height(28.dp))
+
+        if (!match.myConfirmed) {
+            Button(
+                onClick = onConfirmClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Emerald),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "FINAL CONFIRM TRANSFER",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.4.sp
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = onRejectClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.2.dp, CriticalRed.copy(alpha = 0.5f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = CriticalRed)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Cancel Mutual Transfer",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+        } else {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MatchMintSoft,
+                border = BorderStroke(1.dp, Emerald.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Emerald, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "You have confirmed. Awaiting unanimous final confirmation.",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Slate
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+        }
+
+        OutlinedButton(
+            onClick = onBack,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text("Back to Pool Status", color = Slate, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun MatchConfirmedView(
+    match: TransferMatchUiModel,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = CircleShape,
+            color = MatchMintSoft,
+            border = BorderStroke(2.dp, Emerald)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = "Confirmed",
+                    tint = Emerald,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Text(
+            "MUTUAL TRANSFER CONFIRMED",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Black,
+            color = Slate,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            "All participants have confirmed this mutual transfer. The official Ministry of Health transfer application is fully verified.",
             fontSize = 13.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center,

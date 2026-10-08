@@ -491,7 +491,8 @@ class TransferRequestRepositoryTest {
 
         val remoteMatch = RemoteMatchState(
             matchId = "match-123",
-            match = WorkerDirectMatch(
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
                 nurseAUid = "nurse-a",
                 nurseBUid = "nurse-b",
                 nurseACurrentHospitalId = "MOH2026-0010",

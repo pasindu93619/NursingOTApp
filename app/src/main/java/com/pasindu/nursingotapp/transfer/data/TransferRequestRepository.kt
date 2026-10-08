@@ -279,7 +279,13 @@ class TransferRequestRepository @Inject constructor(
                 directMatch = remoteMatch.directMatch,
                 threeWayMatch = remoteMatch.threeWayMatch,
                 createdAt = remoteMatch.createdAt,
-                expiresAt = remoteMatch.expiresAt
+                expiresAt = remoteMatch.expiresAt,
+                status = remoteMatch.status.ifBlank { "PENDING_CONFIRMATION" },
+                firstResponseAt = remoteMatch.firstResponseAt,
+                chatDeadline = remoteMatch.chatDeadline,
+                confirmedByA = remoteMatch.confirmedByA,
+                confirmedByB = remoteMatch.confirmedByB,
+                confirmedByC = remoteMatch.confirmedByC
             )
         }
 

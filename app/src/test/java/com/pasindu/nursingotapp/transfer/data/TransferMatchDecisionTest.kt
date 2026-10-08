@@ -96,7 +96,8 @@ class TransferMatchDecisionTest {
 
         var remoteMatch: RemoteMatchState? = RemoteMatchState(
             matchId = "MATCH-001",
-            match = WorkerDirectMatch(
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
                 nurseAUid = "user-123",
                 nurseBUid = "user-456",
                 nurseACurrentHospitalId = "HOSP-001",
@@ -515,5 +516,121 @@ class TransferMatchDecisionTest {
         assertNotNull(parsed.threeWayMatch)
         assertEquals("user-C", parsed.threeWayMatch?.nurseCUid)
         assertEquals(3, parsed.threeWayMatch?.combinedPreferenceRank)
+    }
+
+    // 11. Phase 2 Workflow: DecisionResponse parsing with sliding window & chat deadline
+    @Test
+    fun decisionResponse_withWorkflowFields_deserializesAccurately() {
+        val rawJson = """
+            {
+                "matchId": "match-flow-1",
+                "newStatus": "CHAT_OPEN",
+                "expiresAt": "2026-10-11T12:00:00Z",
+                "chatDeadline": "2026-10-11T12:00:00Z",
+                "firstResponseAt": "2026-10-08T12:00:00Z",
+                "decisionApplied": true
+            }
+        """.trimIndent()
+        val parsed = json.decodeFromString<DecisionResponse>(rawJson)
+        assertEquals("match-flow-1", parsed.matchId)
+        assertEquals("CHAT_OPEN", parsed.newStatus)
+        assertEquals("2026-10-11T12:00:00Z", parsed.expiresAt)
+        assertEquals("2026-10-11T12:00:00Z", parsed.chatDeadline)
+        assertEquals("2026-10-08T12:00:00Z", parsed.firstResponseAt)
+        assertTrue(parsed.decisionApplied)
+    }
+
+    // 12. DecisionRequest with CONFIRM decision
+    @Test
+    fun decisionRequest_withConfirmDecision_serializesAccurately() {
+        val req = DecisionRequest("match-conf-1", Decision.CONFIRM)
+        val jsonStr = json.encodeToString(req)
+        assertTrue(jsonStr.contains(""""decision":"CONFIRM""""))
+    }
+
+    // 13. ViewModel: ACCEPT leading to CHAT_OPEN sets ChatOpen state
+    @Test
+    fun viewModel_acceptMatch_advancingToChatOpen_setsChatOpenState() = runTest {
+        advanceUntilIdle()
+        workerApiClient.respondResult = Result.success(
+            DecisionResponse(
+                matchId = "MATCH-001",
+                newStatus = "CHAT_OPEN",
+                expiresAt = "2026-10-11T12:00:00Z",
+                chatDeadline = "2026-10-11T12:00:00Z",
+                firstResponseAt = "2026-10-08T12:00:00Z",
+                decisionApplied = true
+            )
+        )
+
+        viewModel.acceptMatch("MATCH-001")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("Expected ChatOpen state", state is TransferMatchUiState.ChatOpen)
+        val match = (state as TransferMatchUiState.ChatOpen).match
+        assertEquals("CHAT_OPEN", match.serverStatus)
+        assertEquals(MatchDecisionStatus.ACCEPTED, match.myStatus)
+        assertFalse(viewModel.isSubmitting.value)
+    }
+
+    // 14. ViewModel: CONFIRM leading to CONFIRMED sets Confirmed state
+    @Test
+    fun viewModel_confirmMatch_advancingToConfirmed_setsConfirmedState() = runTest {
+        advanceUntilIdle()
+        workerApiClient.respondResult = Result.success(
+            DecisionResponse(
+                matchId = "MATCH-001",
+                newStatus = "CONFIRMED",
+                expiresAt = "2026-10-11T12:00:00Z",
+                chatDeadline = "2026-10-11T12:00:00Z",
+                decisionApplied = true
+            )
+        )
+
+        viewModel.confirmMatch("MATCH-001")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("Expected Confirmed state", state is TransferMatchUiState.Confirmed)
+        val match = (state as TransferMatchUiState.Confirmed).match
+        assertEquals("CONFIRMED", match.serverStatus)
+        assertTrue(match.myConfirmed)
+        assertFalse(viewModel.isSubmitting.value)
+    }
+
+    // 15. Repository: Room persistence preserves matchStatus during workflow advancement
+    @Test
+    fun repository_respondToMatch_persistsChatOpenAndConfirmedStatusToRoom() = runTest {
+        workerApiClient.respondResult = Result.success(
+            DecisionResponse(
+                matchId = "MATCH-001",
+                newStatus = "CHAT_OPEN",
+                expiresAt = "2026-10-11T12:00:00Z",
+                chatDeadline = "2026-10-11T12:00:00Z",
+                decisionApplied = true
+            )
+        )
+
+        val res = repository.respondToMatch("MATCH-001", Decision.ACCEPT)
+        assertTrue(res.isSuccess)
+        val cached = dao.getOnce()
+        assertEquals("CHAT_OPEN", cached?.matchStatus)
+        assertEquals(TransferRequestStatus.MATCHED.name, cached?.requestStatus)
+
+        // Now CONFIRM
+        workerApiClient.respondResult = Result.success(
+            DecisionResponse(
+                matchId = "MATCH-001",
+                newStatus = "CONFIRMED",
+                expiresAt = "2026-10-11T12:00:00Z",
+                decisionApplied = true
+            )
+        )
+        val confirmRes = repository.respondToMatch("MATCH-001", Decision.CONFIRM)
+        assertTrue(confirmRes.isSuccess)
+        val confirmedCache = dao.getOnce()
+        assertEquals("CONFIRMED", confirmedCache?.matchStatus)
+        assertEquals(TransferRequestStatus.MATCHED.name, confirmedCache?.requestStatus)
     }
 }
