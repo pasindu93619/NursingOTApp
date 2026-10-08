@@ -500,34 +500,186 @@ describe("Server-Side Matching & Concurrency-Safe Locking (C4 Step 3)", () => {
     assert.deepEqual(write3.currentDocument, { exists: false });
   });
 
-  // 12. Concurrency conflict / Precondition failure safely handled (HTTP 409)
-  test("12 - concurrent modification precondition failure produces safe MATCH_CONFLICT error (no partial lock)", async () => {
-    const callerDoc = createMockRawDoc("nurse-a", "HOSP-001", ["HOSP-002"], "Grade I", {
-      updateTime: "2026-10-02T10:00:00Z"
-    });
-    const candidateDoc = createMockRawDoc("nurse-b", "HOSP-002", ["HOSP-001"], "Grade I", {
-      updateTime: "2026-10-02T10:00:00Z"
-    });
+  // 12. If another worker wins the race, recover the already-created match.
+  test("12 - commit conflict recovers an existing MATCHED caller and referenced match", async () => {
+    const searchingCallerDoc = createMockRawDoc(
+      "nurse-a",
+      "HOSP-001",
+      ["HOSP-002"],
+      "Grade I",
+      { updateTime: "2026-10-02T10:00:00Z" }
+    );
+    const matchedCallerDoc = createMockRawDoc(
+      "nurse-a",
+      "HOSP-001",
+      ["HOSP-002"],
+      "Grade I",
+      {
+        updateTime: "2026-10-02T10:00:02Z",
+        locked: true,
+        currentMatchId: "winner-match-1",
+        status: "MATCHED"
+      }
+    );
+    const candidateDoc = createMockRawDoc(
+      "nurse-b",
+      "HOSP-002",
+      ["HOSP-001"],
+      "Grade I",
+      { updateTime: "2026-10-02T10:00:00Z" }
+    );
+    const matchDoc = {
+      name: `${TEST_PROJECT_ID}/databases/(default)/documents/matches/winner-match-1`,
+      updateTime: "2026-10-02T10:00:02Z",
+      fields: {
+        nurseAUid: { stringValue: "nurse-a" },
+        nurseBUid: { stringValue: "nurse-b" },
+        nurseACurrentHospitalId: { stringValue: "HOSP-001" },
+        nurseBCurrentHospitalId: { stringValue: "HOSP-002" },
+        nurseADestinationHospitalId: { stringValue: "HOSP-002" },
+        nurseBDestinationHospitalId: { stringValue: "HOSP-001" },
+        nurseAGrade: { stringValue: "Grade I" },
+        nurseBGrade: { stringValue: "Grade I" },
+        isSameGrade: { booleanValue: true },
+        nurseAPreferenceRank: { integerValue: "1" },
+        nurseBPreferenceRank: { integerValue: "1" },
+        combinedPreferenceRank: { integerValue: "2" },
+        priorityReason: { stringValue: "Same-grade match (Grade I), combined preference rank 2 (A: #1, B: #1)" },
+        status: { stringValue: "PENDING_CONFIRMATION" },
+        createdAt: { stringValue: "2026-10-02T10:00:02Z" },
+        expiresAt: { stringValue: "2026-10-04T10:00:02Z" }
+      }
+    };
 
-    const queryItems: FirestoreRunQueryItem[] = [{ document: candidateDoc }];
-
-    // Simulate Firestore rejecting commit because candidate was locked concurrently
+    let callerReadCount = 0;
     const transport = createMockTransport({
-      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
-        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () => {
+        callerReadCount += 1;
+        return new Response(
+          JSON.stringify(callerReadCount === 1 ? searchingCallerDoc : matchedCallerDoc),
+          { status: 200 }
+        );
+      },
       [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
-        new Response(JSON.stringify(queryItems), { status: 200 }),
+        new Response(JSON.stringify([{ document: candidateDoc }]), { status: 200 }),
       [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
         new Response(
           JSON.stringify({
             error: {
               code: 409,
-              message: "Document was updated concurrently (FAILED_PRECONDITION)",
+              message: "Document was updated concurrently",
               status: "ABORTED"
             }
           }),
           { status: 409 }
-        )
+        ),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/winner-match-1`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, { expirationHours: 48 });
+
+    assert.equal(result.matched, true);
+    assert.equal((result as FindAndLockMatchSuccess).matchId, "winner-match-1");
+    assert.equal((result as FindAndLockMatchSuccess).match.nurseBUid, "nurse-b");
+    assert.equal(callerReadCount, 2);
+  });
+
+  // 12b. If no winner exists after the conflict, retry once with fresh reads/preconditions.
+  test("12b - commit conflict retries once and succeeds with fresh reads", async () => {
+    const callerDoc = createMockRawDoc(
+      "nurse-a",
+      "HOSP-001",
+      ["HOSP-002"],
+      "Grade I",
+      { updateTime: "2026-10-02T10:00:00Z" }
+    );
+    const candidateDoc = createMockRawDoc(
+      "nurse-b",
+      "HOSP-002",
+      ["HOSP-001"],
+      "Grade I",
+      { updateTime: "2026-10-02T10:00:01Z" }
+    );
+
+    let commitCount = 0;
+    let callerReadCount = 0;
+    let queryCount = 0;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () => {
+        callerReadCount += 1;
+        return new Response(JSON.stringify(callerDoc), { status: 200 });
+      },
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () => {
+        queryCount += 1;
+        return new Response(JSON.stringify([{ document: candidateDoc }]), { status: 200 });
+      },
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        commitCount += 1;
+        if (commitCount === 1) {
+          return new Response(
+            JSON.stringify({ error: { code: 409, message: "Document was updated concurrently", status: "ABORTED" } }),
+            { status: 409 }
+          );
+        }
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T10:00:03Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const result = await findAndLockMatch("nurse-a", client, {
+      expirationHours: 48,
+      generateMatchId: () => "retry-match-1"
+    });
+
+    assert.equal(result.matched, true);
+    assert.equal((result as FindAndLockMatchSuccess).matchId, "retry-match-1");
+    assert.equal(commitCount, 2);
+    assert.equal(callerReadCount, 3);
+    assert.equal(queryCount, 2);
+  });
+
+  // 12c. Two failed attempts remain a genuine conflict; never fabricate a match.
+  test("12c - repeated commit conflicts return MATCH_CONFLICT after one bounded retry", async () => {
+    const callerDoc = createMockRawDoc(
+      "nurse-a",
+      "HOSP-001",
+      ["HOSP-002"],
+      "Grade I",
+      { updateTime: "2026-10-02T10:00:00Z" }
+    );
+    const candidateDoc = createMockRawDoc(
+      "nurse-b",
+      "HOSP-002",
+      ["HOSP-001"],
+      "Grade I",
+      { updateTime: "2026-10-02T10:00:01Z" }
+    );
+
+    let commitCount = 0;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(callerDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: () =>
+        new Response(JSON.stringify([{ document: candidateDoc }]), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        commitCount += 1;
+        return new Response(
+          JSON.stringify({ error: { code: 409, message: "Document was updated concurrently", status: "ABORTED" } }),
+          { status: 409 }
+        );
+      }
     });
 
     const client = new FirestoreClient({
@@ -547,6 +699,8 @@ describe("Server-Side Matching & Concurrency-Safe Locking (C4 Step 3)", () => {
         return true;
       }
     );
+
+    assert.equal(commitCount, 2);
   });
 
   // 13. Expiration duration must be explicitly configured (no implicit 48h or 72h default)
