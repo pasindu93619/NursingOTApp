@@ -40,7 +40,7 @@ data class TransferChatUiState(
     val isLoading: Boolean = true,
     val matchId: String = "",
     val matchType: String = "DIRECT_2_WAY", // "DIRECT_2_WAY" or "THREE_WAY"
-    val serverStatus: String = "CHAT_OPEN", // "CHAT_OPEN", "CONFIRMED", "CANCELLED", "EXPIRED"
+    val serverStatus: String = "LOADING", // "LOADING", "CHAT_OPEN", "CONFIRMED", "CANCELLED", "EXPIRED"
     val chatDeadlineMs: Long? = null,
     val participants: List<TransferChatParticipant> = emptyList(),
     val currentUserUid: String = "",
@@ -56,13 +56,13 @@ data class TransferChatUiState(
     val isTerminal: Boolean = false
 ) {
     val canSend: Boolean
-        get() = serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
+        get() = !isLoading && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
 
     val canConfirm: Boolean
-        get() = serverStatus == "CHAT_OPEN" && !isUserConfirmed && !isSubmittingAction && !isTerminal
+        get() = !isLoading && serverStatus == "CHAT_OPEN" && !isUserConfirmed && !isSubmittingAction && !isTerminal
 
     val canLeave: Boolean
-        get() = serverStatus == "CHAT_OPEN" && !isSubmittingAction && !isTerminal
+        get() = !isLoading && serverStatus == "CHAT_OPEN" && !isSubmittingAction && !isTerminal
 }
 
 @HiltViewModel

@@ -142,8 +142,8 @@ fun TransferChatScreen(
                     onBack = onBack
                 )
 
-                // Message composer (active only when CHAT_OPEN)
-                if (uiState.serverStatus == "CHAT_OPEN") {
+                // Message composer (active only when fully loaded and CHAT_OPEN)
+                if (!uiState.isLoading && uiState.serverStatus == "CHAT_OPEN") {
                     ChatMessageInputBar(
                         text = messageText,
                         onTextChanged = { messageText = it },
@@ -177,7 +177,7 @@ fun TransferChatScreen(
                         )
                     }
                 }
-                uiState.error != null && uiState.messages.isEmpty() -> {
+                uiState.error != null && uiState.messages.isEmpty() && !uiState.isTerminal -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -243,6 +243,45 @@ fun TransferChatScreen(
                         if (uiState.isTerminal) {
                             item {
                                 TerminalStatusInfoBanner(serverStatus = uiState.serverStatus)
+                            }
+                        }
+
+                        // Inline notice if messages failed to load in a terminal state
+                        if (uiState.isTerminal && uiState.error != null && uiState.messages.isEmpty()) {
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = SurfaceMuted,
+                                    border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.6f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = TextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                "Chat history unavailable",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Slate
+                                            )
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(
+                                                "Coordination messages could not be loaded from the server.",
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -718,6 +757,9 @@ private fun ChatTeamActionBar(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             when {
+                uiState.isLoading -> {
+                    // While authoritative status is loading, render no actionable buttons
+                }
                 uiState.isTerminal -> {
                     Button(
                         onClick = onBack,
