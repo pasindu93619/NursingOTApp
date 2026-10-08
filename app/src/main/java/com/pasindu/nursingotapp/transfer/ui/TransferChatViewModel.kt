@@ -180,8 +180,11 @@ class TransferChatViewModel @Inject constructor(
             runCatching { Instant.parse(it).toEpochMilli() }.getOrNull()
         }
 
-        val serverStatus = matchFound.status
+        val serverStatus = matchFound.status.trim().uppercase()
         val isTerminal = serverStatus in listOf("CONFIRMED", "CANCELLED", "EXPIRED")
+        // CONFIRMED is the authoritative final state: all participants have agreed,
+        // even if older cached participant flags have not caught up yet.
+        val allParticipantsConfirmed = serverStatus == "CONFIRMED"
 
         if (matchFound.matchType == "THREE_WAY" && matchFound.threeWayMatch != null) {
             val tw = matchFound.threeWayMatch
@@ -201,7 +204,7 @@ class TransferChatViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(tw.nurseACurrentHospitalId),
                 grade = tw.nurseAGrade,
                 isCurrentUser = tw.nurseAUid == currentUid,
-                confirmed = matchFound.confirmedByA
+                confirmed = allParticipantsConfirmed || matchFound.confirmedByA
             )
 
             val pB = TransferChatParticipant(
@@ -213,7 +216,7 @@ class TransferChatViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(tw.nurseBCurrentHospitalId),
                 grade = tw.nurseBGrade,
                 isCurrentUser = tw.nurseBUid == currentUid,
-                confirmed = matchFound.confirmedByB
+                confirmed = allParticipantsConfirmed || matchFound.confirmedByB
             )
 
             val pC = TransferChatParticipant(
@@ -225,13 +228,13 @@ class TransferChatViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(tw.nurseCCurrentHospitalId),
                 grade = tw.nurseCGrade,
                 isCurrentUser = tw.nurseCUid == currentUid,
-                confirmed = matchFound.confirmedByC
+                confirmed = allParticipantsConfirmed || matchFound.confirmedByC
             )
 
             val participants = listOf(pA, pB, pC)
             val currentParticipant = participants.find { it.isCurrentUser } ?: pA
             val isUserConfirmed = currentParticipant.confirmed
-            val isAllConfirmed = matchFound.confirmedByA && matchFound.confirmedByB && matchFound.confirmedByC
+            val isAllConfirmed = allParticipantsConfirmed || (matchFound.confirmedByA && matchFound.confirmedByB && matchFound.confirmedByC)
 
             return TransferChatUiState(
                 isLoading = false,
@@ -279,7 +282,7 @@ class TransferChatViewModel @Inject constructor(
 
             val participants = listOf(pA, pB)
             val isUserConfirmed = if (isOfficerA) matchFound.confirmedByA else matchFound.confirmedByB
-            val isAllConfirmed = matchFound.confirmedByA && matchFound.confirmedByB
+            val isAllConfirmed = allParticipantsConfirmed || (matchFound.confirmedByA && matchFound.confirmedByB)
 
             val currentParticipant = if (isOfficerA) pA else pB
 
