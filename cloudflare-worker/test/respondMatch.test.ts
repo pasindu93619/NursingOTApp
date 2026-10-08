@@ -245,6 +245,64 @@ describe("Server-Side Match Decision Accept/Reject Suite", () => {
     assert.equal(result.decisionApplied, true);
   });
 
+  // 3c. ACCEPT must never act as final confirmation once the chat is open.
+  test("3c - ACCEPT during CHAT_OPEN is rejected as INVALID_DECISION", async () => {
+    const matchDoc = createMockMatchDoc("match-stage-guard", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true
+    });
+
+    let commitCalled = false;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-stage-guard`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        commitCalled = true;
+        return new Response(JSON.stringify({ commitTime: new Date().toISOString() }), { status: 200 });
+      }
+    });
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => respondToMatch("nurse-b", "match-stage-guard", "ACCEPT", client),
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "INVALID_DECISION");
+        assert.equal(err.statusCode, 400);
+        return true;
+      }
+    );
+    assert.equal(commitCalled, false, "Invalid stage transition must not write to Firestore");
+  });
+
+  // 3d. CONFIRM must never be accepted before all participants open the chat stage.
+  test("3d - CONFIRM during PENDING_CONFIRMATION is rejected as INVALID_DECISION", async () => {
+    const matchDoc = createMockMatchDoc("match-stage-guard", "nurse-a", "nurse-b");
+
+    let commitCalled = false;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-stage-guard`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () => {
+        commitCalled = true;
+        return new Response(JSON.stringify({ commitTime: new Date().toISOString() }), { status: 200 });
+      }
+    });
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => respondToMatch("nurse-a", "match-stage-guard", "CONFIRM", client),
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "INVALID_DECISION");
+        assert.equal(err.statusCode, 400);
+        return true;
+      }
+    );
+    assert.equal(commitCalled, false, "Invalid stage transition must not write to Firestore");
+  });
+
   // 4. Either REJECT cancels the match even if opponent accepted
   test("4 - Either REJECT cancels the match even if opponent accepted", async () => {
     const matchDoc = createMockMatchDoc("match-1", "nurse-a", "nurse-b", {
