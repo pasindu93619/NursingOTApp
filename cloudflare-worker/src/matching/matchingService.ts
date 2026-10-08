@@ -191,7 +191,7 @@ export async function respondToMatch(
         [acceptedKey]: { booleanValue: decision === "ACCEPT" },
         [rejectedKey]: { booleanValue: decision === "REJECT" },
         status: { stringValue: newStatus },
-        updatedAt: { stringValue: new Date().toISOString() }
+        updatedAt: { integerValue: Date.now().toString() }
       }
     },
     updateMask: { fieldPaths: [acceptedKey, rejectedKey, "status", "updatedAt"] },
@@ -440,7 +440,7 @@ async function findAndLockMatchInternal(
         locked: { booleanValue: true },
         currentMatchId: { stringValue: matchId },
         status: { stringValue: "MATCHED" },
-        updatedAt: { stringValue: nowIso }
+        updatedAt: { integerValue: now.getTime().toString() }
       }
     },
     updateMask: {
@@ -458,7 +458,7 @@ async function findAndLockMatchInternal(
         locked: { booleanValue: true },
         currentMatchId: { stringValue: matchId },
         status: { stringValue: "MATCHED" },
-        updatedAt: { stringValue: nowIso }
+        updatedAt: { integerValue: now.getTime().toString() }
       }
     },
     updateMask: {
@@ -493,7 +493,7 @@ async function findAndLockMatchInternal(
         rejectedByB: { booleanValue: false },
         createdAt: { stringValue: nowIso },
         expiresAt: { stringValue: expiresAtIso },
-        updatedAt: { stringValue: nowIso }
+        updatedAt: { integerValue: now.getTime().toString() }
       }
     },
     currentDocument: {
