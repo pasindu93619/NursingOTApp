@@ -142,8 +142,8 @@ fun TransferChatScreen(
                     onBack = onBack
                 )
 
-                // Message composer (active only when fully loaded and authoritative CHAT_OPEN)
-                if (!uiState.isLoading && uiState.serverStatus == "CHAT_OPEN") {
+                // Message composer (active only when fully loaded, error-free, and authoritative CHAT_OPEN)
+                if (!uiState.isLoading && uiState.error == null && uiState.serverStatus == "CHAT_OPEN") {
                     ChatMessageInputBar(
                         text = messageText,
                         onTextChanged = { messageText = it },
@@ -1082,7 +1082,7 @@ private fun ChatTeamActionBar(
                         Text("Return to Mission Control", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
-                uiState.serverStatus == "CHAT_OPEN" -> {
+                uiState.serverStatus == "CHAT_OPEN" && uiState.error == null -> {
                     if (uiState.isUserConfirmed) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),

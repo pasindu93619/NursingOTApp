@@ -56,13 +56,13 @@ data class TransferChatUiState(
     val isTerminal: Boolean = false
 ) {
     val canSend: Boolean
-        get() = !isLoading && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
+        get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
 
     val canConfirm: Boolean
-        get() = !isLoading && serverStatus == "CHAT_OPEN" && !isUserConfirmed && !isSubmittingAction && !isTerminal
+        get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isUserConfirmed && !isSubmittingAction && !isTerminal
 
     val canLeave: Boolean
-        get() = !isLoading && serverStatus == "CHAT_OPEN" && !isSubmittingAction && !isTerminal
+        get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isSubmittingAction && !isTerminal
 }
 
 @HiltViewModel

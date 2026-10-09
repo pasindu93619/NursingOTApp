@@ -111,4 +111,24 @@ class TransferChatDataTest {
         assertNull(validateText("a".repeat(500)))
         assertEquals("too_long", validateText("a".repeat(501)))
     }
+
+    @Test
+    fun transferChatUiState_actionAvailability_disabledWhenErrorPresent() {
+        val validOpenState = com.pasindu.nursingotapp.transfer.ui.TransferChatUiState(
+            isLoading = false,
+            serverStatus = "CHAT_OPEN",
+            isTerminal = false,
+            error = null
+        )
+        assertTrue(validOpenState.canSend)
+        assertTrue(validOpenState.canConfirm)
+        assertTrue(validOpenState.canLeave)
+
+        val errorOpenState = validOpenState.copy(
+            error = "Access denied: You are not an authorized participant of this match or the chat window is closed."
+        )
+        assertFalse("canSend must be false when error is present", errorOpenState.canSend)
+        assertFalse("canConfirm must be false when error is present", errorOpenState.canConfirm)
+        assertFalse("canLeave must be false when error is present", errorOpenState.canLeave)
+    }
 }
