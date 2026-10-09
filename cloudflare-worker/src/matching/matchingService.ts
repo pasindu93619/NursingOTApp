@@ -306,13 +306,15 @@ export async function respondToMatch(
     if (!firstResponseAtStr && !anyPriorResponse) {
       newFirstResponseAtStr = now.toISOString();
       matchFieldsToUpdate.firstResponseAt = { stringValue: newFirstResponseAtStr };
-      updateMaskFieldPaths.push("firstResponseAt");
+      matchFieldsToUpdate.firstResponseAtMs = { integerValue: now.getTime().toString() };
+      updateMaskFieldPaths.push("firstResponseAt", "firstResponseAtMs");
 
       const slidingDeadline = new Date(now.getTime() + SLIDING_WINDOW_HOURS * 3600 * 1000);
       if (slidingDeadline < expiresAt) {
         newExpiresAtStr = slidingDeadline.toISOString();
         matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
-        updateMaskFieldPaths.push("expiresAt");
+        matchFieldsToUpdate.expiresAtMs = { integerValue: slidingDeadline.getTime().toString() };
+        updateMaskFieldPaths.push("expiresAt", "expiresAtMs");
       }
     }
 
@@ -354,10 +356,12 @@ export async function respondToMatch(
 
         matchFieldsToUpdate.status = { stringValue: newStatus };
         matchFieldsToUpdate.chatDeadline = { stringValue: newChatDeadlineStr };
+        matchFieldsToUpdate.chatDeadlineMs = { integerValue: chatDeadline.getTime().toString() };
         matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
+        matchFieldsToUpdate.expiresAtMs = { integerValue: chatDeadline.getTime().toString() };
         matchFieldsToUpdate.confirmedByA = { booleanValue: false };
         matchFieldsToUpdate.confirmedByB = { booleanValue: false };
-        updateMaskFieldPaths.push("status", "chatDeadline", "expiresAt", "confirmedByA", "confirmedByB");
+        updateMaskFieldPaths.push("status", "chatDeadline", "chatDeadlineMs", "expiresAt", "expiresAtMs", "confirmedByA", "confirmedByB");
 
         if (hasParticipantC) {
           matchFieldsToUpdate.confirmedByC = { booleanValue: false };
@@ -965,6 +969,7 @@ async function findAndLockMatchInternal(
           rejectedByB: { booleanValue: false },
           createdAt: { stringValue: nowIso },
           expiresAt: { stringValue: expiresAtIso },
+          expiresAtMs: { integerValue: expiresAt.getTime().toString() },
           updatedAt: { integerValue: now.getTime().toString() }
         }
       },
@@ -1152,6 +1157,7 @@ async function findAndLockMatchInternal(
         rejectedByC: { booleanValue: false },
         createdAt: { stringValue: nowIso },
         expiresAt: { stringValue: expiresAtIso },
+        expiresAtMs: { integerValue: expiresAt.getTime().toString() },
         updatedAt: { integerValue: now.getTime().toString() }
       }
     },
