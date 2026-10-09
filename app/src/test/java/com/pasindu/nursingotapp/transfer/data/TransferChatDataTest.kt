@@ -130,5 +130,12 @@ class TransferChatDataTest {
         assertFalse("canSend must be false when error is present", errorOpenState.canSend)
         assertFalse("canConfirm must be false when error is present", errorOpenState.canConfirm)
         assertFalse("canLeave must be false when error is present", errorOpenState.canLeave)
+
+        val messageErrorOpenState = validOpenState.copy(
+            messageError = "Permission denied reading messages."
+        )
+        assertFalse("canSend must be false when messageError is present", messageErrorOpenState.canSend)
+        assertTrue("canConfirm must remain true when only messageError is present", messageErrorOpenState.canConfirm)
+        assertTrue("canLeave must remain true when only messageError is present", messageErrorOpenState.canLeave)
     }
 }

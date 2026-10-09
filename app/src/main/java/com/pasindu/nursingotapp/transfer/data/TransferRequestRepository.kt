@@ -371,7 +371,7 @@ class TransferRequestRepository @Inject constructor(
                     requestStatus = TransferRequestStatus.MATCHED.name,
                     matchCycleId = workerResult.matchId,
                     matchType = workerResult.matchType,
-                    matchStatus = "PENDING_CONFIRMATION",
+                    matchStatus = workerResult.status.ifBlank { "PENDING_CONFIRMATION" },
                     matchPayloadJson = matchJson,
                     syncStatus = CacheSyncStatus.SYNCED.name,
                     updatedAt = System.currentTimeMillis()

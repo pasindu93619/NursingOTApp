@@ -53,10 +53,11 @@ data class TransferChatUiState(
     val isSendingMessage: Boolean = false,
     val isSubmittingAction: Boolean = false,
     val error: String? = null,
+    val messageError: String? = null,
     val isTerminal: Boolean = false
 ) {
     val canSend: Boolean
-        get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
+        get() = !isLoading && error == null && messageError == null && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
 
     val canConfirm: Boolean
         get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isUserConfirmed && !isSubmittingAction && !isTerminal
@@ -136,6 +137,14 @@ class TransferChatViewModel @Inject constructor(
         }
     }
 
+    fun retryObserveMessages() {
+        val matchId = _uiState.value.matchId
+        if (matchId.isNotBlank()) {
+            _uiState.value = _uiState.value.copy(messageError = null)
+            observeMessages(matchId)
+        }
+    }
+
     private fun observeMessages(matchId: String) {
         messageCollectionJob?.cancel()
         messageCollectionJob = viewModelScope.launch {
@@ -144,13 +153,14 @@ class TransferChatViewModel @Inject constructor(
                     onSuccess = { list ->
                         _uiState.value = _uiState.value.copy(
                             messages = list,
+                            messageError = null,
                             isLoading = false
                         )
                     },
                     onFailure = { err ->
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = err.message ?: "Failed to listen for incoming messages."
+                            messageError = err.message ?: "Failed to listen for incoming messages."
                         )
                     }
                 )

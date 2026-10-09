@@ -68,12 +68,21 @@ class TransferRequestViewModel @Inject constructor(
         viewModelScope.launch {
             while (true) {
                 val request = _activeRequest.value
+                val pollIntervalMs = if (request != null && (
+                    request.matchStatus.equals("PENDING_CONFIRMATION", ignoreCase = true) ||
+                    request.matchStatus.equals("CHAT_OPEN", ignoreCase = true)
+                )) {
+                    5_000L
+                } else {
+                    15_000L
+                }
+
                 if (request != null && request.requestStatus == com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.PENDING) {
                     runCatching {
                         transferRequestRepository.syncActiveRequest()
                     }
                 }
-                delay(15_000L)
+                delay(pollIntervalMs)
             }
         }
     }

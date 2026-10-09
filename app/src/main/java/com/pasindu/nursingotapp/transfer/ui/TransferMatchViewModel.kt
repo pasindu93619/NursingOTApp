@@ -28,8 +28,65 @@ class TransferMatchViewModel @Inject constructor(
     private val _isSubmitting = MutableStateFlow(false)
     val isSubmitting: StateFlow<Boolean> = _isSubmitting.asStateFlow()
 
+    private var alreadyAcceptedPollingJob: kotlinx.coroutines.Job? = null
+
     init {
         loadCurrentMatch()
+    }
+
+    private fun startAlreadyAcceptedPolling() {
+        if (alreadyAcceptedPollingJob?.isActive == true) return
+        alreadyAcceptedPollingJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(3_000L)
+                val currentState = _uiState.value
+                if (currentState !is TransferMatchUiState.AlreadyAccepted) {
+                    break
+                }
+                runCatching {
+                    val syncResult = transferRequestRepository.syncActiveRequest()
+                    val userId = transferRequestRepository.getCurrentUserId()
+                    val hospitals = hospitalReferenceRepository.getAll()
+                    if (syncResult is WorkerSyncResult.MatchFound && !userId.isNullOrBlank()) {
+                        val uiModel = syncResult.toUiModel(userId, hospitals)
+                        when (uiModel.serverStatus) {
+                            "CHAT_OPEN" -> {
+                                stopAlreadyAcceptedPolling()
+                                _uiState.value = TransferMatchUiState.ChatOpen(uiModel)
+                            }
+                            "CONFIRMED" -> {
+                                stopAlreadyAcceptedPolling()
+                                _uiState.value = TransferMatchUiState.Confirmed(uiModel)
+                            }
+                            "CANCELLED" -> {
+                                stopAlreadyAcceptedPolling()
+                                _uiState.value = TransferMatchUiState.AlreadyRejected(uiModel)
+                            }
+                            "EXPIRED" -> {
+                                stopAlreadyAcceptedPolling()
+                                _uiState.value = TransferMatchUiState.Expired(uiModel)
+                            }
+                            else -> {
+                                // Still in PENDING_CONFIRMATION; preserve existing match model while updating timestamps
+                                if (_uiState.value is TransferMatchUiState.AlreadyAccepted) {
+                                    _uiState.value = TransferMatchUiState.AlreadyAccepted(uiModel)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun stopAlreadyAcceptedPolling() {
+        alreadyAcceptedPollingJob?.cancel()
+        alreadyAcceptedPollingJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAlreadyAcceptedPolling()
     }
 
     private fun loadCurrentMatch() {
@@ -47,20 +104,35 @@ class TransferMatchViewModel @Inject constructor(
                     when (syncResult) {
                         is WorkerSyncResult.MatchFound -> {
                             if (userId.isNullOrBlank()) {
+                                stopAlreadyAcceptedPolling()
                                 _uiState.value = TransferMatchUiState.Error(
                                     "Unable to identify the signed-in nurse."
                                 )
                             } else {
                                 val uiModel = syncResult.toUiModel(userId, hospitals)
                                 _uiState.value = when (uiModel.serverStatus) {
-                                    "CHAT_OPEN" -> TransferMatchUiState.ChatOpen(uiModel)
-                                    "CONFIRMED" -> TransferMatchUiState.Confirmed(uiModel)
-                                    "CANCELLED" -> TransferMatchUiState.AlreadyRejected(uiModel)
-                                    "EXPIRED" -> TransferMatchUiState.Expired(uiModel)
+                                    "CHAT_OPEN" -> {
+                                        stopAlreadyAcceptedPolling()
+                                        TransferMatchUiState.ChatOpen(uiModel)
+                                    }
+                                    "CONFIRMED" -> {
+                                        stopAlreadyAcceptedPolling()
+                                        TransferMatchUiState.Confirmed(uiModel)
+                                    }
+                                    "CANCELLED" -> {
+                                        stopAlreadyAcceptedPolling()
+                                        TransferMatchUiState.AlreadyRejected(uiModel)
+                                    }
+                                    "EXPIRED" -> {
+                                        stopAlreadyAcceptedPolling()
+                                        TransferMatchUiState.Expired(uiModel)
+                                    }
                                     else -> {
                                         if (uiModel.myStatus == MatchDecisionStatus.ACCEPTED) {
+                                            startAlreadyAcceptedPolling()
                                             TransferMatchUiState.AlreadyAccepted(uiModel)
                                         } else {
+                                            stopAlreadyAcceptedPolling()
                                             TransferMatchUiState.MatchFound(uiModel)
                                         }
                                     }
@@ -68,17 +140,23 @@ class TransferMatchViewModel @Inject constructor(
                             }
                         }
                         is WorkerSyncResult.NoMatch -> {
+                            stopAlreadyAcceptedPolling()
                             _uiState.value = TransferMatchUiState.Error(
                                 "No active mutual-transfer match is available."
                             )
                         }
                         is WorkerSyncResult.NetworkError -> {
-                            _uiState.value = TransferMatchUiState.Error(syncResult.message)
+                            // Do not cancel polling if already active on transient network failure
+                            if (_uiState.value !is TransferMatchUiState.AlreadyAccepted) {
+                                _uiState.value = TransferMatchUiState.Error(syncResult.message)
+                            }
                         }
                         is WorkerSyncResult.AuthError -> {
+                            stopAlreadyAcceptedPolling()
                             _uiState.value = TransferMatchUiState.Error(syncResult.message)
                         }
                         is WorkerSyncResult.Conflict -> {
+                            stopAlreadyAcceptedPolling()
                             _uiState.value = TransferMatchUiState.Error(syncResult.message)
                         }
                     }
@@ -267,8 +345,14 @@ class TransferMatchViewModel @Inject constructor(
                     )
 
                     _uiState.value = when (response.newStatus) {
-                        "CHAT_OPEN" -> TransferMatchUiState.ChatOpen(updatedMatch)
-                        else -> TransferMatchUiState.AlreadyAccepted(updatedMatch)
+                        "CHAT_OPEN" -> {
+                            stopAlreadyAcceptedPolling()
+                            TransferMatchUiState.ChatOpen(updatedMatch)
+                        }
+                        else -> {
+                            startAlreadyAcceptedPolling()
+                            TransferMatchUiState.AlreadyAccepted(updatedMatch)
+                        }
                     }
                 },
                 onFailure = { error ->

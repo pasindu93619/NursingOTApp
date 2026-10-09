@@ -270,8 +270,58 @@ fun TransferChatScreen(
                             }
                         }
 
+                        // Inline notice if messages failed to load in active CHAT_OPEN state
+                        if (uiState.messageError != null && !uiState.isTerminal) {
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = SoftAmberPill,
+                                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.5f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = Amber,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                "Messages unavailable — retrying",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Slate
+                                            )
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(
+                                                uiState.messageError,
+                                                fontSize = 11.sp,
+                                                color = TextSecondary,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        OutlinedButton(
+                                            onClick = onRetry,
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            border = BorderStroke(1.dp, ClinicalPrimaryColor)
+                                        ) {
+                                            Text("Retry", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ClinicalPrimaryColor)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Inline notice if messages failed to load in a terminal state
-                        if (uiState.isTerminal && uiState.error != null && uiState.messages.isEmpty()) {
+                        if (uiState.isTerminal && (uiState.error != null || uiState.messageError != null) && uiState.messages.isEmpty()) {
                             item {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
@@ -310,7 +360,7 @@ fun TransferChatScreen(
                         }
 
                         // Empty State Guide when CHAT_OPEN and no messages yet
-                        if (!uiState.isTerminal && uiState.messages.isEmpty()) {
+                        if (!uiState.isTerminal && uiState.messages.isEmpty() && uiState.messageError == null) {
                             item {
                                 ChatEmptyPromptCard()
                             }
