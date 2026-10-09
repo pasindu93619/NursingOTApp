@@ -1590,7 +1590,7 @@ private fun MatchAcceptedView(
 
         Text(
             "MATCH ACCEPTED",
-            fontSize = 22.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Black,
             color = Slate
         )
@@ -1598,24 +1598,60 @@ private fun MatchAcceptedView(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            "You have accepted this mutual transfer. Once your partner confirms, the official Ministry transfer forms will be ready for download.",
+            "You have accepted this transfer proposal. Waiting for your partner nurse to accept.",
             fontSize = 13.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center,
             lineHeight = 18.sp
         )
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(16.dp))
+
+        Surface(
+            shape = RoundedCornerShape(999.dp),
+            color = MatchMintSoft,
+            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.4f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    color = Emerald,
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Syncing partner response automatically...",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Emerald
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            "Once all nurses accept, your team chat will open instantly for coordination and final confirmation.",
+            fontSize = 11.5.sp,
+            color = TextSecondary.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center,
+            lineHeight = 16.sp
+        )
+
+        Spacer(Modifier.height(24.dp))
 
         Button(
             onClick = onBack,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(16.dp),
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor)
         ) {
-            Text("Return to Mission Control", fontWeight = FontWeight.Bold)
+            Text("Return to Mission Control", fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
 }
