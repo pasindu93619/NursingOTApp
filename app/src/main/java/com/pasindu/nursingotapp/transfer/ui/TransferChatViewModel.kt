@@ -54,6 +54,7 @@ data class TransferChatUiState(
     val isSubmittingAction: Boolean = false,
     val error: String? = null,
     val messageError: String? = null,
+    val sendError: String? = null,
     val isTerminal: Boolean = false
 ) {
     val canSend: Boolean
@@ -322,7 +323,7 @@ class TransferChatViewModel @Inject constructor(
         if (!state.canSend) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSendingMessage = true)
+            _uiState.value = _uiState.value.copy(isSendingMessage = true, sendError = null)
             val result = transferChatRepository.sendMessage(
                 matchId = state.matchId,
                 text = trimmed,
@@ -332,16 +333,23 @@ class TransferChatViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    _uiState.value = _uiState.value.copy(isSendingMessage = false)
+                    _uiState.value = _uiState.value.copy(
+                        isSendingMessage = false,
+                        sendError = null
+                    )
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
                         isSendingMessage = false,
-                        error = error.message ?: "Failed to deliver message."
+                        sendError = error.message ?: "Failed to deliver message."
                     )
                 }
             )
         }
+    }
+
+    fun clearSendError() {
+        _uiState.value = _uiState.value.copy(sendError = null)
     }
 
     fun confirmTransfer() {

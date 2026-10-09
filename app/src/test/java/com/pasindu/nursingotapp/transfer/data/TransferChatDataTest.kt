@@ -137,5 +137,13 @@ class TransferChatDataTest {
         assertFalse("canSend must be false when messageError is present", messageErrorOpenState.canSend)
         assertTrue("canConfirm must remain true when only messageError is present", messageErrorOpenState.canConfirm)
         assertTrue("canLeave must remain true when only messageError is present", messageErrorOpenState.canLeave)
+
+        val sendErrorOpenState = validOpenState.copy(
+            sendError = "Access denied: You are not an authorized participant of this match or the chat window is closed."
+        )
+        assertTrue("canSend must remain true when only sendError is present so user can retry", sendErrorOpenState.canSend)
+        assertTrue("canConfirm must remain true when only sendError is present", sendErrorOpenState.canConfirm)
+        assertTrue("canLeave must remain true when only sendError is present", sendErrorOpenState.canLeave)
+        assertNull("error must remain null when only sendError is present", sendErrorOpenState.error)
     }
 }

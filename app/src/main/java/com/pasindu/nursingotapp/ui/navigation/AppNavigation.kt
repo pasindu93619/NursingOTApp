@@ -326,6 +326,9 @@ fun AppNavigation() {
                     },
                     onRetry = {
                         chatViewModel.loadMatchAndObserveChat()
+                    },
+                    onClearSendError = {
+                        chatViewModel.clearSendError()
                     }
                 )
             }
