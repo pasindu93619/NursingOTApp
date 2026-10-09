@@ -178,16 +178,20 @@ service cloud.firestore {
         }
 
         function isBeforeDeadline(matchData) {
-          return matchData.keys().hasAny(['chatDeadline'])
-            ? (
-                matchData.chatDeadline is string
-                  ? request.time < timestamp.dateString(matchData.chatDeadline)
-                  : request.time < matchData.chatDeadline
-              )
+          return matchData.keys().hasAny(['chatDeadlineMs'])
+            ? (matchData.chatDeadlineMs is int && request.time < timestamp.value(matchData.chatDeadlineMs))
             : (
-                matchData.expiresAt is string
-                  ? request.time < timestamp.dateString(matchData.expiresAt)
-                  : request.time < matchData.expiresAt
+                matchData.keys().hasAny(['expiresAtMs'])
+                  ? (matchData.expiresAtMs is int && request.time < timestamp.value(matchData.expiresAtMs))
+                  : (
+                      matchData.keys().hasAny(['chatDeadline']) && matchData.chatDeadline is timestamp
+                        ? request.time < matchData.chatDeadline
+                        : (
+                            matchData.keys().hasAny(['expiresAt']) && matchData.expiresAt is timestamp
+                              ? request.time < matchData.expiresAt
+                              : false
+                          )
+                    )
               );
         }
 

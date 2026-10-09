@@ -236,10 +236,20 @@ function evalMessageCreate(auth, matchId, messageId, matchDoc, requestTime, reso
 
   if (matchDoc.status !== "CHAT_OPEN") return false;
 
-  const deadline = matchDoc.chatDeadline || matchDoc.expiresAt;
-  const deadlineTime = new Date(deadline).getTime();
   const reqTimeMs = new Date(requestTime).getTime();
-  if (reqTimeMs >= deadlineTime) return false;
+  let isBefore = false;
+  if (matchDoc.chatDeadlineMs !== undefined) {
+    isBefore = typeof matchDoc.chatDeadlineMs === "number" && Number.isInteger(matchDoc.chatDeadlineMs) && reqTimeMs < matchDoc.chatDeadlineMs;
+  } else if (matchDoc.expiresAtMs !== undefined) {
+    isBefore = typeof matchDoc.expiresAtMs === "number" && Number.isInteger(matchDoc.expiresAtMs) && reqTimeMs < matchDoc.expiresAtMs;
+  } else if (matchDoc.chatDeadline instanceof Date) {
+    isBefore = reqTimeMs < matchDoc.chatDeadline.getTime();
+  } else if (matchDoc.expiresAt instanceof Date) {
+    isBefore = reqTimeMs < matchDoc.expiresAt.getTime();
+  } else {
+    isBefore = false;
+  }
+  if (!isBefore) return false;
 
   if (resourceData.senderUid !== auth.uid) return false;
   if (resourceData.matchId !== matchId) return false;
@@ -458,7 +468,9 @@ const mockMatch2Way = {
   nurseBUid: "nurse-B",
   status: "CHAT_OPEN",
   chatDeadline: "2026-10-12T12:00:00.000Z",
-  expiresAt: "2026-10-12T12:00:00.000Z"
+  chatDeadlineMs: new Date("2026-10-12T12:00:00.000Z").getTime(),
+  expiresAt: "2026-10-12T12:00:00.000Z",
+  expiresAtMs: new Date("2026-10-12T12:00:00.000Z").getTime()
 };
 
 const mockMatch3Way = {
@@ -467,7 +479,9 @@ const mockMatch3Way = {
   nurseCUid: "nurse-C",
   status: "CHAT_OPEN",
   chatDeadline: "2026-10-12T12:00:00.000Z",
-  expiresAt: "2026-10-12T12:00:00.000Z"
+  chatDeadlineMs: new Date("2026-10-12T12:00:00.000Z").getTime(),
+  expiresAt: "2026-10-12T12:00:00.000Z",
+  expiresAtMs: new Date("2026-10-12T12:00:00.000Z").getTime()
 };
 
 const validReqTime = "2026-10-09T12:00:00.000Z";
