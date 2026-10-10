@@ -1565,12 +1565,13 @@ export async function withdrawTransferRequest(
             name: getMatchDocPath(projectId, matchId),
             fields: {
               status: { stringValue: "CANCELLED" },
+              terminalReason: { stringValue: "A participant withdrew their transfer request." },
               [rejectedKey]: { booleanValue: true },
               [acceptedKey]: { booleanValue: false },
               updatedAt: { integerValue: Date.now().toString() }
             }
           },
-          updateMask: { fieldPaths: ["status", rejectedKey, acceptedKey, "updatedAt"] },
+          updateMask: { fieldPaths: ["status", "terminalReason", rejectedKey, acceptedKey, "updatedAt"] },
           currentDocument: rawMatch.updateTime
             ? { updateTime: rawMatch.updateTime }
             : { exists: true }
