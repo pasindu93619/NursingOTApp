@@ -88,12 +88,12 @@ describe("self-reported transfer completion", () => {
       status: "CONFIRMED", completionReportedByA: false, completionReportedByB: false
     });
     const first = await reportTransferCompletion("nurse-a", "match-1", h.client);
-    assert.equal(first.newStatus, "AWAITING_COMPLETION");
+    assert.equal(first.status, "AWAITING_COMPLETION");
     assert.equal(first.completedParticipants, 1);
     assert.equal(h.read().status.stringValue, "AWAITING_COMPLETION");
 
     const second = await reportTransferCompletion("nurse-b", "match-1", h.client);
-    assert.equal(second.newStatus, "COMPLETED");
+    assert.equal(second.status, "COMPLETED");
     assert.equal(second.completedParticipants, 2);
     assert.equal(typeof h.read().completedAt.stringValue, "string");
     assert.equal(h.read().completionReportedByA.booleanValue, true);
@@ -107,10 +107,10 @@ describe("self-reported transfer completion", () => {
       nurseAUid: "nurse-a", nurseBUid: "nurse-b", nurseCUid: "nurse-c", nurseADestinationHospitalId: "hospital-b", nurseBDestinationHospitalId: "hospital-c", nurseCDestinationHospitalId: "hospital-a",
       status: "CONFIRMED", completionReportedByA: false, completionReportedByB: false, completionReportedByC: false
     });
-    assert.equal((await reportTransferCompletion("nurse-a", "match-1", h.client)).newStatus, "AWAITING_COMPLETION");
+    assert.equal((await reportTransferCompletion("nurse-a", "match-1", h.client)).status, "AWAITING_COMPLETION");
     assert.equal((await reportTransferCompletion("nurse-b", "match-1", h.client)).completedParticipants, 2);
     const final = await reportTransferCompletion("nurse-c", "match-1", h.client);
-    assert.equal(final.newStatus, "COMPLETED");
+    assert.equal(final.status, "COMPLETED");
     assert.equal(final.completedParticipants, 3);
     assert.equal(h.readRequest("nurse-c")?.currentHospitalId.stringValue, "hospital-a");
   });
@@ -139,7 +139,7 @@ describe("self-reported transfer completion", () => {
       completionReportedByA: true, completionReportedByB: false
     });
     const result = await reportTransferCompletion("nurse-a", "match-1", h.client);
-    assert.equal(result.newStatus, "AWAITING_COMPLETION");
+    assert.equal(result.status, "AWAITING_COMPLETION");
     assert.equal(result.completedParticipants, 1);
     assert.equal(h.read().completionReportedByB.booleanValue, false);
   });
