@@ -231,7 +231,7 @@ class TransferChatViewModel @Inject constructor(
 
                         // If the match was cancelled or expired, reconcile with backend
                         // to restore the nurse's active request in Room without deleting it.
-                        if (serverStatus == "CANCELLED" || serverStatus == "EXPIRED") {
+                        if (serverStatus == "CANCELLED" || serverStatus == "EXPIRED" || serverStatus == "COMPLETED") {
                             runCatching {
                                 transferRequestRepository.syncActiveRequest()
                             }
