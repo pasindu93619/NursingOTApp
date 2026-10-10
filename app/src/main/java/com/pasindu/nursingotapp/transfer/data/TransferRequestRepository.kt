@@ -425,10 +425,23 @@ class TransferRequestRepository @Inject constructor(
 
     suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
-        val token = tokenProvider?.getIdToken()
+        val token = tokenProvider?.getFirebaseIdToken()
             ?: throw IllegalStateException("Authentication provider unavailable")
         val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
-        api.reportCompletion(token, matchId)
+        val result = api.reportCompletion(token, matchId)
+        if (result.status == "COMPLETED") {
+            val cached = dao.getOnce()
+            if (cached != null && cached.matchCycleId == matchId) {
+                dao.upsert(cached.copy(
+                    currentHospitalId = result.callerDestinationHospitalId ?: cached.currentHospitalId,
+                    requestStatus = TransferRequestStatus.COMPLETED.name,
+                    matchStatus = "COMPLETED",
+                    syncStatus = CacheSyncStatus.SYNCED.name,
+                    updatedAt = System.currentTimeMillis()
+                ))
+            }
+        }
+        result
     }
 
     suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runCatching {
