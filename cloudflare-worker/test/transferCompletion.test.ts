@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import { FirestoreClient, type FirestoreRawDocument, type HttpTransport } from "../src/firestore/firestoreClient.ts";
-import { reportTransferCompletion } from "../src/matching/matchingService.ts";
+import { getTransferCompletionStatus, reportTransferCompletion } from "../src/matching/matchingService.ts";
 
 const projectId = "nursing-super-app-test";
 
@@ -73,6 +73,18 @@ describe("self-reported transfer completion", () => {
     const final = await reportTransferCompletion("nurse-c", "match-1", h.client);
     assert.equal(final.newStatus, "COMPLETED");
     assert.equal(final.completedParticipants, 3);
+  });
+
+  test("completion progress is visible only to match participants", async () => {
+    const h = createHarness({
+      nurseAUid: "nurse-a", nurseBUid: "nurse-b", status: "AWAITING_COMPLETION",
+      completionReportedByA: true, completionReportedByB: false
+    });
+    const status = await getTransferCompletionStatus("nurse-a", "match-1", h.client);
+    assert.equal(status.callerReportedComplete, true);
+    assert.equal(status.completedParticipants, 1);
+    assert.equal(status.totalParticipants, 2);
+    await assert.rejects(() => getTransferCompletionStatus("intruder", "match-1", h.client), (error: any) => error.code === "NON_PARTICIPANT");
   });
 
   test("rejects non-participants and matches not yet confirmed", async () => {
