@@ -51,6 +51,7 @@ import com.pasindu.nursingotapp.ui.screens.*
 import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferHistoryScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
@@ -265,6 +266,16 @@ fun AppNavigation() {
                             }
                         }
                     }
+                    ,onOpenHistory = {
+                        navController.navigate("transfer_history") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable("transfer_history") {
+                TransferHistoryScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable("transfer_match") {
