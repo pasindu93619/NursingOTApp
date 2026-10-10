@@ -1,5 +1,19 @@
 package com.pasindu.nursingotapp.transfer.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
@@ -97,8 +111,8 @@ fun TransferCompletionScreen(
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
                 ) {
                     androidx.compose.material3.Icon(
-                        imageVector = if (completed) androidx.compose.material.icons.Icons.Default.CheckCircle
-                            else androidx.compose.material.icons.Icons.Default.AssignmentTurnedIn,
+                        imageVector = if (completed) androidx.compose.material.icons.Icons.Default.Check
+                            else androidx.compose.material.icons.Icons.Default.Info,
                         contentDescription = null,
                         tint = if (completed) com.pasindu.nursingotapp.ui.theme.Emerald else com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor,
                         modifier = androidx.compose.ui.Modifier.size(48.dp)
@@ -136,7 +150,7 @@ fun TransferCompletionScreen(
                     ) {
                         androidx.compose.material3.Text("Team progress", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                         androidx.compose.material3.LinearProgressIndicator(
-                            progress = { if (status.totalParticipants > 0) status.completedParticipants.toFloat() / status.totalParticipants else 0f },
+                            progress = if (status.totalParticipants > 0) status.completedParticipants.toFloat() / status.totalParticipants else 0f,
                             modifier = androidx.compose.ui.Modifier.fillMaxWidth()
                         )
                         androidx.compose.material3.Text(
