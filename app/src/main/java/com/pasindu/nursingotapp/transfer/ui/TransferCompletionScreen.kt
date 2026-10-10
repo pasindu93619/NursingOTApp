@@ -11,6 +11,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -73,6 +76,7 @@ fun TransferCompletionScreen(
     viewModel: TransferCompletionViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showReportConfirmation by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(matchId) { viewModel.load(matchId) }
     val status = state.status
     val completed = status?.status == "COMPLETED"
@@ -180,7 +184,7 @@ fun TransferCompletionScreen(
                 (status.status == "CONFIRMED" || status.status == "AWAITING_COMPLETION")
             ) {
                 androidx.compose.material3.Button(
-                    onClick = { viewModel.reportComplete(matchId) },
+                    onClick = { showReportConfirmation = true },
                     enabled = !state.isSubmitting,
                     modifier = androidx.compose.ui.Modifier.fillMaxWidth()
                 ) {
@@ -198,5 +202,30 @@ fun TransferCompletionScreen(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
+    }
+
+    if (showReportConfirmation) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showReportConfirmation = false },
+            title = { androidx.compose.material3.Text("Confirm completion report") },
+            text = {
+                androidx.compose.material3.Text(
+                    "Confirm only if your real-world transfer is complete on your end. This report is shared with the transfer team; NursingOTApp does not verify or grant Ministry approval."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        showReportConfirmation = false
+                        viewModel.reportComplete(matchId)
+                    }
+                ) { androidx.compose.material3.Text("Yes, report complete") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showReportConfirmation = false }) {
+                    androidx.compose.material3.Text("Not yet")
+                }
+            }
+        )
     }
 }
