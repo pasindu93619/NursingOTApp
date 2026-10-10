@@ -14,6 +14,7 @@ import {
   withdrawTransferRequest,
   getMatchHistory,
   reportTransferCompletion,
+  getTransferCompletionStatus,
   MatchServiceError
 } from "./matching/matchingService.ts";
 
@@ -201,11 +202,9 @@ export default {
     }
 
 
-    // Authenticated, participant-scoped self-reported transfer completion.
+
+    // Authenticated, participant-scoped self-reported transfer completion and progress.
     if (pathname === "/api/matching/completion") {
-      if (request.method !== "POST") {
-        return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
-      }
       try {
         const token = extractBearerToken(request.headers.get("Authorization"));
         const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
@@ -213,12 +212,20 @@ export default {
         const tokenProviderResult = resolveTokenProvider(env);
         if (tokenProviderResult instanceof Response) return tokenProviderResult;
         const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
-        const body = await request.json() as { matchId?: unknown };
-        if (typeof body.matchId !== "string" || !body.matchId.trim()) {
-          return errorResponse("InvalidRequest", "matchId is required", 400);
+        if (request.method === "GET") {
+          const matchId = new URL(request.url).searchParams.get("matchId") ?? "";
+          const result = await getTransferCompletionStatus(verifiedResult.uid, matchId, firestoreClient);
+          return jsonResponse(result, 200);
         }
-        const result = await reportTransferCompletion(verifiedResult.uid, body.matchId, firestoreClient);
-        return jsonResponse(result, 200);
+        if (request.method === "POST") {
+          const body = await request.json() as { matchId?: unknown };
+          if (typeof body.matchId !== "string" || !body.matchId.trim()) {
+            return errorResponse("InvalidRequest", "matchId is required", 400);
+          }
+          const result = await reportTransferCompletion(verifiedResult.uid, body.matchId, firestoreClient);
+          return jsonResponse(result, 200);
+        }
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use GET or POST.", 405);
       } catch (err: unknown) {
         if (err instanceof AuthError) return errorResponse("Unauthorized", err.message, err.statusCode);
         if (err instanceof MatchServiceError) return errorResponse(err.code, err.message, err.statusCode);
