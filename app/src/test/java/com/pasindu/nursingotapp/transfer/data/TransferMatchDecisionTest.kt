@@ -124,6 +124,9 @@ class TransferMatchDecisionTest {
         override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
             Result.success(remoteMatch)
 
+        override fun observeMatchDoc(matchId: String): kotlinx.coroutines.flow.Flow<Result<RemoteMatchState?>> =
+            kotlinx.coroutines.flow.flowOf(Result.success(remoteMatch))
+
         override suspend fun publishTransferRequest(
             userId: String,
             request: TransferRequest
