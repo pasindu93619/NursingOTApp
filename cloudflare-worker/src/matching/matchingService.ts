@@ -302,7 +302,12 @@ export async function respondToMatch(
     matchFieldsToUpdate[rejectedKey] = { booleanValue: true };
     matchFieldsToUpdate[acceptedKey] = { booleanValue: false };
     matchFieldsToUpdate.status = { stringValue: newStatus };
-    updateMaskFieldPaths.push(rejectedKey, acceptedKey, "status");
+    matchFieldsToUpdate.terminalReason = {
+      stringValue: decision === "REJECT"
+        ? "A participant rejected the proposed match."
+        : "A participant left the coordination team."
+    };
+    updateMaskFieldPaths.push(rejectedKey, acceptedKey, "status", "terminalReason");
   } else if (status === "PENDING_CONFIRMATION") {
     // ACCEPT decision in PENDING_CONFIRMATION
     matchFieldsToUpdate[acceptedKey] = { booleanValue: true };
@@ -1311,6 +1316,62 @@ export interface SweepExpiredMatchesResult {
  * - Preconditions guard participants against race conditions; never overrides newer matches.
  * - Safe error handling: skips/logs errors per match without halting the entire sweep.
  */
+
+export interface MatchHistoryItem {
+  matchId: string;
+  matchType: "DIRECT_2_WAY" | "THREE_WAY";
+  status: "CANCELLED" | "EXPIRED";
+  createdAt: string;
+  endedAt: string;
+  reason: string;
+}
+
+/** Returns terminal matches involving the authenticated participant only. */
+export async function getMatchHistory(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  limit = 50
+): Promise<MatchHistoryItem[]> {
+  const uid = callerUid.trim();
+  if (!uid) throw new MatchServiceError("Authenticated user ID is required", 401, "UNAUTHENTICATED");
+  const [asA, asB, asC] = await Promise.all([
+    firestoreClient.queryMatchesByParticipant("nurseAUid", uid, 100),
+    firestoreClient.queryMatchesByParticipant("nurseBUid", uid, 100),
+    firestoreClient.queryMatchesByParticipant("nurseCUid", uid, 100)
+  ]);
+  const unique = new Map<string, MatchHistoryItem>();
+  for (const doc of [...asA, ...asB, ...asC]) {
+    const fields = doc.fields ?? {};
+    const matchId = doc.name?.split("/").pop() ?? "";
+    const status = readStringField(fields, "status")?.trim().toUpperCase();
+    if (!matchId || (status !== "CANCELLED" && status !== "EXPIRED")) continue;
+    const createdAt = readStringField(fields, "createdAt") ?? doc.createTime ?? "";
+    const endedAt = readStringField(fields, "updatedAt") ?? doc.updateTime ?? createdAt;
+    const recordedReason = readStringField(fields, "terminalReason")?.trim();
+    const rejected = Boolean(readBooleanField(fields, "rejectedByA")) ||
+      Boolean(readBooleanField(fields, "rejectedByB")) ||
+      Boolean(readBooleanField(fields, "rejectedByC"));
+    const reason = recordedReason || (
+      status === "EXPIRED"
+        ? "The match deadline passed before the workflow was completed."
+        : rejected
+          ? "A participant rejected the proposed match or left the coordination team."
+          : "The match was cancelled by the transfer workflow; no more specific reason was recorded."
+    );
+    unique.set(matchId, {
+      matchId,
+      matchType: readStringField(fields, "nurseCUid") ? "THREE_WAY" : "DIRECT_2_WAY",
+      status,
+      createdAt,
+      endedAt,
+      reason
+    });
+  }
+  return [...unique.values()]
+    .sort((a, b) => Date.parse(b.endedAt) - Date.parse(a.endedAt))
+    .slice(0, Math.max(1, Math.min(limit, 100)));
+}
+
 export async function sweepExpiredMatches(
   firestoreClient: FirestoreClient,
   options?: SweepExpiredMatchesOptions
@@ -1360,10 +1421,11 @@ export async function sweepExpiredMatches(
           name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
           fields: {
             status: { stringValue: "EXPIRED" },
+            terminalReason: { stringValue: "The match deadline passed before the workflow was completed." },
             updatedAt: { integerValue: Date.now().toString() }
           }
         },
-        updateMask: { fieldPaths: ["status", "updatedAt"] },
+        updateMask: { fieldPaths: ["status", "terminalReason", "updatedAt"] },
         currentDocument: rawMatch.updateTime
           ? { updateTime: rawMatch.updateTime }
           : { exists: true }
