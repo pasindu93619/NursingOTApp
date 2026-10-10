@@ -189,6 +189,41 @@ class TransferRequestRepositoryTest {
     }
 
     @Test
+    fun `saveRequest refuses to overwrite an active match and preserves match data`() = runTest {
+        val matchedRow = TransferActiveCacheEntity(
+            id = 1,
+            requestId = "nurse-a",
+            requestStatus = TransferRequestStatus.MATCHED.name,
+            currentHospitalId = "MOH2026-0001",
+            preferenceHospitalIdsJson = "[\\"MOH2026-0100\\"]",
+            grade = "Grade I",
+            matchCycleId = "match-active-123",
+            matchType = "DIRECT_2_WAY",
+            matchStatus = "PENDING_CONFIRMATION",
+            matchPayloadJson = "{\\"matchId\\":\\"match-active-123\\"}",
+            syncStatus = CacheSyncStatus.SYNCED.name,
+            updatedAt = 1000L
+        )
+        fakeDao.upsert(matchedRow)
+
+        val result = runCatching {
+            repository.saveRequest(
+                currentHospitalId = "MOH2026-0999",
+                rankedPreferences = RankedPreferences(listOf("MOH2026-0200"))
+            )
+        }
+
+        assertTrue("An active matched request must reject edits", result.isFailure)
+        val stored = fakeDao.getOnce()
+        assertNotNull(stored)
+        assertEquals(TransferRequestStatus.MATCHED.name, stored!!.requestStatus)
+        assertEquals("match-active-123", stored.matchCycleId)
+        assertEquals("PENDING_CONFIRMATION", stored.matchStatus)
+        assertEquals(matchedRow.preferenceHospitalIdsJson, stored.preferenceHospitalIdsJson)
+        assertEquals(matchedRow.matchPayloadJson, stored.matchPayloadJson)
+    }
+
+    @Test
     fun `saveRequest stores current hospital ID`() = runTest {
         repository.saveRequest(
             currentHospitalId = "MOH2026-0001",
