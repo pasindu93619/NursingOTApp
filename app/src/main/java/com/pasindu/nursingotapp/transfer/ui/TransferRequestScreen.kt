@@ -152,14 +152,14 @@ fun TransferRequestScreen(
     var showProfileNotice by remember { mutableStateOf(false) }
     var showUnsavedChangesDialog by remember { mutableStateOf(false) }
 
+    var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
+
     val originalCurrentHospitalId = activeRequest?.currentHospitalId
     val originalPreferenceIds = activeRequest?.rankedPreferences?.hospitalIds.orEmpty()
     val hasUnsavedChanges =
         (activeRequest == null || initializedFromActiveRequest) &&
             (currentHospital?.hospitalId != originalCurrentHospitalId ||
                 preferences.map { it.hospitalId } != originalPreferenceIds)
-
-    var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(activeRequest, hospitalOptions) {
         if (!initializedFromActiveRequest && activeRequest != null && hospitalOptions.isNotEmpty()) {
             val current = hospitalOptions.find { it.hospitalId == activeRequest.currentHospitalId }
