@@ -26,8 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -78,6 +76,9 @@ import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
+import sh.calvin.reorderable.ReorderableColumn
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.longPressDraggableHandle
 
 private val TransferBlueSoft = Color(0xFFEAF6FF)
 private val TransferPurpleSoft = Color(0xFFF3EEFF)
@@ -444,27 +445,44 @@ fun TransferRequestScreen(
                             }
                         }
 
-                        preferences.forEachIndexed { index, hospital ->
-                            PreferenceRow(
-                                rank = index + 1,
-                                hospital = hospital,
-                                canEdit = !isRequestLocked,
-                                canMoveUp = index > 0,
-                                canMoveDown = index < preferences.lastIndex,
-                                onMoveUp = {
-                                    if (!isRequestLocked && index > 0) {
-                                        val selected = preferences.removeAt(index)
-                                        preferences.add(index - 1, selected)
+                        if (isRequestLocked) {
+                            preferences.forEachIndexed { index, hospital ->
+                                PreferenceRow(
+                                    rank = index + 1,
+                                    hospital = hospital,
+                                    canEdit = false,
+                                    onRemove = {}
+                                )
+                            }
+                        } else {
+                            ReorderableColumn(
+                                list = preferences.toList(),
+                                onSettle = { fromIndex, toIndex ->
+                                    if (fromIndex != toIndex &&
+                                        fromIndex in preferences.indices &&
+                                        toIndex in preferences.indices
+                                    ) {
+                                        val movedHospital = preferences.removeAt(fromIndex)
+                                        preferences.add(toIndex, movedHospital)
                                     }
                                 },
-                                onMoveDown = {
-                                    if (!isRequestLocked && index < preferences.lastIndex) {
-                                        val selected = preferences.removeAt(index)
-                                        preferences.add(index + 1, selected)
+                                verticalArrangement = Arrangement.spacedBy(9.dp)
+                            ) { index, hospital, isDragging ->
+                                key(hospital.hospitalId) {
+                                    ReorderableItem {
+                                        PreferenceRow(
+                                            rank = index + 1,
+                                            hospital = hospital,
+                                            canEdit = true,
+                                            dragModifier = Modifier.longPressDraggableHandle(),
+                                            isDragging = isDragging,
+                                            onRemove = {
+                                                if (!isRequestLocked) preferences.remove(hospital)
+                                            }
+                                        )
                                     }
-                                },
-                                onRemove = { if (!isRequestLocked) preferences.removeAt(index) }
-                            )
+                                }
+                            }
                         }
 
                         if (preferences.size < 3 && !isRequestLocked) {
@@ -1038,10 +1056,8 @@ private fun PreferenceRow(
     rank: Int,
     hospital: HospitalReference,
     canEdit: Boolean = true,
-    canMoveUp: Boolean = false,
-    canMoveDown: Boolean = false,
-    onMoveUp: () -> Unit = {},
-    onMoveDown: () -> Unit = {},
+    dragModifier: Modifier = Modifier,
+    isDragging: Boolean = false,
     onRemove: () -> Unit
 ) {
     val rankLabel = when (rank) {
@@ -1056,15 +1072,23 @@ private fun PreferenceRow(
         3 -> "3rd Choice"
         else -> "Choice $rank"
     }
+    val cardElevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 12.dp else 1.dp,
+        label = "preferenceDragElevation"
+    )
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 70.dp),
+            .defaultMinSize(minHeight = 70.dp)
+            .then(dragModifier),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, BorderMuted.copy(alpha = .7f)),
-        shadowElevation = 1.dp
+        color = if (isDragging) TransferPurpleSoft else Color.White,
+        border = BorderStroke(
+            if (isDragging) 1.5.dp else 1.dp,
+            if (isDragging) AiAccentColor.copy(alpha = 0.65f) else BorderMuted.copy(alpha = .7f)
+        ),
+        shadowElevation = cardElevation
     ) {
         Row(
             modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 9.dp),
@@ -1140,35 +1164,6 @@ private fun PreferenceRow(
             }
 
             if (canEdit) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    IconButton(
-                        onClick = onMoveUp,
-                        enabled = canMoveUp,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowUpward,
-                            contentDescription = "Move preference $rank up: ${hospital.name}",
-                            tint = if (canMoveUp) AiAccentColor else BorderMuted,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = onMoveDown,
-                        enabled = canMoveDown,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowDownward,
-                            contentDescription = "Move preference $rank down: ${hospital.name}",
-                            tint = if (canMoveDown) AiAccentColor else BorderMuted,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
-                }
                 IconButton(
                     onClick = onRemove,
                     modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
