@@ -9,6 +9,7 @@ import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryResponse
+import com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
