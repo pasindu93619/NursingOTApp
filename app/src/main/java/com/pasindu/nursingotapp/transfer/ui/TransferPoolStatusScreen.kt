@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Person
@@ -218,7 +219,8 @@ fun TransferPoolStatusScreen(
     onWithdrawRequest: () -> Unit,
     onCreateNewRequest: () -> Unit,
     onRetryHospitals: () -> Unit = {},
-    onOpenMatch: () -> Unit = {}
+    onOpenMatch: () -> Unit = {},
+    onOpenHistory: () -> Unit = {}
 ) {
     var showWithdrawDialog by remember { mutableStateOf(false) }
 
@@ -244,7 +246,8 @@ fun TransferPoolStatusScreen(
                 onEdit = onEditRequest,
                 onWithdrawClick = { showWithdrawDialog = true },
                 onRetryHospitals = onRetryHospitals,
-                onOpenMatch = onOpenMatch
+                onOpenMatch = onOpenMatch,
+                onOpenHistory = onOpenHistory
             )
         }
 
@@ -275,7 +278,8 @@ private fun ActivePoolMissionControlView(
     onEdit: () -> Unit,
     onWithdrawClick: () -> Unit,
     onRetryHospitals: () -> Unit,
-    onOpenMatch: () -> Unit = {}
+    onOpenMatch: () -> Unit = {},
+    onOpenHistory: () -> Unit = {}
 ) {
     val currentHospital = remember(request.currentHospitalId, hospitals) {
         hospitals.find { it.hospitalId == request.currentHospitalId }
@@ -332,6 +336,17 @@ private fun ActivePoolMissionControlView(
                         "Mutual Transfer Pool",
                         color = TextSecondary,
                         fontSize = 11.sp
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenHistory,
+                    modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                ) {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = "Match history",
+                        tint = ClinicalPrimaryColor
                     )
                 }
 
