@@ -249,6 +249,18 @@ class TransferRequestRepository @Inject constructor(
                 "matchId=${remoteState?.currentMatchId != null}"
         )
 
+        if (remoteState?.status.equals(TransferRequestStatus.COMPLETED.name, ignoreCase = true)) {
+            val completedCache = entity.copy(
+                currentHospitalId = remoteState.currentHospitalId ?: entity.currentHospitalId,
+                requestStatus = TransferRequestStatus.COMPLETED.name,
+                matchStatus = "COMPLETED",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = System.currentTimeMillis()
+            )
+            dao.upsert(completedCache)
+            return WorkerSyncResult.NoMatch("All participants have self-reported transfer completion")
+        }
+
         if (
             remoteState?.status.equals(TransferRequestStatus.MATCHED.name, ignoreCase = true) &&
             remoteState?.locked == true &&
