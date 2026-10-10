@@ -79,7 +79,6 @@ import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.longPressDraggableHandle
 
 private val TransferBlueSoft = Color(0xFFEAF6FF)
 private val TransferPurpleSoft = Color(0xFFF3EEFF)
