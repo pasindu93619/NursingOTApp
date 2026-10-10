@@ -1326,6 +1326,7 @@ export interface TransferCompletionStatus {
   completedParticipants: number;
   totalParticipants: number;
   completedAt?: string;
+  callerDestinationHospitalId?: string;
 }
 
 /** Reads completion progress for a verified participant without exposing other match documents. */
@@ -1361,7 +1362,8 @@ export async function getTransferCompletionStatus(
     callerReportedComplete: readBooleanField(fields, keyByUid[uid]) === true,
     completedParticipants,
     totalParticipants: participantUids.length,
-    ...(readStringField(fields, "completedAt") ? { completedAt: readStringField(fields, "completedAt") } : {})
+    ...(readStringField(fields, "completedAt") ? { completedAt: readStringField(fields, "completedAt") } : {}),
+    ...(readStringField(fields, uid === nurseAUid ? "nurseADestinationHospitalId" : uid === nurseBUid ? "nurseBDestinationHospitalId" : "nurseCDestinationHospitalId") ? { callerDestinationHospitalId: readStringField(fields, uid === nurseAUid ? "nurseADestinationHospitalId" : uid === nurseBUid ? "nurseBDestinationHospitalId" : "nurseCDestinationHospitalId") } : {})
   };
 }
 
@@ -1372,6 +1374,7 @@ export interface CompletionReportResult {
   completedParticipants: number;
   totalParticipants: number;
   completedAt?: string;
+  callerDestinationHospitalId?: string;
 }
 
 /**
@@ -1421,6 +1424,8 @@ export async function reportTransferCompletion(
   });
   const completedParticipants = reported.filter(Boolean).length;
   const completedAt = readStringField(fields, "completedAt");
+  const destinationField = uid === nurseAUid ? "nurseADestinationHospitalId" : uid === nurseBUid ? "nurseBDestinationHospitalId" : "nurseCDestinationHospitalId";
+  const callerDestinationHospitalId = readStringField(fields, destinationField);
 
   if (status === "COMPLETED") {
     return {
@@ -1429,7 +1434,8 @@ export async function reportTransferCompletion(
       callerReportedComplete: true,
       completedParticipants: participantUids.length,
       totalParticipants: participantUids.length,
-      ...(completedAt ? { completedAt } : {})
+      ...(completedAt ? { completedAt } : {}),
+      ...(callerDestinationHospitalId ? { callerDestinationHospitalId } : {})
     };
   }
   if (status !== "CONFIRMED" && status !== "AWAITING_COMPLETION") {
@@ -1445,7 +1451,8 @@ export async function reportTransferCompletion(
       newStatus: status === "CONFIRMED" ? "AWAITING_COMPLETION" : "AWAITING_COMPLETION",
       callerReportedComplete: true,
       completedParticipants,
-      totalParticipants: participantUids.length
+      totalParticipants: participantUids.length,
+      ...(callerDestinationHospitalId ? { callerDestinationHospitalId } : {})
     };
   }
 
@@ -1458,20 +1465,51 @@ export async function reportTransferCompletion(
     updatedAt: { integerValue: Date.now().toString() }
   };
   const updateMask = [callerKey, "status", "updatedAt"];
+  const writes: FirestoreWrite[] = [{
+    update: {
+      name: getMatchDocPath(firestoreClient.getProjectId(), cleanMatchId),
+      fields: updateFields
+    },
+    updateMask: { fieldPaths: updateMask },
+    currentDocument: rawMatch.updateTime ? { updateTime: rawMatch.updateTime } : { exists: true }
+  }];
+  if (allReported) {
+    const destinations: Array<[string, string | undefined]> = [
+      [nurseAUid, readStringField(fields, "nurseADestinationHospitalId")],
+      [nurseBUid, readStringField(fields, "nurseBDestinationHospitalId")]
+    ];
+    if (nurseCUid) destinations.push([nurseCUid, readStringField(fields, "nurseCDestinationHospitalId")]);
+    for (const [participantUid, destinationHospitalId] of destinations) {
+      if (!destinationHospitalId?.trim()) {
+        throw new MatchServiceError("Match is missing a participant destination hospital", 500, "MALFORMED_MATCH_DOC");
+      }
+      const requestDoc = await firestoreClient.getRequestDoc(participantUid);
+      if (!requestDoc || requestDoc.currentMatchId !== cleanMatchId) {
+        throw new MatchServiceError("A participant transfer request no longer points to this match; completion was not finalized.", 409, "PARTICIPANT_REQUEST_CHANGED");
+      }
+      writes.push({
+        update: {
+          name: getTransferRequestDocPath(firestoreClient.getProjectId(), participantUid),
+          fields: {
+            currentHospitalId: { stringValue: destinationHospitalId },
+            status: { stringValue: "COMPLETED" },
+            locked: { booleanValue: false },
+            currentMatchId: { nullValue: null },
+            updatedAt: { integerValue: Date.now().toString() }
+          }
+        },
+        updateMask: { fieldPaths: ["currentHospitalId", "status", "locked", "currentMatchId", "updatedAt"] },
+        currentDocument: requestDoc.updateTime ? { updateTime: requestDoc.updateTime } : { exists: true }
+      });
+    }
+  }
   if (allReported) {
     updateFields.completedAt = { stringValue: now };
     updateMask.push("completedAt");
   }
 
   try {
-    await firestoreClient.commitAtomicMatch([{
-      update: {
-        name: getMatchDocPath(firestoreClient.getProjectId(), cleanMatchId),
-        fields: updateFields
-      },
-      updateMask: { fieldPaths: updateMask },
-      currentDocument: rawMatch.updateTime ? { updateTime: rawMatch.updateTime } : { exists: true }
-    }]);
+    await firestoreClient.commitAtomicMatch(writes);
   } catch (err: unknown) {
     if (err instanceof FirestoreError) {
       const conflict = err.statusCode === 409 || err.code === "ABORTED" || err.code === "FAILED_PRECONDITION";
@@ -1497,7 +1535,8 @@ export async function reportTransferCompletion(
     callerReportedComplete: true,
     completedParticipants: allReported ? participantUids.length : completedParticipants,
     totalParticipants: participantUids.length,
-    ...(allReported ? { completedAt: now } : {})
+    ...(allReported ? { completedAt: now } : {}),
+    ...(callerDestinationHospitalId ? { callerDestinationHospitalId } : {})
   };
 }
 
