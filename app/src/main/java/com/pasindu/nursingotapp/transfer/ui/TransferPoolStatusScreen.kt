@@ -68,10 +68,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -144,6 +146,54 @@ private fun formatTimestamp(timestampMs: Long): String {
 }
 
 /**
+ * Observes the system animator duration scale and reduced motion preference.
+ * Returns true if animations are disabled or scaled to zero.
+ */
+@Composable
+private fun rememberReducedMotionState(): Boolean {
+    val context = LocalContext.current
+    var isReducedMotion by remember {
+        mutableStateOf(
+            runCatching {
+                android.provider.Settings.Global.getFloat(
+                    context.contentResolver,
+                    android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                    1f
+                ) == 0f
+            }.getOrDefault(false)
+        )
+    }
+
+    DisposableEffect(context) {
+        val resolver = context.contentResolver
+        val uri = android.provider.Settings.Global.getUriFor(
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE
+        )
+        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                isReducedMotion = runCatching {
+                    android.provider.Settings.Global.getFloat(
+                        resolver,
+                        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                        1f
+                    ) == 0f
+                }.getOrDefault(false)
+            }
+        }
+        runCatching {
+            resolver.registerContentObserver(uri, false, observer)
+        }
+        onDispose {
+            runCatching {
+                resolver.unregisterContentObserver(observer)
+            }
+        }
+    }
+
+    return isReducedMotion
+}
+
+/**
  * Mutual Transfer Pool Status Screen — Flagship "Transfer Mission Control" Experience.
  *
  * Visually showcases the nurse's active journey toward a reciprocal hospital exchange:
@@ -199,7 +249,9 @@ fun TransferPoolStatusScreen(
         }
 
         if (showWithdrawDialog) {
+            val isMatchActive = TransferPoolStatusStateResolver.isMatchActive(activeRequest)
             WithdrawConfirmDialog(
+                isMatchActive = isMatchActive,
                 isSubmitting = isSubmitting,
                 onDismiss = { showWithdrawDialog = false },
                 onConfirm = {
@@ -238,6 +290,8 @@ private fun ActivePoolMissionControlView(
         }
     }
 
+    val isReducedMotion = rememberReducedMotionState()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -275,23 +329,31 @@ private fun ActivePoolMissionControlView(
                         )
                     }
                     Text(
-                        "2026 Ministry of Health Mutual Transfer Pool",
+                        "Mutual Transfer Pool",
                         color = TextSecondary,
                         fontSize = 11.sp
                     )
                 }
 
+                val headerStatus = TransferPoolStatusStateResolver.resolveHeaderStatus(
+                    request = request,
+                    mintSoft = TransferMintSoft,
+                    blueSoft = TransferBlueSoft,
+                    roseSoft = TransferRoseSoft,
+                    mutedSurface = SurfaceMuted
+                )
+
                 Surface(
                     modifier = Modifier.size(42.dp),
                     shape = CircleShape,
-                    color = TransferMintSoft,
-                    border = BorderStroke(1.dp, Emerald.copy(alpha = 0.35f))
+                    color = headerStatus.backgroundColor,
+                    border = BorderStroke(1.dp, headerStatus.tintColor.copy(alpha = 0.35f))
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = "Active Status",
-                            tint = Emerald,
+                            imageVector = headerStatus.icon,
+                            contentDescription = headerStatus.contentDescription,
+                            tint = headerStatus.tintColor,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -443,12 +505,18 @@ private fun ActivePoolMissionControlView(
 
         // 3. FLAGSHIP ELEMENT: Mission Control Hero with Radar/Network Visual
         item {
-            MissionControlHeroCard(request = request)
+            MissionControlHeroCard(
+                request = request,
+                isReducedMotion = isReducedMotion
+            )
         }
 
         // 4. VISUAL TRANSFER JOURNEY: Connected 4-Step Milestone Stepper
         item {
-            TransferJourneyStepperCard(request = request)
+            TransferJourneyStepperCard(
+                request = request,
+                isReducedMotion = isReducedMotion
+            )
         }
 
         // 5. MATCH READINESS STATUS CARD
@@ -472,6 +540,8 @@ private fun ActivePoolMissionControlView(
             DestinationsHeader(selectedCount = preferredHospitals.size)
         }
 
+        val isMatchActive = TransferPoolStatusStateResolver.isMatchActive(request)
+
         // 8. Render All 3 Preference Slots (1st, 2nd, 3rd)
         items(3) { slotIndex ->
             val rank = slotIndex + 1
@@ -483,6 +553,7 @@ private fun ActivePoolMissionControlView(
             } else {
                 EmptyPreferenceSlotCard(
                     rank = rank,
+                    isLocked = isMatchActive,
                     onEdit = onEdit
                 )
             }
@@ -496,16 +567,19 @@ private fun ActivePoolMissionControlView(
         // 10. PRIMARY AND DESTRUCTIVE ACTIONS
         item {
             Spacer(Modifier.height(4.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onEdit,
+                    enabled = !isMatchActive,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp)
-                        .shadow(4.dp, RoundedCornerShape(18.dp)),
+                        .shadow(if (!isMatchActive) 4.dp else 0.dp, RoundedCornerShape(18.dp)),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ClinicalPrimaryColor
+                        containerColor = ClinicalPrimaryColor,
+                        disabledContainerColor = SurfaceMuted,
+                        disabledContentColor = Slate.copy(alpha = 0.5f)
                     )
                 ) {
                     Icon(
@@ -518,6 +592,18 @@ private fun ActivePoolMissionControlView(
                         "Edit Destination Preferences",
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (isMatchActive) {
+                    Text(
+                        text = "Locked while a match is active",
+                        color = TextSecondary,
+                        fontSize = 11.5.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
                     )
                 }
 
@@ -565,7 +651,10 @@ private fun ActivePoolMissionControlView(
 // 1. Mission Control Hero Card with Radar/Constellation Canvas
 // -----------------------------------------------------------------------------
 @Composable
-private fun MissionControlHeroCard(request: TransferRequest) {
+private fun MissionControlHeroCard(
+    request: TransferRequest,
+    isReducedMotion: Boolean = false
+) {
     val isMatched = request.requestStatus == TransferRequestStatus.MATCHED
     val serverStatus = request.matchStatus?.trim()?.uppercase()
 
@@ -574,74 +663,99 @@ private fun MissionControlHeroCard(request: TransferRequest) {
     val bodyText: String
     val statusPillColor: Color
 
-    if (!isMatched) {
-        statusPillText = "ACTIVE IN POOL"
-        headlineText = "Searching for Compatible Partner"
-        bodyText = "Your request is actively broadcasting across the national nursing pool. When a nurse desiring your posting is found, your match will lock."
-        statusPillColor = Emerald
-    } else {
-        when (serverStatus) {
-            "CHAT_OPEN" -> {
-                statusPillText = "TEAM CHAT OPEN"
-                headlineText = "Transfer Team Connected"
-                bodyText = "All participating nurses have accepted. Open the team chat to discuss and finalize the exchange."
-                statusPillColor = MedicalBlue
-            }
-            "CONFIRMED" -> {
-                statusPillText = "TRANSFER AGREED"
-                headlineText = "Transfer Agreed"
-                bodyText = "All participating nurses have confirmed this exchange. Your team agreement is finalized."
-                statusPillColor = Emerald
-            }
-            "CANCELLED" -> {
-                statusPillText = "CANCELLED"
-                headlineText = "Transfer Cancelled"
-                bodyText = "This transfer team has been cancelled. Your request is no longer active in this match."
-                statusPillColor = CriticalRed
-            }
-            "EXPIRED" -> {
-                statusPillText = "EXPIRED"
-                headlineText = "Transfer Expired"
-                bodyText = "The response window for this transfer match has ended."
-                statusPillColor = Slate
-            }
-            "ACCEPTED" -> {
-                statusPillText = "RESPONSE RECORDED"
-                headlineText = "Match Accepted"
-                bodyText = "Your response has been recorded. Waiting for the other participating nurse(s)."
-                statusPillColor = Emerald
-            }
-            else -> {
-                statusPillText = "MATCH FOUND"
-                headlineText = "Compatible Partner Found"
-                bodyText = "Your compatible transfer partner has been found. Review the proposed exchange and respond before the server deadline."
-                statusPillColor = Emerald
+    when {
+        request.requestStatus == TransferRequestStatus.COMPLETED -> {
+            statusPillText = "COMPLETED"
+            headlineText = "Transfer Finalized"
+            bodyText = "Your mutual transfer agreement has finalized. Best wishes for your next posting."
+            statusPillColor = Emerald
+        }
+        request.requestStatus == TransferRequestStatus.WITHDRAWN -> {
+            statusPillText = "WITHDRAWN"
+            headlineText = "Request Withdrawn"
+            bodyText = "This transfer request has been withdrawn. You can create a new request whenever you are ready."
+            statusPillColor = Slate
+        }
+        !isMatched -> {
+            statusPillText = "ACTIVE IN POOL"
+            headlineText = "Searching for Compatible Partner"
+            bodyText = "Your request is actively broadcasting across the national nursing pool. When a nurse desiring your posting is found, your match will lock."
+            statusPillColor = Emerald
+        }
+        else -> {
+            when (serverStatus) {
+                "CHAT_OPEN" -> {
+                    statusPillText = "TEAM CHAT OPEN"
+                    headlineText = "Transfer Team Connected"
+                    bodyText = "All participating nurses have accepted. Open the team chat to discuss and finalize the exchange."
+                    statusPillColor = MedicalBlue
+                }
+                "CONFIRMED" -> {
+                    statusPillText = "TRANSFER AGREED"
+                    headlineText = "Transfer Agreed"
+                    bodyText = "All participating nurses have confirmed this exchange. Your team agreement is finalized."
+                    statusPillColor = Emerald
+                }
+                "CANCELLED" -> {
+                    statusPillText = "CANCELLED"
+                    headlineText = "Transfer Cancelled"
+                    bodyText = "This transfer team has been cancelled. Your request is no longer active in this match."
+                    statusPillColor = CriticalRed
+                }
+                "EXPIRED" -> {
+                    statusPillText = "EXPIRED"
+                    headlineText = "Transfer Expired"
+                    bodyText = "The response window for this transfer match has ended."
+                    statusPillColor = Slate
+                }
+                "ACCEPTED" -> {
+                    statusPillText = "RESPONSE RECORDED"
+                    headlineText = "Match Accepted"
+                    bodyText = "Your response has been recorded. Waiting for the other participating nurse(s)."
+                    statusPillColor = Emerald
+                }
+                else -> {
+                    statusPillText = "MATCH FOUND"
+                    headlineText = "Compatible Partner Found"
+                    bodyText = "Your compatible transfer partner has been found. Review the proposed exchange and respond before the server deadline."
+                    statusPillColor = Emerald
+                }
             }
         }
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "RadarTransition")
+    val pulseProgress: Float
+    val breathingScale: Float
 
-    // Gentle pulse for radar ring and network nodes
-    val pulseProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "PulseProgress"
-    )
+    if (isReducedMotion) {
+        pulseProgress = 0.5f
+        breathingScale = 1.0f
+    } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "RadarTransition")
 
-    val breathingScale by infiniteTransition.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "BreathingScale"
-    )
+        val animPulseProgress by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2800, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "PulseProgress"
+        )
+
+        val animBreathingScale by infiniteTransition.animateFloat(
+            initialValue = 0.94f,
+            targetValue = 1.06f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1800, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "BreathingScale"
+        )
+
+        pulseProgress = animPulseProgress
+        breathingScale = animBreathingScale
+    }
 
     Card(
         modifier = Modifier
@@ -856,180 +970,18 @@ private fun MissionControlHeroCard(request: TransferRequest) {
 // 2. Dynamic Milestone Transfer Journey Card
 // -----------------------------------------------------------------------------
 @Composable
-private fun TransferJourneyStepperCard(request: TransferRequest) {
-    val isMatched = request.requestStatus == TransferRequestStatus.MATCHED
-    val serverStatus = request.matchStatus?.trim()?.uppercase()
-
-    val stageLabel: String
-    val badgeBgColor: Color
-    val badgeTextColor: Color
-
-    val step2Completed: Boolean
-    val step2Active: Boolean
-    val step2Sublabel: String
-
-    val step3Completed: Boolean
-    val step3Active: Boolean
-    val step3Sublabel: String
-
-    val step4Completed: Boolean
-    val step4Active: Boolean
-    val step4Sublabel: String
-
-    val step5Completed: Boolean
-    val step5Active: Boolean
-    val step5Sublabel: String
-
-    if (!isMatched) {
-        stageLabel = "Stage 2 of 5 • In transfer pool"
-        badgeBgColor = TransferBlueSoft
-        badgeTextColor = ClinicalPrimaryColor
-
-        step2Completed = false
-        step2Active = true
-        step2Sublabel = "In Pool"
-
-        step3Completed = false
-        step3Active = false
-        step3Sublabel = "Awaiting"
-
-        step4Completed = false
-        step4Active = false
-        step4Sublabel = "Pending"
-
-        step5Completed = false
-        step5Active = false
-        step5Sublabel = "Final"
-    } else {
-        when (serverStatus) {
-            "CHAT_OPEN" -> {
-                stageLabel = "Stage 4 of 5 • Team Chat"
-                badgeBgColor = TransferBlueSoft
-                badgeTextColor = MedicalBlue
-
-                step2Completed = true
-                step2Active = false
-                step2Sublabel = "Done"
-
-                step3Completed = true
-                step3Active = false
-                step3Sublabel = "Done"
-
-                step4Completed = false
-                step4Active = true
-                step4Sublabel = "Discuss & agree"
-
-                step5Completed = false
-                step5Active = false
-                step5Sublabel = "Final"
-            }
-            "CONFIRMED" -> {
-                stageLabel = "Stage 5 of 5 • Confirmed"
-                badgeBgColor = TransferMintSoft
-                badgeTextColor = Emerald
-
-                step2Completed = true
-                step2Active = false
-                step2Sublabel = "Done"
-
-                step3Completed = true
-                step3Active = false
-                step3Sublabel = "Done"
-
-                step4Completed = true
-                step4Active = false
-                step4Sublabel = "Done"
-
-                step5Completed = true
-                step5Active = true
-                step5Sublabel = "All nurses agreed"
-            }
-            "CANCELLED" -> {
-                stageLabel = "Transfer Cancelled"
-                badgeBgColor = TransferRoseSoft
-                badgeTextColor = CriticalRed
-
-                step2Completed = true
-                step2Active = false
-                step2Sublabel = "Done"
-
-                step3Completed = false
-                step3Active = true
-                step3Sublabel = "Cancelled"
-
-                step4Completed = false
-                step4Active = false
-                step4Sublabel = "Closed"
-
-                step5Completed = false
-                step5Active = false
-                step5Sublabel = "Final"
-            }
-            "EXPIRED" -> {
-                stageLabel = "Transfer Expired"
-                badgeBgColor = SurfaceMuted
-                badgeTextColor = Slate
-
-                step2Completed = true
-                step2Active = false
-                step2Sublabel = "Done"
-
-                step3Completed = false
-                step3Active = true
-                step3Sublabel = "Expired"
-
-                step4Completed = false
-                step4Active = false
-                step4Sublabel = "Closed"
-
-                step5Completed = false
-                step5Active = false
-                step5Sublabel = "Final"
-            }
-            "ACCEPTED" -> {
-                stageLabel = "Stage 3 of 5 • Match Found"
-                badgeBgColor = TransferMintSoft
-                badgeTextColor = Emerald
-
-                step2Completed = true
-                step2Active = false
-                step2Sublabel = "Done"
-
-                step3Completed = false
-                step3Active = true
-                step3Sublabel = "Accepted • Waiting for other nurse(s)"
-
-                step4Completed = false
-                step4Active = false
-                step4Sublabel = "Pending"
-
-                step5Completed = false
-                step5Active = false
-                step5Sublabel = "Final"
-            }
-            else -> {
-                stageLabel = "Stage 3 of 5 • Match Found"
-                badgeBgColor = TransferMintSoft
-                badgeTextColor = Emerald
-
-                step2Completed = true
-                step2Active = false
-                step2Sublabel = "Done"
-
-                step3Completed = false
-                step3Active = true
-                step3Sublabel = "Response required"
-
-                step4Completed = false
-                step4Active = false
-                step4Sublabel = "Pending"
-
-                step5Completed = false
-                step5Active = false
-                step5Sublabel = "Final"
-            }
-        }
-    }
+private fun TransferJourneyStepperCard(
+    request: TransferRequest,
+    isReducedMotion: Boolean = false
+) {
+    val journeyState = TransferPoolStatusStateResolver.resolveJourneyState(
+        request = request,
+        blueSoft = TransferBlueSoft,
+        primaryClinical = ClinicalPrimaryColor,
+        mintSoft = TransferMintSoft,
+        roseSoft = TransferRoseSoft,
+        mutedSurface = SurfaceMuted
+    )
 
     Card(
         modifier = Modifier
@@ -1054,11 +1006,11 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
 
                 Surface(
                     shape = RoundedCornerShape(999.dp),
-                    color = badgeBgColor
+                    color = journeyState.badgeBgColor
                 ) {
                     Text(
-                        stageLabel,
-                        color = badgeTextColor,
+                        journeyState.stageLabel,
+                        color = journeyState.badgeTextColor,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -1068,67 +1020,73 @@ private fun TransferJourneyStepperCard(request: TransferRequest) {
 
             Spacer(Modifier.height(14.dp))
 
-            // Dynamic Milestone Stepper Row
+            // Dynamic Milestone Stepper Row:
+            // "Request saved" -> "Searching" -> "Review & accept" -> "Discuss with team" -> "Confirm transfer"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Step 1: Request (Completed)
+                // Step 1: Request saved (Always completed once active in pool)
                 JourneyNode(
                     icon = Icons.Default.Check,
-                    label = "REQUEST",
-                    sublabel = "Verified",
+                    label = "Request saved",
+                    sublabel = "Saved",
                     isActive = false,
                     isCompleted = true,
+                    isReducedMotion = isReducedMotion,
                     modifier = Modifier.weight(1f)
                 )
 
-                JourneyConnector(isCompleted = step2Completed || step2Active)
+                JourneyConnector(isCompleted = journeyState.step2Completed || journeyState.step2Active)
 
                 // Step 2: Searching
                 JourneyNode(
                     icon = Icons.Default.Search,
-                    label = "SEARCH",
-                    sublabel = step2Sublabel,
-                    isActive = step2Active,
-                    isCompleted = step2Completed,
+                    label = "Searching",
+                    sublabel = journeyState.step2Sublabel,
+                    isActive = journeyState.step2Active,
+                    isCompleted = journeyState.step2Completed,
+                    isReducedMotion = isReducedMotion,
                     modifier = Modifier.weight(1f)
                 )
 
-                JourneyConnector(isCompleted = step3Completed || step3Active)
+                JourneyConnector(isCompleted = journeyState.step3Completed || journeyState.step3Active)
 
-                // Step 3: Match Found
+                // Step 3: Review & accept
                 JourneyNode(
                     icon = Icons.Default.Person,
-                    label = "MATCH",
-                    sublabel = step3Sublabel,
-                    isActive = step3Active,
-                    isCompleted = step3Completed,
+                    label = "Review & accept",
+                    sublabel = journeyState.step3Sublabel,
+                    isActive = journeyState.step3Active,
+                    isCompleted = journeyState.step3Completed,
+                    isReducedMotion = isReducedMotion,
                     modifier = Modifier.weight(1f)
                 )
 
-                JourneyConnector(isCompleted = step4Completed || step4Active)
+                JourneyConnector(isCompleted = journeyState.step4Completed || journeyState.step4Active)
 
-                // Step 4: Team Chat
+                // Step 4: Discuss with team
                 JourneyNode(
                     icon = Icons.Default.SwapHoriz,
-                    label = "CHAT",
-                    sublabel = step4Sublabel,
-                    isActive = step4Active,
-                    isCompleted = step4Completed,
+                    label = "Discuss with team",
+                    sublabel = journeyState.step4Sublabel,
+                    isActive = journeyState.step4Active,
+                    isCompleted = journeyState.step4Completed,
+                    isReducedMotion = isReducedMotion,
                     modifier = Modifier.weight(1f)
                 )
 
-                JourneyConnector(isCompleted = step5Completed || step5Active)
+                JourneyConnector(isCompleted = journeyState.step5Completed || journeyState.step5Active)
 
-                // Step 5: Confirmed Agreement
+                // Step 5: Confirm transfer
                 JourneyNode(
                     icon = Icons.Default.CheckCircle,
-                    label = "AGREED",
-                    sublabel = step5Sublabel,
-                    isActive = step5Active,
-                    isCompleted = step5Completed,
+                    label = "Confirm transfer",
+                    sublabel = journeyState.step5Sublabel,
+                    isActive = journeyState.step5Active,
+                    isCompleted = journeyState.step5Completed,
+                    isReducedMotion = isReducedMotion,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -1143,18 +1101,26 @@ private fun JourneyNode(
     sublabel: String,
     isActive: Boolean,
     isCompleted: Boolean,
+    isReducedMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "NodePulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.55f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "PulseAlpha"
-    )
+    val pulseAlpha: Float
+
+    if (isReducedMotion || !isActive) {
+        pulseAlpha = 0.35f
+    } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "NodePulse")
+        val animPulseAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.2f,
+            targetValue = 0.55f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "PulseAlpha"
+        )
+        pulseAlpha = animPulseAlpha
+    }
 
     Column(
         modifier = modifier,
@@ -1162,7 +1128,7 @@ private fun JourneyNode(
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (isActive) {
-                // Animated pulse glow ring around active step
+                // Pulse glow ring around active step (static when reduced motion enabled)
                 Surface(
                     modifier = Modifier.size(38.dp),
                     shape = CircleShape,
@@ -1613,6 +1579,7 @@ private fun RankedDestinationCard(
 @Composable
 private fun EmptyPreferenceSlotCard(
     rank: Int,
+    isLocked: Boolean = false,
     onEdit: () -> Unit
 ) {
     val rankTitle = when (rank) {
@@ -1623,10 +1590,12 @@ private fun EmptyPreferenceSlotCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onEdit),
+            .then(
+                if (!isLocked) Modifier.clickable(onClick = onEdit) else Modifier
+            ),
         shape = RoundedCornerShape(20.dp),
-        color = SurfaceWhite.copy(alpha = 0.70f),
-        border = BorderStroke(1.2.dp, BorderMuted.copy(alpha = 0.65f))
+        color = if (isLocked) SurfaceMuted.copy(alpha = 0.5f) else SurfaceWhite.copy(alpha = 0.70f),
+        border = BorderStroke(1.2.dp, BorderMuted.copy(alpha = if (isLocked) 0.35f else 0.65f))
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -1640,7 +1609,7 @@ private fun EmptyPreferenceSlotCard(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         "$rank",
-                        color = Slate.copy(alpha = 0.45f),
+                        color = Slate.copy(alpha = if (isLocked) 0.3f else 0.45f),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1652,24 +1621,26 @@ private fun EmptyPreferenceSlotCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     rankTitle,
-                    color = Slate.copy(alpha = 0.75f),
+                    color = Slate.copy(alpha = if (isLocked) 0.5f else 0.75f),
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Tap 'Edit Destination Preferences' to add a destination hospital",
-                    color = TextSecondary.copy(alpha = 0.75f),
+                    if (isLocked) "Locked while a match is active" else "Tap 'Edit Destination Preferences' to add a destination hospital",
+                    color = TextSecondary.copy(alpha = if (isLocked) 0.6f else 0.75f),
                     fontSize = 9.5.sp
                 )
             }
 
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Add slot",
-                tint = ClinicalPrimaryColor,
-                modifier = Modifier.size(20.dp)
-            )
+            if (!isLocked) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add slot",
+                    tint = ClinicalPrimaryColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -2123,22 +2094,29 @@ private fun TransferJourneyStepRow(
 // -----------------------------------------------------------------------------
 @Composable
 private fun WithdrawConfirmDialog(
+    isMatchActive: Boolean = false,
     isSubmitting: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val dialogMessage = if (isMatchActive) {
+        "You have an active mutual transfer match in progress. Withdrawing your request will cancel this match for all participating nurses. Their eligible requests will return to the pool to discover other matches, and your request will be removed from the pool."
+    } else {
+        "Your request will be removed from the active Mutual Transfer matching pool. You will no longer appear for potential partner nurses. You can create a new request at any time."
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Withdraw Transfer Request?",
+                if (isMatchActive) "Withdraw & Cancel Active Match?" else "Withdraw Transfer Request?",
                 fontWeight = FontWeight.Black,
                 color = TransferInk
             )
         },
         text = {
             Text(
-                "Your request will be removed from the active Mutual Transfer matching pool. You will no longer appear for potential partner nurses. You can create a new request at any time.",
+                dialogMessage,
                 fontSize = 13.sp,
                 lineHeight = 18.5.sp,
                 color = TextSecondary
@@ -2152,7 +2130,10 @@ private fun WithdrawConfirmDialog(
                     containerColor = CriticalRed
                 )
             ) {
-                Text("Withdraw Request", fontWeight = FontWeight.Bold)
+                Text(
+                    if (isMatchActive) "Withdraw & Cancel" else "Withdraw Request",
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
@@ -2160,7 +2141,11 @@ private fun WithdrawConfirmDialog(
                 onClick = onDismiss,
                 enabled = !isSubmitting
             ) {
-                Text("Keep Active", color = Slate, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (isMatchActive) "Keep Match Active" else "Keep Active",
+                    color = Slate,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     )
