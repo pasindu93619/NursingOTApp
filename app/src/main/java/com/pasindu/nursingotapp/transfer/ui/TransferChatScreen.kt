@@ -183,7 +183,7 @@ fun TransferChatScreen(
         },
         bottomBar = {
             // Message composer: anchored cleanly at bottom without heavy competing action bars
-            if (!uiState.isLoading && uiState.error == null && uiState.serverStatus == "CHAT_OPEN") {
+            if (!uiState.isLoading && uiState.error == null && uiState.serverStatus in listOf("CHAT_OPEN", "CONFIRMED", "AWAITING_COMPLETION")) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -215,7 +215,7 @@ fun TransferChatScreen(
                     ) {
                         Button(
                             onClick = onOpenCompletion,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Emerald)
                         ) {
@@ -231,11 +231,25 @@ fun TransferChatScreen(
                                 fontSize = 14.sp
                             )
                         }
-                        OutlinedButton(
-                            onClick = onBack,
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) { Text("Return to Transfer Hub") }
+                        if (uiState.serverStatus != "COMPLETED") {
+                            ChatMessageInputBar(
+                                text = messageText,
+                                onTextChanged = { messageText = it },
+                                canSend = uiState.canSend && messageText.isNotBlank() && messageText.length <= 500,
+                                isSending = uiState.isSendingMessage,
+                                onSend = {
+                                    val textToSend = messageText
+                                    pendingSendText = textToSend
+                                    onSendMessage(textToSend)
+                                }
+                            )
+                        } else {
+                            OutlinedButton(
+                                onClick = onBack,
+                                modifier = Modifier.fillMaxWidth().height(44.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) { Text("Return to Transfer Hub") }
+                        }
                     }
                 }
             } else if (uiState.isTerminal) {
