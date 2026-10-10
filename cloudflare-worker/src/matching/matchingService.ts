@@ -610,7 +610,8 @@ async function recoverExistingMatch(
   const status = readStringField(fields, "status")?.toUpperCase();
   const expiresAt = readStringField(fields, "expiresAt");
   const currentTime = now ?? new Date();
-  const isExpired = expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
+  const isTimedStage = status === "PENDING_CONFIRMATION" || status === "CHAT_OPEN";
+  const isExpired = isTimedStage && expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
 
   if (
     status === "CANCELLED" ||
@@ -620,7 +621,8 @@ async function recoverExistingMatch(
     (status !== undefined &&
       status !== "PENDING_CONFIRMATION" &&
       status !== "CHAT_OPEN" &&
-      status !== "CONFIRMED")
+      status !== "CONFIRMED" &&
+      status !== "AWAITING_COMPLETION")
   ) {
     return null;
   }
@@ -1751,9 +1753,9 @@ export async function withdrawTransferRequest(
       const fields = rawMatch.fields ?? {};
       const status = readStringField(fields, "status")?.toUpperCase();
 
-      if (status === "CONFIRMED") {
+      if (status === "CONFIRMED" || status === "AWAITING_COMPLETION") {
         throw new MatchServiceError(
-          "Cannot withdraw: this mutual transfer has already been finalized and confirmed.",
+          "Cannot withdraw: all participants have confirmed this transfer and the completion workflow is in progress.",
           409,
           "MATCH_ALREADY_CONFIRMED"
         );
