@@ -123,11 +123,29 @@ fun TransferChatScreen(
     onClearSendError: () -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
+    var pendingSendText by remember { mutableStateOf<String?>(null) }
+    var wasSendingMessage by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDetailsSheet by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
+
+    // Keep the draft until the ViewModel confirms a successful send.
+    // A failed send leaves the draft available for retry.
+    LaunchedEffect(uiState.isSendingMessage, uiState.sendError) {
+        if (uiState.isSendingMessage) {
+            wasSendingMessage = true
+        } else if (wasSendingMessage) {
+            if (uiState.sendError == null) {
+                pendingSendText?.let { submitted ->
+                    if (messageText == submitted) messageText = ""
+                }
+                pendingSendText = null
+            }
+            wasSendingMessage = false
+        }
+    }
 
     // Flag to ensure exit navigation happens strictly once
     var hasExited by remember { mutableStateOf(false) }
@@ -175,12 +193,12 @@ fun TransferChatScreen(
                     ChatMessageInputBar(
                         text = messageText,
                         onTextChanged = { messageText = it },
-                        canSend = uiState.canSend && messageText.isNotBlank(),
+                        canSend = uiState.canSend && messageText.isNotBlank() && messageText.length <= 500,
                         isSending = uiState.isSendingMessage,
                         onSend = {
                             val textToSend = messageText
+                            pendingSendText = textToSend
                             onSendMessage(textToSend)
-                            messageText = ""
                         }
                     )
                 }
@@ -341,6 +359,13 @@ fun TransferChatScreen(
                                 item {
                                     MessageDeliveryErrorBanner(
                                         error = uiState.sendError,
+                                        onRetry = {
+                                            val draft = messageText
+                                            if (draft.isNotBlank() && draft.length <= 500 && !uiState.isSendingMessage) {
+                                                pendingSendText = draft
+                                                onSendMessage(draft)
+                                            }
+                                        },
                                         onDismiss = onClearSendError
                                     )
                                 }
@@ -426,8 +451,11 @@ fun TransferChatScreen(
             },
             text = {
                 Text(
-                    "Leaving the team will cancel this mutual transfer match for everyone involved and return you immediately to the transfer pool.\n\n" +
-                        "Use this if coordination has stalled or you wish to seek a different match.",
+                    if (uiState.matchType == "THREE_WAY") {
+                        "Leaving cancels the entire 3-way mutual transfer match for all three nurses, not just your participation. Everyone will leave this match and their requests can return to the matching pool.\n\nDo you want to cancel the match for all three people?"
+                    } else {
+                        "Leaving cancels this mutual transfer match for both nurses, not just your participation. Both requests can return to the matching pool.\n\nDo you want to cancel the match for everyone?"
+                    },
                     fontSize = 13.5.sp,
                     color = Slate,
                     lineHeight = 19.sp
@@ -672,19 +700,9 @@ private fun CoordinationStatusStrip(
     onOpenConfirmDialog: () -> Unit,
     onOpenDetails: () -> Unit
 ) {
-    var currentTimeMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            currentTimeMs = System.currentTimeMillis()
-            delay(1000L)
-        }
-    }
-
     val deadlineMs = uiState.chatDeadlineMs
-    val remainingMs = (deadlineMs ?: 0L) - currentTimeMs
-    val isUrgent = remainingMs in 1..7_200_000L // < 2 hours
-    val isExpired = deadlineMs != null && remainingMs <= 0L
+    val deadlineLabel = deadlineMs?.let(::formatAbsoluteDeadline)
+    val isExpired = deadlineMs != null && deadlineMs <= System.currentTimeMillis()
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -750,24 +768,28 @@ private fun CoordinationStatusStrip(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(999.dp),
-                            color = if (isUrgent) SoftAmberPill else SoftBluePill
+                            color = if (isExpired) SoftRedPill else SoftBluePill
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    if (isUrgent) Icons.Default.Warning else Icons.Default.AccessTime,
+                                    if (isExpired) Icons.Default.Warning else Icons.Default.AccessTime,
                                     contentDescription = null,
-                                    tint = if (isUrgent) Amber else ClinicalPrimaryColor,
+                                    tint = if (isExpired) CriticalRed else ClinicalPrimaryColor,
                                     modifier = Modifier.size(11.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    if (isExpired) "Expired" else formatCountdown(remainingMs),
+                                    when {
+                                        deadlineLabel == null -> "Deadline unavailable"
+                                        isExpired -> "Ended $deadlineLabel"
+                                        else -> "Ends $deadlineLabel"
+                                    },
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isUrgent) Amber else ClinicalPrimaryColor
+                                    color = if (isExpired) CriticalRed else ClinicalPrimaryColor
                                 )
                             }
                         }
@@ -850,7 +872,7 @@ private fun ChatMessageInputBar(
         ) {
             OutlinedTextField(
                 value = text,
-                onValueChange = onTextChanged,
+                onValueChange = { edited -> onTextChanged(edited.take(500)) },
                 placeholder = {
                     Text("Type coordination message...", fontSize = 13.5.sp, color = TextSecondary)
                 },
@@ -865,7 +887,16 @@ private fun ChatMessageInputBar(
                     unfocusedContainerColor = SurfaceMuted
                 ),
                 maxLines = 4,
-                singleLine = false
+                singleLine = false,
+                supportingText = {
+                    Text(
+                        "${text.length}/500",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End,
+                        color = if (text.length >= 500) CriticalRed else TextSecondary,
+                        fontSize = 10.sp
+                    )
+                }
             )
 
             Spacer(Modifier.width(8.dp))
@@ -1341,7 +1372,11 @@ private fun MessageStreamErrorBanner(error: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun MessageDeliveryErrorBanner(error: String, onDismiss: () -> Unit) {
+private fun MessageDeliveryErrorBanner(
+    error: String,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -1359,13 +1394,20 @@ private fun MessageDeliveryErrorBanner(error: String, onDismiss: () -> Unit) {
                 Text(error, fontSize = 11.sp, color = TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                border = BorderStroke(1.dp, CriticalRed)
-            ) {
-                Text("Dismiss", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CriticalRed)
+            Column(horizontalAlignment = Alignment.End) {
+                OutlinedButton(
+                    onClick = onRetry,
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    border = BorderStroke(1.dp, ClinicalPrimaryColor)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = ClinicalPrimaryColor)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Retry", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ClinicalPrimaryColor)
+                }
+                TextButton(onClick = onDismiss, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                    Text("Dismiss", fontSize = 10.sp, color = TextSecondary)
+                }
             }
         }
     }
@@ -1375,17 +1417,8 @@ private fun MessageDeliveryErrorBanner(error: String, onDismiss: () -> Unit) {
 // Formatting Helpers
 // -----------------------------------------------------------------------------
 
-private fun formatCountdown(ms: Long): String {
-    if (ms <= 0L) return "0m"
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "${hours}h ${minutes}m"
-    } else {
-        "${minutes}m ${seconds}s"
-    }
+private fun formatAbsoluteDeadline(epochMillis: Long): String {
+    return SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(epochMillis))
 }
 
 private fun formatMessageTime(epochMillis: Long?): String {
