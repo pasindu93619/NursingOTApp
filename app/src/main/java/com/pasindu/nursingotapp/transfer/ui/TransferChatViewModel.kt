@@ -69,7 +69,7 @@ data class TransferChatUiState(
     val terminalNotice: TerminalNotice? = null
 ) {
     val canSend: Boolean
-        get() = !isLoading && error == null && messageError == null && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
+        get() = !isLoading && error == null && messageError == null && serverStatus in listOf("CHAT_OPEN", "CONFIRMED", "AWAITING_COMPLETION") && !isSendingMessage && !isTerminal
 
     val canConfirm: Boolean
         get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isUserConfirmed && !isSubmittingAction && !isTerminal
@@ -167,7 +167,7 @@ class TransferChatViewModel @Inject constructor(
                 matchResult.onSuccess { remoteMatch ->
                     if (remoteMatch != null) {
                         val serverStatus = remoteMatch.status.trim().uppercase()
-                        val isTerminal = serverStatus in listOf("CONFIRMED", "AWAITING_COMPLETION", "COMPLETED", "CANCELLED", "EXPIRED")
+                        val isTerminal = serverStatus in listOf("COMPLETED", "CANCELLED", "EXPIRED")
                         val isAllConfirmed = serverStatus == "CONFIRMED"
 
                         val currentState = _uiState.value
@@ -461,7 +461,7 @@ class TransferChatViewModel @Inject constructor(
                     val updatedParticipants = state.participants.map {
                         if (it.isCurrentUser) it.copy(confirmed = true) else it
                     }
-                    val isTerminal = response.newStatus in listOf("CONFIRMED", "AWAITING_COMPLETION", "COMPLETED", "CANCELLED", "EXPIRED")
+                    val isTerminal = response.newStatus in listOf("COMPLETED", "CANCELLED", "EXPIRED")
                     val isAllConfirmed = response.newStatus == "CONFIRMED"
 
                     _uiState.value = _uiState.value.copy(
