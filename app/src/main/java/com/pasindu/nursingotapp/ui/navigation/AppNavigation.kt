@@ -265,8 +265,8 @@ fun AppNavigation() {
                                 launchSingleTop = true
                             }
                         }
-                    }
-                    ,onOpenHistory = {
+                    },
+                    onOpenHistory = {
                         navController.navigate("transfer_history") {
                             launchSingleTop = true
                         }
