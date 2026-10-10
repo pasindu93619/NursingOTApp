@@ -26,12 +26,16 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -1753,7 +1757,7 @@ private fun CompactTransferRulesCard() {
 }
 
 // -----------------------------------------------------------------------------
-// Empty / Withdrawn View
+// Empty / Withdrawn View — Flagship Transfer Mission Experience
 // -----------------------------------------------------------------------------
 @Composable
 private fun EmptyPoolStatusView(
@@ -1763,12 +1767,15 @@ private fun EmptyPoolStatusView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(AppBackground)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
+        // Pinned Header
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -1781,80 +1788,335 @@ private fun EmptyPoolStatusView(
                     tint = Slate
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(4.dp))
             Text(
-                "Mutual Transfer",
+                text = "Mutual Transfer",
                 color = TextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Black
             )
         }
 
+        // Scrollable Content
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Surface(
-                modifier = Modifier.size(88.dp),
-                shape = CircleShape,
-                color = TransferPurpleSoft,
-                border = BorderStroke(1.5.dp, AiAccentColor.copy(alpha = 0.25f))
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.SwapHoriz,
-                        contentDescription = null,
-                        tint = AiAccentColor,
-                        modifier = Modifier.size(46.dp)
-                    )
-                }
-            }
+            Spacer(Modifier.height(8.dp))
 
-            Spacer(Modifier.height(22.dp))
+            // Bespoke Pure Compose Vector Hero Illustration
+            TransferMissionHeroVisual()
 
+            Spacer(Modifier.height(18.dp))
+
+            // Inspiring Flagship Headline
             Text(
-                "No Active Transfer Request",
+                text = "Your next posting could start here.",
                 color = TransferInk,
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Black
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                lineHeight = 26.sp
             )
 
             Spacer(Modifier.height(8.dp))
 
+            // Purpose & Instructions Subtitle
             Text(
-                "You are not currently listed in the Mutual Transfer matching pool. Register your current posting and up to 3 destination preferences to start matching with partner nurses.",
+                text = "Create your transfer request, choose up to three preferred destinations, and discover nurses whose posting preferences may match yours.",
                 color = TextSecondary,
-                fontSize = 12.5.sp,
-                lineHeight = 18.sp,
-                textAlign = TextAlign.Center
+                fontSize = 13.5.sp,
+                lineHeight = 19.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            // 3-Step Journey Preview Card
+            TransferJourneyPreviewCard()
+
+            Spacer(Modifier.height(16.dp))
+        }
+
+        // Pinned Bottom CTA Container
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = AppBackground,
+            shadowElevation = 0.dp
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                Button(
+                    onClick = onCreateRequest,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .shadow(6.dp, RoundedCornerShape(18.dp)),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ClinicalPrimaryColor
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Create Transfer Request",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Bespoke pure Compose vector visual depicting reciprocal hospital exchange nodes,
+ * ambient radial glow, curved connecting transfer path, and a central swap badge.
+ */
+@Composable
+private fun TransferMissionHeroVisual() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Canvas background for ambient halos and reciprocal exchange arcs
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .height(120.dp)
+        ) {
+            val centerY = size.height / 2f
+            val leftCenterX = size.width * 0.22f
+            val rightCenterX = size.width * 0.78f
+
+            // Soft ambient glow circles behind nodes
+            drawCircle(
+                color = TransferBlueSoft,
+                radius = 38.dp.toPx(),
+                center = Offset(leftCenterX, centerY)
+            )
+            drawCircle(
+                color = TransferPurpleSoft,
+                radius = 38.dp.toPx(),
+                center = Offset(rightCenterX, centerY)
+            )
+
+            // Dashed reciprocal transfer connection arc
+            val strokeWidth = 2.dp.toPx()
+            val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f)
+
+            // Upper forward arc
+            val arcPathUpper = androidx.compose.ui.graphics.Path().apply {
+                moveTo(leftCenterX + 22.dp.toPx(), centerY - 6.dp.toPx())
+                quadraticTo(
+                    size.width / 2f,
+                    centerY - 28.dp.toPx(),
+                    rightCenterX - 22.dp.toPx(),
+                    centerY - 6.dp.toPx()
+                )
+            }
+            drawPath(
+                path = arcPathUpper,
+                color = ClinicalPrimaryColor.copy(alpha = 0.55f),
+                style = Stroke(width = strokeWidth, pathEffect = dashPathEffect)
+            )
+
+            // Lower return arc
+            val arcPathLower = androidx.compose.ui.graphics.Path().apply {
+                moveTo(rightCenterX - 22.dp.toPx(), centerY + 6.dp.toPx())
+                quadraticTo(
+                    size.width / 2f,
+                    centerY + 28.dp.toPx(),
+                    leftCenterX + 22.dp.toPx(),
+                    centerY + 6.dp.toPx()
+                )
+            }
+            drawPath(
+                path = arcPathLower,
+                color = AiAccentColor.copy(alpha = 0.55f),
+                style = Stroke(width = strokeWidth, pathEffect = dashPathEffect)
             )
         }
 
-        Button(
-            onClick = onCreateRequest,
+        // Left Station Node (Current Posting)
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .shadow(4.dp, RoundedCornerShape(18.dp)),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ClinicalPrimaryColor
-            )
+                .align(Alignment.CenterStart)
+                .padding(start = 28.dp)
         ) {
-            Icon(
-                Icons.Default.Search,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(8.dp))
+            Surface(
+                modifier = Modifier.size(54.dp),
+                shape = CircleShape,
+                color = SurfaceWhite,
+                border = BorderStroke(1.5.dp, ClinicalPrimaryColor.copy(alpha = 0.35f)),
+                shadowElevation = 3.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.LocalHospital,
+                        contentDescription = "Current Hospital",
+                        tint = ClinicalPrimaryColor,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+        }
+
+        // Central Reciprocal Exchange Badge
+        Surface(
+            modifier = Modifier.size(42.dp),
+            shape = CircleShape,
+            color = SurfaceWhite,
+            border = BorderStroke(1.5.dp, Purple.copy(alpha = 0.4f)),
+            shadowElevation = 4.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.SwapHoriz,
+                    contentDescription = null,
+                    tint = AiAccentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        // Right Station Node (Target Preference)
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 28.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(54.dp),
+                shape = CircleShape,
+                color = SurfaceWhite,
+                border = BorderStroke(1.5.dp, AiAccentColor.copy(alpha = 0.35f)),
+                shadowElevation = 3.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.LocalHospital,
+                        contentDescription = "Target Hospital",
+                        tint = AiAccentColor,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Concise, high-trust 3-step mutual transfer preview card educating the nurse
+ * on how the matching lifecycle works before they submit.
+ */
+@Composable
+private fun TransferJourneyPreviewCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.6f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Text(
-                "Create Transfer Request",
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.Black
+                text = "HOW MUTUAL MATCHING WORKS",
+                color = Slate.copy(alpha = 0.65f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.8.sp
+            )
+
+            TransferJourneyStepRow(
+                stepNumber = "1",
+                badgeColor = TransferBlueSoft,
+                numberColor = ClinicalPrimaryColor,
+                title = "Create your request",
+                description = "Register your current hospital and select up to 3 preferred transfer destinations."
+            )
+
+            TransferJourneyStepRow(
+                stepNumber = "2",
+                badgeColor = TransferPurpleSoft,
+                numberColor = AiAccentColor,
+                title = "Find compatible nurses",
+                description = "System continuously monitors for 2-way and 3-way circular posting matches."
+            )
+
+            TransferJourneyStepRow(
+                stepNumber = "3",
+                badgeColor = TransferMintSoft,
+                numberColor = Emerald,
+                title = "Connect and coordinate",
+                description = "Chat directly with matched nurses to review details before Ministry transfer paperwork."
             )
         }
     }
 }
+
+@Composable
+private fun TransferJourneyStepRow(
+    stepNumber: String,
+    badgeColor: Color,
+    numberColor: Color,
+    title: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            modifier = Modifier.size(28.dp),
+            shape = CircleShape,
+            color = badgeColor
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = stepNumber,
+                    color = numberColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TransferInk,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = description,
+                color = TextSecondary,
+                fontSize = 12.sp,
+                lineHeight = 16.5.sp
+            )
+        }
+    }
+}
+
 
 // -----------------------------------------------------------------------------
 // Withdraw Confirmation Dialog

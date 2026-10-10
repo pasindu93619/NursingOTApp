@@ -633,7 +633,7 @@ class TransferRequestRepositoryTest {
             TransferActiveCacheEntity(
                 requestId = "nurse-a",
                 currentHospitalId = "HOSP-001",
-                preferenceHospitalsJson = "[\"HOSP-002\"]",
+                preferenceHospitalIdsJson = "[\"HOSP-002\"]",
                 grade = "Grade II",
                 requestStatus = TransferRequestStatus.MATCHED.name,
                 matchStatus = "PENDING_CONFIRMATION",
@@ -641,7 +641,6 @@ class TransferRequestRepositoryTest {
                 matchType = "DIRECT_2_WAY",
                 matchPayloadJson = "{\"dummy\":true}",
                 syncStatus = CacheSyncStatus.SYNCED.name,
-                createdAt = 1000L,
                 updatedAt = 1000L
             )
         )
