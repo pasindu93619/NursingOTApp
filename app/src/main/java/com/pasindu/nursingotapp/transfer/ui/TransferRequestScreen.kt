@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -392,7 +393,7 @@ fun TransferRequestScreen(
                     number = "02",
                     eyebrow = "PREFERRED DESTINATIONS",
                     title = "Where would you like to go?",
-                    subtitle = "Rank up to 3 destinations in the order you prefer.",
+                    subtitle = "Press and hold a destination, then drag it to set your priority. Rank up to 3.",
                     accent = AiAccentColor,
                     completed = preferences.isNotEmpty()
                 ) {
