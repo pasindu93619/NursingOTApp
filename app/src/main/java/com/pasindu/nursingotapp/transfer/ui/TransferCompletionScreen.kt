@@ -1,0 +1,179 @@
+package com.pasindu.nursingotapp.transfer.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
+import com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class TransferCompletionUiState(
+    val isLoading: Boolean = true,
+    val isSubmitting: Boolean = false,
+    val status: TransferCompletionStatus? = null,
+    val error: String? = null
+)
+
+@HiltViewModel
+class TransferCompletionViewModel @Inject constructor(
+    private val repository: TransferRequestRepository
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(TransferCompletionUiState())
+    val uiState: StateFlow<TransferCompletionUiState> = _uiState.asStateFlow()
+
+    fun load(matchId: String) {
+        if (matchId.isBlank()) {
+            _uiState.value = TransferCompletionUiState(isLoading = false, error = "Missing match reference.")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            repository.getCompletionStatus(matchId).fold(
+                onSuccess = { status -> _uiState.value = TransferCompletionUiState(isLoading = false, status = status) },
+                onFailure = { error -> _uiState.value = TransferCompletionUiState(isLoading = false, error = error.message ?: "Unable to load completion progress.") }
+            )
+        }
+    }
+
+    fun reportComplete(matchId: String) {
+        val current = _uiState.value
+        if (current.isSubmitting || current.status?.callerReportedComplete == true || current.status?.status == "COMPLETED") return
+        viewModelScope.launch {
+            _uiState.value = current.copy(isSubmitting = true, error = null)
+            repository.reportCompletion(matchId).fold(
+                onSuccess = { status -> _uiState.value = TransferCompletionUiState(isLoading = false, status = status) },
+                onFailure = { error -> _uiState.value = _uiState.value.copy(isSubmitting = false, error = error.message ?: "Unable to save your completion report.") }
+            )
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+fun TransferCompletionScreen(
+    matchId: String,
+    onBack: () -> Unit,
+    viewModel: TransferCompletionViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(matchId) { viewModel.load(matchId) }
+    val status = state.status
+    val completed = status?.status == "COMPLETED"
+    val reported = status?.callerReportedComplete == true
+
+    androidx.compose.material3.Scaffold(
+        containerColor = com.pasindu.nursingotapp.ui.theme.AppBackground,
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { androidx.compose.material3.Text("Transfer completion") },
+                navigationIcon = {
+                    androidx.compose.material3.IconButton(onClick = onBack) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        androidx.compose.foundation.layout.Column(
+            modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding).padding(20.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            androidx.compose.material3.Surface(
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                color = if (completed) com.pasindu.nursingotapp.ui.theme.Emerald.copy(alpha = 0.12f)
+                    else com.pasindu.nursingotapp.ui.theme.MedicalBlue.copy(alpha = 0.10f),
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = androidx.compose.ui.Modifier.padding(22.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = if (completed) androidx.compose.material.icons.Icons.Default.CheckCircle
+                            else androidx.compose.material.icons.Icons.Default.AssignmentTurnedIn,
+                        contentDescription = null,
+                        tint = if (completed) com.pasindu.nursingotapp.ui.theme.Emerald else com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor,
+                        modifier = androidx.compose.ui.Modifier.size(48.dp)
+                    )
+                    androidx.compose.material3.Text(
+                        text = when {
+                            completed -> "Everyone reported completion"
+                            reported -> "Your report is recorded"
+                            status?.status == "CONFIRMED" || status?.status == "AWAITING_COMPLETION" -> "Confirm your transfer is complete"
+                            else -> "Completion is not available yet"
+                        },
+                        style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                        color = com.pasindu.nursingotapp.ui.theme.TextPrimary
+                    )
+                    androidx.compose.material3.Text(
+                        text = when {
+                            completed -> "All ${status?.totalParticipants ?: 0} participants have self-reported that their transfer is complete."
+                            reported -> "You have reported completion. Waiting for the other participants to report their own completion."
+                            status?.status == "CONFIRMED" || status?.status == "AWAITING_COMPLETION" -> "Only report completion after your real-world transfer is complete."
+                            else -> "All participants must first confirm the proposed match. This screen does not certify Ministry approval."
+                        },
+                        color = com.pasindu.nursingotapp.ui.theme.TextSecondary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+
+            if (state.isLoading) {
+                androidx.compose.material3.CircularProgressIndicator()
+            } else if (status != null) {
+                androidx.compose.material3.Card(modifier = androidx.compose.ui.Modifier.fillMaxWidth()) {
+                    androidx.compose.foundation.layout.Column(
+                        modifier = androidx.compose.ui.Modifier.padding(16.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    ) {
+                        androidx.compose.material3.Text("Team progress", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { if (status.totalParticipants > 0) status.completedParticipants.toFloat() / status.totalParticipants else 0f },
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                        )
+                        androidx.compose.material3.Text(
+                            "${status.completedParticipants} of ${status.totalParticipants} participants reported complete",
+                            color = com.pasindu.nursingotapp.ui.theme.TextSecondary
+                        )
+                        androidx.compose.material3.Text("Status: ${status.status.replace('_', ' ')}")
+                    }
+                }
+            }
+
+            state.error?.let { message ->
+                androidx.compose.material3.Text(message, color = com.pasindu.nursingotapp.ui.theme.CriticalRed)
+                androidx.compose.material3.OutlinedButton(onClick = { viewModel.load(matchId) }) { androidx.compose.material3.Text("Try again") }
+            }
+
+            if (!state.isLoading && status != null && !reported && !completed &&
+                (status.status == "CONFIRMED" || status.status == "AWAITING_COMPLETION")
+            ) {
+                androidx.compose.material3.Button(
+                    onClick = { viewModel.reportComplete(matchId) },
+                    enabled = !state.isSubmitting,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                ) {
+                    if (state.isSubmitting) androidx.compose.material3.CircularProgressIndicator(
+                        modifier = androidx.compose.ui.Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    ) else androidx.compose.material3.Text("I confirm my transfer is complete")
+                }
+            }
+
+            androidx.compose.material3.Text(
+                "This is a self-reported status only. NursingOTApp does not verify or grant Ministry approval.",
+                color = com.pasindu.nursingotapp.ui.theme.TextSecondary,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
