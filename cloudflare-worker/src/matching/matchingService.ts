@@ -224,6 +224,18 @@ export async function respondToMatch(
 
   // 3. Verify match is actionable
   if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") {
+    // If the match was already cancelled by another participant, LEAVE or REJECT is idempotent.
+    // Return the cancelled state cleanly rather than throwing HTTP 409 INVALID_STATUS.
+    if (status === "CANCELLED" && (decision === "REJECT" || decision === "LEAVE")) {
+      return {
+        matchId,
+        newStatus: "CANCELLED",
+        expiresAt: expiresAtStr,
+        chatDeadline: chatDeadlineStr,
+        firstResponseAt: firstResponseAtStr,
+        decisionApplied: true
+      };
+    }
     throw new MatchServiceError("Match is not awaiting confirmation or chat finalization", 409, "INVALID_STATUS");
   }
 

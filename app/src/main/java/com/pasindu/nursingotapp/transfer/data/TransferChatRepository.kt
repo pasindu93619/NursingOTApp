@@ -22,6 +22,11 @@ interface TransferChatRepository {
     fun observeMessages(matchId: String): Flow<Result<List<TransferChatMessage>>>
 
     /**
+     * Realtime observation of the match document state (status, deadlines, confirmations).
+     */
+    fun observeMatchState(matchId: String): Flow<Result<RemoteMatchState?>>
+
+    /**
      * Validates and sends a new mutual-transfer coordination message.
      */
     suspend fun sendMessage(
@@ -35,8 +40,12 @@ interface TransferChatRepository {
 @Singleton
 class FirestoreTransferChatRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val tokenProvider: TransferTokenProvider
+    private val tokenProvider: TransferTokenProvider,
+    private val remoteDataSource: TransferRemoteDataSource
 ) : TransferChatRepository {
+
+    override fun observeMatchState(matchId: String): Flow<Result<RemoteMatchState?>> =
+        remoteDataSource.observeMatchDoc(matchId)
 
     override fun observeMessages(matchId: String): Flow<Result<List<TransferChatMessage>>> = callbackFlow {
         if (matchId.isBlank()) {

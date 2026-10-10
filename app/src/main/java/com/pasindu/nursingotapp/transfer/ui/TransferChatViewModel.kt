@@ -34,6 +34,16 @@ data class TransferChatParticipant(
 )
 
 /**
+ * Explanatory notice shown to the nurse when a match reaches a terminal state (CANCELLED or EXPIRED).
+ */
+data class TerminalNotice(
+    val title: String,
+    val message: String,
+    val isCancelled: Boolean,
+    val isSelfInitiated: Boolean
+)
+
+/**
  * UI State for the Transfer Chat screen.
  */
 data class TransferChatUiState(
@@ -55,7 +65,8 @@ data class TransferChatUiState(
     val error: String? = null,
     val messageError: String? = null,
     val sendError: String? = null,
-    val isTerminal: Boolean = false
+    val isTerminal: Boolean = false,
+    val terminalNotice: TerminalNotice? = null
 ) {
     val canSend: Boolean
         get() = !isLoading && error == null && messageError == null && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
@@ -78,6 +89,7 @@ class TransferChatViewModel @Inject constructor(
     val uiState: StateFlow<TransferChatUiState> = _uiState.asStateFlow()
 
     private var messageCollectionJob: Job? = null
+    private var matchStateCollectionJob: Job? = null
 
     init {
         loadMatchAndObserveChat()
@@ -101,6 +113,7 @@ class TransferChatViewModel @Inject constructor(
                             val state = buildStateFromMatch(syncResult, currentUid, hospitals)
                             _uiState.value = state
                             observeMessages(syncResult.matchId)
+                            observeMatchState(syncResult.matchId)
                         }
                         is WorkerSyncResult.NoMatch -> {
                             _uiState.value = _uiState.value.copy(
@@ -143,6 +156,89 @@ class TransferChatViewModel @Inject constructor(
         if (matchId.isNotBlank()) {
             _uiState.value = _uiState.value.copy(messageError = null)
             observeMessages(matchId)
+            observeMatchState(matchId)
+        }
+    }
+
+    private fun observeMatchState(matchId: String) {
+        matchStateCollectionJob?.cancel()
+        matchStateCollectionJob = viewModelScope.launch {
+            transferChatRepository.observeMatchState(matchId).collect { matchResult ->
+                matchResult.onSuccess { remoteMatch ->
+                    if (remoteMatch != null) {
+                        val serverStatus = remoteMatch.status.trim().uppercase()
+                        val isTerminal = serverStatus in listOf("CONFIRMED", "CANCELLED", "EXPIRED")
+                        val isAllConfirmed = serverStatus == "CONFIRMED"
+
+                        val currentState = _uiState.value
+                        val updatedParticipants = currentState.participants.map { p ->
+                            val isConfirmed = when (p.roleLetter) {
+                                "A" -> remoteMatch.confirmedByA
+                                "B" -> remoteMatch.confirmedByB
+                                "C" -> remoteMatch.confirmedByC
+                                else -> p.confirmed
+                            } || isAllConfirmed
+                            p.copy(confirmed = isConfirmed)
+                        }
+
+                        val currentUserParticipant = updatedParticipants.find { it.isCurrentUser }
+                        val isUserConfirmed = currentUserParticipant?.confirmed ?: currentState.isUserConfirmed
+
+                        val isSelfInitiated = when (currentState.currentUserRole) {
+                            "A" -> remoteMatch.rejectedByA
+                            "B" -> remoteMatch.rejectedByB
+                            "C" -> remoteMatch.rejectedByC
+                            else -> false
+                        }
+
+                        val notice = when {
+                            serverStatus == "CANCELLED" && currentState.terminalNotice == null -> {
+                                if (isSelfInitiated) {
+                                    TerminalNotice(
+                                        title = "Transfer Team Left",
+                                        message = "You have left the transfer team. Your transfer request remains active and in the matching pool to discover new matches.",
+                                        isCancelled = true,
+                                        isSelfInitiated = true
+                                    )
+                                } else {
+                                    TerminalNotice(
+                                        title = "Transfer Team Cancelled",
+                                        message = "A participating nurse has left the transfer team. Your transfer request remains active, and your preferred destinations are preserved. You can continue searching for another mutual transfer.",
+                                        isCancelled = true,
+                                        isSelfInitiated = false
+                                    )
+                                }
+                            }
+                            serverStatus == "EXPIRED" && currentState.terminalNotice == null -> {
+                                TerminalNotice(
+                                    title = "Coordination Window Expired",
+                                    message = "The mutual transfer coordination window has ended. Your transfer request remains active, and your preferred destinations are preserved. You can continue searching for another mutual transfer.",
+                                    isCancelled = false,
+                                    isSelfInitiated = false
+                                )
+                            }
+                            else -> currentState.terminalNotice
+                        }
+
+                        _uiState.value = currentState.copy(
+                            serverStatus = serverStatus,
+                            isTerminal = isTerminal,
+                            isAllConfirmed = isAllConfirmed,
+                            isUserConfirmed = isUserConfirmed,
+                            participants = updatedParticipants,
+                            terminalNotice = notice
+                        )
+
+                        // If the match was cancelled or expired, reconcile with backend
+                        // to restore the nurse's active request in Room without deleting it.
+                        if (serverStatus == "CANCELLED" || serverStatus == "EXPIRED") {
+                            runCatching {
+                                transferRequestRepository.syncActiveRequest()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

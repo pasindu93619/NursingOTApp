@@ -7,6 +7,9 @@ import java.time.Instant
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -92,6 +95,7 @@ data class RemoteMatchState(
 interface TransferRemoteDataSource {
     suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?>
     suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?>
+    fun observeMatchDoc(matchId: String): kotlinx.coroutines.flow.Flow<Result<RemoteMatchState?>>
     suspend fun publishTransferRequest(userId: String, request: TransferRequest): Result<Unit>
     suspend fun withdrawTransferRequest(userId: String): Result<Unit>
 }
@@ -262,6 +266,138 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
             require(directMatch.nurseAUid.isNotBlank() && directMatch.nurseBUid.isNotBlank()) {
                 "Malformed remote 2-way match document"
             }
+
+            RemoteMatchState(
+                matchId = matchId,
+                matchType = "DIRECT_2_WAY",
+                directMatch = directMatch,
+                status = string("status"),
+                createdAt = string("createdAt"),
+                expiresAt = string("expiresAt"),
+                firstResponseAt = firstResponseAt,
+                chatDeadline = chatDeadline,
+                acceptedByA = acceptedByA,
+                acceptedByB = acceptedByB,
+                rejectedByA = rejectedByA,
+                rejectedByB = rejectedByB,
+                confirmedByA = confirmedByA,
+                confirmedByB = confirmedByB
+            )
+        }
+    }
+
+    override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> = callbackFlow {
+        if (matchId.isBlank()) {
+            trySend(Result.failure(IllegalArgumentException("matchId must not be blank")))
+            close()
+            return@callbackFlow
+        }
+
+        val registration = firestore.collection("matches")
+            .document(matchId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot == null || !snapshot.exists()) {
+                    trySend(Result.success(null))
+                    return@addSnapshotListener
+                }
+
+                val parsed = runCatching { parseMatchSnapshot(matchId, snapshot) }
+                trySend(parsed)
+            }
+
+        awaitClose {
+            registration.remove()
+        }
+    }
+
+    private fun parseMatchSnapshot(matchId: String, snapshot: DocumentSnapshot): RemoteMatchState {
+        fun string(name: String): String = snapshot.getString(name).orEmpty()
+        fun int(name: String): Int = (snapshot.getLong(name) ?: 0L).toInt()
+        fun bool(name: String): Boolean = snapshot.getBoolean(name) ?: false
+
+        val nurseAUid = string("nurseAUid")
+        val nurseBUid = string("nurseBUid")
+        val nurseCUid = string("nurseCUid")
+
+        val acceptedByA = bool("acceptedByA")
+        val acceptedByB = bool("acceptedByB")
+        val acceptedByC = bool("acceptedByC")
+        val rejectedByA = bool("rejectedByA")
+        val rejectedByB = bool("rejectedByB")
+        val rejectedByC = bool("rejectedByC")
+
+        val is3Way = nurseCUid.isNotBlank() ||
+            snapshot.contains("acceptedByC") ||
+            snapshot.contains("rejectedByC")
+
+        val firstResponseAt = snapshot.getString("firstResponseAt")
+        val chatDeadline = snapshot.getString("chatDeadline")
+        val confirmedByA = bool("confirmedByA")
+        val confirmedByB = bool("confirmedByB")
+        val confirmedByC = bool("confirmedByC")
+
+        return if (is3Way) {
+            val threeWayMatch = WorkerThreeWayMatch(
+                nurseAUid = nurseAUid,
+                nurseBUid = nurseBUid,
+                nurseCUid = nurseCUid,
+                nurseACurrentHospitalId = string("nurseACurrentHospitalId"),
+                nurseBCurrentHospitalId = string("nurseBCurrentHospitalId"),
+                nurseCCurrentHospitalId = string("nurseCCurrentHospitalId"),
+                nurseADestinationHospitalId = string("nurseADestinationHospitalId"),
+                nurseBDestinationHospitalId = string("nurseBDestinationHospitalId"),
+                nurseCDestinationHospitalId = string("nurseCDestinationHospitalId"),
+                nurseAGrade = string("nurseAGrade"),
+                nurseBGrade = string("nurseBGrade"),
+                nurseCGrade = string("nurseCGrade"),
+                isAllSameGrade = bool("isAllSameGrade"),
+                nurseAPreferenceRank = int("nurseAPreferenceRank"),
+                nurseBPreferenceRank = int("nurseBPreferenceRank"),
+                nurseCPreferenceRank = int("nurseCPreferenceRank"),
+                combinedPreferenceRank = int("combinedPreferenceRank"),
+                priorityReason = string("priorityReason")
+            )
+
+            RemoteMatchState(
+                matchId = matchId,
+                matchType = "THREE_WAY",
+                threeWayMatch = threeWayMatch,
+                status = string("status"),
+                createdAt = string("createdAt"),
+                expiresAt = string("expiresAt"),
+                firstResponseAt = firstResponseAt,
+                chatDeadline = chatDeadline,
+                acceptedByA = acceptedByA,
+                acceptedByB = acceptedByB,
+                acceptedByC = acceptedByC,
+                rejectedByA = rejectedByA,
+                rejectedByB = rejectedByB,
+                rejectedByC = rejectedByC,
+                confirmedByA = confirmedByA,
+                confirmedByB = confirmedByB,
+                confirmedByC = confirmedByC
+            )
+        } else {
+            val directMatch = WorkerDirectMatch(
+                nurseAUid = nurseAUid,
+                nurseBUid = nurseBUid,
+                nurseACurrentHospitalId = string("nurseACurrentHospitalId"),
+                nurseBCurrentHospitalId = string("nurseBCurrentHospitalId"),
+                nurseADestinationHospitalId = string("nurseADestinationHospitalId"),
+                nurseBDestinationHospitalId = string("nurseBDestinationHospitalId"),
+                nurseAGrade = string("nurseAGrade"),
+                nurseBGrade = string("nurseBGrade"),
+                isSameGrade = bool("isSameGrade"),
+                nurseAPreferenceRank = int("nurseAPreferenceRank"),
+                nurseBPreferenceRank = int("nurseBPreferenceRank"),
+                combinedPreferenceRank = int("combinedPreferenceRank"),
+                priorityReason = string("priorityReason")
+            )
 
             RemoteMatchState(
                 matchId = matchId,

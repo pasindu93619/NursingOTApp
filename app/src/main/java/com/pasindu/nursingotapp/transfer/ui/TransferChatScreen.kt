@@ -129,10 +129,26 @@ fun TransferChatScreen(
 
     val listState = rememberLazyListState()
 
+    // Flag to ensure exit navigation happens strictly once
+    var hasExited by remember { mutableStateOf(false) }
+
     // Auto-scroll to latest message when new messages arrive
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.size - 1)
+        }
+    }
+
+    // Automatic delayed navigation when a terminal state notice is presented
+    LaunchedEffect(uiState.terminalNotice) {
+        val notice = uiState.terminalNotice
+        if (notice != null && !hasExited) {
+            // Wait approximately 2.5 seconds before automatically navigating out
+            kotlinx.coroutines.delay(2500L)
+            if (!hasExited) {
+                hasExited = true
+                onBack()
+            }
         }
     }
 
@@ -167,6 +183,43 @@ fun TransferChatScreen(
                             messageText = ""
                         }
                     )
+                }
+            } else if (uiState.isTerminal) {
+                // When team is cancelled or expired, provide an immediate one-tap return action
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SurfaceWhite,
+                    border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.4f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Button(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (uiState.serverStatus == "CONFIRMED") Emerald else ClinicalPrimaryColor
+                            )
+                        ) {
+                            Icon(
+                                if (uiState.serverStatus == "CONFIRMED") Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (uiState.serverStatus == "CONFIRMED") "Return to Transfer Hub (Confirmed)" else "Return to Transfer Hub",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
             }
         },
@@ -395,6 +448,74 @@ fun TransferChatScreen(
             dismissButton = {
                 TextButton(onClick = { showLeaveDialog = false }) {
                     Text("Stay in Team", color = Slate)
+                }
+            }
+        )
+    }
+
+    // Prominent Terminal Notice Dialog (Auto-navigates in ~2.5s or on manual tap)
+    val notice = uiState.terminalNotice
+    if (notice != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!hasExited) {
+                    hasExited = true
+                    onBack()
+                }
+            },
+            icon = {
+                Surface(
+                    shape = CircleShape,
+                    color = if (notice.isCancelled) SoftRedPill else SoftAmberPill,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            if (notice.isCancelled) Icons.Default.Close else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (notice.isCancelled) CriticalRed else Amber,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            },
+            title = {
+                Text(
+                    text = notice.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = Slate,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = notice.message,
+                    fontSize = 13.5.sp,
+                    color = TextSecondary,
+                    lineHeight = 19.sp,
+                    textAlign = TextAlign.Center
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (!hasExited) {
+                            hasExited = true
+                            onBack()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ClinicalPrimaryColor
+                    )
+                ) {
+                    Text(
+                        text = "Return to Pool",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
             }
         )

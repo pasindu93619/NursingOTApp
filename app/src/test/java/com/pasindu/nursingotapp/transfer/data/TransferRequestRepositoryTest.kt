@@ -137,6 +137,9 @@ class TransferRequestRepositoryTest {
 
         override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
             Result.success(Unit)
+
+        override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+            kotlinx.coroutines.flow.flowOf(Result.success(remoteMatch))
     }
 
 
@@ -655,6 +658,124 @@ class TransferRequestRepositoryTest {
         assertNull(updated.matchCycleId)
         assertNull(updated.matchType)
         assertNull(updated.matchPayloadJson)
+    }
+
+    @Test
+    fun `respondToMatch reconciles with remoteDataSource when worker returns error on CANCELLED match`() = runTest {
+        val throwingWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String) = WorkerSyncResult.NoMatch("")
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                throw RuntimeException("Server returned HTTP 409: INVALID_STATUS")
+            }
+            override suspend fun withdrawRequest(firebaseIdToken: String) = WorkerWithdrawResponse(withdrawn = true)
+        }
+
+        val remoteMatchCancelled = RemoteMatchState(
+            matchId = "match-123",
+            match = WorkerDirectMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-001",
+                nurseBCurrentHospitalId = "HOSP-002",
+                nurseADestinationHospitalId = "HOSP-002",
+                nurseBDestinationHospitalId = "HOSP-001",
+                nurseAGrade = "Grade II",
+                nurseBGrade = "Grade II",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "TEST"
+            ),
+            status = "CANCELLED",
+            createdAt = "2026-10-10T10:00:00Z",
+            expiresAt = "2026-10-12T10:00:00Z"
+        )
+
+        val repoWithReconciliation = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = FakeRemoteDataSource(null, remoteMatchCancelled),
+            workerApiClient = throwingWorker
+        )
+
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                requestId = "nurse-a",
+                currentHospitalId = "HOSP-001",
+                preferenceHospitalIdsJson = "[\"HOSP-002\"]",
+                grade = "Grade II",
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                matchStatus = "PENDING_CONFIRMATION",
+                matchCycleId = "match-123",
+                matchType = "DIRECT_2_WAY",
+                matchPayloadJson = "{\"dummy\":true}",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 1000L
+            )
+        )
+
+        val result = repoWithReconciliation.respondToMatch("match-123", Decision.LEAVE)
+        assertTrue(result.isSuccess)
+        assertEquals("CANCELLED", result.getOrNull()?.newStatus)
+
+        val updated = fakeDao.getOnce()
+        assertNotNull(updated)
+        assertEquals("CANCELLED", updated!!.matchStatus)
+        assertEquals(TransferRequestStatus.PENDING.name, updated.requestStatus)
+        assertNull(updated.matchCycleId)
+    }
+
+    @Test
+    fun `respondToMatch does not corrupt newer match when acting on stale matchId`() = runTest {
+        val fakeWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String) = WorkerSyncResult.NoMatch("")
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                return DecisionResponse(
+                    matchId = "old-match-999",
+                    newStatus = "CANCELLED",
+                    expiresAt = "2026-10-12T10:00:00Z",
+                    decisionApplied = true
+                )
+            }
+            override suspend fun withdrawRequest(firebaseIdToken: String) = WorkerWithdrawResponse(withdrawn = true)
+        }
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = null,
+            workerApiClient = fakeWorker
+        )
+
+        // Cache currently contains a newer match "new-match-100"
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                requestId = "nurse-a",
+                currentHospitalId = "HOSP-001",
+                preferenceHospitalIdsJson = "[\"HOSP-002\"]",
+                grade = "Grade II",
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                matchStatus = "PENDING_CONFIRMATION",
+                matchCycleId = "new-match-100",
+                matchType = "DIRECT_2_WAY",
+                matchPayloadJson = "{\"dummy\":true}",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 1000L
+            )
+        )
+
+        // Stale action arrives targeting "old-match-999"
+        val result = repo.respondToMatch("old-match-999", Decision.REJECT)
+        assertTrue(result.isSuccess)
+
+        // Active cache should NOT be overwritten because matchCycleId ("new-match-100") did not match
+        val cached = fakeDao.getOnce()
+        assertNotNull(cached)
+        assertEquals("new-match-100", cached!!.matchCycleId)
+        assertEquals(TransferRequestStatus.MATCHED.name, cached.requestStatus)
     }
 
     @Test

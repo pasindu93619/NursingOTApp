@@ -434,33 +434,56 @@ class TransferRequestRepository @Inject constructor(
 
         val response = runCatching {
             api.respondToMatch(token, DecisionRequest(matchId, decision))
-        }.getOrElse { return Result.failure(it) }
+        }.getOrElse { originalError ->
+            // Reconcile with authoritative match state if the worker call failed
+            if (remoteDataSource != null && (decision == Decision.LEAVE || decision == Decision.REJECT)) {
+                val remoteMatch = remoteDataSource.fetchMatchDoc(matchId).getOrNull()
+                if (remoteMatch != null && remoteMatch.status == "CANCELLED") {
+                    DecisionResponse(
+                        matchId = matchId,
+                        newStatus = "CANCELLED",
+                        expiresAt = remoteMatch.expiresAt,
+                        chatDeadline = remoteMatch.chatDeadline,
+                        firstResponseAt = remoteMatch.firstResponseAt,
+                        decisionApplied = true
+                    )
+                } else {
+                    return Result.failure(originalError)
+                }
+            } else {
+                return Result.failure(originalError)
+            }
+        }
 
         val entity = dao.getOnce()
         if (entity != null) {
-            val updated = when (response.newStatus) {
-                "CANCELLED" -> entity.copy(
-                    matchStatus = "CANCELLED",
-                    requestStatus = TransferRequestStatus.PENDING.name,
-                    matchCycleId = null,
-                    matchType = null,
-                    matchPayloadJson = null,
-                    syncStatus = CacheSyncStatus.SYNCED.name,
-                    updatedAt = System.currentTimeMillis()
-                )
-                "CONFIRMED" -> entity.copy(
-                    matchStatus = "CONFIRMED",
-                    requestStatus = TransferRequestStatus.MATCHED.name,
-                    syncStatus = CacheSyncStatus.SYNCED.name,
-                    updatedAt = System.currentTimeMillis()
-                )
-                else -> entity.copy(
-                    matchStatus = response.newStatus,
-                    syncStatus = CacheSyncStatus.SYNCED.name,
-                    updatedAt = System.currentTimeMillis()
-                )
+            // Guard: Stale actions must not corrupt a newer or different match
+            val isTargetMatch = entity.matchCycleId == null || entity.matchCycleId == matchId
+            if (isTargetMatch) {
+                val updated = when (response.newStatus) {
+                    "CANCELLED" -> entity.copy(
+                        matchStatus = "CANCELLED",
+                        requestStatus = TransferRequestStatus.PENDING.name,
+                        matchCycleId = null,
+                        matchType = null,
+                        matchPayloadJson = null,
+                        syncStatus = CacheSyncStatus.SYNCED.name,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    "CONFIRMED" -> entity.copy(
+                        matchStatus = "CONFIRMED",
+                        requestStatus = TransferRequestStatus.MATCHED.name,
+                        syncStatus = CacheSyncStatus.SYNCED.name,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    else -> entity.copy(
+                        matchStatus = response.newStatus,
+                        syncStatus = CacheSyncStatus.SYNCED.name,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                }
+                dao.upsert(updated)
             }
-            dao.upsert(updated)
         }
 
         return Result.success(response)

@@ -1927,8 +1927,8 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
     );
   });
 
-  // 13. Decision on already CANCELLED match returns 409 INVALID_STATUS
-  test("PW-13: Decision on already CANCELLED match throws 409 INVALID_STATUS", async () => {
+  // 13. Decision on already CANCELLED match returns idempotent CANCELLED for LEAVE/REJECT, 409 for CONFIRM
+  test("PW-13: LEAVE on already CANCELLED match is idempotent and returns CANCELLED", async () => {
     const matchDoc = createMockMatchDoc("match-already-cancelled", "nurse-a", "nurse-b", {
       status: "CANCELLED"
     });
@@ -1940,9 +1940,14 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
 
     const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
 
+    const result = await respondToMatch("nurse-a", "match-already-cancelled", "LEAVE", client);
+    assert.equal(result.newStatus, "CANCELLED");
+    assert.equal(result.decisionApplied, true);
+
+    // CONFIRM on CANCELLED match still throws 409 INVALID_STATUS
     await assert.rejects(
       async () => {
-        await respondToMatch("nurse-a", "match-already-cancelled", "LEAVE", client);
+        await respondToMatch("nurse-a", "match-already-cancelled", "CONFIRM", client);
       },
       (err: Error) => {
         const matchErr = err as MatchServiceError;
