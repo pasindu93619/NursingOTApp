@@ -126,6 +126,7 @@ fun TransferChatScreen(
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDetailsSheet by remember { mutableStateOf(false) }
+    var showHowItWorksDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
 
@@ -175,7 +176,8 @@ fun TransferChatScreen(
                 onBack = onBack,
                 onOpenDetails = { showDetailsSheet = true },
                 onOpenConfirmDialog = { showConfirmDialog = true },
-                onOpenLeaveDialog = { showLeaveDialog = true }
+                onOpenLeaveDialog = { showLeaveDialog = true },
+                onOpenHowItWorks = { showHowItWorksDialog = true }
             )
         },
         bottomBar = {
@@ -394,6 +396,68 @@ fun TransferChatScreen(
         }
     }
 
+    if (showHowItWorksDialog) {
+        AlertDialog(
+            onDismissRequest = { showHowItWorksDialog = false },
+            icon = {
+                Surface(shape = CircleShape, color = SoftBluePill, modifier = Modifier.size(46.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = ClinicalPrimaryColor, modifier = Modifier.size(23.dp))
+                    }
+                }
+            },
+            title = {
+                Text("How mutual transfer works", color = Slate, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "A direct exchange swaps two nurses between each other’s current hospitals. A 3-way circular exchange connects three nurses: A moves to B’s hospital, B to C’s, and C to A’s.",
+                        color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp
+                    )
+                    HowItWorksStep(
+                        number = "01",
+                        title = "Accept · agree to coordinate",
+                        detail = "Every participant must Accept. Accepting does not finalize the transfer; it opens the team chat when all 2 or all 3 nurses have accepted."
+                    )
+                    HowItWorksStep(
+                        number = "02",
+                        title = "Discuss · 72-hour chat window",
+                        detail = "Once everyone accepts, the chat coordination deadline is set to 72 hours. Use this time to discuss practical details."
+                    )
+                    HowItWorksStep(
+                        number = "03",
+                        title = "Confirm · final agreement",
+                        detail = "After discussion, each participant must Confirm. The match becomes CONFIRMED only when everyone confirms. Leaving or rejecting cancels the match for everyone."
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFFFF7ED),
+                        border = BorderStroke(1.dp, Amber.copy(alpha = 0.25f))
+                    ) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("THE DEADLINES", color = Color(0xFF92400E), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+                            Text("48 hours · initial match response window", color = Slate, fontSize = 11.sp)
+                            Text("24 hours · after the first response, the response deadline may tighten to 24 hours from that response", color = Slate, fontSize = 11.sp, lineHeight = 15.sp)
+                            Text("72 hours · chat window starts after everyone accepts", color = Slate, fontSize = 11.sp)
+                        }
+                    }
+                    Text(
+                        "Deadlines are enforced by the server. The deadline shown in this chat is the current authoritative deadline.",
+                        color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showHowItWorksDialog = false },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor)
+                ) { Text("Got it") }
+            }
+        )
+    }
+
     // Modal Bottom Sheet with Match Details & Team Route
     if (showDetailsSheet) {
         MatchDetailsBottomSheet(
@@ -559,7 +623,8 @@ private fun TransferChatTopAppBar(
     onBack: () -> Unit,
     onOpenDetails: () -> Unit,
     onOpenConfirmDialog: () -> Unit,
-    onOpenLeaveDialog: () -> Unit
+    onOpenLeaveDialog: () -> Unit,
+    onOpenHowItWorks: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -645,6 +710,17 @@ private fun TransferChatTopAppBar(
                 onDismissRequest = { menuExpanded = false }
             ) {
                 DropdownMenuItem(
+                    text = { Text("How mutual transfer works", fontSize = 13.sp) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp), tint = ClinicalPrimaryColor)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onOpenHowItWorks()
+                    }
+                )
+
+                DropdownMenuItem(
                     text = { Text("Match & Team Details", fontSize = 13.sp) },
                     leadingIcon = {
                         Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp), tint = ClinicalPrimaryColor)
@@ -686,6 +762,21 @@ private fun TransferChatTopAppBar(
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
     )
+}
+
+@Composable
+private fun HowItWorksStep(number: String, title: String, detail: String) {
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        Surface(shape = CircleShape, color = SoftBluePill, modifier = Modifier.size(30.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(number, color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, color = Slate, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(detail, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
