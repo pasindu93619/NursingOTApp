@@ -140,10 +140,15 @@ fun TransferRequestScreen(
         !activeRequest.matchStatus.equals("CANCELLED", ignoreCase = true) &&
         !activeRequest.matchStatus.equals("EXPIRED", ignoreCase = true)
     val canSubmit = currentHospital != null && preferences.isNotEmpty()
-    val progress = when {
-        currentHospital == null -> 0.33f
-        preferences.isEmpty() -> 0.66f
-        else -> 1f
+    // Readiness tracks the two required request sections, not the three destination ranks.
+    val completedRequestSections =
+        (if (currentHospital != null) 1 else 0) +
+            (if (preferences.isNotEmpty()) 1 else 0)
+    val progress = completedRequestSections / 2f
+    val requestReadinessLabel = when {
+        completedRequestSections == 2 -> "READY TO SUBMIT"
+        currentHospital == null -> "CHOOSE CURRENT POSTING"
+        else -> "ADD PREFERRED DESTINATIONS"
     }
 
     Box(
@@ -286,7 +291,7 @@ fun TransferRequestScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            "REQUEST SETUP",
+                                            "REQUEST READINESS",
                                             color = Color.White.copy(alpha = .72f),
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black,
@@ -294,11 +299,7 @@ fun TransferRequestScreen(
                                         )
                                         Spacer(Modifier.weight(1f))
                                         Text(
-                                            when {
-                                                progress >= 1f -> "READY (3 OF 3)"
-                                                currentHospital != null -> "2 OF 3"
-                                                else -> "1 OF 3"
-                                            },
+                                            requestReadinessLabel,
                                             color = Color.White,
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black
