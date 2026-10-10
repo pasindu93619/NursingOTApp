@@ -155,8 +155,8 @@ service cloud.firestore {
        * - Scoped strictly to /matches/{matchId}/messages/{messageId}.
        * - Only authenticated participants (A, B, and C if 3-way) of the parent match may read or create.
        * - Reads allowed for participants across active, confirmed, cancelled, and expired states.
-       * - Message creation allowed ONLY when parent match.status == 'CHAT_OPEN'.
-       * - Message creation allowed ONLY before match authoritative chatDeadline has passed.
+       * - Message creation allowed while coordinating in CHAT_OPEN, CONFIRMED, or AWAITING_COMPLETION.
+       * - The 72-hour deadline gates CHAT_OPEN; after final agreement, chat remains open until all participants report completion.
        * - Sender identity enforced: senderUid must match request.auth.uid.
        * - matchId and messageId must match the document path.
        * - Text must be a string, non-empty after trimming, <= 500 characters, no attachments.
@@ -198,8 +198,8 @@ service cloud.firestore {
         allow read: if isMatchParticipant(getMatchData());
 
         allow create: if isMatchParticipant(getMatchData())
-          && getMatchData().status == 'CHAT_OPEN'
-          && isBeforeDeadline(getMatchData())
+          && getMatchData().status in ['CHAT_OPEN', 'CONFIRMED', 'AWAITING_COMPLETION']
+          && (getMatchData().status in ['CONFIRMED', 'AWAITING_COMPLETION'] || isBeforeDeadline(getMatchData()))
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.matchId == matchId
           && request.resource.data.messageId == messageId
