@@ -31,7 +31,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,7 +51,6 @@ import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.BorderMuted
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.CriticalRed
-import com.pasindu.nursingotapp.ui.theme.Emerald
 import com.pasindu.nursingotapp.ui.theme.MedicalBlue
 import com.pasindu.nursingotapp.ui.theme.Slate
 import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
@@ -256,7 +253,7 @@ private fun MatchHistoryCard(item: TransferMatchHistoryItem) {
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Default.Info, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(8.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Why it ended", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(item.reason, color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
                 }
