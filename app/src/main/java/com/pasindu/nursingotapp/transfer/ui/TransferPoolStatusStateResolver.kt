@@ -359,3 +359,4 @@ object TransferPoolStatusStateResolver {
         }
     }
 }
+}
