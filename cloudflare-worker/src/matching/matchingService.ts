@@ -1533,7 +1533,7 @@ export async function reportTransferCompletion(
 
   return {
     matchId: cleanMatchId,
-    newStatus,
+    status: newStatus,
     callerReportedComplete: true,
     completedParticipants: allReported ? participantUids.length : completedParticipants,
     totalParticipants: participantUids.length,
