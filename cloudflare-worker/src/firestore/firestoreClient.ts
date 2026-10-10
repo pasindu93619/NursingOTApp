@@ -612,8 +612,7 @@ export class FirestoreClient {
           value: { stringValue: participantUid.trim() }
         }
       },
-      limit: Math.max(1, Math.min(limit, 100)),
-      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }]
+      limit: Math.max(1, Math.min(limit, 100))
     };
     let response: Response;
     try {
