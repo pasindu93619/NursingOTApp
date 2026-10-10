@@ -911,7 +911,7 @@ private fun HospitalSelectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 78.dp)
-                .clickable(onClick = onClick),
+                .clickable(enabled = enabled, onClick = onClick),
             shape = RoundedCornerShape(20.dp),
             color = Color.White,
             border = BorderStroke(1.5.dp, accent.copy(alpha = 0.35f)),
@@ -996,18 +996,20 @@ private fun HospitalSelectionCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Change",
+                            if (enabled) "Change" else "Locked",
                             color = accent,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.width(2.dp))
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(15.dp)
-                        )
+                        if (enabled) {
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                     }
                 }
             }
