@@ -12,6 +12,7 @@ import {
   respondToMatch,
   sweepExpiredMatches,
   withdrawTransferRequest,
+  getMatchHistory,
   MatchServiceError
 } from "./matching/matchingService.ts";
 
@@ -171,6 +172,28 @@ export default {
         if (err instanceof MatchServiceError) {
           return errorResponse(err.code, err.message, err.statusCode);
         }
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
+    // Participant-scoped terminal match history. UID is always derived from the verified token.
+    if (pathname === "/api/matching/history") {
+      if (request.method !== "GET") {
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use GET.", 405);
+      }
+      try {
+        const token = extractBearerToken(request.headers.get("Authorization"));
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) return tokenProviderResult;
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const result = await getMatchHistory(verifiedResult.uid, firestoreClient);
+        return jsonResponse({ items: result }, 200);
+      } catch (err: unknown) {
+        if (err instanceof AuthError) return errorResponse("Unauthorized", err.message, err.statusCode);
+        if (err instanceof MatchServiceError) return errorResponse(err.code, err.message, err.statusCode);
         const message = err instanceof Error ? err.message : "Internal Server Error";
         return errorResponse("InternalError", message, 500);
       }
