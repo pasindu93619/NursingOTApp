@@ -288,7 +288,7 @@ class TransferChatViewModel @Inject constructor(
         }
 
         val serverStatus = matchFound.status.trim().uppercase()
-        val isTerminal = serverStatus in listOf("CONFIRMED", "CANCELLED", "EXPIRED")
+        val isTerminal = serverStatus in listOf("CONFIRMED", "AWAITING_COMPLETION", "COMPLETED", "CANCELLED", "EXPIRED")
         // CONFIRMED is the authoritative final state: all participants have agreed,
         // even if older cached participant flags have not caught up yet.
         val allParticipantsConfirmed = serverStatus == "CONFIRMED"
