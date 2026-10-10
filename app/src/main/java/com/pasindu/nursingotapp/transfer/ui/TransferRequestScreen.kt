@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
+import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.BorderMuted
@@ -132,6 +133,9 @@ fun TransferRequestScreen(
         }
     }
 
+    val isRequestLocked = activeRequest?.requestStatus == TransferRequestStatus.MATCHED &&
+        !activeRequest.matchStatus.equals("CANCELLED", ignoreCase = true) &&
+        !activeRequest.matchStatus.equals("EXPIRED", ignoreCase = true)
     val canSubmit = currentHospital != null && preferences.isNotEmpty()
     val progress = when {
         currentHospital == null -> 0.33f
@@ -322,6 +326,43 @@ fun TransferRequestScreen(
                 )
             }
 
+            if (isRequestLocked) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = TransferBlueSoft,
+                        border = BorderStroke(1.dp, ClinicalPrimaryColor.copy(alpha = 0.25f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                tint = ClinicalPrimaryColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    "Your transfer match is active",
+                                    color = TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Hospital choices are locked until this match is cancelled, expires, or is otherwise closed.",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 TransferStepCard(
                     number = "01",
@@ -334,10 +375,11 @@ fun TransferRequestScreen(
                     HospitalSelectionCard(
                         hospital = currentHospital,
                         placeholder = "Select your current hospital",
-                        helper = "Official 2026 hospital reference list",
+                        helper = if (isRequestLocked) "Locked while your match is active" else "Official 2026 hospital reference list",
                         accent = ClinicalPrimaryColor,
                         surface = TransferBlueSoft,
-                        onClick = { pickerMode = PickerMode.CURRENT }
+                        enabled = !isRequestLocked,
+                        onClick = { if (!isRequestLocked) pickerMode = PickerMode.CURRENT }
                     )
                 }
             }
@@ -404,11 +446,12 @@ fun TransferRequestScreen(
                             PreferenceRow(
                                 rank = index + 1,
                                 hospital = hospital,
-                                onRemove = { preferences.removeAt(index) }
+                                canEdit = !isRequestLocked,
+                                onRemove = { if (!isRequestLocked) preferences.removeAt(index) }
                             )
                         }
 
-                        if (preferences.size < 3) {
+                        if (preferences.size < 3 && !isRequestLocked) {
                             AddPreferenceCard(currentCount = preferences.size) {
                                 pickerMode = PickerMode.PREFERENCE
                             }
@@ -553,7 +596,7 @@ fun TransferRequestScreen(
                             preferences.map { it.hospitalId }
                         )
                     },
-                    enabled = canSubmit,
+                    enabled = canSubmit && !isRequestLocked,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
@@ -571,7 +614,11 @@ fun TransferRequestScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (activeRequest != null) "Save changes & update pool" else "Start searching for a match",
+                        when {
+                            isRequestLocked -> "Match active — editing locked"
+                            activeRequest != null -> "Save changes & update pool"
+                            else -> "Start searching for a match"
+                        },
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.Black
                     )
@@ -580,7 +627,7 @@ fun TransferRequestScreen(
         }
     }
 
-    if (pickerMode != null) {
+    if (pickerMode != null && !isRequestLocked) {
         HospitalPickerDialog(
             title = if (pickerMode == PickerMode.CURRENT) {
                 "Select current hospital"
@@ -785,6 +832,7 @@ private fun HospitalSelectionCard(
     helper: String,
     accent: Color,
     surface: Color,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     if (hospital == null) {
@@ -793,7 +841,7 @@ private fun HospitalSelectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 72.dp)
-                .clickable(onClick = onClick),
+                 .clickable(enabled = enabled, onClick = onClick),
             shape = RoundedCornerShape(20.dp),
             color = surface,
             border = BorderStroke(1.5.dp, accent.copy(alpha = 0.22f))
@@ -971,6 +1019,7 @@ private fun HospitalSelectionCard(
 private fun PreferenceRow(
     rank: Int,
     hospital: HospitalReference,
+    canEdit: Boolean = true,
     onRemove: () -> Unit
 ) {
     val rankLabel = when (rank) {
@@ -1068,7 +1117,7 @@ private fun PreferenceRow(
                 }
             }
 
-            IconButton(
+            if (canEdit) IconButton(
                 onClick = onRemove,
                 modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
             ) {
