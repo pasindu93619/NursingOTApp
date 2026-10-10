@@ -111,8 +111,8 @@ fun TransferCompletionScreen(
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
                 ) {
                     androidx.compose.material3.Icon(
-                        imageVector = if (completed) androidx.compose.material.icons.Icons.Default.Check
-                            else androidx.compose.material.icons.Icons.Default.Info,
+                        imageVector = if (completed) Icons.Default.Check
+                            else Icons.Default.Info,
                         contentDescription = null,
                         tint = if (completed) com.pasindu.nursingotapp.ui.theme.Emerald else com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor,
                         modifier = androidx.compose.ui.Modifier.size(48.dp)
