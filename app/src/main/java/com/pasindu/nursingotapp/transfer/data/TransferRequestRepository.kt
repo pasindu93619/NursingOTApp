@@ -13,6 +13,7 @@ import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
+import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -407,6 +408,17 @@ class TransferRequestRepository @Inject constructor(
         }
 
         return workerResult
+    }
+
+    /**
+     * Loads the authenticated nurse's own cancelled/expired matches from the Worker.
+     * Match history is remote-only and does not alter the Room active-request cache.
+     */
+    suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runCatching {
+        val tp = tokenProvider ?: error("Token provider not configured")
+        val api = workerApiClient ?: error("Worker API client not configured")
+        val token = tp.getFirebaseIdToken() ?: error("Authentication failure: Unable to get ID token")
+        api.getMatchHistory(token)
     }
 
     /**
