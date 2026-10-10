@@ -1369,7 +1369,7 @@ export async function getTransferCompletionStatus(
 
 export interface CompletionReportResult {
   matchId: string;
-  newStatus: "AWAITING_COMPLETION" | "COMPLETED";
+  status: "AWAITING_COMPLETION" | "COMPLETED";
   callerReportedComplete: true;
   completedParticipants: number;
   totalParticipants: number;
@@ -1430,7 +1430,7 @@ export async function reportTransferCompletion(
   if (status === "COMPLETED") {
     return {
       matchId: cleanMatchId,
-      newStatus: "COMPLETED",
+      status: "COMPLETED",
       callerReportedComplete: true,
       completedParticipants: participantUids.length,
       totalParticipants: participantUids.length,
@@ -1448,7 +1448,7 @@ export async function reportTransferCompletion(
   if (readBooleanField(fields, callerKey) === true) {
     return {
       matchId: cleanMatchId,
-      newStatus: status === "CONFIRMED" ? "AWAITING_COMPLETION" : "AWAITING_COMPLETION",
+      status: status === "CONFIRMED" ? "AWAITING_COMPLETION" : "AWAITING_COMPLETION",
       callerReportedComplete: true,
       completedParticipants,
       totalParticipants: participantUids.length,
