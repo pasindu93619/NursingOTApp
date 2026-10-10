@@ -89,6 +89,38 @@ private val TransferInk = Color(0xFF12204A)
  * Formats a hospital's geographic location as "District • Province" or "RDHS • Province".
  * Strictly respects privacy and geographic standards: never exposes raw coordinates or 0.0.
  */
+/**
+ * Small, dependency-free edit-distance matcher for short hospital-search tokens.
+ * Only tolerates a small number of edits so unrelated hospitals are not broadly matched.
+ */
+private fun isFuzzyTokenMatch(queryToken: String, candidateToken: String): Boolean {
+    if (candidateToken.contains(queryToken) || queryToken.contains(candidateToken)) return true
+    if (queryToken.length < 4 || candidateToken.length < 4) return false
+    val allowedDistance = if (queryToken.length >= 8) 2 else 1
+    if (kotlin.math.abs(queryToken.length - candidateToken.length) > allowedDistance) return false
+
+    var previous = IntArray(candidateToken.length + 1) { it }
+    var current = IntArray(candidateToken.length + 1)
+    for (i in queryToken.indices) {
+        current[0] = i + 1
+        var rowMinimum = current[0]
+        for (j in candidateToken.indices) {
+            val substitutionCost = if (queryToken[i] == candidateToken[j]) 0 else 1
+            current[j + 1] = minOf(
+                previous[j + 1] + 1,
+                current[j] + 1,
+                previous[j] + substitutionCost
+            )
+            rowMinimum = minOf(rowMinimum, current[j + 1])
+        }
+        if (rowMinimum > allowedDistance) return false
+        val temp = previous
+        previous = current
+        current = temp
+    }
+    return previous[candidateToken.length] <= allowedDistance
+}
+
 private fun formatHospitalLocation(hospital: HospitalReference): String {
     val district = hospital.district?.trim()?.takeIf { it.isNotEmpty() }
     val rdhs = hospital.rdhsDivision.trim().takeIf { it.isNotEmpty() }
@@ -118,6 +150,13 @@ fun TransferRequestScreen(
     val preferences = remember { mutableStateListOf<HospitalReference>() }
     var pickerMode by remember { mutableStateOf<PickerMode?>(null) }
     var showProfileNotice by remember { mutableStateOf(false) }
+    var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+
+    val originalCurrentHospitalId = activeRequest?.currentHospitalId
+    val originalPreferenceIds = activeRequest?.rankedPreferences?.hospitalIds.orEmpty()
+    val hasUnsavedChanges =
+        currentHospital?.hospitalId != originalCurrentHospitalId ||
+            preferences.map { it.hospitalId } != originalPreferenceIds
 
     var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(activeRequest, hospitalOptions) {
@@ -172,7 +211,13 @@ fun TransferRequestScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = onBack,
+                        onClick = {
+                            if (hasUnsavedChanges && !isRequestLocked) {
+                                showUnsavedChangesDialog = true
+                            } else {
+                                onBack()
+                            }
+                        },
                         modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
                     ) {
                         Icon(
@@ -685,6 +730,43 @@ fun TransferRequestScreen(
                 }
                 pickerMode = null
             }
+        )
+    }
+
+    if (showUnsavedChangesDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnsavedChangesDialog = false },
+            title = {
+                Text(
+                    "Leave without saving?",
+                    fontWeight = FontWeight.Black,
+                    color = TransferInk
+                )
+            },
+            text = {
+                Text(
+                    "Your hospital choices or their ranking have changed. If you leave now, these edits will be lost.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showUnsavedChangesDialog = false
+                        onBack()
+                    }
+                ) {
+                    Text("Discard changes", color = Color(0xFFB42318), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnsavedChangesDialog = false }) {
+                    Text("Keep editing", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = Color.White,
+            titleContentColor = TransferInk,
+            textContentColor = TextSecondary
         )
     }
 
@@ -1289,10 +1371,13 @@ private fun HospitalPickerDialog(
                 .joinToString(" ")
                 .let(::normalizeSearchText)
 
-            normalizedQuery
-                .split(" ")
-                .filter { it.isNotBlank() }
-                .all { token -> searchableText.contains(token) }
+            val queryTokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
+            val searchableTokens = searchableText.split(" ").filter { it.isNotBlank() }
+            queryTokens.all { queryToken ->
+                searchableTokens.any { candidateToken ->
+                    isFuzzyTokenMatch(queryToken, candidateToken)
+                } || searchableText.contains(queryToken)
+            }
         }
     }
 
