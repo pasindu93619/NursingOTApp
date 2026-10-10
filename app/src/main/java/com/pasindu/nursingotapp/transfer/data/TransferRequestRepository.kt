@@ -112,11 +112,24 @@ class TransferRequestRepository @Inject constructor(
             "A valid nursing grade is required in your profile before submitting a transfer request"
         }
 
+        // Never replace an active matched cache row with a fresh PENDING request.
+        // That would erase matchCycleId/matchStatus/matchPayloadJson before the
+        // server's lock rejection arrives, making the UI falsely look unmatched.
+        val existing = dao.getOnce()
+        val existingMatchStatus = existing?.matchStatus?.trim()?.uppercase()
+        val hasActiveLocalMatch =
+            existing?.requestStatus.equals(TransferRequestStatus.MATCHED.name, ignoreCase = true) &&
+                existingMatchStatus != "CANCELLED" &&
+                existingMatchStatus != "EXPIRED"
+        check(!hasActiveLocalMatch) {
+            "Your request is locked while a match is active. Cancel or finish the match before editing preferences."
+        }
+
         val preferenceJson = serializePreferences(rankedPreferences)
         val nowMs = System.currentTimeMillis()
 
         // Preserve the existing requestId if there is already a cached row.
-        val existingRequestId = dao.getOnce()?.requestId
+        val existingRequestId = existing?.requestId
 
         val entity = TransferActiveCacheEntity(
             id = 1,
