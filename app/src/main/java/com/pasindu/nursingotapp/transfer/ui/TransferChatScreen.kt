@@ -118,7 +118,8 @@ fun TransferChatScreen(
     onConfirmTransfer: () -> Unit,
     onLeaveTeam: () -> Unit,
     onRetry: () -> Unit = {},
-    onClearSendError: () -> Unit = {}
+    onClearSendError: () -> Unit = {},
+    onOpenCompletion: () -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
     var pendingSendText by remember { mutableStateOf<String?>(null) }
@@ -201,6 +202,41 @@ fun TransferChatScreen(
                             onSendMessage(textToSend)
                         }
                     )
+                }
+            } else if (uiState.serverStatus in listOf("CONFIRMED", "AWAITING_COMPLETION", "COMPLETED")) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SurfaceWhite,
+                    border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onOpenCompletion,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                when (uiState.serverStatus) {
+                                    "COMPLETED" -> "View Completed Transfer"
+                                    "AWAITING_COMPLETION" -> "Report / View Completion"
+                                    else -> "Report Transfer Completion"
+                                },
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onBack,
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) { Text("Return to Transfer Hub") }
+                    }
                 }
             } else if (uiState.isTerminal) {
                 // When team is cancelled or expired, provide an immediate one-tap return action
