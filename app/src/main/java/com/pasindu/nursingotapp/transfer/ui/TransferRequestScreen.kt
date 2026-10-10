@@ -1034,7 +1034,6 @@ private fun HospitalSelectionCard(
 }
 
 @Composable
-@Composable
 private fun PreferenceRow(
     rank: Int,
     hospital: HospitalReference,
