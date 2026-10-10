@@ -587,4 +587,64 @@ export class FirestoreClient {
       throw new FirestoreError("Invalid JSON returned by Firestore commit");
     }
   }
+
+  /**
+   * Queries match documents by one verified participant UID.
+   * Callers must supply only a participant field; history results are filtered
+   * to terminal states by the matching service before being returned to clients.
+   */
+  async queryMatchesByParticipant(
+    participantField: "nurseAUid" | "nurseBUid" | "nurseCUid",
+    participantUid: string,
+    limit = 100
+  ): Promise<FirestoreRawDocument[]> {
+    if (!participantUid || participantUid.trim().length === 0) {
+      throw new FirestoreError("participantUid must not be empty");
+    }
+    const authHeader = await this.getAuthHeader();
+    const url = `${this.baseUrl}:runQuery`;
+    const structuredQuery = {
+      from: [{ collectionId: "matches" }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: participantField },
+          op: "EQUAL",
+          value: { stringValue: participantUid.trim() }
+        }
+      },
+      limit: Math.max(1, Math.min(limit, 100)),
+      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }]
+    };
+    let response: Response;
+    try {
+      response = await this.transport(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ structuredQuery })
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network failure";
+      throw new FirestoreError(`Transport error while querying participant matches: ${msg}`);
+    }
+    if (!response.ok) {
+      throw new FirestoreError(
+        `Failed to query participant matches: HTTP ${response.status}`,
+        response.status
+      );
+    }
+    let items: FirestoreRunQueryItem[];
+    try {
+      items = (await response.json()) as FirestoreRunQueryItem[];
+    } catch {
+      throw new FirestoreError("Invalid JSON returned by Firestore query");
+    }
+    return Array.isArray(items)
+      ? items.flatMap(item => item.document ? [item.document] : [])
+      : [];
+  }
+
 }
