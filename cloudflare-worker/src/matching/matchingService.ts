@@ -1318,6 +1318,53 @@ export interface SweepExpiredMatchesResult {
  */
 
 
+
+export interface TransferCompletionStatus {
+  matchId: string;
+  status: string;
+  callerReportedComplete: boolean;
+  completedParticipants: number;
+  totalParticipants: number;
+  completedAt?: string;
+}
+
+/** Reads completion progress for a verified participant without exposing other match documents. */
+export async function getTransferCompletionStatus(
+  callerUid: string,
+  matchId: string,
+  firestoreClient: FirestoreClient
+): Promise<TransferCompletionStatus> {
+  const uid = callerUid.trim();
+  const cleanMatchId = matchId.trim();
+  if (!uid) throw new MatchServiceError("Authenticated user ID is required", 401, "UNAUTHENTICATED");
+  if (!cleanMatchId || cleanMatchId.includes("/")) throw new MatchServiceError("A valid matchId is required", 400, "INVALID_MATCH_ID");
+  const rawMatch = await firestoreClient.getMatchDoc(cleanMatchId);
+  if (!rawMatch) throw new MatchServiceError("Match not found", 404, "MATCH_NOT_FOUND");
+  const fields = rawMatch.fields ?? {};
+  const nurseAUid = readStringField(fields, "nurseAUid");
+  const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseCUid = readStringField(fields, "nurseCUid");
+  if (!nurseAUid || !nurseBUid) throw new MatchServiceError("Malformed match document", 500, "MALFORMED_MATCH_DOC");
+  const participantUids = nurseCUid ? [nurseAUid, nurseBUid, nurseCUid] : [nurseAUid, nurseBUid];
+  if (!participantUids.includes(uid)) throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+  const keyByUid: Record<string, string> = {
+    [nurseAUid]: "completionReportedByA",
+    [nurseBUid]: "completionReportedByB"
+  };
+  if (nurseCUid) keyByUid[nurseCUid] = "completionReportedByC";
+  const completedParticipants = participantUids.filter(participantUid =>
+    readBooleanField(fields, keyByUid[participantUid]) === true
+  ).length;
+  return {
+    matchId: cleanMatchId,
+    status: readStringField(fields, "status") ?? "UNKNOWN",
+    callerReportedComplete: readBooleanField(fields, keyByUid[uid]) === true,
+    completedParticipants,
+    totalParticipants: participantUids.length,
+    ...(readStringField(fields, "completedAt") ? { completedAt: readStringField(fields, "completedAt") } : {})
+  };
+}
+
 export interface CompletionReportResult {
   matchId: string;
   newStatus: "AWAITING_COMPLETION" | "COMPLETED";
