@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -447,6 +449,20 @@ fun TransferRequestScreen(
                                 rank = index + 1,
                                 hospital = hospital,
                                 canEdit = !isRequestLocked,
+                                canMoveUp = index > 0,
+                                canMoveDown = index < preferences.lastIndex,
+                                onMoveUp = {
+                                    if (!isRequestLocked && index > 0) {
+                                        val selected = preferences.removeAt(index)
+                                        preferences.add(index - 1, selected)
+                                    }
+                                },
+                                onMoveDown = {
+                                    if (!isRequestLocked && index < preferences.lastIndex) {
+                                        val selected = preferences.removeAt(index)
+                                        preferences.add(index + 1, selected)
+                                    }
+                                },
                                 onRemove = { if (!isRequestLocked) preferences.removeAt(index) }
                             )
                         }
@@ -1018,10 +1034,15 @@ private fun HospitalSelectionCard(
 }
 
 @Composable
+@Composable
 private fun PreferenceRow(
     rank: Int,
     hospital: HospitalReference,
     canEdit: Boolean = true,
+    canMoveUp: Boolean = false,
+    canMoveDown: Boolean = false,
+    onMoveUp: () -> Unit = {},
+    onMoveDown: () -> Unit = {},
     onRemove: () -> Unit
 ) {
     val rankLabel = when (rank) {
@@ -1119,22 +1140,53 @@ private fun PreferenceRow(
                 }
             }
 
-            if (canEdit) IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
-            ) {
-                Surface(
-                    modifier = Modifier.size(28.dp),
-                    shape = CircleShape,
-                    color = SurfaceMuted
+            if (canEdit) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick = onMoveUp,
+                        enabled = canMoveUp,
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Remove preference $rank: ${hospital.name}",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
+                            Icons.Default.ArrowUpward,
+                            contentDescription = "Move preference $rank up: ${hospital.name}",
+                            tint = if (canMoveUp) AiAccentColor else BorderMuted,
+                            modifier = Modifier.size(17.dp)
                         )
+                    }
+                    IconButton(
+                        onClick = onMoveDown,
+                        enabled = canMoveDown,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowDownward,
+                            contentDescription = "Move preference $rank down: ${hospital.name}",
+                            tint = if (canMoveDown) AiAccentColor else BorderMuted,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                }
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                ) {
+                    Surface(
+                        modifier = Modifier.size(28.dp),
+                        shape = CircleShape,
+                        color = SurfaceMuted
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove preference $rank: ${hospital.name}",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
