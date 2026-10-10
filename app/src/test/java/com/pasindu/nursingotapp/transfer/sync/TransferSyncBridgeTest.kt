@@ -116,6 +116,9 @@ class TransferSyncBridgeTest {
         override suspend fun fetchMatchDoc(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.RemoteMatchState?> =
             Result.success(null)
 
+        override fun observeMatchDoc(matchId: String): Flow<Result<com.pasindu.nursingotapp.transfer.data.RemoteMatchState?>> =
+            kotlinx.coroutines.flow.flowOf(Result.success(null))
+
     }
 
     private class FakeWorkerApiClient : TransferWorkerApiClient {
