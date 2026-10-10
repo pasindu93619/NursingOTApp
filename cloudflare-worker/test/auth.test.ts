@@ -4,7 +4,8 @@ import worker from "../src/index.ts";
 import {
   extractBearerToken,
   verifyFirebaseIdToken,
-  base64UrlToUint8Array
+  base64UrlToUint8Array,
+  resetJwksCache
 } from "../src/auth/firebaseAuth.ts";
 import type { GoogleJwk, Env } from "../src/types.ts";
 
@@ -138,14 +139,30 @@ test("Cloudflare Worker Firebase Auth Test Suite", async (t) => {
       (err: Error) => err.message.includes("Cryptographic verification failed")
     );
 
-    // Also test through the worker API (with jwksProvider injected into verify)
-    const req = new Request("https://worker.local/api/auth/check", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${tamperedToken}` }
-    });
-    // In worker API, it will fetch from mock/JWKS; even with Google JWKS, tampered token fails
-    const res = await worker.fetch(req, env);
-    assert.equal(res.status, 401);
+    // Also test through the worker API with mocked globalThis.fetch returning publicJwk
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = (async (url: string | URL | Request) => {
+        if (String(url).includes("jwk")) {
+          return new Response(JSON.stringify({ keys: [publicJwk] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return new Response("Not found", { status: 404 });
+      }) as typeof fetch;
+
+      resetJwksCache();
+      const req = new Request("https://worker.local/api/auth/check", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tamperedToken}` }
+      });
+      const res = await worker.fetch(req, env);
+      assert.equal(res.status, 401);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetJwksCache();
+    }
   });
 
   // ---------------------------------------------------------------------------
@@ -302,5 +319,48 @@ test("Cloudflare Worker Firebase Auth Test Suite", async (t) => {
     assert.equal("matches" in response, false);
     assert.equal("serviceNo" in response, false);
     assert.equal("grade" in response, false);
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. Production environment blocks mock access token fallback
+  // ---------------------------------------------------------------------------
+  await t.test("11 - Production environment blocks mock access token when service account credentials are missing", async () => {
+    resetJwksCache();
+    const validToken = await createSignedTestJwt(defaultHeader, defaultPayload, keyPair.privateKey);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("service_accounts/v1/jwk")) {
+        return new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 });
+      }
+      return originalFetch(url);
+    };
+
+    try {
+      const prodEnv: Env = {
+        FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "production",
+        MATCH_EXPIRATION_HOURS: "48"
+      };
+
+      const req = new Request("https://worker.local/api/matching/respond", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${validToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ matchId: "any-match", decision: "ACCEPT" })
+      });
+
+      const res = await worker.fetch(req, prodEnv);
+      assert.equal(res.status, 500);
+      const body = (await res.json()) as { error: string; message: string };
+      assert.equal(body.error, "ConfigError");
+      assert.match(body.message, /Firebase service account credentials missing in production environment/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetJwksCache();
+    }
   });
 });

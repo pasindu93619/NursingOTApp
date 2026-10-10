@@ -5,11 +5,13 @@ import {
   getTransferRequestDocPath,
   type FirestoreWrite
 } from "../firestore/firestoreClient.ts";
-import type { MatchDecisionResponse } from "../types.ts";
+import type { MatchDecisionResponse, WithdrawResponse } from "../types.ts";
 import {
   findBestMatch,
+  findBestThreeWayCycle,
   type CandidateRequest,
-  type DirectMatch
+  type DirectMatch,
+  type ThreeWayMatch
 } from "./matchingEngine.ts";
 
 export class MatchServiceError extends Error {
@@ -27,7 +29,8 @@ export class MatchServiceError extends Error {
 export interface FindAndLockMatchSuccess {
   matched: true;
   matchId: string;
-  match: DirectMatch;
+  matchType?: "DIRECT_2_WAY" | "THREE_WAY";
+  match: DirectMatch | ThreeWayMatch;
   createdAt: string;
   expiresAt: string;
 }
@@ -103,14 +106,34 @@ function validateCallerRequest(caller: CandidateRequest): void {
   }
 }
 
+export const CHAT_DURATION_HOURS = 72; // 3 days for CHAT_OPEN phase
+export const SLIDING_WINDOW_HOURS = 24; // 24 hours after first response
+
 /**
- * Responds to a matched transfer request with an ACCEPT or REJECT decision.
+ * Responds to a matched transfer request with an ACCEPT, REJECT, or CONFIRM decision.
+ *
+ * Workflow State Machine:
+ * 1. PENDING_CONFIRMATION:
+ *    - REJECT -> CANCELLED (releases all participants to SEARCHING)
+ *    - ACCEPT:
+ *      - If first accept, sliding window triggers: firstResponseAt recorded, expiresAt tightened to min(expiresAt, now + 24h).
+ *      - If all participants accept (2 in 2-way, 3 in 3-way) -> transitions to CHAT_OPEN.
+ *        chatDeadline is established (now + 72h) and expiresAt is updated to chatDeadline.
+ *      - Otherwise remains PENDING_CONFIRMATION awaiting remaining responses.
+ * 2. CHAT_OPEN:
+ *    - REJECT / LEAVE -> CANCELLED (releases all participants to SEARCHING)
+ *    - CONFIRM only:
+ *      - Marks caller's confirmedBy flag.
+ *      - If all participants confirm -> transitions to CONFIRMED.
+ *      - Otherwise remains CHAT_OPEN awaiting remaining confirmations.
+ *    - ACCEPT is invalid here; accepting a match is never final confirmation.
  */
 export async function respondToMatch(
   callerUid: string,
   matchId: string,
-  decision: "ACCEPT" | "REJECT",
-  firestoreClient: FirestoreClient
+  decision: "ACCEPT" | "REJECT" | "CONFIRM" | "LEAVE",
+  firestoreClient: FirestoreClient,
+  retryCount = 1
 ): Promise<MatchDecisionResponse> {
   // 1. Load match document
   const rawMatch = await firestoreClient.getMatchDoc(matchId);
@@ -131,24 +154,108 @@ export async function respondToMatch(
 
   const nurseAUid = getString("nurseAUid");
   const nurseBUid = getString("nurseBUid");
+  const nurseCUid = getString("nurseCUid");
   const status = getString("status");
   const expiresAtStr = getString("expiresAt");
+  const firstResponseAtStr = getString("firstResponseAt");
+  const chatDeadlineStr = getString("chatDeadline");
   const updateTime = rawMatch.updateTime;
 
   if (!nurseAUid || !nurseBUid || !status || !expiresAtStr) {
     throw new MatchServiceError("Malformed match document", 500, "MALFORMED_MATCH_DOC");
   }
 
-  // 2. Verify caller is a participant
-  const isParticipantA = callerUid === nurseAUid;
-  const isParticipantB = callerUid === nurseBUid;
-  if (!isParticipantA && !isParticipantB) {
-    throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+  // Detect whether match is 3-way or 2-way.
+  // A match is 3-way if nurseCUid is present or if any participant C flag exists.
+  const hasParticipantC =
+    Boolean(nurseCUid) ||
+    fields.acceptedByC !== undefined ||
+    fields.rejectedByC !== undefined;
+
+  let isParticipantA = false;
+  let isParticipantB = false;
+  let isParticipantC = false;
+  let acceptedKey: string;
+  let rejectedKey: string;
+  let confirmedKey: string;
+
+  if (hasParticipantC) {
+    // In a 3-way match, nurseCUid must be valid and decision booleans must be present
+    const acceptedByC = getBool("acceptedByC");
+    const rejectedByC = getBool("rejectedByC");
+    if (!nurseCUid || acceptedByC === undefined || rejectedByC === undefined) {
+      throw new MatchServiceError("Malformed 3-way match document", 500, "MALFORMED_MATCH_DOC");
+    }
+
+    isParticipantA = callerUid === nurseAUid;
+    isParticipantB = callerUid === nurseBUid;
+    isParticipantC = callerUid === nurseCUid;
+
+    if (!isParticipantA && !isParticipantB && !isParticipantC) {
+      throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+    }
+
+    if (isParticipantA) {
+      acceptedKey = "acceptedByA";
+      rejectedKey = "rejectedByA";
+      confirmedKey = "confirmedByA";
+    } else if (isParticipantB) {
+      acceptedKey = "acceptedByB";
+      rejectedKey = "rejectedByB";
+      confirmedKey = "confirmedByB";
+    } else {
+      acceptedKey = "acceptedByC";
+      rejectedKey = "rejectedByC";
+      confirmedKey = "confirmedByC";
+    }
+  } else {
+    // 2-Way match
+    isParticipantA = callerUid === nurseAUid;
+    isParticipantB = callerUid === nurseBUid;
+
+    if (!isParticipantA && !isParticipantB) {
+      throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+    }
+
+    acceptedKey = isParticipantA ? "acceptedByA" : "acceptedByB";
+    rejectedKey = isParticipantA ? "rejectedByA" : "rejectedByB";
+    confirmedKey = isParticipantA ? "confirmedByA" : "confirmedByB";
   }
 
   // 3. Verify match is actionable
-  if (status !== "PENDING_CONFIRMATION") {
-    throw new MatchServiceError("Match is not awaiting confirmation", 409, "INVALID_STATUS");
+  if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") {
+    // If the match was already cancelled by another participant, LEAVE or REJECT is idempotent.
+    // Return the cancelled state cleanly rather than throwing HTTP 409 INVALID_STATUS.
+    if (status === "CANCELLED" && (decision === "REJECT" || decision === "LEAVE")) {
+      return {
+        matchId,
+        newStatus: "CANCELLED",
+        expiresAt: expiresAtStr,
+        chatDeadline: chatDeadlineStr,
+        firstResponseAt: firstResponseAtStr,
+        decisionApplied: true
+      };
+    }
+    throw new MatchServiceError("Match is not awaiting confirmation or chat finalization", 409, "INVALID_STATUS");
+  }
+
+  // Enforce the two distinct decision stages at the trusted backend boundary.
+  // Stage 1: ACCEPT/REJECT while the proposed match is pending.
+  // Stage 2: CONFIRM/REJECT/LEAVE after the coordination chat opens.
+  // Never reinterpret ACCEPT as final agreement, or CONFIRM as initial acceptance.
+  if (status === "PENDING_CONFIRMATION" && decision === "CONFIRM") {
+    throw new MatchServiceError(
+      "Final confirmation is available only after all nurses accept and the chat opens",
+      400,
+      "INVALID_DECISION"
+    );
+  }
+  if (status === "CHAT_OPEN" && decision === "ACCEPT") {
+    throw new MatchServiceError(
+      "The match has already been accepted; use CONFIRM after discussion to finalize it",
+      400,
+      "INVALID_DECISION"
+    );
   }
 
   const now = new Date();
@@ -157,29 +264,162 @@ export async function respondToMatch(
     throw new MatchServiceError("Match deadline has expired", 410, "EXPIRED");
   }
 
-  // 4. Verify participant has not already responded
-  const acceptedKey = isParticipantA ? "acceptedByA" : "acceptedByB";
-  const rejectedKey = isParticipantA ? "rejectedByA" : "rejectedByB";
-  const alreadyAccepted = getBool(acceptedKey);
-  const alreadyRejected = getBool(rejectedKey);
-  if (alreadyAccepted || alreadyRejected) {
-    throw new MatchServiceError("Participant has already responded", 409, "ALREADY_RESPONDED");
+  // 4. Verify participant response eligibility per state
+  if (status === "PENDING_CONFIRMATION") {
+    if (decision === "LEAVE") {
+      throw new MatchServiceError("Cannot LEAVE before chat is open; use REJECT instead", 400, "INVALID_DECISION");
+    }
+    const alreadyAccepted = getBool(acceptedKey);
+    const alreadyRejected = getBool(rejectedKey);
+    if (alreadyAccepted || alreadyRejected) {
+      throw new MatchServiceError("Participant has already responded", 409, "ALREADY_RESPONDED");
+    }
+  } else if (status === "CHAT_OPEN") {
+    if (decision === "REJECT" || decision === "LEAVE") {
+      // Allowed to reject/leave in CHAT_OPEN
+    } else {
+      // CONFIRM or ACCEPT
+      const alreadyConfirmed = getBool(confirmedKey);
+      if (alreadyConfirmed) {
+        throw new MatchServiceError("Participant has already confirmed", 409, "ALREADY_CONFIRMED");
+      }
+    }
   }
 
-  // 5. Determine new status after this decision
-  let newStatus = "PENDING_CONFIRMATION";
-  if (decision === "REJECT") {
+  // 5. Determine new status, deadlines, and flags
+  let newStatus = status;
+  let newExpiresAtStr = expiresAtStr;
+  let newFirstResponseAtStr = firstResponseAtStr;
+  let newChatDeadlineStr = chatDeadlineStr;
+
+  const matchFieldsToUpdate: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }> = {
+    updatedAt: { integerValue: Date.now().toString() }
+  };
+  const updateMaskFieldPaths: string[] = ["updatedAt"];
+
+  if (decision === "REJECT" || decision === "LEAVE") {
     newStatus = "CANCELLED";
-  } else {
-    // ACCEPT: check opponent's decision
-    const opponentAcceptedKey = isParticipantA ? "acceptedByB" : "acceptedByA";
-    const opponentRejectedKey = isParticipantA ? "rejectedByB" : "rejectedByA";
-    const opponentAccepted = getBool(opponentAcceptedKey);
-    const opponentRejected = getBool(opponentRejectedKey);
-    if (opponentRejected) {
-      newStatus = "CANCELLED"; // should not happen due to precondition but safe
-    } else if (opponentAccepted) {
+    matchFieldsToUpdate[rejectedKey] = { booleanValue: true };
+    matchFieldsToUpdate[acceptedKey] = { booleanValue: false };
+    matchFieldsToUpdate.status = { stringValue: newStatus };
+    matchFieldsToUpdate.terminalReason = {
+      stringValue: decision === "REJECT"
+        ? "A participant rejected the proposed match."
+        : "A participant left the coordination team."
+    };
+    updateMaskFieldPaths.push(rejectedKey, acceptedKey, "status", "terminalReason");
+  } else if (status === "PENDING_CONFIRMATION") {
+    // ACCEPT decision in PENDING_CONFIRMATION
+    matchFieldsToUpdate[acceptedKey] = { booleanValue: true };
+    matchFieldsToUpdate[rejectedKey] = { booleanValue: false };
+    updateMaskFieldPaths.push(acceptedKey, rejectedKey);
+
+    // Sliding window check: If this is the first response, set firstResponseAt and tighten deadline
+    const anyPriorResponse =
+      (isParticipantA ? false : Boolean(getBool("acceptedByA"))) ||
+      (isParticipantB ? false : Boolean(getBool("acceptedByB"))) ||
+      (hasParticipantC && !isParticipantC ? Boolean(getBool("acceptedByC")) : false);
+
+    if (!firstResponseAtStr && !anyPriorResponse) {
+      newFirstResponseAtStr = now.toISOString();
+      matchFieldsToUpdate.firstResponseAt = { stringValue: newFirstResponseAtStr };
+      matchFieldsToUpdate.firstResponseAtMs = { integerValue: now.getTime().toString() };
+      updateMaskFieldPaths.push("firstResponseAt", "firstResponseAtMs");
+
+      const slidingDeadline = new Date(now.getTime() + SLIDING_WINDOW_HOURS * 3600 * 1000);
+      if (slidingDeadline < expiresAt) {
+        newExpiresAtStr = slidingDeadline.toISOString();
+        matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
+        matchFieldsToUpdate.expiresAtMs = { integerValue: slidingDeadline.getTime().toString() };
+        updateMaskFieldPaths.push("expiresAt", "expiresAtMs");
+      }
+    }
+
+    // Check if all participants have now accepted
+    let allAccepted = false;
+    if (hasParticipantC) {
+      const acceptedA = isParticipantA ? true : Boolean(getBool("acceptedByA"));
+      const acceptedB = isParticipantB ? true : Boolean(getBool("acceptedByB"));
+      const acceptedC = isParticipantC ? true : Boolean(getBool("acceptedByC"));
+      const anyRejected =
+        Boolean(getBool("rejectedByA")) ||
+        Boolean(getBool("rejectedByB")) ||
+        Boolean(getBool("rejectedByC"));
+
+      if (anyRejected) {
+        newStatus = "CANCELLED";
+      } else if (acceptedA && acceptedB && acceptedC) {
+        allAccepted = true;
+      }
+    } else {
+      const acceptedA = isParticipantA ? true : Boolean(getBool("acceptedByA"));
+      const acceptedB = isParticipantB ? true : Boolean(getBool("acceptedByB"));
+      const anyRejected = Boolean(getBool("rejectedByA")) || Boolean(getBool("rejectedByB"));
+
+      if (anyRejected) {
+        newStatus = "CANCELLED";
+      } else if (acceptedA && acceptedB) {
+        allAccepted = true;
+      }
+    }
+
+    if (newStatus !== "CANCELLED") {
+      if (allAccepted) {
+        // Transition to CHAT_OPEN
+        newStatus = "CHAT_OPEN";
+        const chatDeadline = new Date(now.getTime() + CHAT_DURATION_HOURS * 3600 * 1000);
+        newChatDeadlineStr = chatDeadline.toISOString();
+        newExpiresAtStr = newChatDeadlineStr;
+
+        matchFieldsToUpdate.status = { stringValue: newStatus };
+        matchFieldsToUpdate.chatDeadline = { stringValue: newChatDeadlineStr };
+        matchFieldsToUpdate.chatDeadlineMs = { integerValue: chatDeadline.getTime().toString() };
+        matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
+        matchFieldsToUpdate.expiresAtMs = { integerValue: chatDeadline.getTime().toString() };
+        matchFieldsToUpdate.confirmedByA = { booleanValue: false };
+        matchFieldsToUpdate.confirmedByB = { booleanValue: false };
+        updateMaskFieldPaths.push("status", "chatDeadline", "chatDeadlineMs", "expiresAt", "expiresAtMs", "confirmedByA", "confirmedByB");
+
+        if (hasParticipantC) {
+          matchFieldsToUpdate.confirmedByC = { booleanValue: false };
+          updateMaskFieldPaths.push("confirmedByC");
+        }
+      } else {
+        newStatus = "PENDING_CONFIRMATION";
+        matchFieldsToUpdate.status = { stringValue: newStatus };
+        updateMaskFieldPaths.push("status");
+      }
+    } else {
+      matchFieldsToUpdate.status = { stringValue: newStatus };
+      updateMaskFieldPaths.push("status");
+    }
+  } else if (status === "CHAT_OPEN") {
+    // Decision is CONFIRM or ACCEPT in CHAT_OPEN
+    matchFieldsToUpdate[confirmedKey] = { booleanValue: true };
+    updateMaskFieldPaths.push(confirmedKey);
+
+    let allConfirmed = false;
+    if (hasParticipantC) {
+      const confirmedA = isParticipantA ? true : Boolean(getBool("confirmedByA"));
+      const confirmedB = isParticipantB ? true : Boolean(getBool("confirmedByB"));
+      const confirmedC = isParticipantC ? true : Boolean(getBool("confirmedByC"));
+      if (confirmedA && confirmedB && confirmedC) {
+        allConfirmed = true;
+      }
+    } else {
+      const confirmedA = isParticipantA ? true : Boolean(getBool("confirmedByA"));
+      const confirmedB = isParticipantB ? true : Boolean(getBool("confirmedByB"));
+      if (confirmedA && confirmedB) {
+        allConfirmed = true;
+      }
+    }
+
+    if (allConfirmed) {
       newStatus = "CONFIRMED";
+      matchFieldsToUpdate.status = { stringValue: newStatus };
+      updateMaskFieldPaths.push("status");
+    } else {
+      newStatus = "CHAT_OPEN";
     }
   }
 
@@ -187,25 +427,113 @@ export async function respondToMatch(
   const writeMatch: FirestoreWrite = {
     update: {
       name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
-      fields: {
-        [acceptedKey]: { booleanValue: decision === "ACCEPT" },
-        [rejectedKey]: { booleanValue: decision === "REJECT" },
-        status: { stringValue: newStatus },
-        updatedAt: { stringValue: new Date().toISOString() }
-      }
+      fields: matchFieldsToUpdate
     },
-    updateMask: { fieldPaths: [acceptedKey, rejectedKey, "status", "updatedAt"] },
-    currentDocument: {
-      exists: true,
-      ...(updateTime ? { updateTime } : {})
-    }
+    updateMask: { fieldPaths: updateMaskFieldPaths },
+    currentDocument: updateTime
+      ? { updateTime }
+      : { exists: true }
   };
+
+  const writes: FirestoreWrite[] = [writeMatch];
+
+  if (newStatus === "CANCELLED") {
+    const participantUids = hasParticipantC && nurseCUid
+      ? [nurseAUid, nurseBUid, nurseCUid]
+      : [nurseAUid, nurseBUid];
+
+    const participantDocs: (CandidateRequest | null)[] = [];
+    for (const uid of participantUids) {
+      try {
+        const doc = await firestoreClient.getRequestDoc(uid);
+        participantDocs.push(doc);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        throw new MatchServiceError(
+          `Failed to read participant request ${uid} during cancellation: ${msg}`,
+          500,
+          "PARTICIPANT_READ_FAILED"
+        );
+      }
+    }
+
+    for (const doc of participantDocs) {
+      if (doc && doc.currentMatchId === matchId) {
+        writes.push({
+          update: {
+            name: getTransferRequestDocPath(firestoreClient.getProjectId(), doc.firebaseUid),
+            fields: {
+              locked: { booleanValue: false },
+              currentMatchId: { nullValue: null },
+              status: { stringValue: "SEARCHING" },
+              updatedAt: { integerValue: Date.now().toString() }
+            }
+          },
+          updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+          currentDocument: doc.updateTime
+            ? { updateTime: doc.updateTime }
+            : { exists: true }
+        });
+      }
+    }
+  }
 
   // 7. Commit atomically
   try {
-    await firestoreClient.commitAtomicMatch([writeMatch]);
+    await firestoreClient.commitAtomicMatch(writes);
   } catch (err: unknown) {
     if (err instanceof FirestoreError) {
+      const isConcurrencyConflict =
+        err.statusCode === 409 ||
+        err.code === "ABORTED" ||
+        err.code === "FAILED_PRECONDITION";
+
+      if (isConcurrencyConflict) {
+        const freshRawMatch = await firestoreClient.getMatchDoc(matchId).catch(() => null);
+        if (freshRawMatch) {
+          const freshFields = freshRawMatch.fields ?? {};
+          const freshStatus = readStringField(freshFields, "status") ?? "PENDING_CONFIRMATION";
+          const freshExpiresAt = readStringField(freshFields, "expiresAt") ?? newExpiresAtStr;
+          const freshChatDeadline = readStringField(freshFields, "chatDeadline") ?? newChatDeadlineStr;
+          const freshFirstResponseAt = readStringField(freshFields, "firstResponseAt") ?? newFirstResponseAtStr;
+          const freshAccepted = readBooleanField(freshFields, acceptedKey);
+          const freshRejected = readBooleanField(freshFields, rejectedKey);
+          const freshConfirmed = readBooleanField(freshFields, confirmedKey);
+
+          if (
+            (decision === "ACCEPT" && freshAccepted) ||
+            ((decision === "REJECT" || decision === "LEAVE") && freshRejected) ||
+            (decision === "CONFIRM" && freshConfirmed)
+          ) {
+            return {
+              matchId,
+              newStatus: freshStatus,
+              expiresAt: freshExpiresAt,
+              chatDeadline: freshChatDeadline,
+              firstResponseAt: freshFirstResponseAt,
+              decisionApplied: true
+            };
+          }
+
+          if (freshStatus === "CANCELLED" || freshStatus === "CONFIRMED") {
+            return {
+              matchId,
+              newStatus: freshStatus,
+              expiresAt: freshExpiresAt,
+              chatDeadline: freshChatDeadline,
+              firstResponseAt: freshFirstResponseAt,
+              decisionApplied:
+                (decision === "ACCEPT" && (freshStatus === "CHAT_OPEN" || freshStatus === "CONFIRMED")) ||
+                (decision === "CONFIRM" && freshStatus === "CONFIRMED") ||
+                ((decision === "REJECT" || decision === "LEAVE") && freshStatus === "CANCELLED")
+            };
+          }
+
+          if (retryCount > 0) {
+            return respondToMatch(callerUid, matchId, decision, firestoreClient, retryCount - 1);
+          }
+        }
+      }
       throw new MatchServiceError(`Failed to commit decision: ${err.message}`, err.statusCode || 500, "FIRESTORE_COMMIT_FAILED");
     }
     const msg = err instanceof Error ? err.message : "Internal error";
@@ -215,7 +543,9 @@ export async function respondToMatch(
   return {
     matchId,
     newStatus,
-    expiresAt: expiresAtStr,
+    expiresAt: newExpiresAtStr,
+    chatDeadline: newChatDeadlineStr,
+    firstResponseAt: newFirstResponseAtStr,
     decisionApplied: true
   };
 }
@@ -228,8 +558,705 @@ export async function respondToMatch(
  * 2. Queries searching candidates without grade-based exclusionary filtering.
  * 3. Uses deterministic pure matching engine (same-grade prioritized, cross-grade eligible).
  * 4. Executes concurrency-safe atomic lock via Firestore :commit with precondition updateTime.
- * 5. Guarantees zero partial locking: if either nurse or match doc fails, entire commit aborts.
+ * 5. Guarantees zero partial locking: if any participant or match doc fails, entire commit aborts.
  */
+function readStringField(
+  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  key: string
+): string | undefined {
+  const value = fields[key];
+  return value && typeof value === "object" && "stringValue" in value
+    ? value.stringValue
+    : undefined;
+}
+
+function readBooleanField(
+  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  key: string
+): boolean | undefined {
+  const value = fields[key];
+  return value && typeof value === "object" && "booleanValue" in value
+    ? value.booleanValue
+    : undefined;
+}
+
+function readIntegerField(
+  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  key: string
+): number | undefined {
+  const value = fields[key];
+  if (!value || typeof value !== "object" || !("integerValue" in value)) return undefined;
+  const parsed = Number(value.integerValue);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+/**
+ * Reconstructs an already-created active match after a concurrent caller lost
+ * the Firestore commit race. This is recovery only; it never fabricates a match.
+ * Supports both 2-way and 3-way match documents.
+ */
+async function recoverExistingMatch(
+  callerUid: string,
+  matchId: string,
+  firestoreClient: FirestoreClient,
+  now?: Date
+): Promise<FindAndLockMatchSuccess | null> {
+  const rawMatch = await firestoreClient.getMatchDoc(matchId);
+  if (!rawMatch) {
+    return null;
+  }
+
+  const fields = rawMatch.fields ?? {};
+  const status = readStringField(fields, "status")?.toUpperCase();
+  const expiresAt = readStringField(fields, "expiresAt");
+  const currentTime = now ?? new Date();
+  const isExpired = expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
+
+  if (
+    status === "CANCELLED" ||
+    status === "COMPLETED" ||
+    status === "EXPIRED" ||
+    isExpired ||
+    (status !== undefined &&
+      status !== "PENDING_CONFIRMATION" &&
+      status !== "CHAT_OPEN" &&
+      status !== "CONFIRMED")
+  ) {
+    return null;
+  }
+
+  const nurseAUid = readStringField(fields, "nurseAUid");
+  const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseCUid = readStringField(fields, "nurseCUid");
+  const nurseACurrentHospitalId = readStringField(fields, "nurseACurrentHospitalId");
+  const nurseBCurrentHospitalId = readStringField(fields, "nurseBCurrentHospitalId");
+  const nurseCCurrentHospitalId = readStringField(fields, "nurseCCurrentHospitalId");
+  const nurseADestinationHospitalId = readStringField(fields, "nurseADestinationHospitalId");
+  const nurseBDestinationHospitalId = readStringField(fields, "nurseBDestinationHospitalId");
+  const nurseCDestinationHospitalId = readStringField(fields, "nurseCDestinationHospitalId");
+  const nurseAGrade = readStringField(fields, "nurseAGrade");
+  const nurseBGrade = readStringField(fields, "nurseBGrade");
+  const nurseCGrade = readStringField(fields, "nurseCGrade");
+  const isSameGrade = readBooleanField(fields, "isSameGrade");
+  const isAllSameGrade = readBooleanField(fields, "isAllSameGrade");
+  const nurseAPreferenceRank = readIntegerField(fields, "nurseAPreferenceRank");
+  const nurseBPreferenceRank = readIntegerField(fields, "nurseBPreferenceRank");
+  const nurseCPreferenceRank = readIntegerField(fields, "nurseCPreferenceRank");
+  const combinedPreferenceRank = readIntegerField(fields, "combinedPreferenceRank");
+  const priorityReason = readStringField(fields, "priorityReason");
+  const createdAt = readStringField(fields, "createdAt");
+
+  const is3Way = Boolean(nurseCUid);
+
+  if (is3Way) {
+    if (
+      !nurseAUid ||
+      !nurseBUid ||
+      !nurseCUid ||
+      !nurseACurrentHospitalId ||
+      !nurseBCurrentHospitalId ||
+      !nurseCCurrentHospitalId ||
+      !nurseADestinationHospitalId ||
+      !nurseBDestinationHospitalId ||
+      !nurseCDestinationHospitalId ||
+      !nurseAGrade ||
+      !nurseBGrade ||
+      !nurseCGrade ||
+      isAllSameGrade === undefined ||
+      nurseAPreferenceRank === undefined ||
+      nurseBPreferenceRank === undefined ||
+      nurseCPreferenceRank === undefined ||
+      combinedPreferenceRank === undefined ||
+      !priorityReason ||
+      !createdAt ||
+      !expiresAt
+    ) {
+      throw new MatchServiceError(
+        "Referenced match document is malformed",
+        500,
+        "MALFORMED_MATCH_DOC"
+      );
+    }
+
+    if (callerUid !== nurseAUid && callerUid !== nurseBUid && callerUid !== nurseCUid) {
+      throw new MatchServiceError(
+        "Caller is not a participant of the referenced match",
+        409,
+        "MATCH_STATE_INCOMPLETE"
+      );
+    }
+
+    const match: ThreeWayMatch = {
+      nurseAUid,
+      nurseBUid,
+      nurseCUid,
+      nurseACurrentHospitalId,
+      nurseBCurrentHospitalId,
+      nurseCCurrentHospitalId,
+      nurseADestinationHospitalId,
+      nurseBDestinationHospitalId,
+      nurseCDestinationHospitalId,
+      nurseAGrade,
+      nurseBGrade,
+      nurseCGrade,
+      isAllSameGrade,
+      nurseAPreferenceRank,
+      nurseBPreferenceRank,
+      nurseCPreferenceRank,
+      combinedPreferenceRank,
+      priorityReason
+    };
+
+    return {
+      matched: true,
+      matchId,
+      matchType: "THREE_WAY",
+      match,
+      createdAt,
+      expiresAt
+    };
+  }
+
+  // 2-Way Match recovery
+  if (
+    !nurseAUid ||
+    !nurseBUid ||
+    !nurseACurrentHospitalId ||
+    !nurseBCurrentHospitalId ||
+    !nurseADestinationHospitalId ||
+    !nurseBDestinationHospitalId ||
+    !nurseAGrade ||
+    !nurseBGrade ||
+    isSameGrade === undefined ||
+    nurseAPreferenceRank === undefined ||
+    nurseBPreferenceRank === undefined ||
+    combinedPreferenceRank === undefined ||
+    !priorityReason ||
+    !createdAt ||
+    !expiresAt
+  ) {
+    throw new MatchServiceError(
+      "Referenced match document is malformed",
+      500,
+      "MALFORMED_MATCH_DOC"
+    );
+  }
+
+  if (callerUid !== nurseAUid && callerUid !== nurseBUid) {
+    throw new MatchServiceError(
+      "Caller is not a participant of the referenced match",
+      409,
+      "MATCH_STATE_INCOMPLETE"
+    );
+  }
+
+  const match: DirectMatch = {
+    nurseAUid,
+    nurseBUid,
+    nurseACurrentHospitalId,
+    nurseBCurrentHospitalId,
+    nurseADestinationHospitalId,
+    nurseBDestinationHospitalId,
+    nurseAGrade,
+    nurseBGrade,
+    isSameGrade,
+    nurseAPreferenceRank,
+    nurseBPreferenceRank,
+    combinedPreferenceRank,
+    priorityReason
+  };
+
+  return {
+    matched: true,
+    matchId,
+    matchType: "DIRECT_2_WAY",
+    match,
+    createdAt,
+    expiresAt
+  };
+}
+
+function conflictRetryDelayMs(callerUid: string): number {
+  // Small deterministic jitter avoids synchronized retry bursts without using randomness.
+  let hash = 0;
+  for (let index = 0; index < callerUid.length; index += 1) {
+    hash = (hash * 31 + callerUid.charCodeAt(index)) >>> 0;
+  }
+  return 75 + (hash % 101);
+}
+
+async function findAndLockMatchInternal(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  options: FindAndLockMatchOptions,
+  allowConflictRetry: boolean
+): Promise<FindAndLockResult> {
+  const cleanCallerUid = callerUid.trim();
+
+  // Always re-read the caller before matching. This is also the recovery point
+  // after a competing worker has already won the race.
+  const caller = await firestoreClient.getRequestDoc(cleanCallerUid);
+  if (!caller) {
+    throw new MatchServiceError(
+      "No transfer request found for caller",
+      404,
+      "CALLER_NOT_FOUND"
+    );
+  }
+
+  if (
+    caller.locked &&
+    caller.currentMatchId &&
+    caller.currentMatchId.trim().length > 0 &&
+    caller.status.trim().toUpperCase() === "MATCHED"
+  ) {
+    const existingMatch = await recoverExistingMatch(
+      cleanCallerUid,
+      caller.currentMatchId.trim(),
+      firestoreClient,
+      options.now ? options.now() : undefined
+    );
+    if (existingMatch) {
+      return existingMatch;
+    }
+
+    const referencedMatchDoc = await firestoreClient.getMatchDoc(caller.currentMatchId.trim());
+    if (referencedMatchDoc) {
+      const matchStatus = readStringField(referencedMatchDoc.fields ?? {}, "status")?.toUpperCase();
+      if (matchStatus === "COMPLETED") {
+        throw new MatchServiceError(
+          "Caller transfer has already been completed",
+          409,
+          "MATCH_ALREADY_COMPLETED"
+        );
+      }
+    }
+
+    // Stale or terminal match: reset caller request to SEARCHING and unlock
+    const staleMatchId = caller.currentMatchId.trim();
+    const resetWrite: FirestoreWrite = {
+      update: {
+        name: getTransferRequestDocPath(firestoreClient.getProjectId(), cleanCallerUid),
+        fields: {
+          locked: { booleanValue: false },
+          currentMatchId: { nullValue: null },
+          status: { stringValue: "SEARCHING" },
+          updatedAt: { integerValue: Date.now().toString() }
+        }
+      },
+      updateMask: {
+        fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+      },
+      currentDocument: caller.updateTime
+        ? { updateTime: caller.updateTime }
+        : { exists: true }
+    };
+
+    try {
+      await firestoreClient.commitAtomicMatch([resetWrite]);
+      caller.locked = false;
+      caller.currentMatchId = null;
+      caller.status = "SEARCHING";
+    } catch {
+      const rechecked = await firestoreClient.getRequestDoc(cleanCallerUid);
+      if (rechecked) {
+        if (
+          rechecked.locked &&
+          rechecked.currentMatchId &&
+          rechecked.currentMatchId.trim() !== staleMatchId
+        ) {
+          const recoveredNewer = await recoverExistingMatch(
+            cleanCallerUid,
+            rechecked.currentMatchId.trim(),
+            firestoreClient,
+            options.now ? options.now() : undefined
+          );
+          if (recoveredNewer) return recoveredNewer;
+        }
+        Object.assign(caller, rechecked);
+      }
+    }
+  }
+
+  validateCallerRequest(caller);
+
+  const candidateLimit = options.candidateLimit ?? 100;
+  const batchSize = 100;
+  const rawCandidates: CandidateRequest[] = [];
+  let offset = 0;
+
+  while (rawCandidates.length < candidateLimit) {
+    const currentBatchLimit = Math.min(batchSize, candidateLimit - rawCandidates.length);
+    const batch = await firestoreClient.querySearchingCandidates(currentBatchLimit, offset);
+    if (!batch || batch.length === 0) break;
+    rawCandidates.push(...batch);
+    if (batch.length < currentBatchLimit) break;
+    offset += batch.length;
+  }
+
+  const pool = rawCandidates.filter(
+    candidate =>
+      candidate.firebaseUid.trim() !== cleanCallerUid &&
+      !candidate.locked &&
+      (!candidate.currentMatchId || candidate.currentMatchId.trim().length === 0)
+  );
+
+  // 1. Direct 2-Way matching has ABSOLUTE priority
+  const best2WayMatch = findBestMatch(caller, pool);
+
+  const matchId = options.generateMatchId
+    ? options.generateMatchId()
+    : crypto.randomUUID();
+
+  const now = options.now ? options.now() : new Date();
+  const nowIso = now.toISOString();
+  const expiresAt = new Date(now.getTime() + options.expirationHours! * 3600 * 1000);
+  const expiresAtIso = expiresAt.toISOString();
+  const projectId = firestoreClient.getProjectId();
+
+  if (best2WayMatch) {
+    const candidate = pool.find(
+      candidateRequest =>
+        candidateRequest.firebaseUid.trim() === best2WayMatch.nurseBUid.trim()
+    );
+    if (!candidate) {
+      return {
+        matched: false,
+        message: "Candidate no longer in pool"
+      };
+    }
+
+    const writeCaller: FirestoreWrite = {
+      update: {
+        name: getTransferRequestDocPath(projectId, cleanCallerUid),
+        fields: {
+          locked: { booleanValue: true },
+          currentMatchId: { stringValue: matchId },
+          status: { stringValue: "MATCHED" },
+          updatedAt: { integerValue: now.getTime().toString() }
+        }
+      },
+      updateMask: {
+        fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+      },
+      currentDocument: caller.updateTime
+        ? { updateTime: caller.updateTime }
+        : { exists: true }
+    };
+
+    const writeCandidate: FirestoreWrite = {
+      update: {
+        name: getTransferRequestDocPath(projectId, best2WayMatch.nurseBUid),
+        fields: {
+          locked: { booleanValue: true },
+          currentMatchId: { stringValue: matchId },
+          status: { stringValue: "MATCHED" },
+          updatedAt: { integerValue: now.getTime().toString() }
+        }
+      },
+      updateMask: {
+        fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+      },
+      currentDocument: candidate.updateTime
+        ? { updateTime: candidate.updateTime }
+        : { exists: true }
+    };
+
+    const writeMatch: FirestoreWrite = {
+      update: {
+        name: getMatchDocPath(projectId, matchId),
+        fields: {
+          nurseAUid: { stringValue: best2WayMatch.nurseAUid },
+          nurseBUid: { stringValue: best2WayMatch.nurseBUid },
+          nurseACurrentHospitalId: { stringValue: best2WayMatch.nurseACurrentHospitalId },
+          nurseBCurrentHospitalId: { stringValue: best2WayMatch.nurseBCurrentHospitalId },
+          nurseADestinationHospitalId: { stringValue: best2WayMatch.nurseADestinationHospitalId },
+          nurseBDestinationHospitalId: { stringValue: best2WayMatch.nurseBDestinationHospitalId },
+          nurseAGrade: { stringValue: best2WayMatch.nurseAGrade },
+          nurseBGrade: { stringValue: best2WayMatch.nurseBGrade },
+          isSameGrade: { booleanValue: best2WayMatch.isSameGrade },
+          nurseAPreferenceRank: { integerValue: best2WayMatch.nurseAPreferenceRank.toString() },
+          nurseBPreferenceRank: { integerValue: best2WayMatch.nurseBPreferenceRank.toString() },
+          combinedPreferenceRank: { integerValue: best2WayMatch.combinedPreferenceRank.toString() },
+          priorityReason: { stringValue: best2WayMatch.priorityReason },
+          status: { stringValue: "PENDING_CONFIRMATION" },
+          acceptedByA: { booleanValue: false },
+          acceptedByB: { booleanValue: false },
+          rejectedByA: { booleanValue: false },
+          rejectedByB: { booleanValue: false },
+          createdAt: { stringValue: nowIso },
+          expiresAt: { stringValue: expiresAtIso },
+          expiresAtMs: { integerValue: expiresAt.getTime().toString() },
+          updatedAt: { integerValue: now.getTime().toString() }
+        }
+      },
+      currentDocument: {
+        exists: false
+      }
+    };
+
+    try {
+      await firestoreClient.commitAtomicMatch([writeCaller, writeCandidate, writeMatch]);
+    } catch (err: unknown) {
+      if (err instanceof FirestoreError) {
+        const isConcurrencyConflict =
+          err.statusCode === 409 ||
+          err.code === "ABORTED" ||
+          err.code === "FAILED_PRECONDITION";
+
+        if (isConcurrencyConflict) {
+          const latestCaller = await firestoreClient.getRequestDoc(cleanCallerUid);
+          if (
+            latestCaller?.locked &&
+            latestCaller.currentMatchId &&
+            latestCaller.currentMatchId.trim().length > 0 &&
+            latestCaller.status.trim().toUpperCase() === "MATCHED"
+          ) {
+            const recovered = await recoverExistingMatch(
+              cleanCallerUid,
+              latestCaller.currentMatchId.trim(),
+              firestoreClient,
+              options.now ? options.now() : undefined
+            );
+            if (recovered) {
+              return recovered;
+            }
+          }
+
+          if (allowConflictRetry) {
+            await new Promise<void>(resolve => {
+              setTimeout(resolve, conflictRetryDelayMs(cleanCallerUid));
+            });
+
+            return findAndLockMatchInternal(
+              cleanCallerUid,
+              firestoreClient,
+              options,
+              false
+            );
+          }
+
+          throw new MatchServiceError(
+            "Concurrent modification conflict detected while locking transfer match",
+            409,
+            "MATCH_CONFLICT"
+          );
+        }
+
+        throw new MatchServiceError(
+          `Failed to commit match: ${err.message}`,
+          err.statusCode || 500,
+          "FIRESTORE_COMMIT_FAILED"
+        );
+      }
+
+      const msg = err instanceof Error ? err.message : "Internal error";
+      throw new MatchServiceError(`Commit error: ${msg}`, 500, "INTERNAL_ERROR");
+    }
+
+    return {
+      matched: true,
+      matchId,
+      matchType: "DIRECT_2_WAY",
+      match: best2WayMatch,
+      createdAt: nowIso,
+      expiresAt: expiresAtIso
+    };
+  }
+
+  // 2. Only if NO direct 2-way match, search for a valid 3-way cycle
+  const best3WayCycle = findBestThreeWayCycle(caller, pool);
+  if (!best3WayCycle) {
+    return {
+      matched: false,
+      message: "No compatible match found"
+    };
+  }
+
+  const candidateB = pool.find(
+    candidateRequest =>
+      candidateRequest.firebaseUid.trim() === best3WayCycle.nurseBUid.trim()
+  );
+  const candidateC = pool.find(
+    candidateRequest =>
+      candidateRequest.firebaseUid.trim() === best3WayCycle.nurseCUid.trim()
+  );
+
+  if (!candidateB || !candidateC) {
+    return {
+      matched: false,
+      message: "Candidate no longer in pool"
+    };
+  }
+
+  const writeCaller3Way: FirestoreWrite = {
+    update: {
+      name: getTransferRequestDocPath(projectId, cleanCallerUid),
+      fields: {
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: matchId },
+        status: { stringValue: "MATCHED" },
+        updatedAt: { integerValue: now.getTime().toString() }
+      }
+    },
+    updateMask: {
+      fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+    },
+    currentDocument: caller.updateTime
+      ? { updateTime: caller.updateTime }
+      : { exists: true }
+  };
+
+  const writeCandidateB: FirestoreWrite = {
+    update: {
+      name: getTransferRequestDocPath(projectId, best3WayCycle.nurseBUid),
+      fields: {
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: matchId },
+        status: { stringValue: "MATCHED" },
+        updatedAt: { integerValue: now.getTime().toString() }
+      }
+    },
+    updateMask: {
+      fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+    },
+    currentDocument: candidateB.updateTime
+      ? { updateTime: candidateB.updateTime }
+      : { exists: true }
+  };
+
+  const writeCandidateC: FirestoreWrite = {
+    update: {
+      name: getTransferRequestDocPath(projectId, best3WayCycle.nurseCUid),
+      fields: {
+        locked: { booleanValue: true },
+        currentMatchId: { stringValue: matchId },
+        status: { stringValue: "MATCHED" },
+        updatedAt: { integerValue: now.getTime().toString() }
+      }
+    },
+    updateMask: {
+      fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
+    },
+    currentDocument: candidateC.updateTime
+      ? { updateTime: candidateC.updateTime }
+      : { exists: true }
+  };
+
+  const writeMatch3Way: FirestoreWrite = {
+    update: {
+      name: getMatchDocPath(projectId, matchId),
+      fields: {
+        nurseAUid: { stringValue: best3WayCycle.nurseAUid },
+        nurseBUid: { stringValue: best3WayCycle.nurseBUid },
+        nurseCUid: { stringValue: best3WayCycle.nurseCUid },
+        nurseACurrentHospitalId: { stringValue: best3WayCycle.nurseACurrentHospitalId },
+        nurseBCurrentHospitalId: { stringValue: best3WayCycle.nurseBCurrentHospitalId },
+        nurseCCurrentHospitalId: { stringValue: best3WayCycle.nurseCCurrentHospitalId },
+        nurseADestinationHospitalId: { stringValue: best3WayCycle.nurseADestinationHospitalId },
+        nurseBDestinationHospitalId: { stringValue: best3WayCycle.nurseBDestinationHospitalId },
+        nurseCDestinationHospitalId: { stringValue: best3WayCycle.nurseCDestinationHospitalId },
+        nurseAGrade: { stringValue: best3WayCycle.nurseAGrade },
+        nurseBGrade: { stringValue: best3WayCycle.nurseBGrade },
+        nurseCGrade: { stringValue: best3WayCycle.nurseCGrade },
+        isAllSameGrade: { booleanValue: best3WayCycle.isAllSameGrade },
+        nurseAPreferenceRank: { integerValue: best3WayCycle.nurseAPreferenceRank.toString() },
+        nurseBPreferenceRank: { integerValue: best3WayCycle.nurseBPreferenceRank.toString() },
+        nurseCPreferenceRank: { integerValue: best3WayCycle.nurseCPreferenceRank.toString() },
+        combinedPreferenceRank: { integerValue: best3WayCycle.combinedPreferenceRank.toString() },
+        priorityReason: { stringValue: best3WayCycle.priorityReason },
+        status: { stringValue: "PENDING_CONFIRMATION" },
+        acceptedByA: { booleanValue: false },
+        acceptedByB: { booleanValue: false },
+        acceptedByC: { booleanValue: false },
+        rejectedByA: { booleanValue: false },
+        rejectedByB: { booleanValue: false },
+        rejectedByC: { booleanValue: false },
+        createdAt: { stringValue: nowIso },
+        expiresAt: { stringValue: expiresAtIso },
+        expiresAtMs: { integerValue: expiresAt.getTime().toString() },
+        updatedAt: { integerValue: now.getTime().toString() }
+      }
+    },
+    currentDocument: {
+      exists: false
+    }
+  };
+
+  try {
+    await firestoreClient.commitAtomicMatch([
+      writeCaller3Way,
+      writeCandidateB,
+      writeCandidateC,
+      writeMatch3Way
+    ]);
+  } catch (err: unknown) {
+    if (err instanceof FirestoreError) {
+      const isConcurrencyConflict =
+        err.statusCode === 409 ||
+        err.code === "ABORTED" ||
+        err.code === "FAILED_PRECONDITION";
+
+      if (isConcurrencyConflict) {
+        const latestCaller = await firestoreClient.getRequestDoc(cleanCallerUid);
+        if (
+          latestCaller?.locked &&
+          latestCaller.currentMatchId &&
+          latestCaller.currentMatchId.trim().length > 0 &&
+          latestCaller.status.trim().toUpperCase() === "MATCHED"
+        ) {
+          const recovered = await recoverExistingMatch(
+            cleanCallerUid,
+            latestCaller.currentMatchId.trim(),
+            firestoreClient,
+            options.now ? options.now() : undefined
+          );
+          if (recovered) {
+            return recovered;
+          }
+        }
+
+        if (allowConflictRetry) {
+          await new Promise<void>(resolve => {
+            setTimeout(resolve, conflictRetryDelayMs(cleanCallerUid));
+          });
+
+          return findAndLockMatchInternal(
+            cleanCallerUid,
+            firestoreClient,
+            options,
+            false
+          );
+        }
+
+        throw new MatchServiceError(
+          "Concurrent modification conflict detected while locking transfer match",
+          409,
+          "MATCH_CONFLICT"
+        );
+      }
+
+      throw new MatchServiceError(
+        `Failed to commit match: ${err.message}`,
+        err.statusCode || 500,
+        "FIRESTORE_COMMIT_FAILED"
+      );
+    }
+
+    const msg = err instanceof Error ? err.message : "Internal error";
+    throw new MatchServiceError(`Commit error: ${msg}`, 500, "INTERNAL_ERROR");
+  }
+
+  return {
+    matched: true,
+    matchId,
+    matchType: "THREE_WAY",
+    match: best3WayCycle,
+    createdAt: nowIso,
+    expiresAt: expiresAtIso
+  };
+}
+
 export async function findAndLockMatch(
   callerUid: string,
   firestoreClient: FirestoreClient,
@@ -256,162 +1283,375 @@ export async function findAndLockMatch(
     throw new MatchServiceError("callerUid must not be empty", 400, "INVALID_UID");
   }
 
-  const cleanCallerUid = callerUid.trim();
-
-  // 1. Fetch caller's transfer request
-  const caller = await firestoreClient.getRequestDoc(cleanCallerUid);
-  if (!caller) {
-    throw new MatchServiceError(
-      "No transfer request found for caller",
-      404,
-      "CALLER_NOT_FOUND"
-    );
-  }
-
-  // 2. Validate caller eligibility
-  validateCallerRequest(caller);
-
-  // 3. Fetch searching candidate pool (cross-grade candidates included)
-  const candidateLimit = options?.candidateLimit ?? 100;
-  const rawCandidates = await firestoreClient.querySearchingCandidates(candidateLimit);
-
-  // Filter out caller and any locked/matched requests
-  const pool = rawCandidates.filter(
-    c =>
-      c.firebaseUid.trim() !== cleanCallerUid &&
-      !c.locked &&
-      (!c.currentMatchId || c.currentMatchId.trim().length === 0)
+  return findAndLockMatchInternal(
+    callerUid,
+    firestoreClient,
+    {
+      ...options,
+      expirationHours
+    },
+    true
   );
+}
 
-  // 4. Evaluate candidates deterministically using pure matching engine
-  const bestMatch = findBestMatch(caller, pool);
-  if (!bestMatch) {
-    return {
-      matched: false,
-      message: "No compatible match found"
-    };
+export interface SweepExpiredMatchesOptions {
+  batchSize?: number;
+  now?: () => Date;
+}
+
+export interface SweepExpiredMatchesResult {
+  scanned: number;
+  expired: number;
+  unlockedParticipants: number;
+  errors: number;
+}
+
+/**
+ * Sweeps active PENDING_CONFIRMATION and CHAT_OPEN matches that have passed their expiration deadline.
+ * Marks expired matches as EXPIRED and unlocks/resets their participants back to SEARCHING.
+ *
+ * Invariants:
+ * - Scans PENDING_CONFIRMATION and CHAT_OPEN matches where now > expiresAt.
+ * - Atomically marks match EXPIRED and resets participants (A, B, and C if 3-way).
+ * - Preconditions guard participants against race conditions; never overrides newer matches.
+ * - Safe error handling: skips/logs errors per match without halting the entire sweep.
+ */
+
+export interface MatchHistoryItem {
+  matchId: string;
+  matchType: "DIRECT_2_WAY" | "THREE_WAY";
+  status: "CANCELLED" | "EXPIRED";
+  createdAt: string;
+  endedAt: string;
+  reason: string;
+}
+
+/** Returns terminal matches involving the authenticated participant only. */
+export async function getMatchHistory(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  limit = 50
+): Promise<MatchHistoryItem[]> {
+  const uid = callerUid.trim();
+  if (!uid) throw new MatchServiceError("Authenticated user ID is required", 401, "UNAUTHENTICATED");
+  const [asA, asB, asC] = await Promise.all([
+    firestoreClient.queryMatchesByParticipant("nurseAUid", uid, 100),
+    firestoreClient.queryMatchesByParticipant("nurseBUid", uid, 100),
+    firestoreClient.queryMatchesByParticipant("nurseCUid", uid, 100)
+  ]);
+  const unique = new Map<string, MatchHistoryItem>();
+  for (const doc of [...asA, ...asB, ...asC]) {
+    const fields = doc.fields ?? {};
+    const matchId = doc.name?.split("/").pop() ?? "";
+    const status = readStringField(fields, "status")?.trim().toUpperCase();
+    if (!matchId || (status !== "CANCELLED" && status !== "EXPIRED")) continue;
+    const createdAt = readStringField(fields, "createdAt") ?? doc.createTime ?? "";
+    const endedAt = readStringField(fields, "updatedAt") ?? doc.updateTime ?? createdAt;
+    const recordedReason = readStringField(fields, "terminalReason")?.trim();
+    const rejected = Boolean(readBooleanField(fields, "rejectedByA")) ||
+      Boolean(readBooleanField(fields, "rejectedByB")) ||
+      Boolean(readBooleanField(fields, "rejectedByC"));
+    const reason = recordedReason || (
+      status === "EXPIRED"
+        ? "The match deadline passed before the workflow was completed."
+        : rejected
+          ? "A participant rejected the proposed match or left the coordination team."
+          : "The match was cancelled by the transfer workflow; no more specific reason was recorded."
+    );
+    unique.set(matchId, {
+      matchId,
+      matchType: readStringField(fields, "nurseCUid") ? "THREE_WAY" : "DIRECT_2_WAY",
+      status,
+      createdAt,
+      endedAt,
+      reason
+    });
   }
+  return [...unique.values()]
+    .sort((a, b) => Date.parse(b.endedAt) - Date.parse(a.endedAt))
+    .slice(0, Math.max(1, Math.min(limit, 100)));
+}
 
-  // 5. Locate candidate doc for precondition check
-  const candidate = pool.find(c => c.firebaseUid.trim() === bestMatch.nurseBUid.trim());
-  if (!candidate) {
-    return {
-      matched: false,
-      message: "Candidate no longer in pool"
-    };
-  }
-
-  // 6. Generate match identifiers and timestamps
-  const matchId = options?.generateMatchId
-    ? options.generateMatchId()
-    : crypto.randomUUID();
-
+export async function sweepExpiredMatches(
+  firestoreClient: FirestoreClient,
+  options?: SweepExpiredMatchesOptions
+): Promise<SweepExpiredMatchesResult> {
+  const batchSize = options?.batchSize ?? 100;
   const now = options?.now ? options.now() : new Date();
-  const nowIso = now.toISOString();
 
-  const expiresAt = new Date(now.getTime() + expirationHours * 3600 * 1000);
-  const expiresAtIso = expiresAt.toISOString();
+  const pendingMatches = await firestoreClient.queryPendingConfirmationMatches(batchSize);
+
+  let scanned = 0;
+  let expired = 0;
+  let unlockedParticipants = 0;
+  let errors = 0;
+
+  for (const rawMatch of pendingMatches) {
+    scanned += 1;
+    try {
+      const matchName = rawMatch.name;
+      const matchId = matchName ? matchName.split("/").pop() || "" : "";
+      if (!matchId) continue;
+
+      const fields = rawMatch.fields ?? {};
+      const status = readStringField(fields, "status")?.toUpperCase();
+      if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") continue;
+
+      const expiresAtStr = readStringField(fields, "expiresAt");
+      if (!expiresAtStr) continue;
+
+      const expiresAt = new Date(expiresAtStr);
+      if (now.getTime() <= expiresAt.getTime()) {
+        // Not expired yet
+        continue;
+      }
+
+      // Match has expired
+      const nurseAUid = readStringField(fields, "nurseAUid");
+      const nurseBUid = readStringField(fields, "nurseBUid");
+      const nurseCUid = readStringField(fields, "nurseCUid");
+
+      const participantUids: string[] = [];
+      if (nurseAUid) participantUids.push(nurseAUid);
+      if (nurseBUid) participantUids.push(nurseBUid);
+      if (nurseCUid) participantUids.push(nurseCUid);
+
+      const writeMatch: FirestoreWrite = {
+        update: {
+          name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
+          fields: {
+            status: { stringValue: "EXPIRED" },
+            terminalReason: { stringValue: "The match deadline passed before the workflow was completed." },
+            updatedAt: { integerValue: Date.now().toString() }
+          }
+        },
+        updateMask: { fieldPaths: ["status", "terminalReason", "updatedAt"] },
+        currentDocument: rawMatch.updateTime
+          ? { updateTime: rawMatch.updateTime }
+          : { exists: true }
+      };
+
+      const writes: FirestoreWrite[] = [writeMatch];
+      let participantsToUnlockCount = 0;
+
+      for (const uid of participantUids) {
+        try {
+          const doc = await firestoreClient.getRequestDoc(uid);
+          if (doc && doc.currentMatchId === matchId) {
+            participantsToUnlockCount += 1;
+            writes.push({
+              update: {
+                name: getTransferRequestDocPath(firestoreClient.getProjectId(), doc.firebaseUid),
+                fields: {
+                  locked: { booleanValue: false },
+                  currentMatchId: { nullValue: null },
+                  status: { stringValue: "SEARCHING" },
+                  updatedAt: { integerValue: Date.now().toString() }
+                }
+              },
+              updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+              currentDocument: doc.updateTime
+                ? { updateTime: doc.updateTime }
+                : { exists: true }
+            });
+          }
+        } catch (readErr: unknown) {
+          throw new MatchServiceError(
+            `Failed to read participant request ${uid} during expiry sweep: ${readErr instanceof Error ? readErr.message : "Unknown error"}`,
+            500,
+            "PARTICIPANT_READ_FAILED"
+          );
+        }
+      }
+
+      await firestoreClient.commitAtomicMatch(writes);
+      expired += 1;
+      unlockedParticipants += participantsToUnlockCount;
+    } catch (err: unknown) {
+      errors += 1;
+      console.error("[SWEEP_EXPIRED_MATCH_ERROR]", {
+        message: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
+  return {
+    scanned,
+    expired,
+    unlockedParticipants,
+    errors
+  };
+}
+
+/**
+ * Authoritatively withdraws a caller's active transfer request from the matching pool.
+ *
+ * Invariants:
+ * 1. Derives authenticated caller strictly from callerUid verified via JWT.
+ * 2. If caller has no active request document (already absent), succeeds idempotently.
+ * 3. If caller is locked in an active match (PENDING_CONFIRMATION or CHAT_OPEN):
+ *    - Validates match state. If CONFIRMED, rejects with 409 (cannot withdraw finalized transfer).
+ *    - Cancels the active match and marks rejectedBy<Caller> = true.
+ *    - Retains the match document with status CANCELLED for history/audit.
+ *    - Unlocks partner participant(s) atomically back to SEARCHING, locked = false, currentMatchId = null.
+ *    - Deletes caller's /transferRequests/{callerUid} document.
+ * 4. If caller is not locked in a match:
+ *    - Deletes caller's /transferRequests/{callerUid} document atomically.
+ * 5. Uses Firestore :commit preconditions to guarantee consistency under concurrent operations.
+ */
+export async function withdrawTransferRequest(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  retryCount = 1
+): Promise<WithdrawResponse> {
+  const cleanCallerUid = callerUid.trim();
+  const caller = await firestoreClient.getRequestDoc(cleanCallerUid);
+
+  if (!caller) {
+    return {
+      withdrawn: true,
+      matchCancelled: false
+    };
+  }
 
   const projectId = firestoreClient.getProjectId();
+  const writes: FirestoreWrite[] = [];
+  let matchCancelled = false;
+  let cancelledMatchId: string | undefined;
 
-  // 7. Build atomic writes with preconditions
-  const writeCaller: FirestoreWrite = {
-    update: {
-      name: getTransferRequestDocPath(projectId, cleanCallerUid),
-      fields: {
-        locked: { booleanValue: true },
-        currentMatchId: { stringValue: matchId },
-        status: { stringValue: "MATCHED" },
-        updatedAt: { stringValue: nowIso }
-      }
-    },
-    updateMask: {
-      fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
-    },
-    currentDocument: {
-      exists: true,
-      ...(caller.updateTime ? { updateTime: caller.updateTime } : {})
-    }
-  };
+  // Check if caller is locked in an active match
+  if (caller.locked && caller.currentMatchId && caller.currentMatchId.trim().length > 0) {
+    const matchId = caller.currentMatchId.trim();
+    const rawMatch = await firestoreClient.getMatchDoc(matchId);
 
-  const writeCandidate: FirestoreWrite = {
-    update: {
-      name: getTransferRequestDocPath(projectId, bestMatch.nurseBUid),
-      fields: {
-        locked: { booleanValue: true },
-        currentMatchId: { stringValue: matchId },
-        status: { stringValue: "MATCHED" },
-        updatedAt: { stringValue: nowIso }
-      }
-    },
-    updateMask: {
-      fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"]
-    },
-    currentDocument: {
-      exists: true,
-      ...(candidate.updateTime ? { updateTime: candidate.updateTime } : {})
-    }
-  };
+    if (rawMatch) {
+      const fields = rawMatch.fields ?? {};
+      const status = readStringField(fields, "status")?.toUpperCase();
 
-  const writeMatch: FirestoreWrite = {
-    update: {
-      name: getMatchDocPath(projectId, matchId),
-      fields: {
-        nurseAUid: { stringValue: bestMatch.nurseAUid },
-        nurseBUid: { stringValue: bestMatch.nurseBUid },
-        nurseACurrentHospitalId: { stringValue: bestMatch.nurseACurrentHospitalId },
-        nurseBCurrentHospitalId: { stringValue: bestMatch.nurseBCurrentHospitalId },
-        nurseADestinationHospitalId: { stringValue: bestMatch.nurseADestinationHospitalId },
-        nurseBDestinationHospitalId: { stringValue: bestMatch.nurseBDestinationHospitalId },
-        nurseAGrade: { stringValue: bestMatch.nurseAGrade },
-        nurseBGrade: { stringValue: bestMatch.nurseBGrade },
-        isSameGrade: { booleanValue: bestMatch.isSameGrade },
-        nurseAPreferenceRank: { integerValue: bestMatch.nurseAPreferenceRank.toString() },
-        nurseBPreferenceRank: { integerValue: bestMatch.nurseBPreferenceRank.toString() },
-        combinedPreferenceRank: { integerValue: bestMatch.combinedPreferenceRank.toString() },
-        priorityReason: { stringValue: bestMatch.priorityReason },
-        status: { stringValue: "PENDING_CONFIRMATION" },
-        acceptedByA: { booleanValue: false },
-        acceptedByB: { booleanValue: false },
-        rejectedByA: { booleanValue: false },
-        rejectedByB: { booleanValue: false },
-        createdAt: { stringValue: nowIso },
-        expiresAt: { stringValue: expiresAtIso },
-        updatedAt: { stringValue: nowIso }
-      }
-    },
-    currentDocument: {
-      exists: false
-    }
-  };
-
-  // 8. Commit writes atomically
-  try {
-    await firestoreClient.commitAtomicMatch([writeCaller, writeCandidate, writeMatch]);
-  } catch (err: unknown) {
-    if (err instanceof FirestoreError) {
-      if (err.statusCode === 409 || err.statusCode === 400) {
+      if (status === "CONFIRMED") {
         throw new MatchServiceError(
-          "Concurrent modification conflict detected while locking transfer match",
+          "Cannot withdraw: this mutual transfer has already been finalized and confirmed.",
           409,
-          "MATCH_CONFLICT"
+          "MATCH_ALREADY_CONFIRMED"
         );
       }
+
+      if (status === "PENDING_CONFIRMATION" || status === "CHAT_OPEN") {
+        matchCancelled = true;
+        cancelledMatchId = matchId;
+
+        const nurseAUid = readStringField(fields, "nurseAUid");
+        const nurseBUid = readStringField(fields, "nurseBUid");
+        const nurseCUid = readStringField(fields, "nurseCUid");
+
+        const hasParticipantC = Boolean(nurseCUid) || fields.acceptedByC !== undefined;
+        let rejectedKey = "rejectedByA";
+        let acceptedKey = "acceptedByA";
+
+        if (cleanCallerUid === nurseAUid) {
+          rejectedKey = "rejectedByA";
+          acceptedKey = "acceptedByA";
+        } else if (cleanCallerUid === nurseBUid) {
+          rejectedKey = "rejectedByB";
+          acceptedKey = "acceptedByB";
+        } else if (cleanCallerUid === nurseCUid) {
+          rejectedKey = "rejectedByC";
+          acceptedKey = "acceptedByC";
+        }
+
+        // 1. Write match cancellation (retaining document for historical audit)
+        writes.push({
+          update: {
+            name: getMatchDocPath(projectId, matchId),
+            fields: {
+              status: { stringValue: "CANCELLED" },
+              terminalReason: { stringValue: "A participant withdrew their transfer request." },
+              [rejectedKey]: { booleanValue: true },
+              [acceptedKey]: { booleanValue: false },
+              updatedAt: { integerValue: Date.now().toString() }
+            }
+          },
+          updateMask: { fieldPaths: ["status", "terminalReason", rejectedKey, acceptedKey, "updatedAt"] },
+          currentDocument: rawMatch.updateTime
+            ? { updateTime: rawMatch.updateTime }
+            : { exists: true }
+        });
+
+        // 2. Unlock other participants back to SEARCHING
+        const participantUids = hasParticipantC && nurseCUid
+          ? [nurseAUid, nurseBUid, nurseCUid]
+          : [nurseAUid, nurseBUid];
+
+        const otherUids = participantUids.filter(
+          (uid): uid is string => Boolean(uid) && uid !== cleanCallerUid
+        );
+
+        for (const partnerUid of otherUids) {
+          try {
+            const partnerDoc = await firestoreClient.getRequestDoc(partnerUid);
+            if (partnerDoc && partnerDoc.currentMatchId === matchId) {
+              writes.push({
+                update: {
+                  name: getTransferRequestDocPath(projectId, partnerDoc.firebaseUid),
+                  fields: {
+                    locked: { booleanValue: false },
+                    currentMatchId: { nullValue: null },
+                    status: { stringValue: "SEARCHING" },
+                    updatedAt: { integerValue: Date.now().toString() }
+                  }
+                },
+                updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+                currentDocument: partnerDoc.updateTime
+                  ? { updateTime: partnerDoc.updateTime }
+                  : { exists: true }
+              });
+            }
+          } catch (readErr: unknown) {
+            const msg = readErr instanceof Error ? readErr.message : "Unknown error";
+            throw new MatchServiceError(
+              `Failed to read partner participant request ${partnerUid} during withdrawal: ${msg}`,
+              500,
+              "PARTICIPANT_READ_FAILED"
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Delete the caller's transfer request document from Firebase
+  writes.push({
+    delete: getTransferRequestDocPath(projectId, cleanCallerUid),
+    currentDocument: caller.updateTime
+      ? { updateTime: caller.updateTime }
+      : { exists: true }
+  });
+
+  try {
+    await firestoreClient.commitAtomicMatch(writes);
+  } catch (err: unknown) {
+    if (err instanceof FirestoreError) {
+      const isConcurrencyConflict =
+        err.statusCode === 409 ||
+        err.code === "ABORTED" ||
+        err.code === "FAILED_PRECONDITION";
+
+      if (isConcurrencyConflict && retryCount > 0) {
+        return withdrawTransferRequest(callerUid, firestoreClient, retryCount - 1);
+      }
       throw new MatchServiceError(
-        `Failed to commit match: ${err.message}`,
+        `Failed to commit withdrawal: ${err.message}`,
         err.statusCode || 500,
         "FIRESTORE_COMMIT_FAILED"
       );
     }
     const msg = err instanceof Error ? err.message : "Internal error";
-    throw new MatchServiceError(`Commit error: ${msg}`, 500, "INTERNAL_ERROR");
+    throw new MatchServiceError(`Withdrawal error: ${msg}`, 500, "INTERNAL_ERROR");
   }
 
   return {
-    matched: true,
-    matchId,
-    match: bestMatch,
-    createdAt: nowIso,
-    expiresAt: expiresAtIso
+    withdrawn: true,
+    matchCancelled,
+    cancelledMatchId
   };
 }

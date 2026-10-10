@@ -109,6 +109,16 @@ class TransferSyncBridgeTest {
             publishedRequest = null
             return Result.success(Unit)
         }
+
+        override suspend fun fetchTransferRequest(userId: String): Result<com.pasindu.nursingotapp.transfer.data.RemoteTransferRequestState?> =
+            Result.success(null)
+
+        override suspend fun fetchMatchDoc(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.RemoteMatchState?> =
+            Result.success(null)
+
+        override fun observeMatchDoc(matchId: String): Flow<Result<com.pasindu.nursingotapp.transfer.data.RemoteMatchState?>> =
+            kotlinx.coroutines.flow.flowOf(Result.success(null))
+
     }
 
     private class FakeWorkerApiClient : TransferWorkerApiClient {
@@ -132,6 +142,10 @@ class TransferSyncBridgeTest {
                 expiresAt = "2026-10-04T12:00:00Z",
                 decisionApplied = true
             )
+        }
+
+        override suspend fun withdrawRequest(firebaseIdToken: String): com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse {
+            return com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse(withdrawn = true)
         }
     }
 
@@ -245,7 +259,7 @@ class TransferSyncBridgeTest {
 
         workerApiClient.result = WorkerSyncResult.MatchFound(
             matchId = "MATCH-2026-9999",
-            match = match,
+            directMatch = match,
             createdAt = "2026-10-02T12:00:00Z",
             expiresAt = "2026-10-04T12:00:00Z"
         )
@@ -354,7 +368,7 @@ class TransferSyncBridgeTest {
 
         workerApiClient.result = WorkerSyncResult.MatchFound(
             matchId = "MATCH-CROSS-1",
-            match = match,
+            directMatch = match,
             createdAt = "2026-10-02T12:00:00Z",
             expiresAt = "2026-10-04T12:00:00Z"
         )

@@ -9,6 +9,17 @@ export interface Env {
   FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY?: string;
   // Match configuration:
   MATCH_EXPIRATION_HOURS?: string;
+  CANDIDATE_LIMIT?: string;
+}
+
+export interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
+
+export interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
 }
 
 /**
@@ -64,16 +75,25 @@ export interface GoogleJwksResponse {
   keys: GoogleJwk[];
 }
 
-// Request payload for match decision (accept/reject)
+// Request payload for match decision (accept/reject/confirm)
 export interface MatchDecisionRequest {
   matchId: string;
-  decision: "ACCEPT" | "REJECT";
+  decision: "ACCEPT" | "REJECT" | "CONFIRM" | "LEAVE";
 }
 
 // Response payload after processing a decision
 export interface MatchDecisionResponse {
   matchId: string;
-  newStatus: string; // PENDING_CONFIRMATION | CONFIRMED | CANCELLED
+  newStatus: string; // PENDING_CONFIRMATION | CHAT_OPEN | CONFIRMED | CANCELLED
   expiresAt: string;
+  chatDeadline?: string;
+  firstResponseAt?: string;
   decisionApplied: boolean;
+}
+
+// Response payload after processing request withdrawal
+export interface WithdrawResponse {
+  withdrawn: boolean;
+  matchCancelled: boolean;
+  cancelledMatchId?: string;
 }

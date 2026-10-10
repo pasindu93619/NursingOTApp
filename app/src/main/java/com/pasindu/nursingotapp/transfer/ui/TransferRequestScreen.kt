@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
+import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.BorderMuted
@@ -75,6 +77,8 @@ import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
+import sh.calvin.reorderable.ReorderableColumn
+import sh.calvin.reorderable.ReorderableItem
 
 private val TransferBlueSoft = Color(0xFFEAF6FF)
 private val TransferPurpleSoft = Color(0xFFF3EEFF)
@@ -85,6 +89,38 @@ private val TransferInk = Color(0xFF12204A)
  * Formats a hospital's geographic location as "District • Province" or "RDHS • Province".
  * Strictly respects privacy and geographic standards: never exposes raw coordinates or 0.0.
  */
+/**
+ * Small, dependency-free edit-distance matcher for short hospital-search tokens.
+ * Only tolerates a small number of edits so unrelated hospitals are not broadly matched.
+ */
+private fun isFuzzyTokenMatch(queryToken: String, candidateToken: String): Boolean {
+    if (candidateToken.contains(queryToken) || queryToken.contains(candidateToken)) return true
+    if (queryToken.length < 4 || candidateToken.length < 4) return false
+    val allowedDistance = if (queryToken.length >= 8) 2 else 1
+    if (kotlin.math.abs(queryToken.length - candidateToken.length) > allowedDistance) return false
+
+    var previous = IntArray(candidateToken.length + 1) { it }
+    var current = IntArray(candidateToken.length + 1)
+    for (i in queryToken.indices) {
+        current[0] = i + 1
+        var rowMinimum = current[0]
+        for (j in candidateToken.indices) {
+            val substitutionCost = if (queryToken[i] == candidateToken[j]) 0 else 1
+            current[j + 1] = minOf(
+                previous[j + 1] + 1,
+                current[j] + 1,
+                previous[j] + substitutionCost
+            )
+            rowMinimum = minOf(rowMinimum, current[j + 1])
+        }
+        if (rowMinimum > allowedDistance) return false
+        val temp = previous
+        previous = current
+        current = temp
+    }
+    return previous[candidateToken.length] <= allowedDistance
+}
+
 private fun formatHospitalLocation(hospital: HospitalReference): String {
     val district = hospital.district?.trim()?.takeIf { it.isNotEmpty() }
     val rdhs = hospital.rdhsDivision.trim().takeIf { it.isNotEmpty() }
@@ -114,8 +150,16 @@ fun TransferRequestScreen(
     val preferences = remember { mutableStateListOf<HospitalReference>() }
     var pickerMode by remember { mutableStateOf<PickerMode?>(null) }
     var showProfileNotice by remember { mutableStateOf(false) }
+    var showUnsavedChangesDialog by remember { mutableStateOf(false) }
 
     var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
+
+    val originalCurrentHospitalId = activeRequest?.currentHospitalId
+    val originalPreferenceIds = activeRequest?.rankedPreferences?.hospitalIds.orEmpty()
+    val hasUnsavedChanges =
+        (activeRequest == null || initializedFromActiveRequest) &&
+            (currentHospital?.hospitalId != originalCurrentHospitalId ||
+                preferences.map { it.hospitalId } != originalPreferenceIds)
     androidx.compose.runtime.LaunchedEffect(activeRequest, hospitalOptions) {
         if (!initializedFromActiveRequest && activeRequest != null && hospitalOptions.isNotEmpty()) {
             val current = hospitalOptions.find { it.hospitalId == activeRequest.currentHospitalId }
@@ -132,11 +176,19 @@ fun TransferRequestScreen(
         }
     }
 
+    val isRequestLocked = activeRequest?.requestStatus == TransferRequestStatus.MATCHED &&
+        !activeRequest.matchStatus.equals("CANCELLED", ignoreCase = true) &&
+        !activeRequest.matchStatus.equals("EXPIRED", ignoreCase = true)
     val canSubmit = currentHospital != null && preferences.isNotEmpty()
-    val progress = when {
-        currentHospital == null -> 0.33f
-        preferences.isEmpty() -> 0.66f
-        else -> 1f
+    // Readiness tracks the two required request sections, not the three destination ranks.
+    val completedRequestSections =
+        (if (currentHospital != null) 1 else 0) +
+            (if (preferences.isNotEmpty()) 1 else 0)
+    val progress = completedRequestSections / 2f
+    val requestReadinessLabel = when {
+        completedRequestSections == 2 -> "READY TO SUBMIT"
+        currentHospital == null -> "CHOOSE CURRENT POSTING"
+        else -> "ADD PREFERRED DESTINATIONS"
     }
 
     Box(
@@ -160,7 +212,13 @@ fun TransferRequestScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = onBack,
+                        onClick = {
+                            if (hasUnsavedChanges && !isRequestLocked) {
+                                showUnsavedChangesDialog = true
+                            } else {
+                                onBack()
+                            }
+                        },
                         modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
                     ) {
                         Icon(
@@ -279,7 +337,7 @@ fun TransferRequestScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            "REQUEST SETUP",
+                                            "REQUEST READINESS",
                                             color = Color.White.copy(alpha = .72f),
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black,
@@ -287,11 +345,7 @@ fun TransferRequestScreen(
                                         )
                                         Spacer(Modifier.weight(1f))
                                         Text(
-                                            when {
-                                                progress >= 1f -> "READY (3 OF 3)"
-                                                currentHospital != null -> "2 OF 3"
-                                                else -> "1 OF 3"
-                                            },
+                                            requestReadinessLabel,
                                             color = Color.White,
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black
@@ -322,6 +376,43 @@ fun TransferRequestScreen(
                 )
             }
 
+            if (isRequestLocked) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = TransferBlueSoft,
+                        border = BorderStroke(1.dp, ClinicalPrimaryColor.copy(alpha = 0.25f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                tint = ClinicalPrimaryColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    "Your transfer match is active",
+                                    color = TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Hospital choices are locked until this match is cancelled, expires, or is otherwise closed.",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 TransferStepCard(
                     number = "01",
@@ -334,10 +425,11 @@ fun TransferRequestScreen(
                     HospitalSelectionCard(
                         hospital = currentHospital,
                         placeholder = "Select your current hospital",
-                        helper = "Official 2026 hospital reference list",
+                        helper = if (isRequestLocked) "Locked while your match is active" else "Official 2026 hospital reference list",
                         accent = ClinicalPrimaryColor,
                         surface = TransferBlueSoft,
-                        onClick = { pickerMode = PickerMode.CURRENT }
+                        enabled = !isRequestLocked,
+                        onClick = { if (!isRequestLocked) pickerMode = PickerMode.CURRENT }
                     )
                 }
             }
@@ -347,7 +439,7 @@ fun TransferRequestScreen(
                     number = "02",
                     eyebrow = "PREFERRED DESTINATIONS",
                     title = "Where would you like to go?",
-                    subtitle = "Rank up to 3 destinations in the order you prefer.",
+                    subtitle = "Press and hold a destination, then drag it to set your priority. Rank up to 3.",
                     accent = AiAccentColor,
                     completed = preferences.isNotEmpty()
                 ) {
@@ -400,15 +492,47 @@ fun TransferRequestScreen(
                             }
                         }
 
-                        preferences.forEachIndexed { index, hospital ->
-                            PreferenceRow(
-                                rank = index + 1,
-                                hospital = hospital,
-                                onRemove = { preferences.removeAt(index) }
-                            )
+                        if (isRequestLocked) {
+                            preferences.forEachIndexed { index, hospital ->
+                                PreferenceRow(
+                                    rank = index + 1,
+                                    hospital = hospital,
+                                    canEdit = false,
+                                    onRemove = {}
+                                )
+                            }
+                        } else {
+                            ReorderableColumn(
+                                list = preferences.toList(),
+                                onSettle = { fromIndex, toIndex ->
+                                    if (fromIndex != toIndex &&
+                                        fromIndex in preferences.indices &&
+                                        toIndex in preferences.indices
+                                    ) {
+                                        val movedHospital = preferences.removeAt(fromIndex)
+                                        preferences.add(toIndex, movedHospital)
+                                    }
+                                },
+                                verticalArrangement = Arrangement.spacedBy(9.dp)
+                            ) { index, hospital, isDragging ->
+                                key(hospital.hospitalId) {
+                                    ReorderableItem {
+                                        PreferenceRow(
+                                            rank = index + 1,
+                                            hospital = hospital,
+                                            canEdit = true,
+                                            dragModifier = Modifier.longPressDraggableHandle(),
+                                            isDragging = isDragging,
+                                            onRemove = {
+                                                if (!isRequestLocked) preferences.remove(hospital)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
 
-                        if (preferences.size < 3) {
+                        if (preferences.size < 3 && !isRequestLocked) {
                             AddPreferenceCard(currentCount = preferences.size) {
                                 pickerMode = PickerMode.PREFERENCE
                             }
@@ -553,7 +677,7 @@ fun TransferRequestScreen(
                             preferences.map { it.hospitalId }
                         )
                     },
-                    enabled = canSubmit,
+                    enabled = canSubmit && !isRequestLocked,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
@@ -571,7 +695,11 @@ fun TransferRequestScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (activeRequest != null) "Save changes & update pool" else "Start searching for a match",
+                        when {
+                            isRequestLocked -> "Match active — editing locked"
+                            activeRequest != null -> "Save changes & update pool"
+                            else -> "Start searching for a match"
+                        },
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.Black
                     )
@@ -580,7 +708,7 @@ fun TransferRequestScreen(
         }
     }
 
-    if (pickerMode != null) {
+    if (pickerMode != null && !isRequestLocked) {
         HospitalPickerDialog(
             title = if (pickerMode == PickerMode.CURRENT) {
                 "Select current hospital"
@@ -603,6 +731,43 @@ fun TransferRequestScreen(
                 }
                 pickerMode = null
             }
+        )
+    }
+
+    if (showUnsavedChangesDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnsavedChangesDialog = false },
+            title = {
+                Text(
+                    "Leave without saving?",
+                    fontWeight = FontWeight.Black,
+                    color = TransferInk
+                )
+            },
+            text = {
+                Text(
+                    "Your hospital choices or their ranking have changed. If you leave now, these edits will be lost.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showUnsavedChangesDialog = false
+                        onBack()
+                    }
+                ) {
+                    Text("Discard changes", color = Color(0xFFB42318), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnsavedChangesDialog = false }) {
+                    Text("Keep editing", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = Color.White,
+            titleContentColor = TransferInk,
+            textContentColor = TextSecondary
         )
     }
 
@@ -785,6 +950,7 @@ private fun HospitalSelectionCard(
     helper: String,
     accent: Color,
     surface: Color,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     if (hospital == null) {
@@ -793,7 +959,7 @@ private fun HospitalSelectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 72.dp)
-                .clickable(onClick = onClick),
+                 .clickable(enabled = enabled, onClick = onClick),
             shape = RoundedCornerShape(20.dp),
             color = surface,
             border = BorderStroke(1.5.dp, accent.copy(alpha = 0.22f))
@@ -863,7 +1029,7 @@ private fun HospitalSelectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 78.dp)
-                .clickable(onClick = onClick),
+                .clickable(enabled = enabled, onClick = onClick),
             shape = RoundedCornerShape(20.dp),
             color = Color.White,
             border = BorderStroke(1.5.dp, accent.copy(alpha = 0.35f)),
@@ -948,18 +1114,20 @@ private fun HospitalSelectionCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Change",
+                            if (enabled) "Change" else "Locked",
                             color = accent,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.width(2.dp))
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(15.dp)
-                        )
+                        if (enabled) {
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -971,6 +1139,9 @@ private fun HospitalSelectionCard(
 private fun PreferenceRow(
     rank: Int,
     hospital: HospitalReference,
+    canEdit: Boolean = true,
+    dragModifier: Modifier = Modifier,
+    isDragging: Boolean = false,
     onRemove: () -> Unit
 ) {
     val rankLabel = when (rank) {
@@ -985,15 +1156,23 @@ private fun PreferenceRow(
         3 -> "3rd Choice"
         else -> "Choice $rank"
     }
+    val cardElevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 12.dp else 1.dp,
+        label = "preferenceDragElevation"
+    )
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 70.dp),
+            .defaultMinSize(minHeight = 70.dp)
+            .then(dragModifier),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, BorderMuted.copy(alpha = .7f)),
-        shadowElevation = 1.dp
+        color = if (isDragging) TransferPurpleSoft else Color.White,
+        border = BorderStroke(
+            if (isDragging) 1.5.dp else 1.dp,
+            if (isDragging) AiAccentColor.copy(alpha = 0.65f) else BorderMuted.copy(alpha = .7f)
+        ),
+        shadowElevation = cardElevation
     ) {
         Row(
             modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 9.dp),
@@ -1068,22 +1247,24 @@ private fun PreferenceRow(
                 }
             }
 
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
-            ) {
-                Surface(
-                    modifier = Modifier.size(28.dp),
-                    shape = CircleShape,
-                    color = SurfaceMuted
+            if (canEdit) {
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Remove preference $rank: ${hospital.name}",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                    Surface(
+                        modifier = Modifier.size(28.dp),
+                        shape = CircleShape,
+                        color = SurfaceMuted
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove preference $rank: ${hospital.name}",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1191,10 +1372,13 @@ private fun HospitalPickerDialog(
                 .joinToString(" ")
                 .let(::normalizeSearchText)
 
-            normalizedQuery
-                .split(" ")
-                .filter { it.isNotBlank() }
-                .all { token -> searchableText.contains(token) }
+            val queryTokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
+            val searchableTokens = searchableText.split(" ").filter { it.isNotBlank() }
+            queryTokens.all { queryToken ->
+                searchableTokens.any { candidateToken ->
+                    isFuzzyTokenMatch(queryToken, candidateToken)
+                } || searchableText.contains(queryToken)
+            }
         }
     }
 

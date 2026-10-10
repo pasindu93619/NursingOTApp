@@ -1,4 +1,4 @@
-import type { Env, AuthCheckResponse } from "./types.ts";
+import type { Env, AuthCheckResponse, ScheduledEvent, ExecutionContext } from "./types.ts";
 import {
   AuthError,
   extractBearerToken,
@@ -7,7 +7,14 @@ import {
 import { FirestoreClient } from "./firestore/firestoreClient.ts";
 import { createServiceAccountTokenProvider } from "./auth/serviceAccountAuth.ts";
 import type { MatchDecisionRequest } from "./types.ts";
-import { findAndLockMatch, respondToMatch, MatchServiceError } from "./matching/matchingService.ts";
+import {
+  findAndLockMatch,
+  respondToMatch,
+  sweepExpiredMatches,
+  withdrawTransferRequest,
+  getMatchHistory,
+  MatchServiceError
+} from "./matching/matchingService.ts";
 
 const DEFAULT_PROJECT_ID = "nursing-super-app";
 
@@ -35,6 +42,23 @@ function errorResponse(error: string, message: string, status = 400): Response {
     },
     status
   );
+}
+
+function resolveTokenProvider(env: Env): (() => Promise<string>) | Response {
+  if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    return createServiceAccountTokenProvider({
+      clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+      privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
+    });
+  }
+  if (env.ENVIRONMENT === "production") {
+    return errorResponse(
+      "ConfigError",
+      "Firebase service account credentials missing in production environment",
+      500
+    );
+  }
+  return async () => "mock-access-token";
 }
 
 export default {
@@ -93,21 +117,19 @@ export default {
         const callerUid = verifiedResult.uid;
 
         // Token provider for Firestore Client
-        let tokenProvider: () => Promise<string>;
-        if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-          tokenProvider = createServiceAccountTokenProvider({
-            clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
-            privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
-          });
-        } else {
-          tokenProvider = async () => "mock-access-token";
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider });
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
 
         const body = await request.json();
         const decisionReq = body as MatchDecisionRequest;
         if (!decisionReq.matchId || !decisionReq.decision) {
           return errorResponse("InvalidRequest", "matchId and decision are required", 400);
+        }
+        if (!["ACCEPT", "REJECT", "CONFIRM", "LEAVE"].includes(decisionReq.decision)) {
+          return errorResponse("InvalidRequest", `Invalid decision: ${decisionReq.decision}`, 400);
         }
         const result = await respondToMatch(callerUid, decisionReq.matchId, decisionReq.decision, firestoreClient);
         return jsonResponse(result, 200);
@@ -118,6 +140,60 @@ export default {
         if (err instanceof MatchServiceError) {
           return errorResponse(err.code, err.message, err.statusCode);
         }
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
+    // 3.5. Authoritative Request Withdrawal Endpoint
+    if (pathname === "/api/matching/withdraw") {
+      if (request.method !== "POST") {
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
+      }
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const token = extractBearerToken(authHeader);
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
+        const callerUid = verifiedResult.uid;
+
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
+        }
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+
+        const result = await withdrawTransferRequest(callerUid, firestoreClient);
+        return jsonResponse(result, 200);
+      } catch (err: unknown) {
+        if (err instanceof AuthError) {
+          return errorResponse("Unauthorized", err.message, err.statusCode);
+        }
+        if (err instanceof MatchServiceError) {
+          return errorResponse(err.code, err.message, err.statusCode);
+        }
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
+    // Participant-scoped terminal match history. UID is always derived from the verified token.
+    if (pathname === "/api/matching/history") {
+      if (request.method !== "GET") {
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use GET.", 405);
+      }
+      try {
+        const token = extractBearerToken(request.headers.get("Authorization"));
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) return tokenProviderResult;
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const result = await getMatchHistory(verifiedResult.uid, firestoreClient);
+        return jsonResponse({ items: result }, 200);
+      } catch (err: unknown) {
+        if (err instanceof AuthError) return errorResponse("Unauthorized", err.message, err.statusCode);
+        if (err instanceof MatchServiceError) return errorResponse(err.code, err.message, err.statusCode);
         const message = err instanceof Error ? err.message : "Internal Server Error";
         return errorResponse("InternalError", message, 500);
       }
@@ -138,16 +214,11 @@ export default {
         const callerUid = verifiedResult.uid;
 
         // Token provider for Firestore Client
-        let tokenProvider: () => Promise<string>;
-        if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-          tokenProvider = createServiceAccountTokenProvider({
-            clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
-            privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
-          });
-        } else {
-          tokenProvider = async () => "mock-access-token";
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider });
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
 
         if (!env.MATCH_EXPIRATION_HOURS || env.MATCH_EXPIRATION_HOURS.trim().length === 0) {
           return errorResponse(
@@ -166,10 +237,66 @@ export default {
           );
         }
 
+        let candidateLimit: number | undefined;
+        if (env.CANDIDATE_LIMIT && env.CANDIDATE_LIMIT.trim().length > 0) {
+          const parsed = parseInt(env.CANDIDATE_LIMIT.trim(), 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            candidateLimit = parsed;
+          }
+        }
+
         const result = await findAndLockMatch(callerUid, firestoreClient, {
-          expirationHours
+          expirationHours,
+          candidateLimit
         });
 
+        return jsonResponse(result, 200);
+      } catch (err: unknown) {
+        console.error("[MATCHING_FIND_AND_LOCK_ERROR]", {
+          name: err instanceof Error ? err.name : "UnknownError",
+          message: err instanceof Error ? err.message : String(err),
+          statusCode:
+            typeof err === "object" &&
+            err !== null &&
+            "statusCode" in err
+              ? (err as { statusCode?: unknown }).statusCode
+              : undefined,
+          errorCode:
+            typeof err === "object" &&
+            err !== null &&
+            "code" in err
+              ? (err as { code?: unknown }).code
+              : undefined
+        });
+        if (err instanceof AuthError) {
+          return errorResponse("Unauthorized", err.message, err.statusCode);
+        }
+        if (err instanceof MatchServiceError) {
+          return errorResponse(err.code, err.message, err.statusCode);
+        }
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
+    // 6. Manual / Triggered Expiry Sweep Endpoint (Protected)
+    if (pathname === "/api/matching/sweep-expired") {
+      if (request.method !== "POST") {
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
+      }
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const token = extractBearerToken(authHeader);
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        await verifyFirebaseIdToken(token, { projectId });
+
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
+        }
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+
+        const result = await sweepExpiredMatches(firestoreClient);
         return jsonResponse(result, 200);
       } catch (err: unknown) {
         if (err instanceof AuthError) {
@@ -185,5 +312,31 @@ export default {
 
     // Default 404
     return errorResponse("NotFound", `Endpoint '${pathname}' not found`, 404);
+  },
+
+  async scheduled(event: ScheduledEvent, env: Env, ctx?: ExecutionContext): Promise<void> {
+    const runSweep = async () => {
+      try {
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          console.error("[SCHEDULED_SWEEP_CONFIG_ERROR] Failed to resolve token provider");
+          return;
+        }
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const result = await sweepExpiredMatches(firestoreClient);
+        console.log("[SCHEDULED_SWEEP_COMPLETED]", result);
+      } catch (err: unknown) {
+        console.error("[SCHEDULED_SWEEP_ERROR]", {
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
+    };
+
+    if (ctx && typeof ctx.waitUntil === "function") {
+      ctx.waitUntil(runSweep());
+    } else {
+      await runSweep();
+    }
   }
 };

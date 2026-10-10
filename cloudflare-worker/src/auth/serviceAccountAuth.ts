@@ -57,6 +57,9 @@ export function pemToPkcs8Der(pem: string): Uint8Array {
   }
 
   const cleanBase64 = pem
+    // Google service-account JSON commonly represents PEM line breaks as literal "\\n".
+    // Normalize both escaped and real line breaks before stripping PEM formatting.
+    .replace(/\\n/g, "\n")
     .replace(/-----BEGIN[ A-Z_-]+-----/g, "")
     .replace(/-----END[ A-Z_-]+-----/g, "")
     .replace(/\s+/g, "");

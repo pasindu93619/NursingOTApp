@@ -15,11 +15,13 @@ export interface FirestoreClientConfig {
 
 export class FirestoreError extends Error {
   statusCode?: number;
+  code?: string;
 
-  constructor(message: string, statusCode?: number) {
+  constructor(message: string, statusCode?: number, code?: string) {
     super(message);
     this.name = "FirestoreError";
     this.statusCode = statusCode;
+    this.code = code;
   }
 }
 
@@ -53,6 +55,7 @@ export interface FirestoreWrite {
     name: string;
     fields: Record<string, FirestoreValue>;
   };
+  delete?: string;
   currentDocument?: {
     exists?: boolean;
     updateTime?: string;
@@ -330,37 +333,47 @@ export class FirestoreClient {
    * Invariant: Does NOT enforce grade equality in the query.
    * Cross-grade candidates remain eligible in accordance with project rules.
    */
-  async querySearchingCandidates(limit = 100): Promise<CandidateRequest[]> {
+  async querySearchingCandidates(limit = 100, offset = 0): Promise<CandidateRequest[]> {
     const authHeader = await this.getAuthHeader();
     const url = `${this.baseUrl}:runQuery`;
 
-    const body = {
-      structuredQuery: {
-        from: [{ collectionId: "transferRequests" }],
-        where: {
-          compositeFilter: {
-            op: "AND",
-            filters: [
-              {
-                fieldFilter: {
-                  field: { fieldPath: "status" },
-                  op: "EQUAL",
-                  value: { stringValue: "SEARCHING" }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: "locked" },
-                  op: "EQUAL",
-                  value: { booleanValue: false }
-                }
+    const structuredQuery: Record<string, unknown> = {
+      from: [{ collectionId: "transferRequests" }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            {
+              fieldFilter: {
+                field: { fieldPath: "status" },
+                op: "EQUAL",
+                value: { stringValue: "SEARCHING" }
               }
-            ]
-          }
-        },
-        limit
-      }
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: "locked" },
+                op: "EQUAL",
+                value: { booleanValue: false }
+              }
+            }
+          ]
+        }
+      },
+      limit,
+      orderBy: [
+        {
+          field: { fieldPath: "__name__" },
+          direction: "ASCENDING"
+        }
+      ]
     };
+
+    if (offset > 0) {
+      structuredQuery.offset = offset;
+    }
+
+    const body = { structuredQuery };
 
     let response: Response;
     try {
@@ -405,6 +418,83 @@ export class FirestoreClient {
   }
 
   /**
+   * Queries matches with status IN ['PENDING_CONFIRMATION', 'CHAT_OPEN'].
+   * Used by server-side expiry sweep.
+   */
+  async queryPendingConfirmationMatches(limit = 100): Promise<FirestoreRawDocument[]> {
+    const authHeader = await this.getAuthHeader();
+    const url = `${this.baseUrl}:runQuery`;
+
+    const structuredQuery: Record<string, unknown> = {
+      from: [{ collectionId: "matches" }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: "status" },
+          op: "IN",
+          value: {
+            arrayValue: {
+              values: [
+                { stringValue: "PENDING_CONFIRMATION" },
+                { stringValue: "CHAT_OPEN" }
+              ]
+            }
+          }
+        }
+      },
+      limit,
+      orderBy: [
+        {
+          field: { fieldPath: "__name__" },
+          direction: "ASCENDING"
+        }
+      ]
+    };
+
+    const body = { structuredQuery };
+
+    let response: Response;
+    try {
+      response = await this.transport(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network failure";
+      throw new FirestoreError(`Transport error while querying pending matches: ${msg}`);
+    }
+
+    if (!response.ok) {
+      throw new FirestoreError(
+        `Failed to query pending matches: HTTP ${response.status}`,
+        response.status
+      );
+    }
+
+    let items: FirestoreRunQueryItem[];
+    try {
+      items = (await response.json()) as FirestoreRunQueryItem[];
+    } catch {
+      throw new FirestoreError("Invalid JSON returned by Firestore query");
+    }
+
+    const matchDocs: FirestoreRawDocument[] = [];
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (item.document) {
+          matchDocs.push(item.document);
+        }
+      }
+    }
+
+    return matchDocs;
+  }
+
+  /**
    * Low-level atomic commit capability.
    *
    * Sends caller-provided writes atomically to Firestore REST :commit endpoint.
@@ -418,7 +508,43 @@ export class FirestoreClient {
     const authHeader = await this.getAuthHeader();
     const url = `${this.baseUrl}:commit`;
 
-    const body = { writes };
+    // Firestore REST Write.currentDocument is a protobuf oneof: exactly one of
+    // exists or updateTime may be present. Normalize every write at the transport
+    // boundary so callers cannot accidentally send an invalid oneof or stray fields.
+    const normalizedWrites = writes.map((write): FirestoreWrite => {
+      const normalized: FirestoreWrite = {};
+
+      if (write.update) {
+        normalized.update = {
+          name: write.update.name,
+          fields: write.update.fields
+        };
+      }
+
+      if (write.delete) {
+        normalized.delete = write.delete;
+      }
+
+      if (write.updateMask) {
+        normalized.updateMask = {
+          fieldPaths: [...write.updateMask.fieldPaths]
+        };
+      }
+
+      if (write.currentDocument?.updateTime) {
+        normalized.currentDocument = {
+          updateTime: write.currentDocument.updateTime
+        };
+      } else if (write.currentDocument?.exists !== undefined) {
+        normalized.currentDocument = {
+          exists: write.currentDocument.exists
+        };
+      }
+
+      return normalized;
+    });
+
+    const body = { writes: normalizedWrites };
 
     let response: Response;
     try {
@@ -437,10 +563,22 @@ export class FirestoreClient {
     }
 
     if (!response.ok) {
-      throw new FirestoreError(
-        `Failed to commit atomic writes: HTTP ${response.status}`,
-        response.status
-      );
+      let message = `Failed to commit atomic writes: HTTP ${response.status}`;
+      let code: string | undefined;
+
+      try {
+        const errorBody = (await response.json()) as {
+          error?: { message?: string; status?: string };
+        };
+        if (errorBody.error?.message) {
+          message = errorBody.error.message;
+        }
+        code = errorBody.error?.status;
+      } catch {
+        // Keep the HTTP status when Firestore does not return JSON.
+      }
+
+      throw new FirestoreError(message, response.status, code);
     }
 
     try {
@@ -449,4 +587,64 @@ export class FirestoreClient {
       throw new FirestoreError("Invalid JSON returned by Firestore commit");
     }
   }
+
+  /**
+   * Queries match documents by one verified participant UID.
+   * Callers must supply only a participant field; history results are filtered
+   * to terminal states by the matching service before being returned to clients.
+   */
+  async queryMatchesByParticipant(
+    participantField: "nurseAUid" | "nurseBUid" | "nurseCUid",
+    participantUid: string,
+    limit = 100
+  ): Promise<FirestoreRawDocument[]> {
+    if (!participantUid || participantUid.trim().length === 0) {
+      throw new FirestoreError("participantUid must not be empty");
+    }
+    const authHeader = await this.getAuthHeader();
+    const url = `${this.baseUrl}:runQuery`;
+    const structuredQuery = {
+      from: [{ collectionId: "matches" }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: participantField },
+          op: "EQUAL",
+          value: { stringValue: participantUid.trim() }
+        }
+      },
+      limit: Math.max(1, Math.min(limit, 100)),
+      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }]
+    };
+    let response: Response;
+    try {
+      response = await this.transport(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ structuredQuery })
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network failure";
+      throw new FirestoreError(`Transport error while querying participant matches: ${msg}`);
+    }
+    if (!response.ok) {
+      throw new FirestoreError(
+        `Failed to query participant matches: HTTP ${response.status}`,
+        response.status
+      );
+    }
+    let items: FirestoreRunQueryItem[];
+    try {
+      items = (await response.json()) as FirestoreRunQueryItem[];
+    } catch {
+      throw new FirestoreError("Invalid JSON returned by Firestore query");
+    }
+    return Array.isArray(items)
+      ? items.flatMap(item => item.document ? [item.document] : [])
+      : [];
+  }
+
 }

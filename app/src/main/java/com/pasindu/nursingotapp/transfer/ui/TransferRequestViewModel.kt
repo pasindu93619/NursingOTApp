@@ -13,6 +13,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -55,6 +56,35 @@ class TransferRequestViewModel @Inject constructor(
     init {
         loadHospitals()
         observeActiveRequest()
+        startAutomaticMatchPolling()
+    }
+
+    /**
+     * Keeps an active SEARCHING request synchronized with the server while this
+     * ViewModel is alive. The server is authoritative; syncActiveRequest() first
+     * checks for a remote MATCHED state before publishing local SEARCHING data.
+     */
+    private fun startAutomaticMatchPolling() {
+        viewModelScope.launch {
+            while (true) {
+                val request = _activeRequest.value
+                val pollIntervalMs = if (request != null && (
+                    request.matchStatus.equals("PENDING_CONFIRMATION", ignoreCase = true) ||
+                    request.matchStatus.equals("CHAT_OPEN", ignoreCase = true)
+                )) {
+                    5_000L
+                } else {
+                    15_000L
+                }
+
+                if (request != null && request.requestStatus == com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.PENDING) {
+                    runCatching {
+                        transferRequestRepository.syncActiveRequest()
+                    }
+                }
+                delay(pollIntervalMs)
+            }
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -155,13 +185,16 @@ class TransferRequestViewModel @Inject constructor(
      */
     fun withdrawRequest(onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
+            _isSubmitting.value = true
             _submitError.value = null
 
             runCatching {
                 transferRequestRepository.clearRequest()
             }.onSuccess {
+                _isSubmitting.value = false
                 onSuccess()
             }.onFailure { error ->
+                _isSubmitting.value = false
                 _submitError.value =
                     error.message ?: "Unable to withdraw transfer request"
             }
