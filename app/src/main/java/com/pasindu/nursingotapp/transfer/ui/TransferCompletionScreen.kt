@@ -167,6 +167,15 @@ fun TransferCompletionScreen(
                 androidx.compose.material3.OutlinedButton(onClick = { viewModel.load(matchId) }) { androidx.compose.material3.Text("Try again") }
             }
 
+            if (!state.isLoading && status != null && !completed) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { viewModel.load(matchId) },
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.material3.Text("Refresh team progress")
+                }
+            }
+
             if (!state.isLoading && status != null && !reported && !completed &&
                 (status.status == "CONFIRMED" || status.status == "AWAITING_COMPLETION")
             ) {
