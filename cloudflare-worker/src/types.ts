@@ -90,3 +90,10 @@ export interface MatchDecisionResponse {
   firstResponseAt?: string;
   decisionApplied: boolean;
 }
+
+// Response payload after processing request withdrawal
+export interface WithdrawResponse {
+  withdrawn: boolean;
+  matchCancelled: boolean;
+  cancelledMatchId?: string;
+}

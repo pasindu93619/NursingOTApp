@@ -142,3 +142,16 @@ data class DecisionResponse(
 @Serializable
 enum class Decision { ACCEPT, REJECT, CONFIRM, LEAVE }
 
+/**
+ * Response payload from POST /api/matching/withdraw.
+ * Indicates whether the transfer request was removed and any active match was cancelled.
+ */
+@Serializable
+data class WorkerWithdrawResponse(
+    val withdrawn: Boolean = false,
+    val matchCancelled: Boolean = false,
+    val cancelledMatchId: String? = null,
+    val message: String? = null,
+    val error: String? = null
+)
+

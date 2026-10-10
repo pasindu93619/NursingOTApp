@@ -5,7 +5,7 @@ import {
   getTransferRequestDocPath,
   type FirestoreWrite
 } from "../firestore/firestoreClient.ts";
-import type { MatchDecisionResponse } from "../types.ts";
+import type { MatchDecisionResponse, WithdrawResponse } from "../types.ts";
 import {
   findBestMatch,
   findBestThreeWayCycle,
@@ -1406,5 +1406,177 @@ export async function sweepExpiredMatches(
     expired,
     unlockedParticipants,
     errors
+  };
+}
+
+/**
+ * Authoritatively withdraws a caller's active transfer request from the matching pool.
+ *
+ * Invariants:
+ * 1. Derives authenticated caller strictly from callerUid verified via JWT.
+ * 2. If caller has no active request document (already absent), succeeds idempotently.
+ * 3. If caller is locked in an active match (PENDING_CONFIRMATION or CHAT_OPEN):
+ *    - Validates match state. If CONFIRMED, rejects with 409 (cannot withdraw finalized transfer).
+ *    - Cancels the active match and marks rejectedBy<Caller> = true.
+ *    - Retains the match document with status CANCELLED for history/audit.
+ *    - Unlocks partner participant(s) atomically back to SEARCHING, locked = false, currentMatchId = null.
+ *    - Deletes caller's /transferRequests/{callerUid} document.
+ * 4. If caller is not locked in a match:
+ *    - Deletes caller's /transferRequests/{callerUid} document atomically.
+ * 5. Uses Firestore :commit preconditions to guarantee consistency under concurrent operations.
+ */
+export async function withdrawTransferRequest(
+  callerUid: string,
+  firestoreClient: FirestoreClient,
+  retryCount = 1
+): Promise<WithdrawResponse> {
+  const cleanCallerUid = callerUid.trim();
+  const caller = await firestoreClient.getRequestDoc(cleanCallerUid);
+
+  if (!caller) {
+    return {
+      withdrawn: true,
+      matchCancelled: false
+    };
+  }
+
+  const projectId = firestoreClient.getProjectId();
+  const writes: FirestoreWrite[] = [];
+  let matchCancelled = false;
+  let cancelledMatchId: string | undefined;
+
+  // Check if caller is locked in an active match
+  if (caller.locked && caller.currentMatchId && caller.currentMatchId.trim().length > 0) {
+    const matchId = caller.currentMatchId.trim();
+    const rawMatch = await firestoreClient.getMatchDoc(matchId);
+
+    if (rawMatch) {
+      const fields = rawMatch.fields ?? {};
+      const status = readStringField(fields, "status")?.toUpperCase();
+
+      if (status === "CONFIRMED") {
+        throw new MatchServiceError(
+          "Cannot withdraw: this mutual transfer has already been finalized and confirmed.",
+          409,
+          "MATCH_ALREADY_CONFIRMED"
+        );
+      }
+
+      if (status === "PENDING_CONFIRMATION" || status === "CHAT_OPEN") {
+        matchCancelled = true;
+        cancelledMatchId = matchId;
+
+        const nurseAUid = readStringField(fields, "nurseAUid");
+        const nurseBUid = readStringField(fields, "nurseBUid");
+        const nurseCUid = readStringField(fields, "nurseCUid");
+
+        const hasParticipantC = Boolean(nurseCUid) || fields.acceptedByC !== undefined;
+        let rejectedKey = "rejectedByA";
+        let acceptedKey = "acceptedByA";
+
+        if (cleanCallerUid === nurseAUid) {
+          rejectedKey = "rejectedByA";
+          acceptedKey = "acceptedByA";
+        } else if (cleanCallerUid === nurseBUid) {
+          rejectedKey = "rejectedByB";
+          acceptedKey = "acceptedByB";
+        } else if (cleanCallerUid === nurseCUid) {
+          rejectedKey = "rejectedByC";
+          acceptedKey = "acceptedByC";
+        }
+
+        // 1. Write match cancellation (retaining document for historical audit)
+        writes.push({
+          update: {
+            name: getMatchDocPath(projectId, matchId),
+            fields: {
+              status: { stringValue: "CANCELLED" },
+              [rejectedKey]: { booleanValue: true },
+              [acceptedKey]: { booleanValue: false },
+              updatedAt: { integerValue: Date.now().toString() }
+            }
+          },
+          updateMask: { fieldPaths: ["status", rejectedKey, acceptedKey, "updatedAt"] },
+          currentDocument: rawMatch.updateTime
+            ? { updateTime: rawMatch.updateTime }
+            : { exists: true }
+        });
+
+        // 2. Unlock other participants back to SEARCHING
+        const participantUids = hasParticipantC && nurseCUid
+          ? [nurseAUid, nurseBUid, nurseCUid]
+          : [nurseAUid, nurseBUid];
+
+        const otherUids = participantUids.filter(
+          (uid): uid is string => Boolean(uid) && uid !== cleanCallerUid
+        );
+
+        for (const partnerUid of otherUids) {
+          try {
+            const partnerDoc = await firestoreClient.getRequestDoc(partnerUid);
+            if (partnerDoc && partnerDoc.currentMatchId === matchId) {
+              writes.push({
+                update: {
+                  name: getTransferRequestDocPath(projectId, partnerDoc.firebaseUid),
+                  fields: {
+                    locked: { booleanValue: false },
+                    currentMatchId: { nullValue: null },
+                    status: { stringValue: "SEARCHING" },
+                    updatedAt: { integerValue: Date.now().toString() }
+                  }
+                },
+                updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+                currentDocument: partnerDoc.updateTime
+                  ? { updateTime: partnerDoc.updateTime }
+                  : { exists: true }
+              });
+            }
+          } catch (readErr: unknown) {
+            const msg = readErr instanceof Error ? readErr.message : "Unknown error";
+            throw new MatchServiceError(
+              `Failed to read partner participant request ${partnerUid} during withdrawal: ${msg}`,
+              500,
+              "PARTICIPANT_READ_FAILED"
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Delete the caller's transfer request document from Firebase
+  writes.push({
+    delete: getTransferRequestDocPath(projectId, cleanCallerUid),
+    currentDocument: caller.updateTime
+      ? { updateTime: caller.updateTime }
+      : { exists: true }
+  });
+
+  try {
+    await firestoreClient.commitAtomicMatch(writes);
+  } catch (err: unknown) {
+    if (err instanceof FirestoreError) {
+      const isConcurrencyConflict =
+        err.statusCode === 409 ||
+        err.code === "ABORTED" ||
+        err.code === "FAILED_PRECONDITION";
+
+      if (isConcurrencyConflict && retryCount > 0) {
+        return withdrawTransferRequest(callerUid, firestoreClient, retryCount - 1);
+      }
+      throw new MatchServiceError(
+        `Failed to commit withdrawal: ${err.message}`,
+        err.statusCode || 500,
+        "FIRESTORE_COMMIT_FAILED"
+      );
+    }
+    const msg = err instanceof Error ? err.message : "Internal error";
+    throw new MatchServiceError(`Withdrawal error: ${msg}`, 500, "INTERNAL_ERROR");
+  }
+
+  return {
+    withdrawn: true,
+    matchCancelled,
+    cancelledMatchId
   };
 }

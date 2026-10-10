@@ -11,6 +11,7 @@ import {
   findAndLockMatch,
   respondToMatch,
   sweepExpiredMatches,
+  withdrawTransferRequest,
   MatchServiceError
 } from "./matching/matchingService.ts";
 
@@ -130,6 +131,38 @@ export default {
           return errorResponse("InvalidRequest", `Invalid decision: ${decisionReq.decision}`, 400);
         }
         const result = await respondToMatch(callerUid, decisionReq.matchId, decisionReq.decision, firestoreClient);
+        return jsonResponse(result, 200);
+      } catch (err: unknown) {
+        if (err instanceof AuthError) {
+          return errorResponse("Unauthorized", err.message, err.statusCode);
+        }
+        if (err instanceof MatchServiceError) {
+          return errorResponse(err.code, err.message, err.statusCode);
+        }
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
+    // 3.5. Authoritative Request Withdrawal Endpoint
+    if (pathname === "/api/matching/withdraw") {
+      if (request.method !== "POST") {
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
+      }
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const token = extractBearerToken(authHeader);
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
+        const callerUid = verifiedResult.uid;
+
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) {
+          return tokenProviderResult;
+        }
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+
+        const result = await withdrawTransferRequest(callerUid, firestoreClient);
         return jsonResponse(result, 200);
       } catch (err: unknown) {
         if (err instanceof AuthError) {

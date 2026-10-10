@@ -140,6 +140,10 @@ class TransferSyncBridgeTest {
                 decisionApplied = true
             )
         }
+
+        override suspend fun withdrawRequest(firebaseIdToken: String): com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse {
+            return com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse(withdrawn = true)
+        }
     }
 
     private class FakeSyncScheduler : TransferSyncScheduler {

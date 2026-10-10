@@ -55,6 +55,7 @@ export interface FirestoreWrite {
     name: string;
     fields: Record<string, FirestoreValue>;
   };
+  delete?: string;
   currentDocument?: {
     exists?: boolean;
     updateTime?: string;
@@ -518,6 +519,10 @@ export class FirestoreClient {
           name: write.update.name,
           fields: write.update.fields
         };
+      }
+
+      if (write.delete) {
+        normalized.delete = write.delete;
       }
 
       if (write.updateMask) {

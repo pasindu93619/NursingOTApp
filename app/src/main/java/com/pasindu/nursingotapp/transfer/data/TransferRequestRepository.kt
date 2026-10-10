@@ -397,17 +397,24 @@ class TransferRequestRepository @Inject constructor(
     }
 
     /**
-     * Clears the active request row from Room and withdraws from Firestore if online.
+     * Clears the active request row from Room and authoritatively withdraws from the backend.
      *
      * After this call, [observeActiveRequest] will emit `null`.
      *
-     * @throws Exception if the Room delete fails.
+     * @throws Exception if backend withdrawal or Room delete fails.
      */
     suspend fun clearRequest() {
-        val userId = tokenProvider?.getCurrentUserId()
+        val tp = tokenProvider
+        val api = workerApiClient
         val remote = remoteDataSource
-        if (userId != null && remote != null) {
-            runCatching {
+
+        if (api != null && tp != null) {
+            val token = tp.getFirebaseIdToken()
+                ?: throw IllegalStateException("Authentication failure: Unable to get ID token")
+            api.withdrawRequest(token)
+        } else if (remote != null && tp != null) {
+            val userId = tp.getCurrentUserId()
+            if (userId != null) {
                 remote.withdrawTransferRequest(userId)
             }
         }
@@ -435,6 +442,9 @@ class TransferRequestRepository @Inject constructor(
                 "CANCELLED" -> entity.copy(
                     matchStatus = "CANCELLED",
                     requestStatus = TransferRequestStatus.PENDING.name,
+                    matchCycleId = null,
+                    matchType = null,
+                    matchPayloadJson = null,
                     syncStatus = CacheSyncStatus.SYNCED.name,
                     updatedAt = System.currentTimeMillis()
                 )

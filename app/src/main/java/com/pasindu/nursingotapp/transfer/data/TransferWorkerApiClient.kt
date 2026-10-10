@@ -6,6 +6,7 @@ import com.pasindu.nursingotapp.transfer.data.model.DecisionResponse
 import com.pasindu.nursingotapp.transfer.data.model.WorkerMatchResponse
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
+import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -32,6 +33,11 @@ interface TransferWorkerApiClient {
      * Send a decision (ACCEPT/REJECT) for a matched transfer.
      */
     suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse
+
+    /**
+     * Authoritatively withdraws the transfer request and cancels any active match via Cloudflare Worker.
+     */
+    suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse
 }
 
 /**
@@ -216,6 +222,50 @@ class HttpTransferWorkerApiClient @Inject constructor(
                 json.decodeFromString(DecisionResponse.serializer(), responseBody)
             } catch (e: Exception) {
                 throw Exception("Network error while sending decision: ${e.message}", e)
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+    override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
+        withContext(Dispatchers.IO) {
+            require(firebaseIdToken.isNotBlank()) { "Firebase ID token must not be blank" }
+
+            var connection: HttpURLConnection? = null
+            try {
+                val cleanBaseUrl = baseUrl.trim().removeSuffix("/")
+                val endpointUrl = URL("$cleanBaseUrl/api/matching/withdraw")
+                connection = (endpointUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 15_000
+                    readTimeout = 20_000
+                    doInput = true
+                    doOutput = true
+                    setRequestProperty("Authorization", "Bearer ${firebaseIdToken.trim()}")
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Accept", "application/json")
+                }
+
+                connection.outputStream.use { os ->
+                    os.write("{}".toByteArray(Charsets.UTF_8))
+                    os.flush()
+                }
+
+                val responseCode = connection.responseCode
+                val stream = if (responseCode in 200..299) {
+                    connection.inputStream
+                } else {
+                    connection.errorStream ?: connection.inputStream
+                }
+                val responseBody = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+
+                if (responseCode !in 200..299) {
+                    throw Exception("Server returned HTTP $responseCode: $responseBody")
+                }
+
+                json.decodeFromString(WorkerWithdrawResponse.serializer(), responseBody)
+            } catch (e: Exception) {
+                throw Exception("Network error while withdrawing request: ${e.message}", e)
             } finally {
                 connection?.disconnect()
             }

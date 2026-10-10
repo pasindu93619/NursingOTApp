@@ -15,6 +15,7 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
+import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.ui.MatchDecisionStatus
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
@@ -156,6 +157,10 @@ class TransferMatchDecisionTest {
                 )
             )
             return res.getOrThrow()
+        }
+
+        override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse {
+            return WorkerWithdrawResponse(withdrawn = true)
         }
     }
 

@@ -185,13 +185,16 @@ class TransferRequestViewModel @Inject constructor(
      */
     fun withdrawRequest(onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
+            _isSubmitting.value = true
             _submitError.value = null
 
             runCatching {
                 transferRequestRepository.clearRequest()
             }.onSuccess {
+                _isSubmitting.value = false
                 onSuccess()
             }.onFailure { error ->
+                _isSubmitting.value = false
                 _submitError.value =
                     error.message ?: "Unable to withdraw transfer request"
             }

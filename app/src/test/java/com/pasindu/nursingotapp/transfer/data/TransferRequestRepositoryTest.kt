@@ -12,6 +12,7 @@ import com.pasindu.nursingotapp.transfer.data.model.DecisionResponse
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
+import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -89,6 +90,9 @@ class TransferRequestRepositoryTest {
 
     private class FakeWorkerApiClient : TransferWorkerApiClient {
         var findAndLockCalls = 0
+        var withdrawCalls = 0
+        var withdrawResponse = WorkerWithdrawResponse(withdrawn = true)
+        var withdrawShouldThrow: Throwable? = null
 
         override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
             findAndLockCalls++
@@ -100,6 +104,12 @@ class TransferRequestRepositoryTest {
             payload: DecisionRequest
         ): DecisionResponse {
             error("Not used by this test")
+        }
+
+        override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse {
+            withdrawCalls++
+            withdrawShouldThrow?.let { throw it }
+            return withdrawResponse
         }
     }
 
@@ -553,6 +563,99 @@ class TransferRequestRepositoryTest {
     fun `clearRequest delegates to dao clear`() = runTest {
         repository.clearRequest()
         assertEquals(1, fakeDao.clearCallCount)
+    }
+
+    @Test
+    fun `clearRequest calls workerApiClient withdrawRequest when configured`() = runTest {
+        val fakeWorker = FakeWorkerApiClient()
+        val repoWithWorker = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = null,
+            workerApiClient = fakeWorker
+        )
+
+        repoWithWorker.clearRequest()
+
+        assertEquals(1, fakeWorker.withdrawCalls)
+        assertEquals(1, fakeDao.clearCallCount)
+    }
+
+    @Test
+    fun `clearRequest does not clear dao when workerApiClient withdrawRequest throws`() = runTest {
+        val fakeWorker = FakeWorkerApiClient().apply {
+            withdrawShouldThrow = RuntimeException("Network error on withdrawal")
+        }
+        val repoWithWorker = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = null,
+            workerApiClient = fakeWorker
+        )
+
+        try {
+            repoWithWorker.clearRequest()
+            org.junit.Assert.fail("Expected exception")
+        } catch (e: RuntimeException) {
+            assertEquals("Network error on withdrawal", e.message)
+        }
+
+        assertEquals(1, fakeWorker.withdrawCalls)
+        assertEquals(0, fakeDao.clearCallCount)
+    }
+
+    @Test
+    fun `respondToMatch CANCELLED clears matchCycleId and payload json`() = runTest {
+        val fakeWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String) = WorkerSyncResult.NoMatch("")
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                return DecisionResponse(
+                    matchId = "match-123",
+                    newStatus = "CANCELLED",
+                    expiresAt = "2026-10-12T10:00:00Z",
+                    decisionApplied = true
+                )
+            }
+            override suspend fun withdrawRequest(firebaseIdToken: String) = WorkerWithdrawResponse(withdrawn = true)
+        }
+
+        val repoWithWorker = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = null,
+            workerApiClient = fakeWorker
+        )
+
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                requestId = "nurse-a",
+                currentHospitalId = "HOSP-001",
+                preferenceHospitalsJson = "[\"HOSP-002\"]",
+                grade = "Grade II",
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                matchStatus = "PENDING_CONFIRMATION",
+                matchCycleId = "match-123",
+                matchType = "DIRECT_2_WAY",
+                matchPayloadJson = "{\"dummy\":true}",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                createdAt = 1000L,
+                updatedAt = 1000L
+            )
+        )
+
+        val result = repoWithWorker.respondToMatch("match-123", Decision.REJECT)
+        assertTrue(result.isSuccess)
+
+        val updated = fakeDao.getOnce()
+        assertNotNull(updated)
+        assertEquals("CANCELLED", updated!!.matchStatus)
+        assertEquals(TransferRequestStatus.PENDING.name, updated.requestStatus)
+        assertNull(updated.matchCycleId)
+        assertNull(updated.matchType)
+        assertNull(updated.matchPayloadJson)
     }
 
     @Test

@@ -175,6 +175,12 @@ function evalTransferRequestUpdate(auth, userId, existing, next) {
   return true;
 }
 
+function evalTransferRequestDelete(auth, userId, existing) {
+  if (auth == null || auth.uid !== userId) return false;
+  if (existing.locked !== false) return false;
+  return true;
+}
+
 function evalMatchGet(auth, matchDoc) {
   return auth != null && (
     auth.uid === matchDoc.nurseAUid ||
@@ -457,6 +463,34 @@ test("same-grade is NOT enforced by firestore rules contract", () => {
   assert.equal(rulesContent.includes("nurseAGrade == nurseBGrade"), false);
   assert.equal(rulesContent.includes("grade =="), false);
   assert.ok(rulesContent.includes("grade is string")); // Grade is verified as string metadata
+});
+
+test("user can delete own unlocked transfer request", () => {
+  const auth = { uid: "nurse-A" };
+  const unlockedDoc = { firebaseUid: "nurse-A", locked: false, status: "SEARCHING" };
+  assert.equal(evalTransferRequestDelete(auth, "nurse-A", unlockedDoc), true);
+});
+
+test("user cannot delete own locked transfer request directly via client", () => {
+  const auth = { uid: "nurse-A" };
+  const lockedDoc = { firebaseUid: "nurse-A", locked: true, status: "PENDING_CONFIRMATION" };
+  assert.equal(evalTransferRequestDelete(auth, "nurse-A", lockedDoc), false);
+});
+
+test("user cannot delete another user's transfer request", () => {
+  const authA = { uid: "nurse-A" };
+  const docB = { firebaseUid: "nurse-B", locked: false, status: "SEARCHING" };
+  assert.equal(evalTransferRequestDelete(authA, "nurse-B", docB), false);
+});
+
+test("unauthenticated caller cannot delete transfer request", () => {
+  const unlockedDoc = { firebaseUid: "nurse-A", locked: false, status: "SEARCHING" };
+  assert.equal(evalTransferRequestDelete(null, "nurse-A", unlockedDoc), false);
+});
+
+test("firestore.rules enforces delete rule requiring non-locked request", () => {
+  assert.ok(rulesContent.includes("allow delete: if request.auth != null"));
+  assert.ok(rulesContent.includes("resource.data.locked == false"));
 });
 
 // =============================================================================
