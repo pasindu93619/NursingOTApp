@@ -182,5 +182,6 @@ data class TransferCompletionStatus(
     val callerReportedComplete: Boolean = false,
     val completedParticipants: Int = 0,
     val totalParticipants: Int = 0,
-    val completedAt: String? = null
+    val completedAt: String? = null,
+    val callerDestinationHospitalId: String? = null
 )
