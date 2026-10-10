@@ -52,6 +52,7 @@ import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferHistoryScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferCompletionScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
@@ -278,6 +279,16 @@ fun AppNavigation() {
                     onBack = { navController.popBackStack() }
                 )
             }
+            composable(
+                "transfer_completion/{matchId}",
+                arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getString("matchId").orEmpty()
+                TransferCompletionScreen(
+                    matchId = matchId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable("transfer_match") {
                 val matchViewModel: TransferMatchViewModel = hiltViewModel()
                 val matchUiState by matchViewModel.uiState.collectAsState()
@@ -340,6 +351,10 @@ fun AppNavigation() {
                     },
                     onClearSendError = {
                         chatViewModel.clearSendError()
+                    },
+                    onOpenCompletion = {
+                        val matchId = chatUiState.matchId
+                        if (matchId.isNotBlank()) navController.navigate("transfer_completion/${Uri.encode(matchId)}") { launchSingleTop = true }
                     }
                 )
             }
