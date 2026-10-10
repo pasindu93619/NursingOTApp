@@ -195,12 +195,12 @@ class TransferRequestRepositoryTest {
             requestId = "nurse-a",
             requestStatus = TransferRequestStatus.MATCHED.name,
             currentHospitalId = "MOH2026-0001",
-            preferenceHospitalIdsJson = "[\\"MOH2026-0100\\"]",
+            preferenceHospitalIdsJson = """["MOH2026-0100"]""",
             grade = "Grade I",
             matchCycleId = "match-active-123",
             matchType = "DIRECT_2_WAY",
             matchStatus = "PENDING_CONFIRMATION",
-            matchPayloadJson = "{\\"matchId\\":\\"match-active-123\\"}",
+            matchPayloadJson = """{"matchId":"match-active-123"}""",
             syncStatus = CacheSyncStatus.SYNCED.name,
             updatedAt = 1000L
         )
