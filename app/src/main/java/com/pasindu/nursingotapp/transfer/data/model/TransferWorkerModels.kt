@@ -134,6 +134,23 @@ data class DecisionResponse(
     val decisionApplied: Boolean
 )
 
+
+/** A past terminal mutual-transfer match visible only to its authenticated participants. */
+@Serializable
+data class TransferMatchHistoryItem(
+    val matchId: String,
+    val matchType: String,
+    val status: String,
+    val createdAt: String,
+    val endedAt: String,
+    val reason: String
+)
+
+@Serializable
+data class TransferMatchHistoryResponse(
+    val items: List<TransferMatchHistoryItem> = emptyList()
+)
+
 /**
  * Enum of possible decisions supported by Cloudflare Worker.
  * Initial stage: ACCEPT / REJECT
