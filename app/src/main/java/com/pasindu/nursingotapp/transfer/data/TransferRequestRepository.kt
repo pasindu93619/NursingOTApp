@@ -414,6 +414,23 @@ class TransferRequestRepository @Inject constructor(
      * Loads the authenticated nurse's own cancelled/expired matches from the Worker.
      * Match history is remote-only and does not alter the Room active-request cache.
      */
+
+    suspend fun getCompletionStatus(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
+        require(matchId.isNotBlank()) { "matchId must not be blank" }
+        val token = tokenProvider?.getIdToken()
+            ?: throw IllegalStateException("Authentication provider unavailable")
+        val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
+        api.getCompletionStatus(token, matchId)
+    }
+
+    suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
+        require(matchId.isNotBlank()) { "matchId must not be blank" }
+        val token = tokenProvider?.getIdToken()
+            ?: throw IllegalStateException("Authentication provider unavailable")
+        val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
+        api.reportCompletion(token, matchId)
+    }
+
     suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runCatching {
         val tp = tokenProvider ?: error("Token provider not configured")
         val api = workerApiClient ?: error("Worker API client not configured")
