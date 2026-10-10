@@ -232,7 +232,8 @@ fun TransferPoolStatusScreen(
         if (activeRequest == null) {
             EmptyPoolStatusView(
                 onBack = onBack,
-                onCreateRequest = onCreateNewRequest
+                onCreateRequest = onCreateNewRequest,
+                onOpenHistory = onOpenHistory
             )
         } else {
             ActivePoolMissionControlView(
@@ -1748,7 +1749,8 @@ private fun CompactTransferRulesCard() {
 @Composable
 private fun EmptyPoolStatusView(
     onBack: () -> Unit,
-    onCreateRequest: () -> Unit
+    onCreateRequest: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -1781,6 +1783,17 @@ private fun EmptyPoolStatusView(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Black
             )
+            Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = onOpenHistory,
+                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+            ) {
+                Icon(
+                    Icons.Default.History,
+                    contentDescription = "Match history",
+                    tint = ClinicalPrimaryColor
+                )
+            }
         }
 
         // Scrollable Content
