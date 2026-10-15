@@ -108,7 +108,9 @@ data class TransferRequest(
      * Raw server-authoritative match status (e.g. PENDING_CONFIRMATION, CHAT_OPEN, CONFIRMED, CANCELLED, EXPIRED).
      * Mapped from offline cache entity matchStatus column.
      */
-    val matchStatus: String? = null
+    val matchStatus: String? = null,
+    /** Server/local cache match-cycle identifier used for transfer navigation. */
+    val matchCycleId: String? = null
 ) {
     init {
         require(grade.isNotBlank()) {
