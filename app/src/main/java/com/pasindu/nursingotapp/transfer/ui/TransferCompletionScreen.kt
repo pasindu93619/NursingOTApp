@@ -186,6 +186,7 @@ fun TransferCompletionScreen(
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
+            if (status != null || state.error == null) {
             androidx.compose.material3.Surface(
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
                 color = if (completed) com.pasindu.nursingotapp.ui.theme.Emerald.copy(alpha = 0.12f)
@@ -225,6 +226,7 @@ fun TransferCompletionScreen(
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
+            }
             }
 
             if (state.isLoading) {
