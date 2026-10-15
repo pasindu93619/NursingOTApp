@@ -709,6 +709,24 @@ class TransferMatchDecisionTest {
             rejectedByB = false
         )
 
+        remoteDataSource.remoteRequest = RemoteTransferRequestState(
+            status = "MATCHED",
+            locked = true,
+            currentMatchId = "MATCH-B3",
+            updatedAt = 1000L
+        )
+        remoteDataSource.remoteMatch = RemoteMatchState(
+            matchId = "MATCH-B3",
+            matchType = "DIRECT_2_WAY",
+            directMatch = matchFound.directMatch,
+            status = "PENDING_CONFIRMATION",
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            acceptedByA = true,
+            acceptedByB = false,
+            rejectedByA = false,
+            rejectedByB = false
+        )
         workerApiClient.syncResult = matchFound
         tokenProvider.userId = "nurse-a"
 
@@ -751,6 +769,21 @@ class TransferMatchDecisionTest {
             acceptedByA = true
         )
 
+        remoteDataSource.remoteRequest = RemoteTransferRequestState(
+            status = "MATCHED",
+            locked = true,
+            currentMatchId = "MATCH-B4",
+            updatedAt = 1000L
+        )
+        remoteDataSource.remoteMatch = RemoteMatchState(
+            matchId = "MATCH-B4",
+            matchType = "DIRECT_2_WAY",
+            directMatch = initialMatch.directMatch,
+            status = "PENDING_CONFIRMATION",
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            acceptedByA = true
+        )
         workerApiClient.syncResult = initialMatch
         tokenProvider.userId = "nurse-a"
 
@@ -759,6 +792,8 @@ class TransferMatchDecisionTest {
         assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
         // Now server returns NoMatch (e.g. partner rejected)
+        remoteDataSource.remoteRequest = null
+        remoteDataSource.remoteMatch = remoteDataSource.remoteMatch?.copy(status = "CANCELLED")
         workerApiClient.syncResult = WorkerSyncResult.NoMatch("Partner declined")
         // Trigger sync
         val syncRes = repository.syncActiveRequest()
