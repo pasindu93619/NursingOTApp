@@ -9,6 +9,7 @@ import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryResponse
+import com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -42,6 +43,10 @@ interface TransferWorkerApiClient {
     suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse
     /** Fetches only this authenticated nurse's cancelled/expired match history. */
     suspend fun getMatchHistory(firebaseIdToken: String): List<TransferMatchHistoryItem>
+    /** Reads completion progress for a match the authenticated nurse participates in. */
+    suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): TransferCompletionStatus
+    /** Records this nurse's self-reported transfer completion. */
+    suspend fun reportCompletion(firebaseIdToken: String, matchId: String): TransferCompletionStatus
 }
 
 /**
@@ -260,6 +265,53 @@ class HttpTransferWorkerApiClient @Inject constructor(
                 connection?.disconnect()
             }
         }
+
+
+    override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): TransferCompletionStatus =
+        completionRequest(firebaseIdToken, matchId, report = false)
+
+    override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): TransferCompletionStatus =
+        completionRequest(firebaseIdToken, matchId, report = true)
+
+    private suspend fun completionRequest(
+        firebaseIdToken: String,
+        matchId: String,
+        report: Boolean
+    ): TransferCompletionStatus = withContext(Dispatchers.IO) {
+        require(firebaseIdToken.isNotBlank()) { "Firebase ID token must not be blank" }
+        require(matchId.isNotBlank()) { "matchId must not be blank" }
+        var connection: HttpURLConnection? = null
+        try {
+            val cleanBaseUrl = baseUrl.trim().removeSuffix("/")
+            val encodedMatchId = java.net.URLEncoder.encode(matchId.trim(), Charsets.UTF_8.name())
+            val endpointUrl = URL("$cleanBaseUrl/api/matching/completion?matchId=$encodedMatchId")
+            connection = (endpointUrl.openConnection() as HttpURLConnection).apply {
+                requestMethod = if (report) "POST" else "GET"
+                connectTimeout = 15_000
+                readTimeout = 20_000
+                doInput = true
+                doOutput = report
+                setRequestProperty("Authorization", "Bearer ${firebaseIdToken.trim()}")
+                setRequestProperty("Accept", "application/json")
+                if (report) setRequestProperty("Content-Type", "application/json")
+            }
+            if (report) {
+                val body = kotlinx.serialization.json.buildJsonObject {
+                    put("matchId", kotlinx.serialization.json.JsonPrimitive(matchId.trim()))
+                }.toString()
+                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream ?: connection.inputStream
+            val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw Exception("Server returned HTTP $code: $body")
+            json.decodeFromString(TransferCompletionStatus.serializer(), body)
+        } catch (e: Exception) {
+            throw Exception("Unable to ${if (report) "record" else "load"} transfer completion: ${e.message}", e)
+        } finally {
+            connection?.disconnect()
+        }
+    }
 
     override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
         withContext(Dispatchers.IO) {

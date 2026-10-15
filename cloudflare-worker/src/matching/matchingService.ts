@@ -236,6 +236,18 @@ export async function respondToMatch(
         decisionApplied: true
       };
     }
+    // If the match has already reached CONFIRMED agreement across all required participants,
+    // a repeated CONFIRM from a verified participant is idempotent and returns CONFIRMED cleanly.
+    if (status === "CONFIRMED" && decision === "CONFIRM") {
+      return {
+        matchId,
+        newStatus: "CONFIRMED",
+        expiresAt: expiresAtStr,
+        chatDeadline: chatDeadlineStr,
+        firstResponseAt: firstResponseAtStr,
+        decisionApplied: true
+      };
+    }
     throw new MatchServiceError("Match is not awaiting confirmation or chat finalization", 409, "INVALID_STATUS");
   }
 
@@ -610,7 +622,8 @@ async function recoverExistingMatch(
   const status = readStringField(fields, "status")?.toUpperCase();
   const expiresAt = readStringField(fields, "expiresAt");
   const currentTime = now ?? new Date();
-  const isExpired = expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
+  const isTimedStage = status === "PENDING_CONFIRMATION" || status === "CHAT_OPEN";
+  const isExpired = isTimedStage && expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
 
   if (
     status === "CANCELLED" ||
@@ -620,7 +633,8 @@ async function recoverExistingMatch(
     (status !== undefined &&
       status !== "PENDING_CONFIRMATION" &&
       status !== "CHAT_OPEN" &&
-      status !== "CONFIRMED")
+      status !== "CONFIRMED" &&
+      status !== "AWAITING_COMPLETION")
   ) {
     return null;
   }
@@ -1317,6 +1331,229 @@ export interface SweepExpiredMatchesResult {
  * - Safe error handling: skips/logs errors per match without halting the entire sweep.
  */
 
+
+
+export interface TransferCompletionStatus {
+  matchId: string;
+  status: string;
+  callerReportedComplete: boolean;
+  completedParticipants: number;
+  totalParticipants: number;
+  completedAt?: string;
+  callerDestinationHospitalId?: string;
+}
+
+/** Reads completion progress for a verified participant without exposing other match documents. */
+export async function getTransferCompletionStatus(
+  callerUid: string,
+  matchId: string,
+  firestoreClient: FirestoreClient
+): Promise<TransferCompletionStatus> {
+  const uid = callerUid.trim();
+  const cleanMatchId = matchId.trim();
+  if (!uid) throw new MatchServiceError("Authenticated user ID is required", 401, "UNAUTHENTICATED");
+  if (!cleanMatchId || cleanMatchId.includes("/")) throw new MatchServiceError("A valid matchId is required", 400, "INVALID_MATCH_ID");
+  const rawMatch = await firestoreClient.getMatchDoc(cleanMatchId);
+  if (!rawMatch) throw new MatchServiceError("Match not found", 404, "MATCH_NOT_FOUND");
+  const fields = rawMatch.fields ?? {};
+  const nurseAUid = readStringField(fields, "nurseAUid");
+  const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseCUid = readStringField(fields, "nurseCUid");
+  if (!nurseAUid || !nurseBUid) throw new MatchServiceError("Malformed match document", 500, "MALFORMED_MATCH_DOC");
+  const participantUids = nurseCUid ? [nurseAUid, nurseBUid, nurseCUid] : [nurseAUid, nurseBUid];
+  if (!participantUids.includes(uid)) throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+  const keyByUid: Record<string, string> = {
+    [nurseAUid]: "completionReportedByA",
+    [nurseBUid]: "completionReportedByB"
+  };
+  if (nurseCUid) keyByUid[nurseCUid] = "completionReportedByC";
+  const completedParticipants = participantUids.filter(participantUid =>
+    readBooleanField(fields, keyByUid[participantUid]) === true
+  ).length;
+  return {
+    matchId: cleanMatchId,
+    status: readStringField(fields, "status") ?? "UNKNOWN",
+    callerReportedComplete: readBooleanField(fields, keyByUid[uid]) === true,
+    completedParticipants,
+    totalParticipants: participantUids.length,
+    ...(readStringField(fields, "completedAt") ? { completedAt: readStringField(fields, "completedAt") } : {}),
+    ...(readStringField(fields, uid === nurseAUid ? "nurseADestinationHospitalId" : uid === nurseBUid ? "nurseBDestinationHospitalId" : "nurseCDestinationHospitalId") ? { callerDestinationHospitalId: readStringField(fields, uid === nurseAUid ? "nurseADestinationHospitalId" : uid === nurseBUid ? "nurseBDestinationHospitalId" : "nurseCDestinationHospitalId") } : {})
+  };
+}
+
+export interface CompletionReportResult {
+  matchId: string;
+  status: "AWAITING_COMPLETION" | "COMPLETED";
+  callerReportedComplete: true;
+  completedParticipants: number;
+  totalParticipants: number;
+  completedAt?: string;
+  callerDestinationHospitalId?: string;
+}
+
+/**
+ * Records a participant's self-reported real-world transfer completion.
+ * Completion is not an administrative verification. Each participant reports
+ * independently; the match reaches COMPLETED only when every participant reports.
+ * Firestore updateTime preconditions make concurrent reports safe.
+ */
+export async function reportTransferCompletion(
+  callerUid: string,
+  matchId: string,
+  firestoreClient: FirestoreClient,
+  retryCount = 1
+): Promise<CompletionReportResult> {
+  const uid = callerUid.trim();
+  const cleanMatchId = matchId.trim();
+  if (!uid) throw new MatchServiceError("Authenticated user ID is required", 401, "UNAUTHENTICATED");
+  if (!cleanMatchId || cleanMatchId.includes("/")) {
+    throw new MatchServiceError("A valid matchId is required", 400, "INVALID_MATCH_ID");
+  }
+
+  const rawMatch = await firestoreClient.getMatchDoc(cleanMatchId);
+  if (!rawMatch) throw new MatchServiceError("Match not found", 404, "MATCH_NOT_FOUND");
+  const fields = rawMatch.fields ?? {};
+  const nurseAUid = readStringField(fields, "nurseAUid");
+  const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseCUid = readStringField(fields, "nurseCUid");
+  if (!nurseAUid || !nurseBUid) {
+    throw new MatchServiceError("Malformed match document", 500, "MALFORMED_MATCH_DOC");
+  }
+
+  const participantUids = nurseCUid ? [nurseAUid, nurseBUid, nurseCUid] : [nurseAUid, nurseBUid];
+  if (!participantUids.includes(uid)) {
+    throw new MatchServiceError("Caller is not a participant of this match", 403, "NON_PARTICIPANT");
+  }
+
+  const status = (readStringField(fields, "status") ?? "").trim().toUpperCase();
+  const keyByUid: Record<string, string> = {
+    [nurseAUid]: "completionReportedByA",
+    [nurseBUid]: "completionReportedByB"
+  };
+  if (nurseCUid) keyByUid[nurseCUid] = "completionReportedByC";
+  const callerKey = keyByUid[uid];
+  const reported = participantUids.map(participantUid => {
+    const key = keyByUid[participantUid];
+    return participantUid === uid || readBooleanField(fields, key) === true;
+  });
+  const completedParticipants = reported.filter(Boolean).length;
+  const completedAt = readStringField(fields, "completedAt");
+  const destinationField = uid === nurseAUid ? "nurseADestinationHospitalId" : uid === nurseBUid ? "nurseBDestinationHospitalId" : "nurseCDestinationHospitalId";
+  const callerDestinationHospitalId = readStringField(fields, destinationField);
+
+  if (status === "COMPLETED") {
+    return {
+      matchId: cleanMatchId,
+      status: "COMPLETED",
+      callerReportedComplete: true,
+      completedParticipants: participantUids.length,
+      totalParticipants: participantUids.length,
+      ...(completedAt ? { completedAt } : {}),
+      ...(callerDestinationHospitalId ? { callerDestinationHospitalId } : {})
+    };
+  }
+  if (status !== "CONFIRMED" && status !== "AWAITING_COMPLETION") {
+    throw new MatchServiceError(
+      "Transfer completion can be reported only after all participants confirm the proposed match",
+      409,
+      "INVALID_COMPLETION_STATE"
+    );
+  }
+  if (readBooleanField(fields, callerKey) === true) {
+    return {
+      matchId: cleanMatchId,
+      status: status === "CONFIRMED" ? "AWAITING_COMPLETION" : "AWAITING_COMPLETION",
+      callerReportedComplete: true,
+      completedParticipants,
+      totalParticipants: participantUids.length,
+      ...(callerDestinationHospitalId ? { callerDestinationHospitalId } : {})
+    };
+  }
+
+  const allReported = reported.every(Boolean);
+  const newStatus = allReported ? "COMPLETED" : "AWAITING_COMPLETION";
+  const now = new Date().toISOString();
+  const updateFields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }> = {
+    [callerKey]: { booleanValue: true },
+    status: { stringValue: newStatus },
+    updatedAt: { integerValue: Date.now().toString() }
+  };
+  const updateMask = [callerKey, "status", "updatedAt"];
+  const writes: FirestoreWrite[] = [{
+    update: {
+      name: getMatchDocPath(firestoreClient.getProjectId(), cleanMatchId),
+      fields: updateFields
+    },
+    updateMask: { fieldPaths: updateMask },
+    currentDocument: rawMatch.updateTime ? { updateTime: rawMatch.updateTime } : { exists: true }
+  }];
+  if (allReported) {
+    const destinations: Array<[string, string | undefined]> = [
+      [nurseAUid, readStringField(fields, "nurseADestinationHospitalId")],
+      [nurseBUid, readStringField(fields, "nurseBDestinationHospitalId")]
+    ];
+    if (nurseCUid) destinations.push([nurseCUid, readStringField(fields, "nurseCDestinationHospitalId")]);
+    for (const [participantUid, destinationHospitalId] of destinations) {
+      if (!destinationHospitalId?.trim()) {
+        throw new MatchServiceError("Match is missing a participant destination hospital", 500, "MALFORMED_MATCH_DOC");
+      }
+      const requestDoc = await firestoreClient.getRequestDoc(participantUid);
+      if (!requestDoc || requestDoc.currentMatchId !== cleanMatchId) {
+        throw new MatchServiceError("A participant transfer request no longer points to this match; completion was not finalized.", 409, "PARTICIPANT_REQUEST_CHANGED");
+      }
+      writes.push({
+        update: {
+          name: getTransferRequestDocPath(firestoreClient.getProjectId(), participantUid),
+          fields: {
+            currentHospitalId: { stringValue: destinationHospitalId },
+            status: { stringValue: "COMPLETED" },
+            locked: { booleanValue: false },
+            currentMatchId: { nullValue: null },
+            updatedAt: { integerValue: Date.now().toString() }
+          }
+        },
+        updateMask: { fieldPaths: ["currentHospitalId", "status", "locked", "currentMatchId", "updatedAt"] },
+        currentDocument: requestDoc.updateTime ? { updateTime: requestDoc.updateTime } : { exists: true }
+      });
+    }
+  }
+  if (allReported) {
+    updateFields.completedAt = { stringValue: now };
+    updateMask.push("completedAt");
+  }
+
+  try {
+    await firestoreClient.commitAtomicMatch(writes);
+  } catch (err: unknown) {
+    if (err instanceof FirestoreError) {
+      const conflict = err.statusCode === 409 || err.code === "ABORTED" || err.code === "FAILED_PRECONDITION";
+      if (conflict && retryCount > 0) {
+        return reportTransferCompletion(uid, cleanMatchId, firestoreClient, retryCount - 1);
+      }
+      throw new MatchServiceError(
+        `Could not safely save completion report: ${err.message}`,
+        err.statusCode || 500,
+        "COMPLETION_COMMIT_FAILED"
+      );
+    }
+    throw new MatchServiceError(
+      `Completion report failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      500,
+      "COMPLETION_FAILED"
+    );
+  }
+
+  return {
+    matchId: cleanMatchId,
+    status: newStatus,
+    callerReportedComplete: true,
+    completedParticipants: allReported ? participantUids.length : completedParticipants,
+    totalParticipants: participantUids.length,
+    ...(allReported ? { completedAt: now } : {}),
+    ...(callerDestinationHospitalId ? { callerDestinationHospitalId } : {})
+  };
+}
+
 export interface MatchHistoryItem {
   matchId: string;
   matchType: "DIRECT_2_WAY" | "THREE_WAY";
@@ -1528,9 +1765,9 @@ export async function withdrawTransferRequest(
       const fields = rawMatch.fields ?? {};
       const status = readStringField(fields, "status")?.toUpperCase();
 
-      if (status === "CONFIRMED") {
+      if (status === "CONFIRMED" || status === "AWAITING_COMPLETION") {
         throw new MatchServiceError(
-          "Cannot withdraw: this mutual transfer has already been finalized and confirmed.",
+          "Cannot withdraw: all participants have confirmed this transfer and the completion workflow is in progress.",
           409,
           "MATCH_ALREADY_CONFIRMED"
         );

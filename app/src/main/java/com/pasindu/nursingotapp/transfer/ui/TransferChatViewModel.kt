@@ -229,9 +229,9 @@ class TransferChatViewModel @Inject constructor(
                             terminalNotice = notice
                         )
 
-                        // If the match was cancelled or expired, reconcile with backend
-                        // to restore the nurse's active request in Room without deleting it.
-                        if (serverStatus == "CANCELLED" || serverStatus == "EXPIRED") {
+                        // If the match transitioned to a terminal status (CONFIRMED, CANCELLED, or EXPIRED),
+                        // reconcile Room cache with backend authoritative state without overwriting newer state.
+                        if (serverStatus == "CONFIRMED" || serverStatus == "CANCELLED" || serverStatus == "EXPIRED") {
                             runCatching {
                                 transferRequestRepository.syncActiveRequest()
                             }

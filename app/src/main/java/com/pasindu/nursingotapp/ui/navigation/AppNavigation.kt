@@ -50,7 +50,9 @@ import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
 import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
+import com.pasindu.nursingotapp.transfer.ui.TransferCompletionScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferInstructionsScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferHistoryScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
@@ -256,7 +258,18 @@ fun AppNavigation() {
                     onRetryHospitals = transferRequestViewModel::retry,
                     onOpenMatch = {
                         val status = activeTransferRequest?.matchStatus?.trim()?.uppercase()
-                        if (status == "CHAT_OPEN" || status == "CONFIRMED") {
+                        val matchId = activeTransferRequest?.matchCycleId?.orEmpty()
+                        if (status == "CONFIRMED" || status == "AWAITING_COMPLETION" || status == "COMPLETED") {
+                            if (!matchId.isNullOrBlank()) {
+                                navController.navigate("transfer_instructions/${Uri.encode(matchId)}") {
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.navigate("transfer_match") {
+                                    launchSingleTop = true
+                                }
+                            }
+                        } else if (status == "CHAT_OPEN") {
                             navController.navigate("transfer_chat") {
                                 launchSingleTop = true
                             }
@@ -324,6 +337,14 @@ fun AppNavigation() {
                 TransferChatScreen(
                     uiState = chatUiState,
                     onBack = { navController.popBackStack() },
+                    onProceedToInstructions = { matchId ->
+                        val targetMatchId = matchId.ifBlank { chatUiState.matchId }
+                        if (targetMatchId.isNotBlank()) {
+                            navController.navigate("transfer_instructions/${Uri.encode(targetMatchId)}") {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                     onSendMessage = { text ->
                         chatViewModel.sendMessage(text)
                     },
@@ -340,6 +361,49 @@ fun AppNavigation() {
                     },
                     onClearSendError = {
                         chatViewModel.clearSendError()
+                    }
+                )
+            }
+            composable(
+                route = "transfer_instructions/{matchId}",
+                arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getString("matchId").orEmpty()
+                val chatViewModel: TransferChatViewModel = hiltViewModel()
+                val chatUiState by chatViewModel.uiState.collectAsState()
+                val participants = if (chatUiState.matchId == matchId) chatUiState.participants else emptyList()
+                val matchType = if (chatUiState.matchId == matchId) chatUiState.matchType else "DIRECT_2_WAY"
+
+                TransferInstructionsScreen(
+                    matchId = matchId,
+                    matchType = matchType,
+                    participants = participants,
+                    onBack = { navController.popBackStack() },
+                    onOpenChat = {
+                        navController.navigate("transfer_chat") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onProceedToCompletion = {
+                        navController.navigate("transfer_completion/${Uri.encode(matchId)}") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(
+                route = "transfer_completion/{matchId}",
+                arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getString("matchId").orEmpty()
+                TransferCompletionScreen(
+                    matchId = matchId,
+                    onBack = { navController.popBackStack() },
+                    onReturnHome = {
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

@@ -172,3 +172,16 @@ data class WorkerWithdrawResponse(
     val error: String? = null
 )
 
+
+
+/** Authenticated participant view of self-reported transfer completion progress. */
+@Serializable
+data class TransferCompletionStatus(
+    val matchId: String,
+    val status: String,
+    val callerReportedComplete: Boolean = false,
+    val completedParticipants: Int = 0,
+    val totalParticipants: Int = 0,
+    val completedAt: String? = null,
+    val callerDestinationHospitalId: String? = null
+)

@@ -26,7 +26,8 @@ data class RemoteTransferRequestState(
     val status: String,
     val locked: Boolean,
     val currentMatchId: String?,
-    val updatedAt: Long?
+    val updatedAt: Long?,
+    val currentHospitalId: String? = null
 )
 
 data class RemoteMatchState(
@@ -121,7 +122,8 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
             status = snapshot.getString("status").orEmpty(),
             locked = snapshot.getBoolean("locked") ?: false,
             currentMatchId = snapshot.getString("currentMatchId"),
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            currentHospitalId = snapshot.getString("currentHospitalId")
         )
     }
 

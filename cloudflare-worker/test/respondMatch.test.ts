@@ -1901,8 +1901,8 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
     );
   });
 
-  // 12. Decision on already CONFIRMED match returns 409 INVALID_STATUS
-  test("PW-12: Decision on already CONFIRMED match throws 409 INVALID_STATUS", async () => {
+  // 12. Non-CONFIRM decision on already CONFIRMED match returns 409 INVALID_STATUS
+  test("PW-12: Non-CONFIRM decision on already CONFIRMED match throws 409 INVALID_STATUS", async () => {
     const matchDoc = createMockMatchDoc("match-already-confirmed", "nurse-a", "nurse-b", {
       status: "CONFIRMED"
     });
@@ -1916,12 +1916,90 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
 
     await assert.rejects(
       async () => {
-        await respondToMatch("nurse-a", "match-already-confirmed", "CONFIRM", client);
+        await respondToMatch("nurse-a", "match-already-confirmed", "REJECT", client);
       },
       (err: Error) => {
         const matchErr = err as MatchServiceError;
         assert.equal(matchErr.statusCode, 409);
         assert.equal(matchErr.code, "INVALID_STATUS");
+        return true;
+      }
+    );
+  });
+
+  // 12b. Repeated CONFIRM on already CONFIRMED match is idempotent and returns CONFIRMED
+  test("PW-12b: Repeated CONFIRM on already CONFIRMED match is idempotent and returns CONFIRMED", async () => {
+    const matchDoc = createMockMatchDoc("match-already-confirmed", "nurse-a", "nurse-b", {
+      status: "CONFIRMED",
+      confirmedByA: true,
+      confirmedByB: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-already-confirmed`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    const result = await respondToMatch("nurse-a", "match-already-confirmed", "CONFIRM", client);
+    assert.equal(result.newStatus, "CONFIRMED");
+    assert.equal(result.matchId, "match-already-confirmed");
+    assert.equal(result.decisionApplied, true);
+  });
+
+  // 12c. CONFIRM on already CONFIRMED match by non-participant throws 403 NON_PARTICIPANT
+  test("PW-12c: CONFIRM on already CONFIRMED match by non-participant throws 403 NON_PARTICIPANT", async () => {
+    const matchDoc = createMockMatchDoc("match-already-confirmed", "nurse-a", "nurse-b", {
+      status: "CONFIRMED",
+      confirmedByA: true,
+      confirmedByB: true
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-already-confirmed`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-c-intruder", "match-already-confirmed", "CONFIRM", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 403);
+        assert.equal(matchErr.code, "NON_PARTICIPANT");
+        return true;
+      }
+    );
+  });
+
+  // 12d. Repeated CONFIRM in CHAT_OPEN before all nurses confirm throws 409 ALREADY_CONFIRMED
+  test("PW-12d: Repeated CONFIRM in CHAT_OPEN before partner confirms throws 409 ALREADY_CONFIRMED", async () => {
+    const matchDoc = createMockMatchDoc("match-chat-open", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      acceptedByA: true,
+      acceptedByB: true
+    });
+    matchDoc.fields.confirmedByA = { booleanValue: true };
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-open`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-chat-open", "CONFIRM", client);
+      },
+      (err: Error) => {
+        const matchErr = err as MatchServiceError;
+        assert.equal(matchErr.statusCode, 409);
+        assert.equal(matchErr.code, "ALREADY_CONFIRMED");
         return true;
       }
     );

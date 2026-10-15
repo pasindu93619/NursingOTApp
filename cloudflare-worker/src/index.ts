@@ -13,6 +13,8 @@ import {
   sweepExpiredMatches,
   withdrawTransferRequest,
   getMatchHistory,
+  reportTransferCompletion,
+  getTransferCompletionStatus,
   MatchServiceError
 } from "./matching/matchingService.ts";
 
@@ -191,6 +193,39 @@ export default {
         const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
         const result = await getMatchHistory(verifiedResult.uid, firestoreClient);
         return jsonResponse({ items: result }, 200);
+      } catch (err: unknown) {
+        if (err instanceof AuthError) return errorResponse("Unauthorized", err.message, err.statusCode);
+        if (err instanceof MatchServiceError) return errorResponse(err.code, err.message, err.statusCode);
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return errorResponse("InternalError", message, 500);
+      }
+    }
+
+
+
+    // Authenticated, participant-scoped self-reported transfer completion and progress.
+    if (pathname === "/api/matching/completion") {
+      try {
+        const token = extractBearerToken(request.headers.get("Authorization"));
+        const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
+        const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
+        const tokenProviderResult = resolveTokenProvider(env);
+        if (tokenProviderResult instanceof Response) return tokenProviderResult;
+        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        if (request.method === "GET") {
+          const matchId = new URL(request.url).searchParams.get("matchId") ?? "";
+          const result = await getTransferCompletionStatus(verifiedResult.uid, matchId, firestoreClient);
+          return jsonResponse(result, 200);
+        }
+        if (request.method === "POST") {
+          const body = await request.json() as { matchId?: unknown };
+          if (typeof body.matchId !== "string" || !body.matchId.trim()) {
+            return errorResponse("InvalidRequest", "matchId is required", 400);
+          }
+          const result = await reportTransferCompletion(verifiedResult.uid, body.matchId, firestoreClient);
+          return jsonResponse(result, 200);
+        }
+        return errorResponse("MethodNotAllowed", "Method not allowed. Use GET or POST.", 405);
       } catch (err: unknown) {
         if (err instanceof AuthError) return errorResponse("Unauthorized", err.message, err.statusCode);
         if (err instanceof MatchServiceError) return errorResponse(err.code, err.message, err.statusCode);

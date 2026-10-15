@@ -118,7 +118,8 @@ fun TransferChatScreen(
     onConfirmTransfer: () -> Unit,
     onLeaveTeam: () -> Unit,
     onRetry: () -> Unit = {},
-    onClearSendError: () -> Unit = {}
+    onClearSendError: () -> Unit = {},
+    onProceedToInstructions: (matchId: String) -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
     var pendingSendText by remember { mutableStateOf<String?>(null) }
@@ -149,6 +150,15 @@ fun TransferChatScreen(
     // Flag to ensure exit navigation happens strictly once
     var hasExited by remember { mutableStateOf(false) }
 
+    // Automatic navigation when agreement is confirmed across all participants
+    var hasNavigatedToInstructions by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.serverStatus, uiState.isAllConfirmed, uiState.matchId) {
+        if (uiState.serverStatus == "CONFIRMED" && !hasNavigatedToInstructions && uiState.matchId.isNotBlank()) {
+            hasNavigatedToInstructions = true
+            onProceedToInstructions(uiState.matchId)
+        }
+    }
+
     // Auto-scroll to latest message when new messages arrive
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
@@ -177,7 +187,8 @@ fun TransferChatScreen(
                 onOpenDetails = { showDetailsSheet = true },
                 onOpenConfirmDialog = { showConfirmDialog = true },
                 onOpenLeaveDialog = { showLeaveDialog = true },
-                onOpenHowItWorks = { showHowItWorksDialog = true }
+                onOpenHowItWorks = { showHowItWorksDialog = true },
+                onProceedToInstructions = onProceedToInstructions
             )
         },
         bottomBar = {
@@ -202,6 +213,47 @@ fun TransferChatScreen(
                         }
                     )
                 }
+            } else if (uiState.serverStatus == "CONFIRMED") {
+                // When team agreement is finalized, prioritize instructions and completion roadmap
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SurfaceWhite,
+                    border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { onProceedToInstructions(uiState.matchId) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald)
+                        ) {
+                            Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "View Instructions & Checklist",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Return to Transfer Hub", color = Slate, fontSize = 13.sp)
+                        }
+                    }
+                }
             } else if (uiState.isTerminal) {
                 // When team is cancelled or expired, provide an immediate one-tap return action
                 Surface(
@@ -221,18 +273,16 @@ fun TransferChatScreen(
                                 .fillMaxWidth()
                                 .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (uiState.serverStatus == "CONFIRMED") Emerald else ClinicalPrimaryColor
-                            )
+                            colors = ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor)
                         ) {
                             Icon(
-                                if (uiState.serverStatus == "CONFIRMED") Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowBack,
+                                Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = if (uiState.serverStatus == "CONFIRMED") "Return to Transfer Hub (Confirmed)" else "Return to Transfer Hub",
+                                text = "Return to Transfer Hub",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -624,7 +674,8 @@ private fun TransferChatTopAppBar(
     onOpenDetails: () -> Unit,
     onOpenConfirmDialog: () -> Unit,
     onOpenLeaveDialog: () -> Unit,
-    onOpenHowItWorks: () -> Unit
+    onOpenHowItWorks: () -> Unit,
+    onProceedToInstructions: (matchId: String) -> Unit = {}
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -730,6 +781,19 @@ private fun TransferChatTopAppBar(
                         onOpenDetails()
                     }
                 )
+
+                if (uiState.serverStatus == "CONFIRMED") {
+                    DropdownMenuItem(
+                        text = { Text("Transfer Instructions", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Emerald) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(18.dp), tint = Emerald)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            if (uiState.matchId.isNotBlank()) onProceedToInstructions(uiState.matchId)
+                        }
+                    )
+                }
 
                 if (uiState.serverStatus == "CHAT_OPEN") {
                     if (!uiState.isUserConfirmed) {

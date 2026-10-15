@@ -138,6 +138,7 @@ fun TransferInstructionsScreen(
     matchType: String = "DIRECT_2_WAY",
     participants: List<TransferChatParticipant> = emptyList(),
     onBack: () -> Unit,
+    onOpenChat: (() -> Unit)? = null,
     onProceedToCompletion: () -> Unit
 ) {
     // Local in-session checklist state (persists across user toggles within screen lifetime)
@@ -252,6 +253,17 @@ fun TransferInstructionsScreen(
                             contentDescription = "Back",
                             tint = Slate
                         )
+                    }
+                },
+                actions = {
+                    if (onOpenChat != null) {
+                        IconButton(onClick = onOpenChat) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = "Team Chat",
+                                tint = ClinicalPrimaryColor
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

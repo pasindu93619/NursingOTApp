@@ -249,6 +249,18 @@ class TransferRequestRepository @Inject constructor(
                 "matchId=${remoteState?.currentMatchId != null}"
         )
 
+        if (remoteState?.status.equals(TransferRequestStatus.COMPLETED.name, ignoreCase = true)) {
+            val completedCache = entity.copy(
+                currentHospitalId = remoteState.currentHospitalId ?: entity.currentHospitalId,
+                requestStatus = TransferRequestStatus.COMPLETED.name,
+                matchStatus = "COMPLETED",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = System.currentTimeMillis()
+            )
+            dao.upsert(completedCache)
+            return WorkerSyncResult.NoMatch("All participants have self-reported transfer completion")
+        }
+
         if (
             remoteState?.status.equals(TransferRequestStatus.MATCHED.name, ignoreCase = true) &&
             remoteState?.locked == true &&
@@ -414,6 +426,36 @@ class TransferRequestRepository @Inject constructor(
      * Loads the authenticated nurse's own cancelled/expired matches from the Worker.
      * Match history is remote-only and does not alter the Room active-request cache.
      */
+
+    suspend fun getCompletionStatus(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
+        require(matchId.isNotBlank()) { "matchId must not be blank" }
+        val token = tokenProvider?.getFirebaseIdToken()
+            ?: throw IllegalStateException("Authentication provider unavailable")
+        val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
+        api.getCompletionStatus(token, matchId)
+    }
+
+    suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
+        require(matchId.isNotBlank()) { "matchId must not be blank" }
+        val token = tokenProvider?.getFirebaseIdToken()
+            ?: throw IllegalStateException("Authentication provider unavailable")
+        val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
+        val result = api.reportCompletion(token, matchId)
+        if (result.status == "COMPLETED") {
+            val cached = dao.getOnce()
+            if (cached != null && cached.matchCycleId == matchId) {
+                dao.upsert(cached.copy(
+                    currentHospitalId = result.callerDestinationHospitalId ?: cached.currentHospitalId,
+                    requestStatus = TransferRequestStatus.COMPLETED.name,
+                    matchStatus = "COMPLETED",
+                    syncStatus = CacheSyncStatus.SYNCED.name,
+                    updatedAt = System.currentTimeMillis()
+                ))
+            }
+        }
+        result
+    }
+
     suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runCatching {
         val tp = tokenProvider ?: error("Token provider not configured")
         val api = workerApiClient ?: error("Worker API client not configured")
