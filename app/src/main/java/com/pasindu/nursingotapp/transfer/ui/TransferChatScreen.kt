@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -98,6 +100,7 @@ private val SoftBluePill = Color(0xFFEAF6FF)
 private val SoftAmberPill = Color(0xFFFFF7ED)
 private val SoftGreenPill = Color(0xFFEAFBF5)
 private val SoftRedPill = Color(0xFFFFF1F2)
+private val SoftRedBorder = CriticalRed.copy(alpha = 0.35f)
 
 /**
  * Redesigned Mutual Transfer Chat Screen.
