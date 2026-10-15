@@ -41,6 +41,12 @@ abstract class TransferNetworkBindingModule {
     abstract fun bindTransferSyncScheduler(
         impl: com.pasindu.nursingotapp.transfer.worker.WorkManagerTransferSyncScheduler
     ): com.pasindu.nursingotapp.transfer.worker.TransferSyncScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindTransferChatRepository(
+        impl: com.pasindu.nursingotapp.transfer.data.FirestoreTransferChatRepository
+    ): com.pasindu.nursingotapp.transfer.data.TransferChatRepository
 }
 
 @Module

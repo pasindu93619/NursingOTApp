@@ -135,8 +135,18 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     assert.equal(assertion.split(".").length, 3);
   });
 
-  // Test 11-14: OAuth request format and contents
-  test("11-14 - OAuth request uses POST, form-urlencoded, grant_type, and assertion", async () => {
+  // Test 11: Google JSON escaped-newline PEM representation
+  test("11 - PEM private key import accepts literal \\n sequences", async () => {
+    const escapedPemPrivateKey = testPemPrivateKey.replace(/\n/g, "\\n");
+
+    const importedKey = await importPemPrivateKey(escapedPemPrivateKey);
+    assert.ok(importedKey);
+    assert.equal(importedKey.type, "private");
+    assert.equal(importedKey.algorithm.name, "RSASSA-PKCS1-v1_5");
+  });
+
+  // Test 12-15: OAuth request format and contents
+  test("12-15 - OAuth request uses POST, form-urlencoded, grant_type, and assertion", async () => {
     let capturedMethod = "";
     let capturedContentType = "";
     let capturedBody = "";
@@ -182,7 +192,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     assert.equal(token, "mock-oauth-token-12345");
   });
 
-  // Test 15: Mock OAuth success returns access_token
+  // Test 16: Mock OAuth success returns access_token
   test("15 - Mock OAuth success returns valid access_token", async () => {
     const transport = createMockTransport({
       [`POST ${FAKE_TOKEN_ENDPOINT}`]: () => {
@@ -201,7 +211,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     assert.equal(token, "ya29.mock-token-abc");
   });
 
-  // Test 16: Missing access_token throws controlled error
+  // Test 17: Missing access_token throws controlled error
   test("16 - Missing access_token in response throws controlled ServiceAccountAuthError", async () => {
     const transport = createMockTransport({
       [`POST ${FAKE_TOKEN_ENDPOINT}`]: () => {
@@ -226,7 +236,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     );
   });
 
-  // Test 17: OAuth HTTP error throws controlled error
+  // Test 18: OAuth HTTP error throws controlled error
   test("17 - OAuth HTTP error throws controlled ServiceAccountAuthError", async () => {
     const transport = createMockTransport({
       [`POST ${FAKE_TOKEN_ENDPOINT}`]: () => {
@@ -249,7 +259,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     );
   });
 
-  // Test 18: Malformed OAuth response throws controlled error
+  // Test 19: Malformed OAuth response throws controlled error
   test("18 - Malformed OAuth response throws controlled ServiceAccountAuthError", async () => {
     const transport = createMockTransport({
       [`POST ${FAKE_TOKEN_ENDPOINT}`]: () => {
@@ -268,7 +278,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     );
   });
 
-  // Test 19: Invalid private key throws controlled error
+  // Test 20: Invalid private key throws controlled error
   test("19 - Invalid private key format throws controlled ServiceAccountAuthError", async () => {
     // Case 1: Malformed base64
     await assert.rejects(
@@ -304,7 +314,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     );
   });
 
-  // Test 20: Unexpected network route blocked by mock transport
+  // Test 21: Unexpected network route blocked by mock transport
   test("20 - Unexpected network route blocked immediately by mock transport", async () => {
     const strictTransport = createMockTransport({});
 
@@ -319,7 +329,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     );
   });
 
-  // Test 21: Sensitive credential material never appears in errors
+  // Test 22: Sensitive credential material never appears in errors
   test("21 - Sensitive credential material never appears in thrown errors", async () => {
     const fakeSecretKey = "SUPER_SECRET_PRIVATE_KEY_BYTES_DO_NOT_LEAK";
     const failingTransport = createMockTransport({
@@ -346,7 +356,7 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     }
   });
 
-  // Test 22: TokenProvider interface compatibility
+  // Test 23: TokenProvider interface compatibility
   test("22 - TokenProvider interface compatibility produces string token for FirestoreClient", async () => {
     const transport = createMockTransport({
       [`POST ${FAKE_TOKEN_ENDPOINT}`]: () => {

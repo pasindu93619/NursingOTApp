@@ -143,6 +143,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item { HomeWelcomeHeader(firstName, initial, userProfile != null) { onNavigate("profile") } }
+        item { MutualTransferHomeHero(onClick = { onNavigate("transfer_request") }) }
         item {
             ShiftSnapshotCard(
                 state = commandState,
@@ -155,7 +156,6 @@ fun HomeScreen(
         item { QuickAccessGrid(actions) { action ->
             if (action.route == "claim_period" && userProfile == null) onNavigate("profile") else onNavigate(action.route)
         } }
-        item { MutualTransferHomeCard(onClick = { onNavigate("transfer_request") }) }
         item { FocusCard(commandState, onNavigate) }
         item { SectionTitle("Your tools", "Everything else stays one tap away") }
         item { SecondaryToolsGrid(onNavigate) }
@@ -170,7 +170,7 @@ private fun HomeWelcomeHeader(firstName: String, initial: String, profileReady: 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile).shadow(7.dp, RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors = CardDefaults.cardColors(containerColor = Slate),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -418,59 +418,216 @@ private fun QuickAccessTile(action: HomeAction, modifier: Modifier, onClick: () 
 }
 
 @Composable
-private fun MutualTransferHomeCard(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().shadow(3.dp, RoundedCornerShape(22.dp)).clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White
+private fun MutualTransferHomeHero(onClick: () -> Unit) {
+    val heroShape = RoundedCornerShape(28.dp)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = heroShape,
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color(0xFFEDE9FE)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            Modifier.padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                Modifier.size(46.dp),
-                CircleShape,
-                TransferPurpleSoft
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .height(224.dp)
+                    .background(Purple)
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 17.dp, vertical = 17.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(50.dp),
+                        color = Purple
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(7.dp),
+                                shape = CircleShape,
+                                color = Color.White
+                            ) {}
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "MUTUAL TRANSFER",
+                                color = Color.White,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.05.sp
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    Surface(
+                        modifier = Modifier.size(38.dp),
+                        shape = CircleShape,
+                        color = Purple
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    "FIND YOUR MOVE",
+                    color = Purple,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.8.sp
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "Exchange your hospital\nwith the right nurse.",
+                    color = Slate,
+                    fontSize = 25.sp,
+                    lineHeight = 29.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "A simple, preference-based direct exchange built for Sri Lankan government nurses.",
+                    color = TextSecondary,
+                    fontSize = 10.5.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TransferJourneyNode(
+                        label = "YOUR HOSPITAL",
+                        icon = Icons.Default.MedicalServices,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Surface(
+                        modifier = Modifier.size(42.dp),
+                        shape = CircleShape,
+                        color = Purple
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.SwapHoriz,
+                                contentDescription = "Two-way hospital exchange",
+                                tint = Color.White,
+                                modifier = Modifier.size(23.dp)
+                            )
+                        }
+                    }
+                    TransferJourneyNode(
+                        label = "COMPATIBLE NURSE",
+                        icon = Icons.Default.AccountBalance,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TransferTrustChip("DIRECT 2-WAY", Purple)
+                    TransferTrustChip("PREFERENCE-BASED", ClinicalPrimaryColor)
+                    Spacer(Modifier.weight(1f))
                     Icon(
-                        Icons.Default.SwapHoriz,
-                        null,
-                        tint = AiAccentColor,
-                        modifier = Modifier.size(24.dp)
+                        Icons.Default.ChevronRight,
+                        contentDescription = "Open Mutual Transfer",
+                        tint = Slate,
+                        modifier = Modifier.size(23.dp)
                     )
                 }
             }
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "Mutual Transfer",
-                    color = HomeInk,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    "Find a compatible nurse for a direct hospital exchange",
-                    color = TextSecondary,
-                    fontSize = 9.sp,
-                    lineHeight = 13.sp
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Flagship workspace • Direct 2-way MVP",
-                    color = AiAccentColor,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold
-                )
+        }
+    }
+}
+
+@Composable
+private fun TransferJourneyNode(
+    label: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(32.dp),
+                shape = RoundedCornerShape(11.dp),
+                color = SurfaceMuted
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = ClinicalPrimaryColor,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
             }
-            Icon(
-                Icons.Default.ChevronRight,
-                "Open Mutual Transfer",
-                tint = AiAccentColor,
-                modifier = Modifier.size(20.dp)
+            Spacer(Modifier.width(7.dp))
+            Text(
+                label,
+                color = Slate,
+                fontSize = 7.5.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.55.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
+    }
+}
+
+@Composable
+private fun TransferTrustChip(text: String, accent: Color) {
+    Surface(
+        shape = RoundedCornerShape(50.dp),
+        color = accent
+    ) {
+        Text(
+            text,
+            color = Color.White,
+            fontSize = 7.5.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+        )
     }
 }
 

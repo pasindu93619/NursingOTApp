@@ -53,6 +53,7 @@ class TransferRequestViewModelTest {
         var lastUpserted: TransferActiveCacheEntity? = null
         var clearCallCount = 0
         var upsertShouldThrow: Throwable? = null
+        var clearShouldThrow: Throwable? = null
 
         override suspend fun upsert(cache: TransferActiveCacheEntity) {
             upsertShouldThrow?.let { throw it }
@@ -65,6 +66,7 @@ class TransferRequestViewModelTest {
         override suspend fun getOnce(): TransferActiveCacheEntity? = _flow.value
 
         override suspend fun clear() {
+            clearShouldThrow?.let { throw it }
             clearCallCount++
             _flow.value = null
         }
@@ -222,6 +224,28 @@ class TransferRequestViewModelTest {
         assertTrue(withdrawSuccess)
         assertEquals(1, fakeDao.clearCallCount)
         assertNull("activeRequest must emit null after withdrawal", viewModel.activeRequest.value)
+    }
+
+    @Test
+    fun `5b - withdraw failure preserves activeRequest and surfaces error without calling onSuccess`() = runTest {
+        val viewModel = createViewModel()
+
+        viewModel.submitRequest(
+            currentHospitalId = "MOH2026-0001",
+            preferenceHospitalIds = listOf("MOH2026-0100")
+        )
+        assertNotNull(viewModel.activeRequest.value)
+
+        fakeDao.clearShouldThrow = RuntimeException("Database error during clear")
+
+        var withdrawSuccess = false
+        viewModel.withdrawRequest(onSuccess = { withdrawSuccess = true })
+
+        assertFalse("onSuccess must NOT be called when withdrawal fails", withdrawSuccess)
+        assertNotNull("submitError must be set", viewModel.submitError.value)
+        assertEquals("Database error during clear", viewModel.submitError.value)
+        assertNotNull("activeRequest must remain intact", viewModel.activeRequest.value)
+        assertFalse(viewModel.isSubmitting.value)
     }
 
     @Test

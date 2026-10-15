@@ -48,8 +48,14 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
+import com.pasindu.nursingotapp.transfer.ui.TransferCompletionScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferInstructionsScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferHistoryScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferPoolStatusScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
@@ -251,28 +257,153 @@ fun AppNavigation() {
                     },
                     onRetryHospitals = transferRequestViewModel::retry,
                     onOpenMatch = {
-                        navController.navigate("transfer_match") {
+                        val status = activeTransferRequest?.matchStatus?.trim()?.uppercase()
+                        val matchId = activeTransferRequest?.matchCycleId?.orEmpty()
+                        if (status == "CONFIRMED" || status == "AWAITING_COMPLETION" || status == "COMPLETED") {
+                            if (!matchId.isNullOrBlank()) {
+                                navController.navigate("transfer_instructions/${Uri.encode(matchId)}") {
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.navigate("transfer_match") {
+                                    launchSingleTop = true
+                                }
+                            }
+                        } else if (status == "CHAT_OPEN") {
+                            navController.navigate("transfer_chat") {
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate("transfer_match") {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onOpenHistory = {
+                        navController.navigate("transfer_history") {
                             launchSingleTop = true
                         }
                     }
                 )
             }
+            composable("transfer_history") {
+                TransferHistoryScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable("transfer_match") {
                 val matchViewModel: TransferMatchViewModel = hiltViewModel()
                 val matchUiState by matchViewModel.uiState.collectAsState()
+
+                // Once every participant has accepted, the authoritative state is CHAT_OPEN.
+                // Move directly into the live coordination channel instead of requiring a
+                // second tap on the match summary. Terminal CONFIRMED matches remain read-only.
+                LaunchedEffect(matchUiState) {
+                    if (matchUiState is TransferMatchUiState.ChatOpen) {
+                        navController.navigate("transfer_chat") {
+                            popUpTo("transfer_match") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
                 TransferMatchScreen(
                     uiState = matchUiState,
                     onBack = { navController.popBackStack() },
                     onAcceptMatch = { matchId ->
                         matchViewModel.acceptMatch(matchId)
                     },
+                    onConfirmMatch = { matchId ->
+                        matchViewModel.confirmMatch(matchId)
+                    },
                     onRejectMatch = { matchId ->
                         matchViewModel.rejectMatch(matchId) {
                             navController.popBackStack()
                         }
                     },
+                    onOpenChat = {
+                        navController.navigate("transfer_chat") {
+                            launchSingleTop = true
+                        }
+                    },
                     onRetry = {
                         matchViewModel.resetState()
+                    }
+                )
+            }
+            composable("transfer_chat") {
+                val chatViewModel: TransferChatViewModel = hiltViewModel()
+                val chatUiState by chatViewModel.uiState.collectAsState()
+                TransferChatScreen(
+                    uiState = chatUiState,
+                    onBack = { navController.popBackStack() },
+                    onProceedToInstructions = { matchId ->
+                        val targetMatchId = matchId.ifBlank { chatUiState.matchId }
+                        if (targetMatchId.isNotBlank()) {
+                            navController.navigate("transfer_instructions/${Uri.encode(targetMatchId)}") {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onSendMessage = { text ->
+                        chatViewModel.sendMessage(text)
+                    },
+                    onConfirmTransfer = {
+                        chatViewModel.confirmTransfer()
+                    },
+                    onLeaveTeam = {
+                        chatViewModel.leaveTeam {
+                            navController.popBackStack()
+                        }
+                    },
+                    onRetry = {
+                        chatViewModel.loadMatchAndObserveChat()
+                    },
+                    onClearSendError = {
+                        chatViewModel.clearSendError()
+                    }
+                )
+            }
+            composable(
+                route = "transfer_instructions/{matchId}",
+                arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getString("matchId").orEmpty()
+                val chatViewModel: TransferChatViewModel = hiltViewModel()
+                val chatUiState by chatViewModel.uiState.collectAsState()
+                val participants = if (chatUiState.matchId == matchId) chatUiState.participants else emptyList()
+                val matchType = if (chatUiState.matchId == matchId) chatUiState.matchType else "DIRECT_2_WAY"
+
+                TransferInstructionsScreen(
+                    matchId = matchId,
+                    matchType = matchType,
+                    participants = participants,
+                    onBack = { navController.popBackStack() },
+                    onOpenChat = {
+                        navController.navigate("transfer_chat") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onProceedToCompletion = {
+                        navController.navigate("transfer_completion/${Uri.encode(matchId)}") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(
+                route = "transfer_completion/{matchId}",
+                arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getString("matchId").orEmpty()
+                TransferCompletionScreen(
+                    matchId = matchId,
+                    onBack = { navController.popBackStack() },
+                    onReturnHome = {
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

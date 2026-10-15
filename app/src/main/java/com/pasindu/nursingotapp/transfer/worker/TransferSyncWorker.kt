@@ -1,5 +1,6 @@
 package com.pasindu.nursingotapp.transfer.worker
 
+import android.util.Log
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -45,7 +46,23 @@ class TransferSyncWorker(
         )
         val repository = entryPoint.repository()
 
-        return when (val syncResult = repository.syncActiveRequest()) {
+        val syncResult = runCatching {
+            repository.syncActiveRequest()
+        }.getOrElse { error ->
+            Log.e(
+                "TransferSyncWorker",
+                "syncActiveRequest threw: ${error.javaClass.simpleName}: ${error.message}",
+                error
+            )
+            return Result.retry()
+        }
+
+        Log.d(
+            "TransferSyncWorker",
+            "syncActiveRequest result: ${syncResult::class.simpleName}"
+        )
+
+        return when (syncResult) {
             is WorkerSyncResult.MatchFound,
             is WorkerSyncResult.NoMatch -> {
                 Result.success()

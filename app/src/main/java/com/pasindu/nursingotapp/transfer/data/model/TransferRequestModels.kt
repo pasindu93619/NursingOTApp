@@ -102,7 +102,13 @@ data class TransferRequest(
      * Wall-clock epoch milliseconds of the last local write.
      * Updated on every [TransferRequestRepository.saveRequest] call.
      */
-    val updatedAt: Long
+    val updatedAt: Long,
+
+    /**
+     * Raw server-authoritative match status (e.g. PENDING_CONFIRMATION, CHAT_OPEN, CONFIRMED, CANCELLED, EXPIRED).
+     * Mapped from offline cache entity matchStatus column.
+     */
+    val matchStatus: String? = null
 ) {
     init {
         require(grade.isNotBlank()) {
