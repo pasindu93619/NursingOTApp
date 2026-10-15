@@ -47,6 +47,23 @@ data class TransferCompletionUiState(
         }
 }
 
+private fun friendlyCompletionError(error: Throwable): String {
+    val detail = error.message.orEmpty()
+    return when {
+        detail.contains("HTTP 404", ignoreCase = true) ||
+            detail.contains("NotFound", ignoreCase = true) ||
+            detail.contains("Endpoint '/api/matching/completion' not found", ignoreCase = true) ->
+            "The transfer status service is not available right now. Your completion report has not been confirmed by the server. Please try again later."
+        detail.contains("HTTP 401", ignoreCase = true) ||
+            detail.contains("Unauthorized", ignoreCase = true) ->
+            "Your session needs to be refreshed before we can check the transfer. Please sign in again and retry."
+        detail.contains("HTTP 403", ignoreCase = true) ->
+            "This transfer record could not be verified for your account. Please return to the match and try again."
+        else ->
+            "We couldn't update your transfer status just now. Your report has not been confirmed by the server. Check your connection and try again."
+    }
+}
+
 @HiltViewModel
 class TransferCompletionViewModel @Inject constructor(
     private val repository: TransferRequestRepository
@@ -77,7 +94,7 @@ class TransferCompletionViewModel @Inject constructor(
                     // Preserve existing status if we already loaded it, showing transient error banner
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = error.message ?: "Unable to load completion progress."
+                        error = friendlyCompletionError(error)
                     )
                 }
             )
@@ -118,7 +135,7 @@ class TransferCompletionViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(isSubmitting = false, status = status, error = null)
                 },
                 onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(isSubmitting = false, error = error.message ?: "Unable to save your completion report.")
+                    _uiState.value = _uiState.value.copy(isSubmitting = false, error = friendlyCompletionError(error))
                 }
             )
         }
@@ -189,8 +206,8 @@ fun TransferCompletionScreen(
                     )
                     androidx.compose.material3.Text(
                         text = when {
-                            completed -> "Everyone reported completion"
-                            reported -> "Your report is recorded"
+                            completed -> "A new chapter begins!"
+                            reported -> "Your completion report is saved"
                             status?.status == "CONFIRMED" || status?.status == "AWAITING_COMPLETION" -> "Confirm your transfer is complete"
                             else -> "Completion is not available yet"
                         },
@@ -199,8 +216,8 @@ fun TransferCompletionScreen(
                     )
                     androidx.compose.material3.Text(
                         text = when {
-                            completed -> "All ${status?.totalParticipants ?: 0} participants have self-reported that their transfer is complete."
-                            reported -> "You have reported completion. Waiting for the other participants to report their own completion."
+                            completed -> "All ${status?.totalParticipants ?: 0} participants have reported their physical transfer complete. Congratulations on reaching this milestone! You can now start fresh from your new current hospital whenever you are ready."
+                            reported -> "Your report has been recorded. The team is still waiting for the other participant(s). You can return Home now; your request location should only change after the server confirms the full team completion."
                             status?.status == "CONFIRMED" || status?.status == "AWAITING_COMPLETION" -> "Only report completion after your real-world transfer is complete."
                             else -> "All participants must first confirm the proposed match. This screen does not certify Ministry approval."
                         },
@@ -233,7 +250,7 @@ fun TransferCompletionScreen(
             }
 
             state.error?.let { message ->
-                androidx.compose.material3.Text(message, color = com.pasindu.nursingotapp.ui.theme.CriticalRed)
+                androidx.compose.material3.Surface(\n                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),\n                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),\n                    color = com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.08f),\n                    border = androidx.compose.foundation.BorderStroke(1.dp, com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.28f))\n                ) {\n                    androidx.compose.foundation.layout.Column(Modifier.padding(16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {\n                        androidx.compose.material3.Text("Status check paused", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = com.pasindu.nursingotapp.ui.theme.CriticalRed)\n                        androidx.compose.material3.Text(message, color = com.pasindu.nursingotapp.ui.theme.TextPrimary)\n                    }\n                }
                 androidx.compose.material3.OutlinedButton(onClick = { viewModel.load(matchId) }) { androidx.compose.material3.Text("Try again") }
             }
 
