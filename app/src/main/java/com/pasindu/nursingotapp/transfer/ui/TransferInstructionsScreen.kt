@@ -375,7 +375,7 @@ fun TransferInstructionsScreen(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
                     Text(
-                        text = "Proceed to Physical Completion Report",
+                        text = "Continue to completion report",
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -728,7 +728,7 @@ private fun ChecklistProgressOverviewCard(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Dossier Readiness",
+                        text = "Preparation progress",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.5.sp,
                         color = TextPrimary
@@ -736,7 +736,7 @@ private fun ChecklistProgressOverviewCard(
                 }
 
                 Text(
-                    text = "$checkedCount of $totalCount Prepared",
+                    text = "$checkedCount of $totalCount items checked",
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                     color = if (checkedCount == totalCount) Emerald else TextSecondary
@@ -757,7 +757,7 @@ private fun ChecklistProgressOverviewCard(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Track your paperwork progress locally. Use the checkboxes below as you compile and certify each required document.",
+                text = "Track your preparation here. Check items as you gather them; suggested items and those requiring local confirmation are not universal requirements.",
                 fontSize = 11.sp,
                 color = TextSecondary,
                 lineHeight = 15.sp
