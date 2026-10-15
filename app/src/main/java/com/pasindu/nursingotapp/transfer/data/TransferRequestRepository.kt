@@ -126,6 +126,10 @@ class TransferRequestRepository @Inject constructor(
             "Your request is locked while a match is active. Cancel or finish the match before editing preferences."
         }
 
+        require(currentHospitalId !in rankedPreferences.hospitalIds) {
+            "Your current hospital cannot also be a preferred destination. Choose a different hospital."
+        }
+
         val preferenceJson = serializePreferences(rankedPreferences)
         val nowMs = System.currentTimeMillis()
 
