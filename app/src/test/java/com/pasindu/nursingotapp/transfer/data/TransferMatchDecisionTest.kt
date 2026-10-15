@@ -278,7 +278,8 @@ class TransferMatchDecisionTest {
         )
 
         viewModel = TransferMatchViewModel(repository, hospitalRepo)
-        testDispatcher.scheduler.advanceUntilIdle()
+        testDispatcher.scheduler.runCurrent()
+        viewModel.onScreenExit()
 
         // Ensure ViewModel has loaded match state for decision tests
         val uiStateField = TransferMatchViewModel::class.java.getDeclaredField("_uiState")
@@ -292,6 +293,9 @@ class TransferMatchDecisionTest {
 
     @After
     fun tearDown() {
+        if (::viewModel.isInitialized) {
+            viewModel.onScreenExit()
+        }
         Dispatchers.resetMain()
     }
 
@@ -407,12 +411,13 @@ class TransferMatchDecisionTest {
         )
 
         viewModel.acceptMatch("MATCH-001")
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue(state is TransferMatchUiState.AlreadyAccepted)
         assertEquals(MatchDecisionStatus.ACCEPTED, (state as TransferMatchUiState.AlreadyAccepted).match.myStatus)
         assertFalse(viewModel.isSubmitting.value)
+        viewModel.onScreenExit()
     }
 
     // 8. ViewModel REJECT
@@ -458,8 +463,9 @@ class TransferMatchDecisionTest {
         // Calling again while submitting
         viewModel.acceptMatch("MATCH-001")
 
-        advanceUntilIdle()
+        testScheduler.runCurrent()
         assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
+        viewModel.onScreenExit()
     }
 
     @Test
@@ -707,7 +713,7 @@ class TransferMatchDecisionTest {
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
-        advanceUntilIdle()
+        testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue("Nurse A who already accepted should be in AlreadyAccepted", state is TransferMatchUiState.AlreadyAccepted)
@@ -749,7 +755,7 @@ class TransferMatchDecisionTest {
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
-        advanceUntilIdle()
+        testScheduler.runCurrent()
         assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
         // Now server returns NoMatch (e.g. partner rejected)
