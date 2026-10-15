@@ -163,18 +163,22 @@ fun TransferRequestScreen(
     androidx.compose.runtime.LaunchedEffect(activeRequest, hospitalOptions) {
         if (!initializedFromActiveRequest && activeRequest != null && hospitalOptions.isNotEmpty()) {
             val current = hospitalOptions.find { it.hospitalId == activeRequest.currentHospitalId }
-            if (current != null && currentHospital == null) {
+            val transferCompleted =
+                activeRequest.requestStatus == TransferRequestStatus.COMPLETED ||
+                    activeRequest.matchStatus.equals("COMPLETED", ignoreCase = true)
+
+            // A completed transfer makes the server-confirmed destination the new current posting.
+            // Reset the old route even if this screen stayed on the back stack.
+            if (current != null && (currentHospital == null || transferCompleted)) {
                 currentHospital = current
             }
-            if (activeRequest.requestStatus != TransferRequestStatus.COMPLETED &&
-                !activeRequest.matchStatus.equals("COMPLETED", ignoreCase = true)
-            ) {
-                if (preferences.isEmpty()) {
-                    val prefHospitals = activeRequest.rankedPreferences.hospitalIds
-                        .filterNot { it == activeRequest.currentHospitalId }
-                        .mapNotNull { id -> hospitalOptions.find { it.hospitalId == id } }
-                    preferences.addAll(prefHospitals)
-                }
+            if (transferCompleted) {
+                preferences.clear()
+            } else if (preferences.isEmpty()) {
+                val prefHospitals = activeRequest.rankedPreferences.hospitalIds
+                    .filterNot { it == activeRequest.currentHospitalId }
+                    .mapNotNull { id -> hospitalOptions.find { it.hospitalId == id } }
+                preferences.addAll(prefHospitals)
             }
             initializedFromActiveRequest = true
         }
