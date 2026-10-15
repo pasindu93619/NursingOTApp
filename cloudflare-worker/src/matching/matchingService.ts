@@ -3,6 +3,7 @@ import {
   FirestoreError,
   getMatchDocPath,
   getTransferRequestDocPath,
+  type FirestoreValue,
   type FirestoreWrite
 } from "../firestore/firestoreClient.ts";
 import type { MatchDecisionResponse, WithdrawResponse } from "../types.ts";
@@ -304,7 +305,7 @@ export async function respondToMatch(
   let newFirstResponseAtStr = firstResponseAtStr;
   let newChatDeadlineStr = chatDeadlineStr;
 
-  const matchFieldsToUpdate: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }> = {
+  const matchFieldsToUpdate: Record<string, FirestoreValue> = {
     updatedAt: { integerValue: Date.now().toString() }
   };
   const updateMaskFieldPaths: string[] = ["updatedAt"];
@@ -528,6 +529,7 @@ export async function respondToMatch(
           }
 
           if (freshStatus === "CANCELLED" || freshStatus === "CONFIRMED") {
+            const freshStatusStr: string = freshStatus;
             return {
               matchId,
               newStatus: freshStatus,
@@ -535,9 +537,9 @@ export async function respondToMatch(
               chatDeadline: freshChatDeadline,
               firstResponseAt: freshFirstResponseAt,
               decisionApplied:
-                (decision === "ACCEPT" && (freshStatus === "CHAT_OPEN" || freshStatus === "CONFIRMED")) ||
-                (decision === "CONFIRM" && freshStatus === "CONFIRMED") ||
-                ((decision === "REJECT" || decision === "LEAVE") && freshStatus === "CANCELLED")
+                (decision === "ACCEPT" && (freshStatusStr === "CHAT_OPEN" || freshStatusStr === "CONFIRMED")) ||
+                (decision === "CONFIRM" && freshStatusStr === "CONFIRMED") ||
+                ((decision === "REJECT" || decision === "LEAVE") && freshStatusStr === "CANCELLED")
             };
           }
 
@@ -573,7 +575,7 @@ export async function respondToMatch(
  * 5. Guarantees zero partial locking: if any participant or match doc fails, entire commit aborts.
  */
 function readStringField(
-  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  fields: Record<string, FirestoreValue>,
   key: string
 ): string | undefined {
   const value = fields[key];
@@ -583,7 +585,7 @@ function readStringField(
 }
 
 function readBooleanField(
-  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  fields: Record<string, FirestoreValue>,
   key: string
 ): boolean | undefined {
   const value = fields[key];
@@ -593,7 +595,7 @@ function readBooleanField(
 }
 
 function readIntegerField(
-  fields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }>,
+  fields: Record<string, FirestoreValue>,
   key: string
 ): number | undefined {
   const value = fields[key];
@@ -1473,7 +1475,7 @@ export async function reportTransferCompletion(
   const allReported = reported.every(Boolean);
   const newStatus = allReported ? "COMPLETED" : "AWAITING_COMPLETION";
   const now = new Date().toISOString();
-  const updateFields: Record<string, { stringValue?: string; booleanValue?: boolean; integerValue?: string }> = {
+  const updateFields: Record<string, FirestoreValue> = {
     [callerKey]: { booleanValue: true },
     status: { stringValue: newStatus },
     updatedAt: { integerValue: Date.now().toString() }

@@ -21,4 +21,5 @@ cloudflare-worker/.wrangler/
 *.log
 .kotlin/errors/
 functions/node_modules/
+cloudflare-worker/node_modules/
 *.before_repair
