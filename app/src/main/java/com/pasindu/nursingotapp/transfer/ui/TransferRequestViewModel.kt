@@ -73,11 +73,22 @@ class TransferRequestViewModel @Inject constructor(
                     request.matchStatus.equals("CHAT_OPEN", ignoreCase = true)
                 )) {
                     5_000L
+                } else if (request != null && (
+                    request.matchStatus.equals("CONFIRMED", ignoreCase = true) ||
+                    request.matchStatus.equals("AWAITING_COMPLETION", ignoreCase = true)
+                )) {
+                    30_000L
                 } else {
                     15_000L
                 }
 
-                if (request != null && request.requestStatus == com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.PENDING) {
+                val shouldPoll = request != null && (
+                    request.requestStatus == com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.PENDING ||
+                    (request.requestStatus == com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.MATCHED &&
+                        !request.matchStatus.equals("COMPLETED", ignoreCase = true))
+                )
+
+                if (shouldPoll) {
                     runCatching {
                         transferRequestRepository.syncActiveRequest()
                     }

@@ -309,6 +309,12 @@ class TransferRequestRepository @Inject constructor(
                 status = remoteMatch.status.ifBlank { "PENDING_CONFIRMATION" },
                 firstResponseAt = remoteMatch.firstResponseAt,
                 chatDeadline = remoteMatch.chatDeadline,
+                acceptedByA = remoteMatch.acceptedByA,
+                acceptedByB = remoteMatch.acceptedByB,
+                acceptedByC = remoteMatch.acceptedByC,
+                rejectedByA = remoteMatch.rejectedByA,
+                rejectedByB = remoteMatch.rejectedByB,
+                rejectedByC = remoteMatch.rejectedByC,
                 confirmedByA = remoteMatch.confirmedByA,
                 confirmedByB = remoteMatch.confirmedByB,
                 confirmedByC = remoteMatch.confirmedByC
@@ -316,21 +322,47 @@ class TransferRequestRepository @Inject constructor(
         }
 
         /*
-         * Server is not currently matched.
+         * Server is not currently MATCHED and locked.
+         *
+         * If the local cache is still MATCHED, the match ended on the server (e.g. partner declined
+         * or match expired while this nurse was offline or viewing the proposal).
+         * Reconcile local row back to PENDING (searching) with matchStatus CANCELLED or EXPIRED,
+         * clear match identifiers, preserve updatedAt, and return NoMatch without calling findAndLock in this pass.
+         */
+        val isLocallyMatched = entity.requestStatus.equals(TransferRequestStatus.MATCHED.name, ignoreCase = true)
+        if (isLocallyMatched) {
+            val oldMatchCycleId = entity.matchCycleId
+            val finalMatchStatus = if (!oldMatchCycleId.isNullOrBlank()) {
+                val oldMatchDoc = rds.fetchMatchDoc(oldMatchCycleId).getOrNull()
+                val status = oldMatchDoc?.status?.trim()?.uppercase()
+                if (status == "EXPIRED") "EXPIRED" else "CANCELLED"
+            } else {
+                "CANCELLED"
+            }
+
+            val resetEntity = entity.copy(
+                requestId = userId,
+                requestStatus = TransferRequestStatus.PENDING.name,
+                matchCycleId = null,
+                matchType = null,
+                matchStatus = finalMatchStatus,
+                matchPayloadJson = null,
+                syncStatus = CacheSyncStatus.SYNCED.name
+                // updatedAt is intentionally UNCHANGED so it does not trigger a republish
+            )
+            dao.upsert(resetEntity)
+            Log.d(TAG, "Reconciled local MATCHED state to PENDING with matchStatus=$finalMatchStatus")
+            return WorkerSyncResult.NoMatch("Match has ended ($finalMatchStatus); request returned to pool")
+        }
+
+        /*
+         * Server is not currently matched and local is not matched.
          *
          * Do not rewrite an already-SYNCED SEARCHING document on every
          * polling cycle. Every Firestore write changes updateTime and can
          * invalidate the Worker atomic precondition while the other nurse
          * is being matched. Publish only when the local request is pending
          * or changed, or when the server has no request yet.
-         */
-        /*
-         * A transient Worker conflict must not force the Android client to
-         * rewrite an already-searching server request. Rewriting that
-         * document changes Firestore updateTime and can race the Worker
-         * precondition. Publish only for a missing/non-searching server
-         * request, an explicitly pending local change, or a local edit that
-         * is newer than the server's known updatedAt.
          */
         val localSyncStatus = entity.syncStatus.trim().uppercase()
         val localHasPendingChanges = localSyncStatus == CacheSyncStatus.PENDING.name

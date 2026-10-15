@@ -1007,4 +1007,122 @@ class TransferRequestRepositoryTest {
         val request = repository.observeActiveRequest().first()
         assertNull("Request with missing grade must not be emitted as active", request)
     }
+
+    @Test
+    fun `syncActiveRequest resets local MATCHED row to PENDING when server request is released`() = runTest {
+        // Local cache thinks we are MATCHED to match-999
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                id = 1,
+                requestId = "nurse-a",
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                currentHospitalId = "HOSP-A",
+                preferenceHospitalIdsJson = """["HOSP-B"]""",
+                grade = "Grade I",
+                matchCycleId = "match-999",
+                matchType = "DIRECT_2_WAY",
+                matchStatus = "PENDING_CONFIRMATION",
+                matchPayloadJson = "{}",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 5000L
+            )
+        )
+
+        // Server request is released back to SEARCHING (unlocked)
+        val remoteRequest = RemoteTransferRequestState(
+            userId = "nurse-a",
+            status = "SEARCHING",
+            currentHospitalId = "HOSP-A",
+            rankedHospitalIds = listOf("HOSP-B"),
+            grade = "Grade I",
+            locked = false,
+            currentMatchId = null,
+            updatedAt = 6000L
+        )
+
+        // Old match doc is marked CANCELLED
+        val remoteMatch = RemoteMatchState(
+            matchId = "match-999",
+            matchType = "DIRECT_2_WAY",
+            status = "CANCELLED",
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z"
+        )
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            rds = FakeRemoteDataSource(remoteRequest, remoteMatch),
+            api = FakeWorkerApiClient(),
+            tp = FakeTokenProvider()
+        )
+
+        val syncResult = repo.syncActiveRequest()
+        assertTrue("Expected NoMatch on server release", syncResult is WorkerSyncResult.NoMatch)
+
+        val updatedEntity = fakeDao.lastUpserted
+        assertNotNull(updatedEntity)
+        assertEquals(TransferRequestStatus.PENDING.name, updatedEntity?.requestStatus)
+        assertEquals("CANCELLED", updatedEntity?.matchStatus)
+        assertNull(updatedEntity?.matchCycleId)
+        assertNull(updatedEntity?.matchPayloadJson)
+        assertEquals(5000L, updatedEntity?.updatedAt) // preserve updatedAt to avoid republish loop
+    }
+
+    @Test
+    fun `syncActiveRequest sets matchStatus EXPIRED when old 3-way match expired`() = runTest {
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                id = 1,
+                requestId = "nurse-a",
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                currentHospitalId = "HOSP-A",
+                preferenceHospitalIdsJson = """["HOSP-B"]""",
+                grade = "Grade I",
+                matchCycleId = "match-3way",
+                matchType = "THREE_WAY",
+                matchStatus = "PENDING_CONFIRMATION",
+                matchPayloadJson = "{}",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 5000L
+            )
+        )
+
+        val remoteRequest = RemoteTransferRequestState(
+            userId = "nurse-a",
+            status = "SEARCHING",
+            currentHospitalId = "HOSP-A",
+            rankedHospitalIds = listOf("HOSP-B"),
+            grade = "Grade I",
+            locked = false,
+            currentMatchId = null,
+            updatedAt = 6000L
+        )
+
+        val remoteMatch = RemoteMatchState(
+            matchId = "match-3way",
+            matchType = "THREE_WAY",
+            status = "EXPIRED",
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T11:00:00Z"
+        )
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            rds = FakeRemoteDataSource(remoteRequest, remoteMatch),
+            api = FakeWorkerApiClient(),
+            tp = FakeTokenProvider()
+        )
+
+        val syncResult = repo.syncActiveRequest()
+        assertTrue("Expected NoMatch on server release", syncResult is WorkerSyncResult.NoMatch)
+
+        val updatedEntity = fakeDao.lastUpserted
+        assertNotNull(updatedEntity)
+        assertEquals(TransferRequestStatus.PENDING.name, updatedEntity?.requestStatus)
+        assertEquals("EXPIRED", updatedEntity?.matchStatus)
+        assertNull(updatedEntity?.matchCycleId)
+        assertEquals(5000L, updatedEntity?.updatedAt)
+    }
 }

@@ -79,6 +79,12 @@ sealed interface WorkerSyncResult {
         val status: String = "PENDING_CONFIRMATION",
         val firstResponseAt: String? = null,
         val chatDeadline: String? = null,
+        val acceptedByA: Boolean = false,
+        val acceptedByB: Boolean = false,
+        val acceptedByC: Boolean = false,
+        val rejectedByA: Boolean = false,
+        val rejectedByB: Boolean = false,
+        val rejectedByC: Boolean = false,
         val confirmedByA: Boolean = false,
         val confirmedByB: Boolean = false,
         val confirmedByC: Boolean = false

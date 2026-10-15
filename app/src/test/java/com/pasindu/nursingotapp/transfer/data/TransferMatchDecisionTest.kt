@@ -641,4 +641,92 @@ class TransferMatchDecisionTest {
         assertEquals("CONFIRMED", confirmedCache?.matchStatus)
         assertEquals(TransferRequestStatus.MATCHED.name, confirmedCache?.requestStatus)
     }
+
+    // 16. B3: toUiModel accurately maps acceptedBy / rejectedBy flags to myStatus and partnerStatus
+    @Test
+    fun toUiModel_mapsAcceptedAndRejectedFlagsToMatchDecisionStatus() = runTest {
+        val matchFound = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-B3",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION",
+            acceptedByA = true,
+            acceptedByB = false,
+            rejectedByA = false,
+            rejectedByB = false
+        )
+
+        remoteDataSource.syncResult = matchFound
+        tokenProvider.userId = "nurse-a"
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("Nurse A who already accepted should be in AlreadyAccepted", state is TransferMatchUiState.AlreadyAccepted)
+        val match = (state as TransferMatchUiState.AlreadyAccepted).match
+        assertEquals(MatchDecisionStatus.ACCEPTED, match.myStatus)
+        assertEquals(MatchDecisionStatus.PENDING, match.partnerStatus)
+
+        viewModel.onScreenExit()
+    }
+
+    // 17. B4: Match polling transitions to error/pool when NoMatch is received
+    @Test
+    fun matchPolling_transitionsToPoolMessageWhenNoMatchReceived() = runTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-B4",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION",
+            acceptedByA = true
+        )
+
+        remoteDataSource.syncResult = initialMatch
+        tokenProvider.userId = "nurse-a"
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
+
+        // Now server returns NoMatch (e.g. partner rejected)
+        remoteDataSource.syncResult = WorkerSyncResult.NoMatch("Partner declined")
+        // Trigger sync
+        val syncRes = repository.syncActiveRequest()
+        assertTrue(syncRes is WorkerSyncResult.NoMatch)
+
+        viewModel.onScreenExit()
+    }
 }

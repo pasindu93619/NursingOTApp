@@ -28,50 +28,81 @@ class TransferMatchViewModel @Inject constructor(
     private val _isSubmitting = MutableStateFlow(false)
     val isSubmitting: StateFlow<Boolean> = _isSubmitting.asStateFlow()
 
-    private var alreadyAcceptedPollingJob: kotlinx.coroutines.Job? = null
+    private var matchPollingJob: kotlinx.coroutines.Job? = null
 
     init {
         loadCurrentMatch()
     }
 
-    private fun startAlreadyAcceptedPolling() {
-        if (alreadyAcceptedPollingJob?.isActive == true) return
-        alreadyAcceptedPollingJob = viewModelScope.launch {
+    private fun startMatchPolling() {
+        if (matchPollingJob?.isActive == true) return
+        matchPollingJob = viewModelScope.launch {
             while (true) {
                 kotlinx.coroutines.delay(3_000L)
                 val currentState = _uiState.value
-                if (currentState !is TransferMatchUiState.AlreadyAccepted) {
+                val isWaitingState = currentState is TransferMatchUiState.AlreadyAccepted ||
+                    currentState is TransferMatchUiState.MatchFound
+                if (!isWaitingState) {
                     break
+                }
+                val currentMatchId = when (currentState) {
+                    is TransferMatchUiState.AlreadyAccepted -> currentState.match.matchId
+                    is TransferMatchUiState.MatchFound -> currentState.match.matchId
+                    else -> null
                 }
                 runCatching {
                     val syncResult = transferRequestRepository.syncActiveRequest()
                     val userId = transferRequestRepository.getCurrentUserId()
                     val hospitals = hospitalReferenceRepository.getAll()
-                    if (syncResult is WorkerSyncResult.MatchFound && !userId.isNullOrBlank()) {
-                        val uiModel = syncResult.toUiModel(userId, hospitals)
-                        when (uiModel.serverStatus) {
-                            "CHAT_OPEN" -> {
-                                stopAlreadyAcceptedPolling()
-                                _uiState.value = TransferMatchUiState.ChatOpen(uiModel)
-                            }
-                            "CONFIRMED" -> {
-                                stopAlreadyAcceptedPolling()
-                                _uiState.value = TransferMatchUiState.Confirmed(uiModel)
-                            }
-                            "CANCELLED" -> {
-                                stopAlreadyAcceptedPolling()
-                                _uiState.value = TransferMatchUiState.AlreadyRejected(uiModel)
-                            }
-                            "EXPIRED" -> {
-                                stopAlreadyAcceptedPolling()
-                                _uiState.value = TransferMatchUiState.Expired(uiModel)
-                            }
-                            else -> {
-                                // Still in PENDING_CONFIRMATION; preserve existing match model while updating timestamps
-                                if (_uiState.value is TransferMatchUiState.AlreadyAccepted) {
-                                    _uiState.value = TransferMatchUiState.AlreadyAccepted(uiModel)
+                    when (syncResult) {
+                        is WorkerSyncResult.MatchFound -> {
+                            if (!userId.isNullOrBlank()) {
+                                val uiModel = syncResult.toUiModel(userId, hospitals)
+                                // If matchId changed, this is a brand new match proposal
+                                if (currentMatchId != null && uiModel.matchId != currentMatchId) {
+                                    if (uiModel.myStatus == MatchDecisionStatus.ACCEPTED) {
+                                        _uiState.value = TransferMatchUiState.AlreadyAccepted(uiModel)
+                                    } else {
+                                        _uiState.value = TransferMatchUiState.MatchFound(uiModel)
+                                    }
+                                } else {
+                                    when (uiModel.serverStatus) {
+                                        "CHAT_OPEN" -> {
+                                            stopMatchPolling()
+                                            _uiState.value = TransferMatchUiState.ChatOpen(uiModel)
+                                        }
+                                        "CONFIRMED" -> {
+                                            stopMatchPolling()
+                                            _uiState.value = TransferMatchUiState.Confirmed(uiModel)
+                                        }
+                                        "CANCELLED" -> {
+                                            stopMatchPolling()
+                                            _uiState.value = TransferMatchUiState.AlreadyRejected(uiModel)
+                                        }
+                                        "EXPIRED" -> {
+                                            stopMatchPolling()
+                                            _uiState.value = TransferMatchUiState.Expired(uiModel)
+                                        }
+                                        else -> {
+                                            if (uiModel.myStatus == MatchDecisionStatus.ACCEPTED) {
+                                                _uiState.value = TransferMatchUiState.AlreadyAccepted(uiModel)
+                                            } else {
+                                                _uiState.value = TransferMatchUiState.MatchFound(uiModel)
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                        }
+                        is WorkerSyncResult.NoMatch -> {
+                            // Match ended (e.g. partner declined or match expired) and local row is back in pool
+                            stopMatchPolling()
+                            _uiState.value = TransferMatchUiState.Error(
+                                "This match has ended. Your request has been returned to the matching pool."
+                            )
+                        }
+                        else -> {
+                            // On network error or conflict during polling, do not wipe state
                         }
                     }
                 }
@@ -79,14 +110,18 @@ class TransferMatchViewModel @Inject constructor(
         }
     }
 
-    private fun stopAlreadyAcceptedPolling() {
-        alreadyAcceptedPollingJob?.cancel()
-        alreadyAcceptedPollingJob = null
+    private fun stopMatchPolling() {
+        matchPollingJob?.cancel()
+        matchPollingJob = null
     }
 
     override fun onCleared() {
         super.onCleared()
-        stopAlreadyAcceptedPolling()
+        stopMatchPolling()
+    }
+
+    fun onScreenExit() {
+        stopMatchPolling()
     }
 
     private fun loadCurrentMatch() {
@@ -104,7 +139,7 @@ class TransferMatchViewModel @Inject constructor(
                     when (syncResult) {
                         is WorkerSyncResult.MatchFound -> {
                             if (userId.isNullOrBlank()) {
-                                stopAlreadyAcceptedPolling()
+                                stopMatchPolling()
                                 _uiState.value = TransferMatchUiState.Error(
                                     "Unable to identify the signed-in nurse."
                                 )
@@ -112,27 +147,26 @@ class TransferMatchViewModel @Inject constructor(
                                 val uiModel = syncResult.toUiModel(userId, hospitals)
                                 _uiState.value = when (uiModel.serverStatus) {
                                     "CHAT_OPEN" -> {
-                                        stopAlreadyAcceptedPolling()
+                                        stopMatchPolling()
                                         TransferMatchUiState.ChatOpen(uiModel)
                                     }
                                     "CONFIRMED" -> {
-                                        stopAlreadyAcceptedPolling()
+                                        stopMatchPolling()
                                         TransferMatchUiState.Confirmed(uiModel)
                                     }
                                     "CANCELLED" -> {
-                                        stopAlreadyAcceptedPolling()
+                                        stopMatchPolling()
                                         TransferMatchUiState.AlreadyRejected(uiModel)
                                     }
                                     "EXPIRED" -> {
-                                        stopAlreadyAcceptedPolling()
+                                        stopMatchPolling()
                                         TransferMatchUiState.Expired(uiModel)
                                     }
                                     else -> {
+                                        startMatchPolling()
                                         if (uiModel.myStatus == MatchDecisionStatus.ACCEPTED) {
-                                            startAlreadyAcceptedPolling()
                                             TransferMatchUiState.AlreadyAccepted(uiModel)
                                         } else {
-                                            stopAlreadyAcceptedPolling()
                                             TransferMatchUiState.MatchFound(uiModel)
                                         }
                                     }
@@ -140,23 +174,25 @@ class TransferMatchViewModel @Inject constructor(
                             }
                         }
                         is WorkerSyncResult.NoMatch -> {
-                            stopAlreadyAcceptedPolling()
+                            stopMatchPolling()
                             _uiState.value = TransferMatchUiState.Error(
                                 "No active mutual-transfer match is available."
                             )
                         }
                         is WorkerSyncResult.NetworkError -> {
                             // Do not cancel polling if already active on transient network failure
-                            if (_uiState.value !is TransferMatchUiState.AlreadyAccepted) {
+                            if (_uiState.value !is TransferMatchUiState.AlreadyAccepted &&
+                                _uiState.value !is TransferMatchUiState.MatchFound
+                            ) {
                                 _uiState.value = TransferMatchUiState.Error(syncResult.message)
                             }
                         }
                         is WorkerSyncResult.AuthError -> {
-                            stopAlreadyAcceptedPolling()
+                            stopMatchPolling()
                             _uiState.value = TransferMatchUiState.Error(syncResult.message)
                         }
                         is WorkerSyncResult.Conflict -> {
-                            stopAlreadyAcceptedPolling()
+                            stopMatchPolling()
                             _uiState.value = TransferMatchUiState.Error(syncResult.message)
                         }
                     }
@@ -218,6 +254,22 @@ class TransferMatchViewModel @Inject constructor(
                 else -> confirmedByC
             }
 
+            fun decisionStatus(accepted: Boolean, rejected: Boolean): MatchDecisionStatus = when {
+                rejected -> MatchDecisionStatus.REJECTED
+                accepted -> MatchDecisionStatus.ACCEPTED
+                else -> MatchDecisionStatus.PENDING
+            }
+
+            val statusA = decisionStatus(acceptedByA, rejectedByA)
+            val statusB = decisionStatus(acceptedByB, rejectedByB)
+            val statusC = decisionStatus(acceptedByC, rejectedByC)
+
+            val (myStatus, p2Status, p3Status) = when (currentUserId) {
+                tw.nurseAUid -> Triple(statusA, statusB, statusC)
+                tw.nurseBUid -> Triple(statusB, statusC, statusA)
+                else -> Triple(statusC, statusA, statusB)
+            }
+
             val p2 = TransferParticipantUiModel(
                 roleLabel = "NURSE 2",
                 roleTitle = "Your Destination Post",
@@ -226,7 +278,7 @@ class TransferMatchViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(n2Hosp),
                 grade = n2Grade,
                 isCurrentUser = false,
-                status = MatchDecisionStatus.PENDING
+                status = p2Status
             )
 
             val p3 = TransferParticipantUiModel(
@@ -237,7 +289,7 @@ class TransferMatchViewModel @Inject constructor(
                 hospitalLocation = hospitalLocation(n3Hosp),
                 grade = n3Grade,
                 isCurrentUser = false,
-                status = MatchDecisionStatus.PENDING
+                status = p3Status
             )
 
             return TransferMatchUiModel(
@@ -256,8 +308,8 @@ class TransferMatchViewModel @Inject constructor(
                 expiresAtMs = expiryMs,
                 firstResponseAtMs = firstResponseMs,
                 chatDeadlineMs = chatDeadlineMs,
-                myStatus = MatchDecisionStatus.PENDING,
-                partnerStatus = MatchDecisionStatus.PENDING,
+                myStatus = myStatus,
+                partnerStatus = p2Status,
                 myConfirmed = myConfirmed,
                 serverStatus = status,
                 participant2 = p2,
@@ -275,6 +327,22 @@ class TransferMatchViewModel @Inject constructor(
         val myConfirmed = if (isOfficerA) confirmedByA else confirmedByB
         val partnerConfirmed = if (isOfficerA) confirmedByB else confirmedByA
 
+        val myAccepted = if (isOfficerA) acceptedByA else acceptedByB
+        val myRejected = if (isOfficerA) rejectedByA else rejectedByB
+        val partnerAccepted = if (isOfficerA) acceptedByB else acceptedByA
+        val partnerRejected = if (isOfficerA) rejectedByB else rejectedByA
+
+        val myStatus = when {
+            myRejected -> MatchDecisionStatus.REJECTED
+            myAccepted -> MatchDecisionStatus.ACCEPTED
+            else -> MatchDecisionStatus.PENDING
+        }
+        val partnerStatus = when {
+            partnerRejected -> MatchDecisionStatus.REJECTED
+            partnerAccepted -> MatchDecisionStatus.ACCEPTED
+            else -> MatchDecisionStatus.PENDING
+        }
+
         return TransferMatchUiModel(
             matchId = matchId,
             myHospitalId = myHospitalId,
@@ -291,8 +359,8 @@ class TransferMatchViewModel @Inject constructor(
             expiresAtMs = expiryMs,
             firstResponseAtMs = firstResponseMs,
             chatDeadlineMs = chatDeadlineMs,
-            myStatus = MatchDecisionStatus.PENDING,
-            partnerStatus = MatchDecisionStatus.PENDING,
+            myStatus = myStatus,
+            partnerStatus = partnerStatus,
             myConfirmed = myConfirmed,
             partnerConfirmed = partnerConfirmed,
             serverStatus = status
@@ -346,11 +414,11 @@ class TransferMatchViewModel @Inject constructor(
 
                     _uiState.value = when (response.newStatus) {
                         "CHAT_OPEN" -> {
-                            stopAlreadyAcceptedPolling()
+                            stopMatchPolling()
                             TransferMatchUiState.ChatOpen(updatedMatch)
                         }
                         else -> {
-                            startAlreadyAcceptedPolling()
+                            startMatchPolling()
                             TransferMatchUiState.AlreadyAccepted(updatedMatch)
                         }
                     }
