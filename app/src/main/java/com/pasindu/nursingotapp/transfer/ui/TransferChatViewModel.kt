@@ -11,13 +11,22 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferChatMessage
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
+
+/**
+ * One-shot navigation events emitted by [TransferChatViewModel].
+ */
+sealed interface TransferChatNavigationEvent {
+    data class NavigateToInstructions(val matchId: String) : TransferChatNavigationEvent
+}
 
 /**
  * Domain representation of a participant in the active transfer team.
@@ -108,6 +117,10 @@ class TransferChatViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TransferChatUiState())
     val uiState: StateFlow<TransferChatUiState> = _uiState.asStateFlow()
 
+    private val _navigationEvents = Channel<TransferChatNavigationEvent>(Channel.BUFFERED)
+    val navigationEvents: kotlinx.coroutines.flow.Flow<TransferChatNavigationEvent> = _navigationEvents.receiveAsFlow()
+    private var hasEmittedConfirmedNav = false
+
     private var messageCollectionJob: Job? = null
     private var matchStateCollectionJob: Job? = null
 
@@ -132,6 +145,9 @@ class TransferChatViewModel @Inject constructor(
                         is WorkerSyncResult.MatchFound -> {
                             val state = buildStateFromMatch(syncResult, currentUid, hospitals)
                             _uiState.value = state
+                            if (syncResult.status.trim().uppercase() == "CONFIRMED") {
+                                hasEmittedConfirmedNav = true
+                            }
                             observeMessages(syncResult.matchId)
                             observeMatchState(syncResult.matchId)
                         }
@@ -249,6 +265,11 @@ class TransferChatViewModel @Inject constructor(
                             terminalNotice = notice
                         )
 
+                        if (isAllConfirmed && !hasEmittedConfirmedNav) {
+                            hasEmittedConfirmedNav = true
+                            _navigationEvents.trySend(TransferChatNavigationEvent.NavigateToInstructions(matchId))
+                        }
+
                         // If the match transitioned to a terminal status (CONFIRMED, CANCELLED, or EXPIRED),
                         // reconcile Room cache with backend authoritative state without overwriting newer state.
                         if (serverStatus == "CONFIRMED" || serverStatus == "CANCELLED" || serverStatus == "EXPIRED") {
@@ -290,17 +311,6 @@ class TransferChatViewModel @Inject constructor(
         currentUid: String,
         hospitals: List<HospitalReference>
     ): TransferChatUiState {
-        fun hospitalName(id: String): String =
-            hospitals.firstOrNull { it.hospitalId == id }?.name?.takeIf { it.isNotBlank() } ?: id
-
-        fun hospitalLocation(id: String): String {
-            val hospital = hospitals.firstOrNull { it.hospitalId == id } ?: return "Sri Lanka"
-            return listOfNotNull(
-                hospital.district?.takeIf { it.isNotBlank() }?.let { "$it District" },
-                hospital.province.takeIf { it.isNotBlank() }?.let { "$it Province" }
-            ).joinToString(" • ").ifBlank { "Sri Lanka" }
-        }
-
         val deadlineMs = matchFound.chatDeadline?.let {
             runCatching { Instant.parse(it).toEpochMilli() }.getOrNull()
         } ?: matchFound.expiresAt.let {
@@ -332,45 +342,9 @@ class TransferChatViewModel @Inject constructor(
                 else -> ""
             }
 
-            val pA = TransferChatParticipant(
-                uid = tw.nurseAUid,
-                roleLetter = "A",
-                displayName = if (tw.nurseAUid == currentUid) "You (Nurse A)" else "Nurse A",
-                hospitalId = tw.nurseACurrentHospitalId,
-                hospitalName = hospitalName(tw.nurseACurrentHospitalId),
-                hospitalLocation = hospitalLocation(tw.nurseACurrentHospitalId),
-                grade = tw.nurseAGrade,
-                isCurrentUser = tw.nurseAUid == currentUid,
-                confirmed = allParticipantsConfirmed || matchFound.confirmedByA
-            )
-
-            val pB = TransferChatParticipant(
-                uid = tw.nurseBUid,
-                roleLetter = "B",
-                displayName = if (tw.nurseBUid == currentUid) "You (Nurse B)" else "Nurse B",
-                hospitalId = tw.nurseBCurrentHospitalId,
-                hospitalName = hospitalName(tw.nurseBCurrentHospitalId),
-                hospitalLocation = hospitalLocation(tw.nurseBCurrentHospitalId),
-                grade = tw.nurseBGrade,
-                isCurrentUser = tw.nurseBUid == currentUid,
-                confirmed = allParticipantsConfirmed || matchFound.confirmedByB
-            )
-
-            val pC = TransferChatParticipant(
-                uid = tw.nurseCUid,
-                roleLetter = "C",
-                displayName = if (tw.nurseCUid == currentUid) "You (Nurse C)" else "Nurse C",
-                hospitalId = tw.nurseCCurrentHospitalId,
-                hospitalName = hospitalName(tw.nurseCCurrentHospitalId),
-                hospitalLocation = hospitalLocation(tw.nurseCCurrentHospitalId),
-                grade = tw.nurseCGrade,
-                isCurrentUser = tw.nurseCUid == currentUid,
-                confirmed = allParticipantsConfirmed || matchFound.confirmedByC
-            )
-
-            val participants = listOf(pA, pB, pC)
-            val currentParticipant = participants.find { it.isCurrentUser } ?: pA
-            val isUserConfirmed = currentParticipant.confirmed
+            val participants = TransferParticipantBuilder.buildParticipants(matchFound, currentUid, hospitals)
+            val currentParticipant = participants.find { it.isCurrentUser } ?: participants.firstOrNull()
+            val isUserConfirmed = currentParticipant?.confirmed ?: false
             val isAllConfirmed = allParticipantsConfirmed || (matchFound.confirmedByA && matchFound.confirmedByB && matchFound.confirmedByC)
 
             return TransferChatUiState(
@@ -382,8 +356,8 @@ class TransferChatViewModel @Inject constructor(
                 participants = participants,
                 currentUserUid = currentUid,
                 currentUserRole = userRole,
-                currentUserHospitalId = currentParticipant.hospitalId,
-                currentUserGrade = currentParticipant.grade,
+                currentUserHospitalId = currentParticipant?.hospitalId.orEmpty(),
+                currentUserGrade = currentParticipant?.grade.orEmpty(),
                 isUserConfirmed = isUserConfirmed,
                 isAllConfirmed = isAllConfirmed,
                 isTerminal = isTerminal
@@ -393,35 +367,10 @@ class TransferChatViewModel @Inject constructor(
             val isOfficerA = currentUid == direct.nurseAUid
             val userRole = if (isOfficerA) "A" else "B"
 
-            val pA = TransferChatParticipant(
-                uid = direct.nurseAUid,
-                roleLetter = "A",
-                displayName = if (isOfficerA) "You (Nurse A)" else "Partner (Nurse A)",
-                hospitalId = direct.nurseACurrentHospitalId,
-                hospitalName = hospitalName(direct.nurseACurrentHospitalId),
-                hospitalLocation = hospitalLocation(direct.nurseACurrentHospitalId),
-                grade = direct.nurseAGrade,
-                isCurrentUser = isOfficerA,
-                confirmed = allParticipantsConfirmed || matchFound.confirmedByA
-            )
-
-            val pB = TransferChatParticipant(
-                uid = direct.nurseBUid,
-                roleLetter = "B",
-                displayName = if (!isOfficerA) "You (Nurse B)" else "Partner (Nurse B)",
-                hospitalId = direct.nurseBCurrentHospitalId,
-                hospitalName = hospitalName(direct.nurseBCurrentHospitalId),
-                hospitalLocation = hospitalLocation(direct.nurseBCurrentHospitalId),
-                grade = direct.nurseBGrade,
-                isCurrentUser = !isOfficerA,
-                confirmed = allParticipantsConfirmed || matchFound.confirmedByB
-            )
-
-            val participants = listOf(pA, pB)
+            val participants = TransferParticipantBuilder.buildParticipants(matchFound, currentUid, hospitals)
             val isUserConfirmed = if (isOfficerA) matchFound.confirmedByA else matchFound.confirmedByB
             val isAllConfirmed = allParticipantsConfirmed || (matchFound.confirmedByA && matchFound.confirmedByB)
-
-            val currentParticipant = if (isOfficerA) pA else pB
+            val currentParticipant = if (isOfficerA) participants.firstOrNull() else participants.getOrNull(1)
 
             return TransferChatUiState(
                 isLoading = false,
@@ -432,8 +381,8 @@ class TransferChatViewModel @Inject constructor(
                 participants = participants,
                 currentUserUid = currentUid,
                 currentUserRole = userRole,
-                currentUserHospitalId = currentParticipant.hospitalId,
-                currentUserGrade = currentParticipant.grade,
+                currentUserHospitalId = currentParticipant?.hospitalId.orEmpty(),
+                currentUserGrade = currentParticipant?.grade.orEmpty(),
                 isUserConfirmed = isUserConfirmed,
                 isAllConfirmed = isAllConfirmed,
                 isTerminal = isTerminal
@@ -504,6 +453,11 @@ class TransferChatViewModel @Inject constructor(
                             isTerminal = isTerminal,
                             actionError = null
                         )
+                    }
+
+                    if (isAllConfirmed && !hasEmittedConfirmedNav) {
+                        hasEmittedConfirmedNav = true
+                        _navigationEvents.trySend(TransferChatNavigationEvent.NavigateToInstructions(state.matchId))
                     }
                 },
                 onFailure = { error ->

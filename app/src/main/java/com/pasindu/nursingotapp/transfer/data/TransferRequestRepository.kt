@@ -484,6 +484,16 @@ class TransferRequestRepository @Inject constructor(
                     updatedAt = System.currentTimeMillis()
                 ))
             }
+        } else {
+            val cached = dao.getOnce()
+            if (cached != null && cached.matchCycleId == matchId) {
+                dao.upsert(cached.copy(
+                    requestStatus = TransferRequestStatus.MATCHED.name,
+                    matchStatus = "AWAITING_COMPLETION",
+                    syncStatus = CacheSyncStatus.SYNCED.name,
+                    updatedAt = System.currentTimeMillis()
+                ))
+            }
         }
         result
     }

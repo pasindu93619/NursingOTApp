@@ -48,11 +48,13 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.ui.TransferChatNavigationEvent
 import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferCompletionScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferIdentityScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferInstructionsScreen
+import com.pasindu.nursingotapp.transfer.ui.TransferInstructionsViewModel
 import com.pasindu.nursingotapp.transfer.ui.TransferHistoryScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
@@ -334,6 +336,19 @@ fun AppNavigation() {
             composable("transfer_chat") {
                 val chatViewModel: TransferChatViewModel = hiltViewModel()
                 val chatUiState by chatViewModel.uiState.collectAsState()
+
+                LaunchedEffect(chatViewModel) {
+                    chatViewModel.navigationEvents.collect { event ->
+                        when (event) {
+                            is TransferChatNavigationEvent.NavigateToInstructions -> {
+                                navController.navigate("transfer_instructions/${Uri.encode(event.matchId)}") {
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
+                    }
+                }
+
                 TransferChatScreen(
                     uiState = chatUiState,
                     onBack = { navController.popBackStack() },
@@ -372,15 +387,18 @@ fun AppNavigation() {
                 arguments = listOf(navArgument("matchId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val matchId = backStackEntry.arguments?.getString("matchId").orEmpty()
-                val chatViewModel: TransferChatViewModel = hiltViewModel()
-                val chatUiState by chatViewModel.uiState.collectAsState()
-                val participants = if (chatUiState.matchId == matchId) chatUiState.participants else emptyList()
-                val matchType = if (chatUiState.matchId == matchId) chatUiState.matchType else "DIRECT_2_WAY"
+                val instructionsViewModel: TransferInstructionsViewModel = hiltViewModel()
+                val state by instructionsViewModel.uiState.collectAsState()
+
+                LaunchedEffect(matchId) {
+                    instructionsViewModel.load(matchId)
+                }
 
                 TransferInstructionsScreen(
                     matchId = matchId,
-                    matchType = matchType,
-                    participants = participants,
+                    matchType = state.matchType.ifBlank { "DIRECT_2_WAY" },
+                    participants = state.participants,
+                    isLoading = state.isLoading,
                     onBack = { navController.popBackStack() },
                     onOpenChat = {
                         navController.navigate("transfer_chat") {

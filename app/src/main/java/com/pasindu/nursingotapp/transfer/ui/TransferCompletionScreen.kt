@@ -34,7 +34,17 @@ data class TransferCompletionUiState(
     val isSubmitting: Boolean = false,
     val status: TransferCompletionStatus? = null,
     val error: String? = null
-)
+) {
+    val friendlyStatusText: String
+        get() = when (status?.status?.trim()?.uppercase()) {
+            "CONFIRMED" -> "Agreement Confirmed"
+            "AWAITING_COMPLETION" -> "Awaiting Physical Transfer Completion"
+            "COMPLETED" -> "Transfer Finalized & Completed"
+            "CANCELLED" -> "Match Cancelled"
+            "EXPIRED" -> "Match Expired"
+            else -> status?.status?.replace('_', ' ') ?: "Unknown"
+        }
+}
 
 @HiltViewModel
 class TransferCompletionViewModel @Inject constructor(
@@ -43,18 +53,58 @@ class TransferCompletionViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TransferCompletionUiState())
     val uiState: StateFlow<TransferCompletionUiState> = _uiState.asStateFlow()
 
-    fun load(matchId: String) {
+    private var autoRefreshJob: kotlinx.coroutines.Job? = null
+
+    fun load(matchId: String, isManualOrInitial: Boolean = true) {
         if (matchId.isBlank()) {
             _uiState.value = TransferCompletionUiState(isLoading = false, error = "Missing match reference.")
             return
         }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            if (isManualOrInitial && _uiState.value.status == null) {
+                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            }
             repository.getCompletionStatus(matchId).fold(
-                onSuccess = { status -> _uiState.value = TransferCompletionUiState(isLoading = false, status = status) },
-                onFailure = { error -> _uiState.value = TransferCompletionUiState(isLoading = false, error = error.message ?: "Unable to load completion progress.") }
+                onSuccess = { status ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        status = status,
+                        error = null
+                    )
+                },
+                onFailure = { error ->
+                    // Preserve existing status if we already loaded it, showing transient error banner
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error.message ?: "Unable to load completion progress."
+                    )
+                }
             )
         }
+    }
+
+    fun startAutoRefresh(matchId: String) {
+        if (autoRefreshJob?.isActive == true || matchId.isBlank()) return
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(20_000L)
+                val current = _uiState.value
+                if (current.status?.status == "COMPLETED") {
+                    break
+                }
+                load(matchId, isManualOrInitial = false)
+            }
+        }
+    }
+
+    fun stopAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAutoRefresh()
     }
 
     fun reportComplete(matchId: String) {
@@ -63,8 +113,12 @@ class TransferCompletionViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = current.copy(isSubmitting = true, error = null)
             repository.reportCompletion(matchId).fold(
-                onSuccess = { status -> _uiState.value = TransferCompletionUiState(isLoading = false, status = status) },
-                onFailure = { error -> _uiState.value = _uiState.value.copy(isSubmitting = false, error = error.message ?: "Unable to save your completion report.") }
+                onSuccess = { status ->
+                    _uiState.value = _uiState.value.copy(isSubmitting = false, status = status, error = null)
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(isSubmitting = false, error = error.message ?: "Unable to save your completion report.")
+                }
             )
         }
     }
@@ -80,7 +134,15 @@ fun TransferCompletionScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showReportConfirmation by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(matchId) { viewModel.load(matchId) }
+    androidx.compose.runtime.LaunchedEffect(matchId) {
+        viewModel.load(matchId)
+        viewModel.startAutoRefresh(matchId)
+    }
+    androidx.compose.runtime.DisposableEffect(matchId) {
+        onDispose {
+            viewModel.stopAutoRefresh()
+        }
+    }
     val status = state.status
     val completed = status?.status == "COMPLETED"
     val reported = status?.callerReportedComplete == true
@@ -164,7 +226,7 @@ fun TransferCompletionScreen(
                             "${status.completedParticipants} of ${status.totalParticipants} participants reported complete",
                             color = com.pasindu.nursingotapp.ui.theme.TextSecondary
                         )
-                        androidx.compose.material3.Text("Status: ${status.status.replace('_', ' ')}")
+                        androidx.compose.material3.Text("Status: ${state.friendlyStatusText}")
                     }
                 }
             }

@@ -40,6 +40,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -137,6 +138,7 @@ fun TransferInstructionsScreen(
     matchId: String,
     matchType: String = "DIRECT_2_WAY",
     participants: List<TransferChatParticipant> = emptyList(),
+    isLoading: Boolean = false,
     onBack: () -> Unit,
     onOpenChat: (() -> Unit)? = null,
     onProceedToCompletion: () -> Unit
@@ -273,13 +275,36 @@ fun TransferInstructionsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(
+                        color = ClinicalPrimaryColor,
+                        modifier = Modifier.size(36.dp)
+                    )
+                    Text(
+                        text = "Loading transfer details...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // 1. Mandatory Authority & Responsibility Disclaimer
             item {
                 TransferAuthorityDisclaimerCard()
@@ -366,6 +391,7 @@ fun TransferInstructionsScreen(
             }
         }
     }
+}
 }
 
 // -----------------------------------------------------------------------------

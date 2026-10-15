@@ -151,15 +151,6 @@ fun TransferChatScreen(
     // Flag to ensure exit navigation happens strictly once
     var hasExited by remember { mutableStateOf(false) }
 
-    // Automatic navigation when agreement is confirmed across all participants
-    var hasNavigatedToInstructions by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.serverStatus, uiState.isAllConfirmed, uiState.matchId) {
-        if (uiState.serverStatus == "CONFIRMED" && !hasNavigatedToInstructions && uiState.matchId.isNotBlank()) {
-            hasNavigatedToInstructions = true
-            onProceedToInstructions(uiState.matchId)
-        }
-    }
-
     // Auto-scroll to latest message when new messages arrive
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
