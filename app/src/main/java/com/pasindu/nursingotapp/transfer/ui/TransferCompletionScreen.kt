@@ -250,7 +250,17 @@ fun TransferCompletionScreen(
             }
 
             state.error?.let { message ->
-                androidx.compose.material3.Surface(\n                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),\n                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),\n                    color = com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.08f),\n                    border = androidx.compose.foundation.BorderStroke(1.dp, com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.28f))\n                ) {\n                    androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {\n                        androidx.compose.material3.Text("Status check paused", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = com.pasindu.nursingotapp.ui.theme.CriticalRed)\n                        androidx.compose.material3.Text(message, color = com.pasindu.nursingotapp.ui.theme.TextPrimary)\n                    }\n                }
+                androidx.compose.material3.Surface(
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    color = com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.08f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.28f))
+                ) {
+                    androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+                        androidx.compose.material3.Text("Status check paused", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = com.pasindu.nursingotapp.ui.theme.CriticalRed)
+                        androidx.compose.material3.Text(message, color = com.pasindu.nursingotapp.ui.theme.TextPrimary)
+                    }
+                }
                 androidx.compose.material3.OutlinedButton(onClick = { viewModel.load(matchId) }) { androidx.compose.material3.Text("Try again") }
             }
 
