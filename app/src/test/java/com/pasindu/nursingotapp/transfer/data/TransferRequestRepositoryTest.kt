@@ -111,6 +111,33 @@ class TransferRequestRepositoryTest {
             withdrawShouldThrow?.let { throw it }
             return withdrawResponse
         }
+
+        override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> {
+            return emptyList()
+        }
+
+        override suspend fun getCompletionStatus(
+            firebaseIdToken: String,
+            matchId: String
+        ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus {
+            return com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(
+                matchId = matchId,
+                status = "CONFIRMED"
+            )
+        }
+
+        override suspend fun reportCompletion(
+            firebaseIdToken: String,
+            matchId: String
+        ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus {
+            return com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(
+                matchId = matchId,
+                status = "CONFIRMED",
+                callerReportedComplete = true,
+                completedParticipants = 1,
+                totalParticipants = 2
+            )
+        }
     }
 
     private class FakeRemoteDataSource(
@@ -657,6 +684,11 @@ class TransferRequestRepositoryTest {
                 )
             }
             override suspend fun withdrawRequest(firebaseIdToken: String) = WorkerWithdrawResponse(withdrawn = true)
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> = emptyList()
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
         }
 
         val repoWithWorker = TransferRequestRepository(
@@ -703,6 +735,11 @@ class TransferRequestRepositoryTest {
                 throw RuntimeException("Server returned HTTP 409: INVALID_STATUS")
             }
             override suspend fun withdrawRequest(firebaseIdToken: String) = WorkerWithdrawResponse(withdrawn = true)
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> = emptyList()
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
         }
 
         val remoteMatchCancelled = RemoteMatchState(
@@ -775,6 +812,11 @@ class TransferRequestRepositoryTest {
                 )
             }
             override suspend fun withdrawRequest(firebaseIdToken: String) = WorkerWithdrawResponse(withdrawn = true)
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> = emptyList()
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
         }
 
         val repo = TransferRequestRepository(
@@ -1030,14 +1072,11 @@ class TransferRequestRepositoryTest {
 
         // Server request is released back to SEARCHING (unlocked)
         val remoteRequest = RemoteTransferRequestState(
-            userId = "nurse-a",
             status = "SEARCHING",
-            currentHospitalId = "HOSP-A",
-            rankedHospitalIds = listOf("HOSP-B"),
-            grade = "Grade I",
             locked = false,
             currentMatchId = null,
-            updatedAt = 6000L
+            updatedAt = 6000L,
+            currentHospitalId = "HOSP-A"
         )
 
         // Old match doc is marked CANCELLED
@@ -1052,9 +1091,9 @@ class TransferRequestRepositoryTest {
         val repo = TransferRequestRepository(
             dao = fakeDao,
             profileDao = fakeProfileDao,
-            rds = FakeRemoteDataSource(remoteRequest, remoteMatch),
-            api = FakeWorkerApiClient(),
-            tp = FakeTokenProvider()
+            remoteDataSource = FakeRemoteDataSource(remoteRequest, remoteMatch),
+            workerApiClient = FakeWorkerApiClient(),
+            tokenProvider = FakeTokenProvider()
         )
 
         val syncResult = repo.syncActiveRequest()
@@ -1089,14 +1128,11 @@ class TransferRequestRepositoryTest {
         )
 
         val remoteRequest = RemoteTransferRequestState(
-            userId = "nurse-a",
             status = "SEARCHING",
-            currentHospitalId = "HOSP-A",
-            rankedHospitalIds = listOf("HOSP-B"),
-            grade = "Grade I",
             locked = false,
             currentMatchId = null,
-            updatedAt = 6000L
+            updatedAt = 6000L,
+            currentHospitalId = "HOSP-A"
         )
 
         val remoteMatch = RemoteMatchState(
@@ -1110,9 +1146,9 @@ class TransferRequestRepositoryTest {
         val repo = TransferRequestRepository(
             dao = fakeDao,
             profileDao = fakeProfileDao,
-            rds = FakeRemoteDataSource(remoteRequest, remoteMatch),
-            api = FakeWorkerApiClient(),
-            tp = FakeTokenProvider()
+            remoteDataSource = FakeRemoteDataSource(remoteRequest, remoteMatch),
+            workerApiClient = FakeWorkerApiClient(),
+            tokenProvider = FakeTokenProvider()
         )
 
         val syncResult = repo.syncActiveRequest()

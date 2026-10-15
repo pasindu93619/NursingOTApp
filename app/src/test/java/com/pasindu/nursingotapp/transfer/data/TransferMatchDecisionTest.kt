@@ -140,9 +140,10 @@ class TransferMatchDecisionTest {
         var respondResult: Result<DecisionResponse>? = null
         var lastCapturedRequest: DecisionRequest? = null
         var lastCapturedToken: String? = null
+        var syncResult: WorkerSyncResult = WorkerSyncResult.NoMatch("No match")
 
         override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
-            return WorkerSyncResult.NoMatch("No match")
+            return syncResult
         }
 
         override suspend fun respondToMatch(
@@ -164,6 +165,33 @@ class TransferMatchDecisionTest {
 
         override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse {
             return WorkerWithdrawResponse(withdrawn = true)
+        }
+
+        override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> {
+            return emptyList()
+        }
+
+        override suspend fun getCompletionStatus(
+            firebaseIdToken: String,
+            matchId: String
+        ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus {
+            return com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(
+                matchId = matchId,
+                status = "CONFIRMED"
+            )
+        }
+
+        override suspend fun reportCompletion(
+            firebaseIdToken: String,
+            matchId: String
+        ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus {
+            return com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(
+                matchId = matchId,
+                status = "CONFIRMED",
+                callerReportedComplete = true,
+                completedParticipants = 1,
+                totalParticipants = 2
+            )
         }
     }
 
@@ -266,6 +294,9 @@ class TransferMatchDecisionTest {
     fun tearDown() {
         Dispatchers.resetMain()
     }
+
+    private fun createViewModel(): TransferMatchViewModel =
+        TransferMatchViewModel(repository, hospitalRepo)
 
     // 1. Serialization
     @Test
@@ -672,7 +703,7 @@ class TransferMatchDecisionTest {
             rejectedByB = false
         )
 
-        remoteDataSource.syncResult = matchFound
+        workerApiClient.syncResult = matchFound
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
@@ -714,7 +745,7 @@ class TransferMatchDecisionTest {
             acceptedByA = true
         )
 
-        remoteDataSource.syncResult = initialMatch
+        workerApiClient.syncResult = initialMatch
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
@@ -722,7 +753,7 @@ class TransferMatchDecisionTest {
         assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
         // Now server returns NoMatch (e.g. partner rejected)
-        remoteDataSource.syncResult = WorkerSyncResult.NoMatch("Partner declined")
+        workerApiClient.syncResult = WorkerSyncResult.NoMatch("Partner declined")
         // Trigger sync
         val syncRes = repository.syncActiveRequest()
         assertTrue(syncRes is WorkerSyncResult.NoMatch)

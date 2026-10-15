@@ -147,6 +147,33 @@ class TransferSyncBridgeTest {
         override suspend fun withdrawRequest(firebaseIdToken: String): com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse {
             return com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse(withdrawn = true)
         }
+
+        override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> {
+            return emptyList()
+        }
+
+        override suspend fun getCompletionStatus(
+            firebaseIdToken: String,
+            matchId: String
+        ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus {
+            return com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(
+                matchId = matchId,
+                status = "CONFIRMED"
+            )
+        }
+
+        override suspend fun reportCompletion(
+            firebaseIdToken: String,
+            matchId: String
+        ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus {
+            return com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(
+                matchId = matchId,
+                status = "CONFIRMED",
+                callerReportedComplete = true,
+                completedParticipants = 1,
+                totalParticipants = 2
+            )
+        }
     }
 
     private class FakeSyncScheduler : TransferSyncScheduler {
