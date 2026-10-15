@@ -709,23 +709,14 @@ class TransferMatchDecisionTest {
             rejectedByB = false
         )
 
-        remoteDataSource.remoteRequest = RemoteTransferRequestState(
-            status = "MATCHED",
-            locked = true,
-            currentMatchId = "MATCH-B3",
-            updatedAt = 1000L
-        )
-        remoteDataSource.remoteMatch = RemoteMatchState(
-            matchId = "MATCH-B3",
-            matchType = "DIRECT_2_WAY",
-            directMatch = matchFound.directMatch,
-            status = "PENDING_CONFIRMATION",
-            createdAt = "2026-10-15T10:00:00Z",
-            expiresAt = "2026-10-15T12:00:00Z",
-            acceptedByA = true,
-            acceptedByB = false,
-            rejectedByA = false,
-            rejectedByB = false
+        // Exercise the WorkerSyncResult -> UI mapping path. A server-side MATCHED
+        // request takes the repository's authoritative Firestore fast path instead.
+        remoteDataSource.remoteRequest = null
+        remoteDataSource.remoteMatch = null
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.PENDING.name,
+            matchCycleId = null,
+            syncStatus = CacheSyncStatus.PENDING.name
         )
         workerApiClient.syncResult = matchFound
         tokenProvider.userId = "nurse-a"
@@ -769,20 +760,15 @@ class TransferMatchDecisionTest {
             acceptedByA = true
         )
 
-        remoteDataSource.remoteRequest = RemoteTransferRequestState(
-            status = "MATCHED",
-            locked = true,
-            currentMatchId = "MATCH-B4",
-            updatedAt = 1000L
-        )
-        remoteDataSource.remoteMatch = RemoteMatchState(
-            matchId = "MATCH-B4",
-            matchType = "DIRECT_2_WAY",
-            directMatch = initialMatch.directMatch,
-            status = "PENDING_CONFIRMATION",
-            createdAt = "2026-10-15T10:00:00Z",
-            expiresAt = "2026-10-15T12:00:00Z",
-            acceptedByA = true
+        // Start from the pool so the initial match comes from the fake Worker.
+        // On the next poll, the now-MATCHED local row plus no server request should
+        // reconcile to NoMatch and move the ViewModel out of its waiting state.
+        remoteDataSource.remoteRequest = null
+        remoteDataSource.remoteMatch = null
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.PENDING.name,
+            matchCycleId = null,
+            syncStatus = CacheSyncStatus.PENDING.name
         )
         workerApiClient.syncResult = initialMatch
         tokenProvider.userId = "nurse-a"
@@ -791,14 +777,25 @@ class TransferMatchDecisionTest {
         testScheduler.runCurrent()
         assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
-        // Now server returns NoMatch (e.g. partner rejected)
-        remoteDataSource.remoteRequest = null
-        remoteDataSource.remoteMatch = remoteDataSource.remoteMatch?.copy(status = "CANCELLED")
-        workerApiClient.syncResult = WorkerSyncResult.NoMatch("Partner declined")
-        // Trigger sync
-        val syncRes = repository.syncActiveRequest()
-        assertTrue(syncRes is WorkerSyncResult.NoMatch)
+        // Simulate the server-side match document being cancelled, then let the
+        // real polling coroutine perform its next sync cycle.
+        remoteDataSource.remoteMatch = RemoteMatchState(
+            matchId = "MATCH-B4",
+            matchType = "DIRECT_2_WAY",
+            directMatch = initialMatch.directMatch,
+            status = "CANCELLED",
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            acceptedByA = true
+        )
+        testScheduler.advanceTimeBy(3_000L)
+        testScheduler.runCurrent()
 
+        val finalState = viewModel.uiState.value
+        assertTrue("Polling a cancelled match should return the request to the pool", finalState is TransferMatchUiState.Error)
+        assertTrue(
+            (finalState as TransferMatchUiState.Error).message.contains("returned to the matching pool")
+        )
         viewModel.onScreenExit()
     }
 }
