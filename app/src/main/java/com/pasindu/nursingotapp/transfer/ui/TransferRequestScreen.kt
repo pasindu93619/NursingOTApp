@@ -166,11 +166,15 @@ fun TransferRequestScreen(
             if (current != null && currentHospital == null) {
                 currentHospital = current
             }
-            if (preferences.isEmpty()) {
-                val prefHospitals = activeRequest.rankedPreferences.hospitalIds.mapNotNull { id ->
-                    hospitalOptions.find { it.hospitalId == id }
+            if (activeRequest.requestStatus != TransferRequestStatus.COMPLETED &&
+                !activeRequest.matchStatus.equals("COMPLETED", ignoreCase = true)
+            ) {
+                if (preferences.isEmpty()) {
+                    val prefHospitals = activeRequest.rankedPreferences.hospitalIds
+                        .filterNot { it == activeRequest.currentHospitalId }
+                        .mapNotNull { id -> hospitalOptions.find { it.hospitalId == id } }
+                    preferences.addAll(prefHospitals)
                 }
-                preferences.addAll(prefHospitals)
             }
             initializedFromActiveRequest = true
         }
@@ -230,13 +234,13 @@ fun TransferRequestScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            if (activeRequest != null) "Edit Transfer Request" else "Mutual Transfer",
+                            if (activeRequest != null && activeRequest.requestStatus != TransferRequestStatus.COMPLETED && !activeRequest.matchStatus.equals("COMPLETED", ignoreCase = true)) "Edit Transfer Request" else "Mutual Transfer",
                             color = TextPrimary,
                             fontSize = 21.sp,
                             fontWeight = FontWeight.Black
                         )
                         Text(
-                            if (activeRequest != null) "Update your posting or ranked preferences" else "Build your preferred transfer route",
+                            if (activeRequest != null && activeRequest.requestStatus != TransferRequestStatus.COMPLETED && !activeRequest.matchStatus.equals("COMPLETED", ignoreCase = true)) "Update your posting or ranked preferences" else "Start from your current posting and choose new destinations",
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
@@ -697,7 +701,7 @@ fun TransferRequestScreen(
                     Text(
                         when {
                             isRequestLocked -> "Match active — editing locked"
-                            activeRequest != null -> "Save changes & update pool"
+                            activeRequest != null && activeRequest.requestStatus != TransferRequestStatus.COMPLETED && !activeRequest.matchStatus.equals("COMPLETED", ignoreCase = true) -> "Save changes & update pool"
                             else -> "Start searching for a match"
                         },
                         fontSize = 14.5.sp,
