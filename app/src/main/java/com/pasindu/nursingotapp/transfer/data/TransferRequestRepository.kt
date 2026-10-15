@@ -249,7 +249,7 @@ class TransferRequestRepository @Inject constructor(
                 "matchId=${remoteState?.currentMatchId != null}"
         )
 
-        if (remoteState?.status.equals(TransferRequestStatus.COMPLETED.name, ignoreCase = true)) {
+        if (remoteState != null && remoteState.status.equals(TransferRequestStatus.COMPLETED.name, ignoreCase = true)) {
             val completedCache = entity.copy(
                 currentHospitalId = remoteState.currentHospitalId ?: entity.currentHospitalId,
                 requestStatus = TransferRequestStatus.COMPLETED.name,
@@ -656,7 +656,8 @@ class TransferRequestRepository @Inject constructor(
             grade = gradeClean,
             syncStatus = cacheSyncStatus,
             updatedAt = this.updatedAt,
-            matchStatus = this.matchStatus
+            matchStatus = this.matchStatus,
+            matchCycleId = this.matchCycleId
         )
     }
 }
