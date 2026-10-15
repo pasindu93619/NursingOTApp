@@ -14,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
@@ -65,9 +66,28 @@ data class TransferChatUiState(
     val error: String? = null,
     val messageError: String? = null,
     val sendError: String? = null,
+    val actionError: String? = null,
     val isTerminal: Boolean = false,
     val terminalNotice: TerminalNotice? = null
 ) {
+    companion object {
+        /**
+         * Canonical terminal statuses: CONFIRMED, AWAITING_COMPLETION, COMPLETED, CANCELLED, EXPIRED.
+         */
+        val TERMINAL_STATUSES = setOf("CONFIRMED", "AWAITING_COMPLETION", "COMPLETED", "CANCELLED", "EXPIRED")
+
+        /**
+         * Statuses in which coordination chat messages can no longer be written.
+         */
+        val READ_ONLY_STATUSES = setOf("CONFIRMED", "AWAITING_COMPLETION", "COMPLETED", "CANCELLED", "EXPIRED")
+
+        fun isTerminalStatus(status: String): Boolean =
+            status.trim().uppercase() in TERMINAL_STATUSES
+
+        fun isReadOnlyChat(status: String): Boolean =
+            status.trim().uppercase() in READ_ONLY_STATUSES
+    }
+
     val canSend: Boolean
         get() = !isLoading && error == null && messageError == null && serverStatus == "CHAT_OPEN" && !isSendingMessage && !isTerminal
 
@@ -167,7 +187,7 @@ class TransferChatViewModel @Inject constructor(
                 matchResult.onSuccess { remoteMatch ->
                     if (remoteMatch != null) {
                         val serverStatus = remoteMatch.status.trim().uppercase()
-                        val isTerminal = serverStatus in listOf("CONFIRMED", "CANCELLED", "EXPIRED")
+                        val isTerminal = TransferChatUiState.isTerminalStatus(serverStatus)
                         val isAllConfirmed = serverStatus == "CONFIRMED"
 
                         val currentState = _uiState.value
@@ -288,18 +308,28 @@ class TransferChatViewModel @Inject constructor(
         }
 
         val serverStatus = matchFound.status.trim().uppercase()
-        val isTerminal = serverStatus in listOf("CONFIRMED", "CANCELLED", "EXPIRED")
+        val isTerminal = TransferChatUiState.isTerminalStatus(serverStatus)
         // CONFIRMED is the authoritative final state: all participants have agreed,
         // even if older cached participant flags have not caught up yet.
         val allParticipantsConfirmed = serverStatus == "CONFIRMED"
 
         if (matchFound.matchType == "THREE_WAY" && matchFound.threeWayMatch != null) {
             val tw = matchFound.threeWayMatch
+            if (currentUid != tw.nurseAUid && currentUid != tw.nurseBUid && currentUid != tw.nurseCUid) {
+                return TransferChatUiState(
+                    isLoading = false,
+                    matchId = matchFound.matchId,
+                    matchType = "THREE_WAY",
+                    serverStatus = serverStatus,
+                    error = "Authentication error: You are not a recognized participant in this 3-way mutual transfer match.",
+                    isTerminal = true
+                )
+            }
             val userRole = when (currentUid) {
                 tw.nurseAUid -> "A"
                 tw.nurseBUid -> "B"
                 tw.nurseCUid -> "C"
-                else -> "A"
+                else -> ""
             }
 
             val pA = TransferChatParticipant(
@@ -453,31 +483,36 @@ class TransferChatViewModel @Inject constructor(
         if (!state.canConfirm) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSubmittingAction = true, error = null)
+            _uiState.update { it.copy(isSubmittingAction = true, actionError = null) }
             val result = transferRequestRepository.respondToMatch(state.matchId, Decision.CONFIRM)
 
             result.fold(
                 onSuccess = { response ->
-                    val updatedParticipants = state.participants.map {
-                        if (it.isCurrentUser) it.copy(confirmed = true) else it
-                    }
-                    val isTerminal = response.newStatus in listOf("CONFIRMED", "CANCELLED", "EXPIRED")
+                    val isTerminal = TransferChatUiState.isTerminalStatus(response.newStatus)
                     val isAllConfirmed = response.newStatus == "CONFIRMED"
 
-                    _uiState.value = _uiState.value.copy(
-                        isSubmittingAction = false,
-                        serverStatus = response.newStatus,
-                        isUserConfirmed = true,
-                        isAllConfirmed = isAllConfirmed,
-                        participants = updatedParticipants,
-                        isTerminal = isTerminal
-                    )
+                    _uiState.update { current ->
+                        val updatedParticipants = current.participants.map {
+                            if (it.isCurrentUser) it.copy(confirmed = true) else it
+                        }
+                        current.copy(
+                            isSubmittingAction = false,
+                            serverStatus = response.newStatus,
+                            isUserConfirmed = true,
+                            isAllConfirmed = isAllConfirmed,
+                            participants = updatedParticipants,
+                            isTerminal = isTerminal,
+                            actionError = null
+                        )
+                    }
                 },
                 onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isSubmittingAction = false,
-                        error = error.message ?: "Failed to confirm mutual transfer."
-                    )
+                    _uiState.update { current ->
+                        current.copy(
+                            isSubmittingAction = false,
+                            actionError = error.message ?: "Failed to confirm mutual transfer."
+                        )
+                    }
                 }
             )
         }
@@ -488,29 +523,38 @@ class TransferChatViewModel @Inject constructor(
         if (!state.canLeave) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSubmittingAction = true, error = null)
+            _uiState.update { it.copy(isSubmittingAction = true, actionError = null) }
             val result = transferRequestRepository.respondToMatch(state.matchId, Decision.LEAVE)
 
             result.fold(
                 onSuccess = {
-                    _uiState.value = _uiState.value.copy(
-                        isSubmittingAction = false,
-                        serverStatus = "CANCELLED",
-                        isTerminal = true
-                    )
+                    _uiState.update { current ->
+                        current.copy(
+                            isSubmittingAction = false,
+                            serverStatus = "CANCELLED",
+                            isTerminal = true,
+                            actionError = null
+                        )
+                    }
                     onComplete()
                 },
                 onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isSubmittingAction = false,
-                        error = error.message ?: "Failed to leave transfer team."
-                    )
+                    _uiState.update { current ->
+                        current.copy(
+                            isSubmittingAction = false,
+                            actionError = error.message ?: "Failed to leave transfer team."
+                        )
+                    }
                 }
             )
         }
     }
 
+    fun clearActionError() {
+        _uiState.update { it.copy(actionError = null) }
+    }
+
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

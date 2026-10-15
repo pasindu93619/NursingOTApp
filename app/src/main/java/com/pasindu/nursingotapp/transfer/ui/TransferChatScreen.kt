@@ -119,6 +119,7 @@ fun TransferChatScreen(
     onLeaveTeam: () -> Unit,
     onRetry: () -> Unit = {},
     onClearSendError: () -> Unit = {},
+    onClearActionError: () -> Unit = {},
     onProceedToInstructions: (matchId: String) -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
@@ -418,6 +419,44 @@ fun TransferChatScreen(
                                         },
                                         onDismiss = onClearSendError
                                     )
+                                }
+                            }
+
+                            // Inline notice if confirmation or leave team action failed
+                            if (uiState.actionError != null) {
+                                item {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = SoftRedPill,
+                                        border = BorderStroke(1.dp, SoftRedBorder),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                Icons.Default.ErrorOutline,
+                                                contentDescription = null,
+                                                tint = CriticalRed,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = uiState.actionError,
+                                                color = CriticalRed,
+                                                fontSize = 13.sp,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            TextButton(
+                                                onClick = onClearActionError,
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                            ) {
+                                                Text("Dismiss", color = CriticalRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
                                 }
                             }
 

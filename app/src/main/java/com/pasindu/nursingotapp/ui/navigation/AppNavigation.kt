@@ -361,6 +361,9 @@ fun AppNavigation() {
                     },
                     onClearSendError = {
                         chatViewModel.clearSendError()
+                    },
+                    onClearActionError = {
+                        chatViewModel.clearActionError()
                     }
                 )
             }

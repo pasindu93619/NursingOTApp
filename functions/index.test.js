@@ -263,7 +263,7 @@ function evalMessageCreate(auth, matchId, messageId, matchDoc, requestTime, reso
 
   if (typeof resourceData.text !== "string") return false;
   if (resourceData.text.length === 0 || resourceData.text.length > 500) return false;
-  if (!/.*\S.*/.test(resourceData.text)) return false;
+  if (!/[\s\S]*\S[\s\S]*/.test(resourceData.text)) return false;
 
   if (typeof resourceData.senderHospitalId !== "string" || resourceData.senderHospitalId.length === 0) return false;
   if (typeof resourceData.senderGrade !== "string" || resourceData.senderGrade.length === 0) return false;
@@ -644,6 +644,12 @@ test("19 - Validation: Whitespace-only text is denied", () => {
   const msg2 = { ...makeValidMessage("nurse-A"), text: "\t\n  " };
   assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg1), false);
   assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg2), false);
+});
+
+test("19b - Validation: Multiline text with line breaks is allowed", () => {
+  const multilineText = "Hello Nurse B,\n\nAre you available for the shift swap next Monday?\nThanks!";
+  const msg = { ...makeValidMessage("nurse-A"), text: multilineText };
+  assert.equal(evalMessageCreate({ uid: "nurse-A" }, "match-1", "msg-1", mockMatch2Way, validReqTime, msg), true);
 });
 
 test("20 - Validation: 500 characters text is allowed", () => {
