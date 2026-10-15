@@ -237,12 +237,12 @@ fun TransferInstructionsScreen(
                     Column {
                         Text(
                             text = "Transfer Instructions",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Administrative roadmap & checklist",
+                            text = "Your next steps, documents & checklist",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -291,7 +291,7 @@ fun TransferInstructionsScreen(
                         modifier = Modifier.size(36.dp)
                     )
                     Text(
-                        text = "Loading transfer details...",
+                        text = "Preparing your transfer roadmap…",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
