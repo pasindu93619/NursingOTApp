@@ -46,6 +46,18 @@ function errorResponse(error: string, message: string, status = 400): Response {
   );
 }
 
+async function safeJsonParse<T = unknown>(request: Request): Promise<{ ok: true; data: T } | { ok: false; response: Response }> {
+  try {
+    const data = (await request.json()) as T;
+    return { ok: true, data };
+  } catch (_err: unknown) {
+    return {
+      ok: false,
+      response: errorResponse("InvalidRequest", "Malformed JSON body", 400)
+    };
+  }
+}
+
 function resolveTokenProvider(env: Env): (() => Promise<string>) | Response {
   if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
     return createServiceAccountTokenProvider({
@@ -125,9 +137,12 @@ export default {
         }
         const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
 
-        const body = await request.json();
-        const decisionReq = body as MatchDecisionRequest;
-        if (!decisionReq.matchId || !decisionReq.decision) {
+        const parseResult = await safeJsonParse<MatchDecisionRequest>(request);
+        if (!parseResult.ok) {
+          return parseResult.response;
+        }
+        const decisionReq = parseResult.data;
+        if (!decisionReq || !decisionReq.matchId || !decisionReq.decision) {
           return errorResponse("InvalidRequest", "matchId and decision are required", 400);
         }
         if (!["ACCEPT", "REJECT", "CONFIRM", "LEAVE"].includes(decisionReq.decision)) {
@@ -141,6 +156,9 @@ export default {
         }
         if (err instanceof MatchServiceError) {
           return errorResponse(err.code, err.message, err.statusCode);
+        }
+        if (err instanceof SyntaxError) {
+          return errorResponse("InvalidRequest", "Malformed JSON body", 400);
         }
         const message = err instanceof Error ? err.message : "Internal Server Error";
         return errorResponse("InternalError", message, 500);
@@ -218,8 +236,12 @@ export default {
           return jsonResponse(result, 200);
         }
         if (request.method === "POST") {
-          const body = await request.json() as { matchId?: unknown };
-          if (typeof body.matchId !== "string" || !body.matchId.trim()) {
+          const parseResult = await safeJsonParse<{ matchId?: unknown }>(request);
+          if (!parseResult.ok) {
+            return parseResult.response;
+          }
+          const body = parseResult.data;
+          if (!body || typeof body.matchId !== "string" || !body.matchId.trim()) {
             return errorResponse("InvalidRequest", "matchId is required", 400);
           }
           const result = await reportTransferCompletion(verifiedResult.uid, body.matchId, firestoreClient);
@@ -229,6 +251,7 @@ export default {
       } catch (err: unknown) {
         if (err instanceof AuthError) return errorResponse("Unauthorized", err.message, err.statusCode);
         if (err instanceof MatchServiceError) return errorResponse(err.code, err.message, err.statusCode);
+        if (err instanceof SyntaxError) return errorResponse("InvalidRequest", "Malformed JSON body", 400);
         const message = err instanceof Error ? err.message : "Internal Server Error";
         return errorResponse("InternalError", message, 500);
       }

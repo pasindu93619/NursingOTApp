@@ -123,30 +123,7 @@ service cloud.firestore {
 
       allow list: if false;
 
-      allow create, delete: if false;
-
-      allow update: if request.auth != null
-        && (
-          (
-            request.auth.uid == resource.data.nurseAUid
-            && request.resource.data.nurseAUid == resource.data.nurseAUid
-            && request.resource.data.nurseBUid == resource.data.nurseBUid
-            && request.resource.data.status == resource.data.status
-            && request.resource.data.createdAt == resource.data.createdAt
-            && request.resource.data.expiresAt == resource.data.expiresAt
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedByA', 'rejectedByA', 'updatedAt'])
-          )
-          ||
-          (
-            request.auth.uid == resource.data.nurseBUid
-            && request.resource.data.nurseAUid == resource.data.nurseAUid
-            && request.resource.data.nurseBUid == resource.data.nurseBUid
-            && request.resource.data.status == resource.data.status
-            && request.resource.data.createdAt == resource.data.createdAt
-            && request.resource.data.expiresAt == resource.data.expiresAt
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedByB', 'rejectedByB', 'updatedAt'])
-          )
-        );
+      allow create, update, delete: if false;
 
       /*
        * Mutual Transfer Chat Messages Subcollection.

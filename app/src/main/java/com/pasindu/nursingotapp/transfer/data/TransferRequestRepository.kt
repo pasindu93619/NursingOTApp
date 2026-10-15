@@ -226,7 +226,7 @@ class TransferRequestRepository @Inject constructor(
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get user ID")
             }
 
-        Log.d(TAG, "syncActiveRequest: authenticated uid=$userId")
+        Log.d(TAG, "syncActiveRequest: authenticated user present")
 
         // Read server-owned state before publishing local SEARCHING data.
         val remoteState = rds.fetchTransferRequest(userId).getOrElse { error ->

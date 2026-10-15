@@ -201,24 +201,7 @@ function evalMatchDelete() {
   return false;
 }
 
-function evalMatchUpdate(auth, existing, next) {
-  if (auth == null) return false;
-  if (next.nurseAUid !== existing.nurseAUid || next.nurseBUid !== existing.nurseBUid) return false;
-  if (next.status !== existing.status) return false;
-  if (next.createdAt !== existing.createdAt || next.expiresAt !== existing.expiresAt) return false;
-
-  const affectedKeys = Object.keys(next).filter(k => next[k] !== existing[k]);
-
-  if (auth.uid === existing.nurseAUid) {
-    const allowed = ["acceptedByA", "rejectedByA", "updatedAt"];
-    return affectedKeys.every(k => allowed.includes(k));
-  }
-
-  if (auth.uid === existing.nurseBUid) {
-    const allowed = ["acceptedByB", "rejectedByB", "updatedAt"];
-    return affectedKeys.every(k => allowed.includes(k));
-  }
-
+function evalMatchUpdate() {
   return false;
 }
 
@@ -392,7 +375,7 @@ test("participant can read own match", () => {
   assert.equal(evalMatchGet({ uid: "nurse-B" }, matchDoc), true);
 });
 
-test("participant can update ONLY their own acceptance/rejection field", () => {
+test("participant cannot update match directly (writes disabled in client rules)", () => {
   const existing = {
     nurseAUid: "nurse-A",
     nurseBUid: "nurse-B",
@@ -403,17 +386,12 @@ test("participant can update ONLY their own acceptance/rejection field", () => {
     acceptedByB: false
   };
 
-  // Nurse A accepts: allowed
-  assert.equal(evalMatchUpdate({ uid: "nurse-A" }, existing, { ...existing, acceptedByA: true }), true);
-
-  // Nurse A tries to accept for Nurse B: denied
+  assert.equal(evalMatchUpdate({ uid: "nurse-A" }, existing, { ...existing, acceptedByA: true }), false);
   assert.equal(evalMatchUpdate({ uid: "nurse-A" }, existing, { ...existing, acceptedByB: true }), false);
-
-  // Nurse B accepts: allowed
-  assert.equal(evalMatchUpdate({ uid: "nurse-B" }, existing, { ...existing, acceptedByB: true }), true);
+  assert.equal(evalMatchUpdate({ uid: "nurse-B" }, existing, { ...existing, acceptedByB: true }), false);
 });
 
-test("participant cannot change match status", () => {
+test("participant cannot change match status directly", () => {
   const existing = {
     nurseAUid: "nurse-A",
     nurseBUid: "nurse-B",
@@ -426,7 +404,7 @@ test("participant cannot change match status", () => {
   assert.equal(evalMatchUpdate({ uid: "nurse-A" }, existing, { ...existing, status: "FINALIZED" }), false);
 });
 
-test("participant cannot change participants", () => {
+test("participant cannot change participants directly", () => {
   const existing = {
     nurseAUid: "nurse-A",
     nurseBUid: "nurse-B",
@@ -438,7 +416,7 @@ test("participant cannot change participants", () => {
   assert.equal(evalMatchUpdate({ uid: "nurse-A" }, existing, { ...existing, nurseBUid: "nurse-C" }), false);
 });
 
-test("participant cannot change grade metadata or timestamps", () => {
+test("participant cannot change grade metadata or timestamps directly", () => {
   const existing = {
     nurseAUid: "nurse-A",
     nurseBUid: "nurse-B",
