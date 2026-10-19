@@ -464,7 +464,7 @@ class TransferMatchDecisionTest {
         viewModel.acceptMatch("MATCH-001")
 
         testScheduler.runCurrent()
-        assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
+        assertTrue("Expected initial AlreadyAccepted state, but actual UI state was: ${viewModel.uiState.value}", viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
         viewModel.onScreenExit()
     }
 
@@ -725,7 +725,7 @@ class TransferMatchDecisionTest {
         testDispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertTrue("Nurse A who already accepted should be in AlreadyAccepted", state is TransferMatchUiState.AlreadyAccepted)
+        assertTrue("Expected AlreadyAccepted, but actual UI state was: $state", state is TransferMatchUiState.AlreadyAccepted)
         val match = (state as TransferMatchUiState.AlreadyAccepted).match
         assertEquals(MatchDecisionStatus.ACCEPTED, match.myStatus)
         assertEquals(MatchDecisionStatus.PENDING, match.partnerStatus)
