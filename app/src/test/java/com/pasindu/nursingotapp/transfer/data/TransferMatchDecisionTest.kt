@@ -722,7 +722,7 @@ class TransferMatchDecisionTest {
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
-        testScheduler.runCurrent()
+        testDispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue("Nurse A who already accepted should be in AlreadyAccepted", state is TransferMatchUiState.AlreadyAccepted)
@@ -774,7 +774,7 @@ class TransferMatchDecisionTest {
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
-        testScheduler.runCurrent()
+        testDispatcher.scheduler.runCurrent()
         assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
         // Simulate the server-side match document being cancelled, then let the
@@ -788,8 +788,8 @@ class TransferMatchDecisionTest {
             expiresAt = "2026-10-15T12:00:00Z",
             acceptedByA = true
         )
-        testScheduler.advanceTimeBy(3_000L)
-        testScheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.runCurrent()
 
         val finalState = viewModel.uiState.value
         assertTrue("Polling a cancelled match should return the request to the pool", finalState is TransferMatchUiState.Error)
