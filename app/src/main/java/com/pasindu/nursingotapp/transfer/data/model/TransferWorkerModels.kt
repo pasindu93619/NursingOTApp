@@ -111,18 +111,10 @@ sealed interface WorkerSyncResult {
             get() = directMatch ?: error("Expected direct 2-way match but was $matchType")
     }
 
-    open class NoMatch(open val message: String) : WorkerSyncResult {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is NoMatch) return false
-            return message == other.message
-        }
-        override fun hashCode(): Int = message.hashCode()
-        override fun toString(): String = "NoMatch(message=$message)"
-    }
+    data class NoMatch(val message: String) : WorkerSyncResult
     data class RequestCompleted(val message: String) : WorkerSyncResult
     data class RequestWithdrawn(val message: String) : WorkerSyncResult
-    data class ReturnedToPool(override val message: String) : NoMatch(message)
+    data class ReturnedToPool(val message: String) : WorkerSyncResult
     data class Conflict(val message: String) : WorkerSyncResult
     data class AuthError(val message: String) : WorkerSyncResult
     data class NetworkError(val message: String, val cause: Throwable? = null) : WorkerSyncResult

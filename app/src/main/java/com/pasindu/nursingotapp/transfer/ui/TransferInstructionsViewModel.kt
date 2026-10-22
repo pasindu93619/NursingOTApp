@@ -60,7 +60,9 @@ class TransferInstructionsViewModel @Inject constructor(
                             isLoading = false,
                             matchId = matchId,
                             matchType = "DIRECT_2_WAY",
-                            error = (syncResult as? WorkerSyncResult.NoMatch)?.message ?: "Unable to load match details."
+                            error = (syncResult as? WorkerSyncResult.NoMatch)?.message
+                                ?: (syncResult as? WorkerSyncResult.ReturnedToPool)?.message
+                                ?: "Unable to load match details."
                         )
                     }
                 },

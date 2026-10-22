@@ -1100,7 +1100,7 @@ class TransferRequestRepositoryTest {
         )
 
         val syncResult = repo.syncActiveRequest()
-        assertTrue("Expected NoMatch on server release", syncResult is WorkerSyncResult.NoMatch)
+        assertTrue("Expected ReturnedToPool on server release", syncResult is WorkerSyncResult.ReturnedToPool)
 
         val updatedEntity = fakeDao.lastUpserted
         assertNotNull(updatedEntity)
@@ -1155,7 +1155,7 @@ class TransferRequestRepositoryTest {
         )
 
         val syncResult = repo.syncActiveRequest()
-        assertTrue("Expected NoMatch on server release", syncResult is WorkerSyncResult.NoMatch)
+        assertTrue("Expected ReturnedToPool on server release", syncResult is WorkerSyncResult.ReturnedToPool)
 
         val updatedEntity = fakeDao.lastUpserted
         assertNotNull(updatedEntity)
