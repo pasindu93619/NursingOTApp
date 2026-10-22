@@ -87,6 +87,7 @@ private val rootDestinations = listOf(
 fun AppNavigation() {
     val navController = rememberNavController()
     val viewModel: NursingViewModel = hiltViewModel()
+    val userProfile by viewModel.userProfile.collectAsState()
     val transferRequestViewModel: TransferRequestViewModel = hiltViewModel()
     val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
     val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
@@ -214,7 +215,7 @@ fun AppNavigation() {
             }
             composable("transfer_request") {
                 TransferRequestScreen(
-                    profile = viewModel.userProfile.value,
+                    profile = userProfile,
                     hospitalOptions = transferHospitalOptions,
                     hospitalDirectoryLoading = transferHospitalLoading,
                     hospitalDirectoryError = transferHospitalLoadError,
