@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.pasindu.nursingotapp.transfer.data.model.TransferIdentityCredentialType
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Stores the nurse's self-declared Transfer identity credentials.
@@ -13,6 +14,7 @@ import javax.inject.Inject
  * An authoritative verification source can be added later without changing
  * the Transfer matching model.
  */
+@Singleton
 class TransferIdentityRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore

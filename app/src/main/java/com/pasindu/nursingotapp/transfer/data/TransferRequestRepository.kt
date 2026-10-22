@@ -13,8 +13,11 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -30,6 +33,7 @@ import kotlinx.serialization.json.Json
  * Remote synchronization publishes the request to Firestore and triggers
  * Cloudflare Worker matching without blocking the UI.
  */
+@Singleton
 class TransferRequestRepository @Inject constructor(
     private val dao: TransferActiveCacheDao,
     private val profileDao: ProfileDao,
@@ -42,6 +46,8 @@ class TransferRequestRepository @Inject constructor(
     companion object {
         private const val TAG = "TransferSync"
     }
+
+    private val syncMutex = Mutex()
 
     // ---------------------------------------------------------------------------
     // JSON configuration — plain array, no surrounding whitespace.
@@ -182,7 +188,11 @@ class TransferRequestRepository @Inject constructor(
      * 5. On no match: sets SYNCED (request remains active in pool).
      * 6. On failure: does NOT delete Room request; retains local data and marks ERROR.
      */
-    suspend fun syncActiveRequest(): WorkerSyncResult {
+    suspend fun syncActiveRequest(): WorkerSyncResult = syncMutex.withLock {
+        syncActiveRequestLocked()
+    }
+
+    private suspend fun syncActiveRequestLocked(): WorkerSyncResult {
         val cachedEntity = dao.getOnce()
             ?: return WorkerSyncResult.NoMatch("No active local transfer request")
 

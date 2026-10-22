@@ -8,9 +8,11 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.zip.GZIPInputStream
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+@Singleton
 class HospitalReferenceRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
@@ -31,7 +33,7 @@ class HospitalReferenceRepository @Inject constructor(
 
             require(hospitals.size == EXPECTED_HOSPITAL_COUNT) {
                 "Hospital reference dataset integrity check failed: expected " +
-                    "$EXPECTED_HOSPITAL_COUNT records, found \${hospitals.size}"
+                    "$EXPECTED_HOSPITAL_COUNT records, found ${hospitals.size}"
             }
 
             require(hospitals.map { it.hospitalId }.distinct().size == hospitals.size) {

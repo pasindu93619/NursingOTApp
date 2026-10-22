@@ -33,7 +33,7 @@ object TransferModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+    fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance("asia-south1")
 
     @Provides
     @Singleton

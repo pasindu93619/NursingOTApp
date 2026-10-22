@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.transfer.data.model.TransferProfileDocument
 import com.pasindu.nursingotapp.transfer.data.model.TransferVerificationStatus
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -21,6 +22,7 @@ import kotlinx.coroutines.tasks.await
  * Current MVP identity records are SELF_DECLARED, so verified publication
  * remains blocked until an authoritative verification source is integrated.
  */
+@Singleton
 class TransferProfileRepository @Inject constructor(
     private val profileDao: ProfileDao,
     private val auth: FirebaseAuth,

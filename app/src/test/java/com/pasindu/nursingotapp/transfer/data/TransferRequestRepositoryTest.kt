@@ -13,6 +13,9 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -1160,5 +1163,155 @@ class TransferRequestRepositoryTest {
         assertEquals("EXPIRED", updatedEntity?.matchStatus)
         assertNull(updatedEntity?.matchCycleId)
         assertEquals(5000L, updatedEntity?.updatedAt)
+    }
+
+    @Test
+    fun `concurrent syncActiveRequest calls serialize via syncMutex and invoke findAndLockMatch once when match is locked`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0010",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0332"))
+        )
+
+        val matchedDirect = WorkerDirectMatch(
+            nurseAUid = "nurse-a",
+            nurseBUid = "nurse-b",
+            nurseACurrentHospitalId = "MOH2026-0010",
+            nurseBCurrentHospitalId = "MOH2026-0332",
+            nurseADestinationHospitalId = "MOH2026-0332",
+            nurseBDestinationHospitalId = "MOH2026-0010",
+            nurseAGrade = "Grade I",
+            nurseBGrade = "Grade I",
+            isSameGrade = true,
+            nurseAPreferenceRank = 1,
+            nurseBPreferenceRank = 1,
+            combinedPreferenceRank = 2,
+            priorityReason = "SAME_GRADE_PRIORITY"
+        )
+
+        var currentRemoteRequest: RemoteTransferRequestState? = null
+        var currentRemoteMatch: RemoteMatchState? = null
+        var publishCalls = 0
+
+        val statefulRemote = object : TransferRemoteDataSource {
+            override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+                Result.success(currentRemoteRequest)
+
+            override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+                Result.success(currentRemoteMatch)
+
+            override suspend fun publishTransferRequest(
+                userId: String,
+                request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+            ): Result<Unit> {
+                publishCalls++
+                currentRemoteRequest = RemoteTransferRequestState(
+                    status = "SEARCHING",
+                    locked = false,
+                    currentMatchId = null,
+                    updatedAt = request.updatedAt,
+                    currentHospitalId = request.currentHospitalId
+                )
+                return Result.success(Unit)
+            }
+
+            override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
+                Result.success(Unit)
+
+            override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+                kotlinx.coroutines.flow.flowOf(Result.success(currentRemoteMatch))
+        }
+
+        val workerEntered = CompletableDeferred<Unit>()
+        val releaseWorker = CompletableDeferred<Unit>()
+        var findAndLockCalls = 0
+        var inFlightWorkerCalls = 0
+        var maxConcurrentWorkerCalls = 0
+
+        val gatingWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
+                findAndLockCalls++
+                inFlightWorkerCalls++
+                if (inFlightWorkerCalls > maxConcurrentWorkerCalls) {
+                    maxConcurrentWorkerCalls = inFlightWorkerCalls
+                }
+                workerEntered.complete(Unit)
+                releaseWorker.await()
+                inFlightWorkerCalls--
+
+                currentRemoteRequest = RemoteTransferRequestState(
+                    status = "MATCHED",
+                    locked = true,
+                    currentMatchId = "match-concurrent-1",
+                    updatedAt = 9000L,
+                    currentHospitalId = "MOH2026-0010"
+                )
+                currentRemoteMatch = RemoteMatchState(
+                    matchId = "match-concurrent-1",
+                    matchType = "DIRECT_2_WAY",
+                    directMatch = matchedDirect,
+                    status = "PENDING_CONFIRMATION",
+                    createdAt = "2026-10-22T10:00:00Z",
+                    expiresAt = "2026-10-24T10:00:00Z"
+                )
+
+                return WorkerSyncResult.MatchFound(
+                    matchId = "match-concurrent-1",
+                    matchType = "DIRECT_2_WAY",
+                    directMatch = matchedDirect,
+                    createdAt = "2026-10-22T10:00:00Z",
+                    expiresAt = "2026-10-24T10:00:00Z",
+                    status = "PENDING_CONFIRMATION"
+                )
+            }
+
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse =
+                error("Not used")
+
+            override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
+                WorkerWithdrawResponse(withdrawn = true)
+
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> =
+                emptyList()
+
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+        }
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = statefulRemote,
+            workerApiClient = gatingWorker
+        )
+
+        val firstCall = async(start = CoroutineStart.UNDISPATCHED) {
+            repo.syncActiveRequest()
+        }
+        workerEntered.await()
+
+        val secondCall = async(start = CoroutineStart.UNDISPATCHED) {
+            repo.syncActiveRequest()
+        }
+
+        // While the first sync holds syncMutex, the second sync must not enter findAndLockMatch or republish
+        assertEquals(1, findAndLockCalls)
+        assertEquals(1, publishCalls)
+
+        releaseWorker.complete(Unit)
+
+        val firstResult = firstCall.await()
+        val secondResult = secondCall.await()
+
+        assertTrue(firstResult is WorkerSyncResult.MatchFound)
+        assertTrue(secondResult is WorkerSyncResult.MatchFound)
+        assertEquals("match-concurrent-1", (firstResult as WorkerSyncResult.MatchFound).matchId)
+        assertEquals("match-concurrent-1", (secondResult as WorkerSyncResult.MatchFound).matchId)
+        assertEquals(1, maxConcurrentWorkerCalls)
+        assertEquals("findAndLockMatch must be invoked only once across serialized sync calls", 1, findAndLockCalls)
+        assertEquals("publishTransferRequest must be invoked only once", 1, publishCalls)
     }
 }
