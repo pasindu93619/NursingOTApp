@@ -12,17 +12,20 @@ import com.pasindu.nursingotapp.transfer.data.model.CacheSyncStatus
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runTest as coroutinesRunTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -86,6 +89,7 @@ class TransferRequestViewModelTest {
     }
 
     private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+    private val createdViewModels = mutableListOf<TransferRequestViewModel>()
     private lateinit var fakeDao: FakeTransferActiveCacheDao
     private lateinit var fakeProfileDao: FakeProfileDao
     private lateinit var repository: TransferRequestRepository
@@ -117,14 +121,25 @@ class TransferRequestViewModelTest {
 
     @After
     fun tearDown() {
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         Dispatchers.resetMain()
+    }
+
+    private fun runTest(block: suspend TestScope.() -> Unit) = coroutinesRunTest {
+        try {
+            block()
+        } finally {
+            createdViewModels.forEach { it.viewModelScope.cancel() }
+            createdViewModels.clear()
+        }
     }
 
     private fun createViewModel(): TransferRequestViewModel =
         TransferRequestViewModel(
             hospitalReferenceRepository = dummyHospitalRepo,
             transferRequestRepository = repository
-        )
+        ).also { createdViewModels.add(it) }
 
     @Test
     fun `1 - newly submitted request appears as active searching`() = runTest {
