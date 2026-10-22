@@ -1,9 +1,11 @@
 package com.pasindu.nursingotapp.di
 
+import com.pasindu.nursingotapp.transfer.data.AndroidTransferSyncLogger
 import com.pasindu.nursingotapp.transfer.data.FirebaseAuthTokenProvider
 import com.pasindu.nursingotapp.transfer.data.FirestoreTransferRemoteDataSource
 import com.pasindu.nursingotapp.transfer.data.HttpTransferWorkerApiClient
 import com.pasindu.nursingotapp.transfer.data.TransferRemoteDataSource
+import com.pasindu.nursingotapp.transfer.data.TransferSyncLogger
 import com.pasindu.nursingotapp.transfer.data.TransferTokenProvider
 import com.pasindu.nursingotapp.transfer.data.TransferWorkerApiClient
 import dagger.Binds
@@ -47,6 +49,12 @@ abstract class TransferNetworkBindingModule {
     abstract fun bindTransferChatRepository(
         impl: com.pasindu.nursingotapp.transfer.data.FirestoreTransferChatRepository
     ): com.pasindu.nursingotapp.transfer.data.TransferChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTransferSyncLogger(
+        impl: AndroidTransferSyncLogger
+    ): TransferSyncLogger
 }
 
 @Module

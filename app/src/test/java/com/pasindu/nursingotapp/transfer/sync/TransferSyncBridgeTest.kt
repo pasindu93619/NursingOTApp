@@ -467,10 +467,31 @@ class TransferSyncBridgeTest {
     // 18. No Firebase token is logged
     @Test
     fun test18_noFirebaseTokenLogged() = runTest {
-        tokenProvider.token = "SENSITIVE_BEARER_TOKEN"
-        repository.saveRequest("HOSP-001", RankedPreferences(listOf("HOSP-002")))
-        val result = repository.syncActiveRequest()
+        val loggedMessages = mutableListOf<String>()
+        val recordingLogger = object : com.pasindu.nursingotapp.transfer.data.TransferSyncLogger {
+            override fun d(tag: String, message: String) {
+                loggedMessages.add("$tag: $message")
+            }
 
+            override fun e(tag: String, message: String, throwable: Throwable?) {
+                loggedMessages.add("$tag: $message ${throwable?.message.orEmpty()}")
+            }
+        }
+        val repoWithLogger = TransferRequestRepository(
+            dao = dao,
+            profileDao = profileDao,
+            tokenProvider = tokenProvider,
+            remoteDataSource = remoteDataSource,
+            workerApiClient = workerApiClient,
+            logger = recordingLogger
+        )
+
+        tokenProvider.token = "SENSITIVE_BEARER_TOKEN"
+        repoWithLogger.saveRequest("HOSP-001", RankedPreferences(listOf("HOSP-002")))
+        val result = repoWithLogger.syncActiveRequest()
+
+        assertTrue(loggedMessages.isNotEmpty())
+        assertFalse(loggedMessages.joinToString("\n").contains("SENSITIVE_BEARER_TOKEN"))
         assertFalse(result.toString().contains("SENSITIVE_BEARER_TOKEN"))
     }
 }

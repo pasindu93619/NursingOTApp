@@ -1,7 +1,5 @@
 package com.pasindu.nursingotapp.transfer.data
 
-import android.util.Log
-
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
@@ -37,7 +35,8 @@ class TransferRequestRepository @Inject constructor(
     private val profileDao: ProfileDao,
     private val tokenProvider: TransferTokenProvider? = null,
     private val remoteDataSource: TransferRemoteDataSource? = null,
-    private val workerApiClient: TransferWorkerApiClient? = null
+    private val workerApiClient: TransferWorkerApiClient? = null,
+    private val logger: TransferSyncLogger = NoOpTransferSyncLogger
 ) {
 
     companion object {
@@ -225,16 +224,16 @@ class TransferRequestRepository @Inject constructor(
 
         val userId = tp.getCurrentUserId()
             ?: run {
-                Log.e(TAG, "Authentication failure: Unable to get user ID")
+                logger.e(TAG, "Authentication failure: Unable to get user ID")
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get user ID")
             }
 
-        Log.d(TAG, "syncActiveRequest: authenticated user present")
+        logger.d(TAG, "syncActiveRequest: authenticated user present")
 
         // Read server-owned state before publishing local SEARCHING data.
         val remoteState = rds.fetchTransferRequest(userId).getOrElse { error ->
-            Log.e(
+            logger.e(
                 TAG,
                 "Firestore fetchTransferRequest FAILED: ${error.javaClass.simpleName}: ${error.message}",
                 error
@@ -246,7 +245,7 @@ class TransferRequestRepository @Inject constructor(
             )
         }
 
-        Log.d(
+        logger.d(
             TAG,
             "Firestore fetchTransferRequest OK: exists=${remoteState != null}, " +
                 "status=${remoteState?.status}, locked=${remoteState?.locked}, " +
@@ -355,7 +354,7 @@ class TransferRequestRepository @Inject constructor(
                 // updatedAt is intentionally UNCHANGED so it does not trigger a republish
             )
             dao.upsert(resetEntity)
-            Log.d(TAG, "Reconciled local MATCHED state to PENDING with matchStatus=$finalMatchStatus")
+            logger.d(TAG, "Reconciled local MATCHED state to PENDING with matchStatus=$finalMatchStatus")
             return WorkerSyncResult.NoMatch("Match has ended ($finalMatchStatus); request returned to pool")
         }
 
@@ -380,7 +379,7 @@ class TransferRequestRepository @Inject constructor(
             localChangedSinceRemote
 
         if (shouldPublishRemote) {
-            Log.d(
+            logger.d(
                 TAG,
                 "Publishing transfer request: current=${domain.currentHospitalId}, " +
                     "preferences=${domain.rankedPreferences.hospitalIds.size}, grade=${domain.grade}"
@@ -388,7 +387,7 @@ class TransferRequestRepository @Inject constructor(
             val publishResult = rds.publishTransferRequest(userId, domain)
             if (publishResult.isFailure) {
                 val err = publishResult.exceptionOrNull()
-                Log.e(
+                logger.e(
                     TAG,
                     "Firestore publishTransferRequest FAILED: " +
                         "${err?.javaClass?.simpleName}: ${err?.message}",
@@ -400,9 +399,9 @@ class TransferRequestRepository @Inject constructor(
                     err
                 )
             }
-            Log.d(TAG, "Firestore publishTransferRequest OK")
+            logger.d(TAG, "Firestore publishTransferRequest OK")
         } else {
-            Log.d(
+            logger.d(
                 TAG,
                 "Remote request already SEARCHING and local cache is SYNCED; " +
                     "skipping redundant Firestore write before matching"
@@ -411,15 +410,15 @@ class TransferRequestRepository @Inject constructor(
 
         val token = tp.getFirebaseIdToken()
             ?: run {
-                Log.e(TAG, "Firebase ID token acquisition FAILED")
+                logger.e(TAG, "Firebase ID token acquisition FAILED")
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.AuthError("Authentication failure: Unable to get ID token")
             }
 
-        Log.d(TAG, "Firebase ID token acquired successfully")
-        Log.d(TAG, "Calling Cloudflare matching Worker")
+        logger.d(TAG, "Firebase ID token acquired successfully")
+        logger.d(TAG, "Calling Cloudflare matching Worker")
         val workerResult = api.findAndLockMatch(token)
-        Log.d(TAG, "Cloudflare matching Worker returned: ${workerResult::class.simpleName}")
+        logger.d(TAG, "Cloudflare matching Worker returned: ${workerResult::class.simpleName}")
 
         when (workerResult) {
             is WorkerSyncResult.MatchFound -> {

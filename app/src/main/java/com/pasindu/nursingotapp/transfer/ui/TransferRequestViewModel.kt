@@ -53,6 +53,8 @@ class TransferRequestViewModel @Inject constructor(
     // Initialisation
     // ---------------------------------------------------------------------------
 
+    private var automaticPollingJob: kotlinx.coroutines.Job? = null
+
     init {
         loadHospitals()
         observeActiveRequest()
@@ -65,7 +67,8 @@ class TransferRequestViewModel @Inject constructor(
      * checks for a remote MATCHED state before publishing local SEARCHING data.
      */
     private fun startAutomaticMatchPolling() {
-        viewModelScope.launch {
+        automaticPollingJob?.cancel()
+        automaticPollingJob = viewModelScope.launch {
             while (true) {
                 val request = _activeRequest.value
                 val pollIntervalMs = if (request != null && (
@@ -96,6 +99,12 @@ class TransferRequestViewModel @Inject constructor(
                 delay(pollIntervalMs)
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        automaticPollingJob?.cancel()
+        automaticPollingJob = null
     }
 
     // ---------------------------------------------------------------------------

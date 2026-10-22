@@ -300,7 +300,12 @@ class TransferMatchDecisionTest {
     }
 
     private fun createViewModel(): TransferMatchViewModel =
-        TransferMatchViewModel(repository, hospitalRepo)
+        TransferMatchViewModel(repository, hospitalRepo).also {
+            if (::viewModel.isInitialized) {
+                viewModel.onScreenExit()
+            }
+            viewModel = it
+        }
 
     // 1. Serialization
     @Test
