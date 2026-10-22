@@ -379,11 +379,7 @@ class TransferRequestRepository @Inject constructor(
             localChangedSinceRemote
 
         if (shouldPublishRemote) {
-            logger.d(
-                TAG,
-                "Publishing transfer request: current=${domain.currentHospitalId}, " +
-                    "preferences=${domain.rankedPreferences.hospitalIds.size}, grade=${domain.grade}"
-            )
+            logger.d(TAG, "Publishing transfer request to server")
             val publishResult = rds.publishTransferRequest(userId, domain)
             if (publishResult.isFailure) {
                 val err = publishResult.exceptionOrNull()

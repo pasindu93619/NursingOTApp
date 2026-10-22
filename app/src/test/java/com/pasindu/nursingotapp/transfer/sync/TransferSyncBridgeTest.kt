@@ -491,7 +491,11 @@ class TransferSyncBridgeTest {
         val result = repoWithLogger.syncActiveRequest()
 
         assertTrue(loggedMessages.isNotEmpty())
-        assertFalse(loggedMessages.joinToString("\n").contains("SENSITIVE_BEARER_TOKEN"))
+        val combinedLogs = loggedMessages.joinToString("\n")
+        assertFalse(combinedLogs.contains("SENSITIVE_BEARER_TOKEN"))
+        assertFalse(combinedLogs.contains("test-nurse-uid-777"))
+        assertFalse(combinedLogs.contains("HOSP-001"))
+        assertFalse(combinedLogs.contains("Grade I"))
         assertFalse(result.toString().contains("SENSITIVE_BEARER_TOKEN"))
     }
 }
