@@ -15,7 +15,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.pasindu.nursingotapp.ui.navigation.AppNavigation
 import com.pasindu.nursingotapp.ui.theme.NursingOTAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-
+import android.os.Build
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,7 +31,9 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = AndroidColor.TRANSPARENT
         window.navigationBarColor = AndroidColor.TRANSPARENT
-        window.isNavigationBarContrastEnforced = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
