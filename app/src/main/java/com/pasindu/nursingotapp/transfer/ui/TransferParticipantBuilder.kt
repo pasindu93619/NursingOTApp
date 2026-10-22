@@ -28,6 +28,17 @@ object TransferParticipantBuilder {
         val serverStatus = matchFound.status.trim().uppercase()
         val allParticipantsConfirmed = serverStatus == "CONFIRMED"
 
+        val isParticipant = if (matchFound.matchType == "THREE_WAY" && matchFound.threeWayMatch != null) {
+            val tw = matchFound.threeWayMatch
+            currentUid == tw.nurseAUid || currentUid == tw.nurseBUid || currentUid == tw.nurseCUid
+        } else {
+            val direct = matchFound.directMatch
+            direct != null && (currentUid == direct.nurseAUid || currentUid == direct.nurseBUid)
+        }
+        if (!isParticipant) {
+            return emptyList()
+        }
+
         return if (matchFound.matchType == "THREE_WAY" && matchFound.threeWayMatch != null) {
             val tw = matchFound.threeWayMatch
             listOf(
@@ -68,6 +79,7 @@ object TransferParticipantBuilder {
         } else {
             val direct = matchFound.directMatch ?: return emptyList()
             val isOfficerA = currentUid == direct.nurseAUid
+            val isOfficerB = currentUid == direct.nurseBUid
             listOf(
                 TransferChatParticipant(
                     uid = direct.nurseAUid,
@@ -83,12 +95,12 @@ object TransferParticipantBuilder {
                 TransferChatParticipant(
                     uid = direct.nurseBUid,
                     roleLetter = "B",
-                    displayName = if (!isOfficerA) "You (Nurse B)" else "Partner (Nurse B)",
+                    displayName = if (isOfficerB) "You (Nurse B)" else "Partner (Nurse B)",
                     hospitalId = direct.nurseBCurrentHospitalId,
                     hospitalName = hospitalName(direct.nurseBCurrentHospitalId),
                     hospitalLocation = hospitalLocation(direct.nurseBCurrentHospitalId),
                     grade = direct.nurseBGrade,
-                    isCurrentUser = !isOfficerA,
+                    isCurrentUser = isOfficerB,
                     confirmed = allParticipantsConfirmed || matchFound.confirmedByB
                 )
             )

@@ -15,6 +15,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -107,6 +108,15 @@ data class TransferChatUiState(
         get() = !isLoading && error == null && serverStatus == "CHAT_OPEN" && !isSubmittingAction && !isTerminal
 }
 
+private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
+
 @HiltViewModel
 class TransferChatViewModel @Inject constructor(
     private val transferChatRepository: TransferChatRepository,
@@ -132,7 +142,7 @@ class TransferChatViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            val result = runCatching {
+            val result = runSuspendCatching {
                 val syncResult = transferRequestRepository.syncActiveRequest()
                 val currentUid = transferRequestRepository.getCurrentUserId().orEmpty()
                 val hospitals = hospitalReferenceRepository.getAll()
@@ -151,10 +161,18 @@ class TransferChatViewModel @Inject constructor(
                             observeMessages(syncResult.matchId)
                             observeMatchState(syncResult.matchId)
                         }
-                        is WorkerSyncResult.NoMatch -> {
+                        is WorkerSyncResult.NoMatch,
+                        is WorkerSyncResult.RequestCompleted,
+                        is WorkerSyncResult.RequestWithdrawn,
+                        is WorkerSyncResult.ReturnedToPool -> {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                error = "No active mutual transfer match found."
+                                error = when (syncResult) {
+                                    is WorkerSyncResult.RequestCompleted -> "This mutual transfer has already been completed."
+                                    is WorkerSyncResult.RequestWithdrawn -> "Your mutual transfer request has been withdrawn."
+                                    is WorkerSyncResult.ReturnedToPool -> "This match has ended. Your request has been returned to the matching pool."
+                                    else -> "No active mutual transfer match found."
+                                }
                             )
                         }
                         is WorkerSyncResult.NetworkError -> {
@@ -364,6 +382,16 @@ class TransferChatViewModel @Inject constructor(
             )
         } else {
             val direct = matchFound.directMatch ?: error("Direct match required")
+            if (currentUid != direct.nurseAUid && currentUid != direct.nurseBUid) {
+                return TransferChatUiState(
+                    isLoading = false,
+                    matchId = matchFound.matchId,
+                    matchType = "DIRECT_2_WAY",
+                    serverStatus = serverStatus,
+                    error = "Authentication error: You are not a recognized participant in this mutual transfer match.",
+                    isTerminal = true
+                )
+            }
             val isOfficerA = currentUid == direct.nurseAUid
             val userRole = if (isOfficerA) "A" else "B"
 

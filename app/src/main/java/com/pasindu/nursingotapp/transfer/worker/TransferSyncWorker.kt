@@ -64,7 +64,10 @@ class TransferSyncWorker(
 
         return when (syncResult) {
             is WorkerSyncResult.MatchFound,
-            is WorkerSyncResult.NoMatch -> {
+            is WorkerSyncResult.NoMatch,
+            is WorkerSyncResult.RequestCompleted,
+            is WorkerSyncResult.RequestWithdrawn,
+            is WorkerSyncResult.ReturnedToPool -> {
                 Result.success()
             }
             is WorkerSyncResult.NetworkError -> {

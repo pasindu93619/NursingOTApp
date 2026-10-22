@@ -13,6 +13,11 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlin.coroutines.cancellation.CancellationException
+import com.pasindu.nursingotapp.transfer.data.model.TransferWorkerApiException
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import java.io.BufferedReader
@@ -180,6 +185,8 @@ class HttpTransferWorkerApiClient @Inject constructor(
                         WorkerSyncResult.NetworkError("Worker error (HTTP $responseCode): $errorMsg")
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 WorkerSyncResult.NetworkError(
                     "Network connection error while contacting matching worker: ${e.message}",
@@ -225,10 +232,23 @@ class HttpTransferWorkerApiClient @Inject constructor(
                 val responseBody = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
 
                 if (responseCode !in 200..299) {
-                    throw Exception("Server returned HTTP $responseCode: $responseBody")
+                    val parsed = runCatching {
+                        json.parseToJsonElement(responseBody).jsonObject
+                    }.getOrNull()
+                    val errCode = parsed?.get("error")?.jsonPrimitive?.contentOrNull
+                    val errMsg = parsed?.get("message")?.jsonPrimitive?.contentOrNull ?: responseBody
+                    throw TransferWorkerApiException(
+                        errorCode = errCode,
+                        statusCode = responseCode,
+                        message = errMsg.ifBlank { "Server returned HTTP $responseCode" }
+                    )
                 }
 
                 json.decodeFromString(DecisionResponse.serializer(), responseBody)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: TransferWorkerApiException) {
+                throw e
             } catch (e: Exception) {
                 throw Exception("Network error while sending decision: ${e.message}", e)
             } finally {
@@ -259,6 +279,8 @@ class HttpTransferWorkerApiClient @Inject constructor(
                     throw Exception("Server returned HTTP $responseCode: $responseBody")
                 }
                 json.decodeFromString(TransferMatchHistoryResponse.serializer(), responseBody).items
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 throw Exception("Unable to load mutual transfer history: ${e.message}", e)
             } finally {
@@ -306,6 +328,8 @@ class HttpTransferWorkerApiClient @Inject constructor(
             val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (code !in 200..299) throw Exception("Server returned HTTP $code: $body")
             json.decodeFromString(TransferCompletionStatus.serializer(), body)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             throw Exception("Unable to ${if (report) "record" else "load"} transfer completion: ${e.message}", e)
         } finally {
@@ -346,10 +370,23 @@ class HttpTransferWorkerApiClient @Inject constructor(
                 val responseBody = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
 
                 if (responseCode !in 200..299) {
-                    throw Exception("Server returned HTTP $responseCode: $responseBody")
+                    val parsed = runCatching {
+                        json.parseToJsonElement(responseBody).jsonObject
+                    }.getOrNull()
+                    val errCode = parsed?.get("error")?.jsonPrimitive?.contentOrNull
+                    val errMsg = parsed?.get("message")?.jsonPrimitive?.contentOrNull ?: responseBody
+                    throw TransferWorkerApiException(
+                        errorCode = errCode,
+                        statusCode = responseCode,
+                        message = errMsg.ifBlank { "Server returned HTTP $responseCode" }
+                    )
                 }
 
                 json.decodeFromString(WorkerWithdrawResponse.serializer(), responseBody)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: TransferWorkerApiException) {
+                throw e
             } catch (e: Exception) {
                 throw Exception("Network error while withdrawing request: ${e.message}", e)
             } finally {

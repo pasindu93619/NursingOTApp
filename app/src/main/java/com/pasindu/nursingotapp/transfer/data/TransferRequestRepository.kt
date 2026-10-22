@@ -1,5 +1,6 @@
 package com.pasindu.nursingotapp.transfer.data
 
+import kotlinx.coroutines.CancellationException
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
 import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
@@ -33,6 +34,15 @@ import kotlinx.serialization.json.Json
  * Remote synchronization publishes the request to Firestore and triggers
  * Cloudflare Worker matching without blocking the UI.
  */
+private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
+
 @Singleton
 class TransferRequestRepository @Inject constructor(
     private val dao: TransferActiveCacheDao,
@@ -222,10 +232,11 @@ class TransferRequestRepository @Inject constructor(
         val domain = entity.toDomain()
             ?: return WorkerSyncResult.NoMatch("Invalid local transfer request")
 
-        if (domain.requestStatus == TransferRequestStatus.COMPLETED ||
-            domain.requestStatus == TransferRequestStatus.WITHDRAWN
-        ) {
-            return WorkerSyncResult.NoMatch("Request is not active")
+        if (domain.requestStatus == TransferRequestStatus.COMPLETED) {
+            return WorkerSyncResult.RequestCompleted("Request is completed")
+        }
+        if (domain.requestStatus == TransferRequestStatus.WITHDRAWN) {
+            return WorkerSyncResult.RequestWithdrawn("Request is withdrawn")
         }
 
         val tp = tokenProvider ?: return WorkerSyncResult.AuthError("Token provider not configured")
@@ -271,7 +282,7 @@ class TransferRequestRepository @Inject constructor(
                 updatedAt = System.currentTimeMillis()
             )
             dao.upsert(completedCache)
-            return WorkerSyncResult.NoMatch("All participants have self-reported transfer completion")
+            return WorkerSyncResult.RequestCompleted("All participants have self-reported transfer completion")
         }
 
         if (
@@ -346,11 +357,19 @@ class TransferRequestRepository @Inject constructor(
         if (isLocallyMatched) {
             val oldMatchCycleId = entity.matchCycleId
             val finalMatchStatus = if (!oldMatchCycleId.isNullOrBlank()) {
-                val oldMatchDoc = rds.fetchMatchDoc(oldMatchCycleId).getOrNull()
+                val matchDocResult = rds.fetchMatchDoc(oldMatchCycleId)
+                val oldMatchDoc = matchDocResult.getOrNull()
                 val status = oldMatchDoc?.status?.trim()?.uppercase()
-                if (status == "EXPIRED") "EXPIRED" else "CANCELLED"
+                when {
+                    status == "EXPIRED" -> "EXPIRED"
+                    status == "CANCELLED" -> "CANCELLED"
+                    matchDocResult.isFailure && entity.matchStatus == "EXPIRED" -> "EXPIRED"
+                    status != null -> status
+                    entity.matchStatus == "EXPIRED" -> "EXPIRED"
+                    else -> "CANCELLED"
+                }
             } else {
-                "CANCELLED"
+                entity.matchStatus ?: "CANCELLED"
             }
 
             val resetEntity = entity.copy(
@@ -365,7 +384,7 @@ class TransferRequestRepository @Inject constructor(
             )
             dao.upsert(resetEntity)
             logger.d(TAG, "Reconciled local MATCHED state to PENDING with matchStatus=$finalMatchStatus")
-            return WorkerSyncResult.NoMatch("Match has ended ($finalMatchStatus); request returned to pool")
+            return WorkerSyncResult.ReturnedToPool("Match has ended ($finalMatchStatus); request returned to pool")
         }
 
         /*
@@ -445,7 +464,10 @@ class TransferRequestRepository @Inject constructor(
                 )
                 dao.upsert(updated)
             }
-            is WorkerSyncResult.NoMatch -> {
+            is WorkerSyncResult.NoMatch,
+            is WorkerSyncResult.RequestCompleted,
+            is WorkerSyncResult.RequestWithdrawn,
+            is WorkerSyncResult.ReturnedToPool -> {
                 dao.upsert(
                     entity.copy(
                         requestId = userId,
@@ -468,7 +490,7 @@ class TransferRequestRepository @Inject constructor(
      * Match history is remote-only and does not alter the Room active-request cache.
      */
 
-    suspend fun getCompletionStatus(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
+    suspend fun getCompletionStatus(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
         val token = tokenProvider?.getFirebaseIdToken()
             ?: throw IllegalStateException("Authentication provider unavailable")
@@ -476,7 +498,7 @@ class TransferRequestRepository @Inject constructor(
         api.getCompletionStatus(token, matchId)
     }
 
-    suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runCatching {
+    suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
         val token = tokenProvider?.getFirebaseIdToken()
             ?: throw IllegalStateException("Authentication provider unavailable")
@@ -507,7 +529,7 @@ class TransferRequestRepository @Inject constructor(
         result
     }
 
-    suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runCatching {
+    suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runSuspendCatching {
         val tp = tokenProvider ?: error("Token provider not configured")
         val api = workerApiClient ?: error("Worker API client not configured")
         val token = tp.getFirebaseIdToken() ?: error("Authentication failure: Unable to get ID token")
@@ -550,9 +572,11 @@ class TransferRequestRepository @Inject constructor(
         val token = tp.getFirebaseIdToken()
             ?: return Result.failure(IllegalStateException("Authentication failure: Unable to get ID token"))
 
-        val response = runCatching {
+        val response = try {
             api.respondToMatch(token, DecisionRequest(matchId, decision))
-        }.getOrElse { originalError ->
+        } catch (e: CancellationException) {
+            throw e
+        } catch (originalError: Throwable) {
             // Reconcile with authoritative match state if the worker call failed
             if (remoteDataSource != null && (decision == Decision.LEAVE || decision == Decision.REJECT)) {
                 val remoteMatch = remoteDataSource.fetchMatchDoc(matchId).getOrNull()
