@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -214,6 +215,12 @@ fun AppNavigation() {
                 )
             }
             composable("transfer_request") {
+                DisposableEffect(Unit) {
+                    transferRequestViewModel.startAutomaticMatchPolling()
+                    onDispose {
+                        transferRequestViewModel.stopAutomaticMatchPolling()
+                    }
+                }
                 TransferRequestScreen(
                     profile = userProfile,
                     hospitalOptions = transferHospitalOptions,
@@ -237,6 +244,12 @@ fun AppNavigation() {
                 )
             }
             composable("transfer_pool_status") {
+                DisposableEffect(Unit) {
+                    transferRequestViewModel.startAutomaticMatchPolling()
+                    onDispose {
+                        transferRequestViewModel.stopAutomaticMatchPolling()
+                    }
+                }
                 TransferPoolStatusScreen(
                     activeRequest = activeTransferRequest,
                     hospitalOptions = transferHospitalOptions,
@@ -297,6 +310,28 @@ fun AppNavigation() {
             composable("transfer_match") {
                 val matchViewModel: TransferMatchViewModel = hiltViewModel()
                 val matchUiState by matchViewModel.uiState.collectAsState()
+                val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+
+                DisposableEffect(lifecycleOwner) {
+                    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        when (event) {
+                            androidx.lifecycle.Lifecycle.Event.ON_START,
+                            androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                                matchViewModel.onScreenResume()
+                            }
+                            androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
+                            androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                                matchViewModel.onScreenExit()
+                            }
+                            else -> {}
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                        matchViewModel.onScreenExit()
+                    }
+                }
 
                 // Once every participant has accepted, the authoritative state is CHAT_OPEN.
                 // Move directly into the live coordination channel instead of requiring a

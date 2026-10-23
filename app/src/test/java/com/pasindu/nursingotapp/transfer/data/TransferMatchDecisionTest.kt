@@ -803,4 +803,160 @@ class TransferMatchDecisionTest {
         )
         viewModel.onScreenExit()
     }
+    // ---------------------------------------------------------------------------
+    // MAL-02: Match Screen Polling Lifecycle Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `MAL-02 - match polling starts when match is loaded in waiting state`() = runTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-MAL02",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("ViewModel should be in MatchFound state", vm.uiState.value is TransferMatchUiState.MatchFound)
+        assertTrue("Polling must be active while in MatchFound waiting state", vm.isPollingActive)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `MAL-02 - onScreenExit stops active match polling`() = runTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-MAL02-EXIT",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Polling should be active initially", vm.isPollingActive)
+
+        // Screen exits / leaves foreground
+        vm.onScreenExit()
+        assertFalse("Polling must be cancelled immediately when screen exits", vm.isPollingActive)
+    }
+
+    @Test
+    fun `MAL-02 - onScreenResume restarts polling without duplicate jobs`() = runTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-MAL02-RESUME",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        vm.onScreenExit()
+        assertFalse(vm.isPollingActive)
+
+        // Returning to foreground resumes polling
+        vm.onScreenResume()
+        assertTrue("Polling must resume when returning to foreground in waiting state", vm.isPollingActive)
+
+        // Duplicate resume calls are idempotent
+        vm.onScreenResume()
+        assertTrue("Duplicate onScreenResume must be idempotent and remain active", vm.isPollingActive)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `MAL-02 - onScreenResume does not start polling in terminal or chat open states`() = runTest {
+        val chatOpenMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-MAL02-CHAT",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "CHAT_OPEN",
+            acceptedByA = true,
+            acceptedByB = true
+        )
+        workerApiClient.syncResult = chatOpenMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("State should be ChatOpen", vm.uiState.value is TransferMatchUiState.ChatOpen)
+        assertFalse("Polling must not run for CHAT_OPEN state", vm.isPollingActive)
+
+        // Calling onScreenResume must NOT start polling in non-waiting state
+        vm.onScreenResume()
+        assertFalse("onScreenResume must not start polling when not in waiting state", vm.isPollingActive)
+        vm.onScreenExit()
+    }
 }

@@ -13,7 +13,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -55,21 +58,23 @@ class TransferRequestViewModel @Inject constructor(
 
     private var automaticPollingJob: kotlinx.coroutines.Job? = null
 
+    val isPollingActive: Boolean
+        get() = automaticPollingJob?.isActive == true
+
     init {
         loadHospitals()
         observeActiveRequest()
-        startAutomaticMatchPolling()
     }
 
     /**
      * Keeps an active SEARCHING request synchronized with the server while this
-     * ViewModel is alive. The server is authoritative; syncActiveRequest() first
+     * destination is active. The server is authoritative; syncActiveRequest() first
      * checks for a remote MATCHED state before publishing local SEARCHING data.
      */
-    private fun startAutomaticMatchPolling() {
-        automaticPollingJob?.cancel()
+    fun startAutomaticMatchPolling() {
+        if (automaticPollingJob?.isActive == true) return
         automaticPollingJob = viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 val request = _activeRequest.value
                 val pollIntervalMs = if (request != null && (
                     request.matchStatus.equals("PENDING_CONFIRMATION", ignoreCase = true) ||
@@ -92,8 +97,12 @@ class TransferRequestViewModel @Inject constructor(
                 )
 
                 if (shouldPoll) {
-                    runCatching {
+                    try {
                         transferRequestRepository.syncActiveRequest()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        // Ignore transient exceptions during polling
                     }
                 }
                 delay(pollIntervalMs)
@@ -101,10 +110,14 @@ class TransferRequestViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    fun stopAutomaticMatchPolling() {
         automaticPollingJob?.cancel()
         automaticPollingJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAutomaticMatchPolling()
     }
 
     // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.transfer.ui
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.isActive
 import com.pasindu.nursingotapp.transfer.data.model.TransferWorkerApiException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -41,14 +42,17 @@ class TransferMatchViewModel @Inject constructor(
 
     private var matchPollingJob: kotlinx.coroutines.Job? = null
 
+    val isPollingActive: Boolean
+        get() = matchPollingJob?.isActive == true
+
     init {
         loadCurrentMatch()
     }
 
-    private fun startMatchPolling() {
+    fun startMatchPolling() {
         if (matchPollingJob?.isActive == true) return
         matchPollingJob = viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 kotlinx.coroutines.delay(3_000L)
                 val currentState = _uiState.value
                 val isWaitingState = currentState is TransferMatchUiState.AlreadyAccepted ||
@@ -63,8 +67,10 @@ class TransferMatchViewModel @Inject constructor(
                 }
                 try {
                     val syncResult = transferRequestRepository.syncActiveRequest()
+                    if (!isActive) return@launch
                     val userId = transferRequestRepository.getCurrentUserId()
                     val hospitals = hospitalReferenceRepository.getAll()
+                    if (!isActive) return@launch
                     when (syncResult) {
                         is WorkerSyncResult.MatchFound -> {
                             if (!userId.isNullOrBlank()) {
@@ -160,6 +166,15 @@ class TransferMatchViewModel @Inject constructor(
 
     fun onScreenExit() {
         stopMatchPolling()
+    }
+
+    fun onScreenResume() {
+        val currentState = _uiState.value
+        if (currentState is TransferMatchUiState.AlreadyAccepted ||
+            currentState is TransferMatchUiState.MatchFound
+        ) {
+            startMatchPolling()
+        }
     }
 
     private fun loadCurrentMatch() {

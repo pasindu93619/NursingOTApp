@@ -336,4 +336,69 @@ class TransferRequestViewModelTest {
         assertNotNull(viewModel.submitError.value)
         assertTrue(viewModel.submitError.value!!.contains("A valid nursing grade is required in your profile"))
     }
+    // ---------------------------------------------------------------------------
+    // MAL-01: Lifecycle-scoped Polling Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `MAL-01 - polling does not start automatically on ViewModel creation`() = runTest {
+        val viewModel = createViewModel()
+        assertFalse("Polling must NOT start automatically on ViewModel creation", viewModel.isPollingActive)
+    }
+
+    @Test
+    fun `MAL-01 - startPolling launches at most one job and is idempotent`() = runTest {
+        val viewModel = createViewModel()
+        assertFalse(viewModel.isPollingActive)
+
+        viewModel.startAutomaticMatchPolling()
+        assertTrue("Polling must be active after startAutomaticMatchPolling()", viewModel.isPollingActive)
+
+        // Second call should be a no-op and remain active without duplicating
+        viewModel.startAutomaticMatchPolling()
+        assertTrue("Polling must remain active and idempotent on duplicate start", viewModel.isPollingActive)
+    }
+
+    @Test
+    fun `MAL-01 - stopPolling cancels polling job and subsequent start works correctly`() = runTest {
+        val viewModel = createViewModel()
+        viewModel.startAutomaticMatchPolling()
+        assertTrue(viewModel.isPollingActive)
+
+        viewModel.stopAutomaticMatchPolling()
+        assertFalse("Polling must be stopped after stopAutomaticMatchPolling()", viewModel.isPollingActive)
+
+        // Starting again after stopping
+        viewModel.startAutomaticMatchPolling()
+        assertTrue("Polling must restart cleanly after previous stop", viewModel.isPollingActive)
+
+        viewModel.stopAutomaticMatchPolling()
+        assertFalse(viewModel.isPollingActive)
+    }
+
+    @Test
+    fun `MAL-01 - room backed activeRequest observation remains intact without network polling`() = runTest {
+        val viewModel = createViewModel()
+        assertFalse("Polling must be inactive", viewModel.isPollingActive)
+        assertNull("activeRequest must be initially null", viewModel.activeRequest.value)
+
+        // Simulate local Room database upsert
+        val localEntity = TransferActiveCacheEntity(
+            id = 1,
+            requestId = "req-123",
+            requestStatus = TransferRequestStatus.PENDING.name,
+            currentHospitalId = "HOSP-001",
+            preferenceHospitalIdsJson = """["HOSP-002"]""",
+            grade = "Grade I",
+            syncStatus = CacheSyncStatus.SYNCED.name,
+            updatedAt = 2000L
+        )
+        fakeDao.upsert(localEntity)
+
+        // activeRequest must observe Room flow immediately without needing network polling
+        val active = viewModel.activeRequest.value
+        assertNotNull("activeRequest must reflect Room cache updates without polling", active)
+        assertEquals("HOSP-001", active?.currentHospitalId)
+        assertEquals(listOf("HOSP-002"), active?.rankedPreferences?.hospitalIds)
+    }
 }
