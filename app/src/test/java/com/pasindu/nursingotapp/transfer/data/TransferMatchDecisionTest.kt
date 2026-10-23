@@ -25,7 +25,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -405,7 +405,7 @@ class TransferMatchDecisionTest {
     // 7. ViewModel ACCEPT
     @Test
     fun viewModel_acceptMatch_setsLoadingThenAccepted() = runTest {
-        advanceUntilIdle()
+        runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -428,7 +428,7 @@ class TransferMatchDecisionTest {
     // 8. ViewModel REJECT
     @Test
     fun viewModel_rejectMatch_setsLoadingThenRejected() = runTest {
-        advanceUntilIdle()
+        runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -442,7 +442,7 @@ class TransferMatchDecisionTest {
         viewModel.rejectMatch("MATCH-001") {
             completed = true
         }
-        advanceUntilIdle()
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue(state is TransferMatchUiState.AlreadyRejected)
@@ -454,7 +454,7 @@ class TransferMatchDecisionTest {
     // 9. Duplicate action and error protection
     @Test
     fun viewModel_duplicateActionProtection_ignoresSecondConcurrentCall() = runTest {
-        advanceUntilIdle()
+        runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -475,11 +475,11 @@ class TransferMatchDecisionTest {
 
     @Test
     fun viewModel_failure_setsErrorState() = runTest {
-        advanceUntilIdle()
+        runCurrent()
         workerApiClient.respondResult = Result.failure(Exception("Worker timeout 504"))
 
         viewModel.acceptMatch("MATCH-001")
-        advanceUntilIdle()
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue(state is TransferMatchUiState.Error)
@@ -601,7 +601,7 @@ class TransferMatchDecisionTest {
     // 13. ViewModel: ACCEPT leading to CHAT_OPEN sets ChatOpen state
     @Test
     fun viewModel_acceptMatch_advancingToChatOpen_setsChatOpenState() = runTest {
-        advanceUntilIdle()
+        runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -614,7 +614,7 @@ class TransferMatchDecisionTest {
         )
 
         viewModel.acceptMatch("MATCH-001")
-        advanceUntilIdle()
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue("Expected ChatOpen state", state is TransferMatchUiState.ChatOpen)
@@ -627,7 +627,7 @@ class TransferMatchDecisionTest {
     // 14. ViewModel: CONFIRM leading to CONFIRMED sets Confirmed state
     @Test
     fun viewModel_confirmMatch_advancingToConfirmed_setsConfirmedState() = runTest {
-        advanceUntilIdle()
+        runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -639,7 +639,7 @@ class TransferMatchDecisionTest {
         )
 
         viewModel.confirmMatch("MATCH-001")
-        advanceUntilIdle()
+        runCurrent()
 
         val state = viewModel.uiState.value
         assertTrue("Expected Confirmed state", state is TransferMatchUiState.Confirmed)
