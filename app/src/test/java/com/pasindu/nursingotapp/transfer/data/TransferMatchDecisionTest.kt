@@ -25,6 +25,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -43,6 +44,17 @@ import org.junit.Test
 class TransferMatchDecisionTest {
 
     private val testDispatcher = StandardTestDispatcher()
+    private val activeViewModels = mutableListOf<TransferMatchViewModel>()
+
+    private fun stopAllPolling() = activeViewModels.forEach { it.onScreenExit() }
+
+    private fun runVmTest(block: suspend TestScope.() -> Unit) = runTest {
+        try {
+            block()
+        } finally {
+            stopAllPolling()
+        }
+    }
     private val json = Json { ignoreUnknownKeys = true }
 
     // ---------------------------------------------------------------------------
@@ -207,6 +219,7 @@ class TransferMatchDecisionTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        activeViewModels.clear()
         dao = FakeDao()
         profileDao = FakeProfileDao(
             ProfileEntity(
@@ -278,6 +291,7 @@ class TransferMatchDecisionTest {
         )
 
         viewModel = TransferMatchViewModel(repository, hospitalRepo)
+        activeViewModels += viewModel
         testDispatcher.scheduler.runCurrent()
         viewModel.onScreenExit()
 
@@ -296,14 +310,14 @@ class TransferMatchDecisionTest {
         if (::viewModel.isInitialized) {
             viewModel.onScreenExit()
         }
+        stopAllPolling()
         Dispatchers.resetMain()
     }
 
     private fun createViewModel(): TransferMatchViewModel =
         TransferMatchViewModel(repository, hospitalRepo).also {
-            if (::viewModel.isInitialized) {
-                viewModel.onScreenExit()
-            }
+            activeViewModels += it
+            if (::viewModel.isInitialized) viewModel.onScreenExit()
             viewModel = it
         }
 
@@ -336,7 +350,7 @@ class TransferMatchDecisionTest {
 
     // 3. API Client interaction
     @Test
-    fun apiClient_respondToMatch_capturesTokenAndPayload() = runTest {
+    fun apiClient_respondToMatch_capturesTokenAndPayload() = runVmTest {
         val resp = workerApiClient.respondToMatch(
             "token-xyz",
             DecisionRequest("match-abc", Decision.REJECT)
@@ -349,7 +363,7 @@ class TransferMatchDecisionTest {
 
     // 4. Repository ACCEPT updates cache
     @Test
-    fun repository_respondToMatch_accept_updatesCacheToConfirmed() = runTest {
+    fun repository_respondToMatch_accept_updatesCacheToConfirmed() = runVmTest {
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -370,7 +384,7 @@ class TransferMatchDecisionTest {
 
     // 5. Repository REJECT updates cache
     @Test
-    fun repository_respondToMatch_reject_updatesCacheToCancelled() = runTest {
+    fun repository_respondToMatch_reject_updatesCacheToCancelled() = runVmTest {
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -391,7 +405,7 @@ class TransferMatchDecisionTest {
 
     // 6. Repository error handling
     @Test
-    fun repository_respondToMatch_networkFailure_returnsFailure() = runTest {
+    fun repository_respondToMatch_networkFailure_returnsFailure() = runVmTest {
         workerApiClient.respondResult = Result.failure(Exception("Network unreachable"))
 
         val result = repository.respondToMatch("MATCH-001", Decision.ACCEPT)
@@ -404,7 +418,7 @@ class TransferMatchDecisionTest {
 
     // 7. ViewModel ACCEPT
     @Test
-    fun viewModel_acceptMatch_setsLoadingThenAccepted() = runTest {
+    fun viewModel_acceptMatch_setsLoadingThenAccepted() = runVmTest {
         runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
@@ -427,7 +441,7 @@ class TransferMatchDecisionTest {
 
     // 8. ViewModel REJECT
     @Test
-    fun viewModel_rejectMatch_setsLoadingThenRejected() = runTest {
+    fun viewModel_rejectMatch_setsLoadingThenRejected() = runVmTest {
         runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
@@ -453,7 +467,7 @@ class TransferMatchDecisionTest {
 
     // 9. Duplicate action and error protection
     @Test
-    fun viewModel_duplicateActionProtection_ignoresSecondConcurrentCall() = runTest {
+    fun viewModel_duplicateActionProtection_ignoresSecondConcurrentCall() = runVmTest {
         runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
@@ -474,7 +488,7 @@ class TransferMatchDecisionTest {
     }
 
     @Test
-    fun viewModel_failure_setsErrorState() = runTest {
+    fun viewModel_failure_setsErrorState() = runVmTest {
         runCurrent()
         workerApiClient.respondResult = Result.failure(Exception("Worker timeout 504"))
 
@@ -600,7 +614,7 @@ class TransferMatchDecisionTest {
 
     // 13. ViewModel: ACCEPT leading to CHAT_OPEN sets ChatOpen state
     @Test
-    fun viewModel_acceptMatch_advancingToChatOpen_setsChatOpenState() = runTest {
+    fun viewModel_acceptMatch_advancingToChatOpen_setsChatOpenState() = runVmTest {
         runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
@@ -626,7 +640,7 @@ class TransferMatchDecisionTest {
 
     // 14. ViewModel: CONFIRM leading to CONFIRMED sets Confirmed state
     @Test
-    fun viewModel_confirmMatch_advancingToConfirmed_setsConfirmedState() = runTest {
+    fun viewModel_confirmMatch_advancingToConfirmed_setsConfirmedState() = runVmTest {
         runCurrent()
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
@@ -651,7 +665,7 @@ class TransferMatchDecisionTest {
 
     // 15. Repository: Room persistence preserves matchStatus during workflow advancement
     @Test
-    fun repository_respondToMatch_persistsChatOpenAndConfirmedStatusToRoom() = runTest {
+    fun repository_respondToMatch_persistsChatOpenAndConfirmedStatusToRoom() = runVmTest {
         workerApiClient.respondResult = Result.success(
             DecisionResponse(
                 matchId = "MATCH-001",
@@ -686,7 +700,7 @@ class TransferMatchDecisionTest {
 
     // 16. B3: toUiModel accurately maps acceptedBy / rejectedBy flags to myStatus and partnerStatus
     @Test
-    fun toUiModel_mapsAcceptedAndRejectedFlagsToMatchDecisionStatus() = runTest {
+    fun toUiModel_mapsAcceptedAndRejectedFlagsToMatchDecisionStatus() = runVmTest {
         val matchFound = WorkerSyncResult.MatchFound(
             matchId = "MATCH-B3",
             matchType = "DIRECT_2_WAY",
@@ -740,7 +754,7 @@ class TransferMatchDecisionTest {
 
     // 17. B4: Match polling transitions to error/pool when NoMatch is received
     @Test
-    fun matchPolling_transitionsToPoolMessageWhenNoMatchReceived() = runTest {
+    fun matchPolling_transitionsToPoolMessageWhenNoMatchReceived() = runVmTest {
         val initialMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-B4",
             matchType = "DIRECT_2_WAY",
@@ -808,7 +822,7 @@ class TransferMatchDecisionTest {
     // ---------------------------------------------------------------------------
 
     @Test
-    fun `MAL-02 - match polling starts when match is loaded in waiting state`() = runTest {
+    fun `MAL-02 - match polling starts when match is loaded in waiting state`() = runVmTest {
         val initialMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-MAL02",
             matchType = "DIRECT_2_WAY",
@@ -843,7 +857,7 @@ class TransferMatchDecisionTest {
     }
 
     @Test
-    fun `MAL-02 - onScreenExit stops active match polling`() = runTest {
+    fun `MAL-02 - onScreenExit stops active match polling`() = runVmTest {
         val initialMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-MAL02-EXIT",
             matchType = "DIRECT_2_WAY",
@@ -879,7 +893,7 @@ class TransferMatchDecisionTest {
     }
 
     @Test
-    fun `MAL-02 - onScreenResume restarts polling without duplicate jobs`() = runTest {
+    fun `MAL-02 - onScreenResume restarts polling without duplicate jobs`() = runVmTest {
         val initialMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-MAL02-RESUME",
             matchType = "DIRECT_2_WAY",
@@ -921,7 +935,7 @@ class TransferMatchDecisionTest {
     }
 
     @Test
-    fun `MAL-02 - onScreenResume does not start polling in terminal or chat open states`() = runTest {
+    fun `MAL-02 - onScreenResume does not start polling in terminal or chat open states`() = runVmTest {
         val chatOpenMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-MAL02-CHAT",
             matchType = "DIRECT_2_WAY",
@@ -945,6 +959,13 @@ class TransferMatchDecisionTest {
             status = "CHAT_OPEN",
             acceptedByA = true,
             acceptedByB = true
+        )
+        remoteDataSource.remoteRequest = null
+        remoteDataSource.remoteMatch = null
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.PENDING.name,
+            matchCycleId = null,
+            syncStatus = CacheSyncStatus.PENDING.name
         )
         workerApiClient.syncResult = chatOpenMatch
         tokenProvider.userId = "user-123"
