@@ -36,6 +36,17 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
+export function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 function errorResponse(error: string, message: string, status = 400): Response {
   return jsonResponse(
     {
@@ -343,10 +354,25 @@ export default {
         return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
       }
       try {
-        const authHeader = request.headers.get("Authorization");
-        const token = extractBearerToken(authHeader);
+        if (!env.SWEEP_ADMIN_SECRET || env.SWEEP_ADMIN_SECRET.trim().length === 0) {
+          return errorResponse(
+            "ConfigError",
+            "SWEEP_ADMIN_SECRET is not configured",
+            500
+          );
+        }
+
+        const providedSecret =
+          request.headers.get("X-Sweep-Admin-Secret") ||
+          (request.headers.get("Authorization")?.startsWith("Bearer ")
+            ? request.headers.get("Authorization")!.substring(7).trim()
+            : null);
+
+        if (!providedSecret || !constantTimeEqual(providedSecret, env.SWEEP_ADMIN_SECRET.trim())) {
+          return errorResponse("Unauthorized", "Invalid or missing sweep admin secret", 401);
+        }
+
         const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
-        await verifyFirebaseIdToken(token, { projectId });
 
         const tokenProviderResult = resolveTokenProvider(env);
         if (tokenProviderResult instanceof Response) {

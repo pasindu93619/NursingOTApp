@@ -41,6 +41,9 @@ class TransferMatchViewModel @Inject constructor(
     val isSubmitting: StateFlow<Boolean> = _isSubmitting.asStateFlow()
 
     private var matchPollingJob: kotlinx.coroutines.Job? = null
+    private var consecutivePollFailures = 0
+    private val _isOfflineOrDegraded = MutableStateFlow(false)
+    val isOfflineOrDegraded: StateFlow<Boolean> = _isOfflineOrDegraded.asStateFlow()
 
     val isPollingActive: Boolean
         get() = matchPollingJob?.isActive == true
@@ -73,6 +76,8 @@ class TransferMatchViewModel @Inject constructor(
                     if (!isActive) return@launch
                     when (syncResult) {
                         is WorkerSyncResult.MatchFound -> {
+                            consecutivePollFailures = 0
+                            _isOfflineOrDegraded.value = false
                             if (!userId.isNullOrBlank()) {
                                 try {
                                     val uiModel = syncResult.toUiModel(userId, hospitals)
@@ -141,6 +146,12 @@ class TransferMatchViewModel @Inject constructor(
                                 "This match has ended. Your request has been returned to the matching pool."
                             )
                         }
+                        is WorkerSyncResult.NetworkError -> {
+                            consecutivePollFailures++
+                            if (consecutivePollFailures >= 2) {
+                                _isOfflineOrDegraded.value = true
+                            }
+                        }
                         else -> {
                             // On network error or conflict during polling, do not wipe state
                         }
@@ -148,7 +159,10 @@ class TransferMatchViewModel @Inject constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Throwable) {
-                    // Ignore transient exceptions during polling
+                    consecutivePollFailures++
+                    if (consecutivePollFailures >= 2) {
+                        _isOfflineOrDegraded.value = true
+                    }
                 }
             }
         }
@@ -177,18 +191,55 @@ class TransferMatchViewModel @Inject constructor(
         }
     }
 
-    private fun loadCurrentMatch() {
+    fun retryPolling() {
+        consecutivePollFailures = 0
+        _isOfflineOrDegraded.value = false
+        loadCurrentMatch()
+    }
+
+    private fun userFriendlyErrorMessage(error: Throwable, fallback: String): String {
+        val message = error.message.orEmpty()
+        return when {
+            error is kotlinx.coroutines.TimeoutCancellationException || message.contains("timeout", ignoreCase = true) ->
+                "The matching server timed out. Please check your connection and try again."
+            message.contains("504") || message.contains("502") || message.contains("503") || message.contains("500") ->
+                "The matching server is temporarily unavailable. Please try again later."
+            message.contains("UnknownHostException", ignoreCase = true) || message.contains("NoRouteToHostException", ignoreCase = true) ->
+                "Unable to connect to the server. Please check your internet connection."
+            error is TransferWorkerApiException -> {
+                when (error.statusCode) {
+                    401 -> "Your session has expired. Please sign in again."
+                    404 -> "The requested match proposal could not be found."
+                    409 -> "A conflict occurred while processing your decision. Please reload and try again."
+                    in 500..599 -> "The matching server encountered a temporary error. Please try again later."
+                    else -> error.message.ifBlank { fallback }
+                }
+            }
+            else -> error.message?.takeIf { it.isNotBlank() && !it.contains("Exception") } ?: fallback
+        }
+    }
+
+    fun loadCurrentMatch() {
+        consecutivePollFailures = 0
+        _isOfflineOrDegraded.value = false
         viewModelScope.launch {
-            val result = runSuspendCatching {
-                val syncResult = transferRequestRepository.syncActiveRequest()
-                val userId = transferRequestRepository.getCurrentUserId()
-                val hospitals = hospitalReferenceRepository.getAll()
-                syncResult to userId to hospitals
+            val result = try {
+                kotlinx.coroutines.withTimeout(15_000L) {
+                    val syncResult = transferRequestRepository.syncActiveRequest()
+                    val userId = transferRequestRepository.getCurrentUserId()
+                    val hospitals = hospitalReferenceRepository.getAll()
+                    Result.success(Triple(syncResult, userId, hospitals))
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Result.failure(Exception("Network request timed out. Please check your connection and retry."))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Result.failure(e)
             }
 
             result.fold(
-                onSuccess = { (payload, hospitals) ->
-                    val (syncResult, userId) = payload
+                onSuccess = { (syncResult, userId, hospitals) ->
                     when (syncResult) {
                         is WorkerSyncResult.MatchFound -> {
                             if (userId.isNullOrBlank()) {
@@ -276,7 +327,7 @@ class TransferMatchViewModel @Inject constructor(
                 onFailure = { error ->
                     stopMatchPolling()
                     _uiState.value = TransferMatchUiState.Error(
-                        error.message ?: "Unable to load the current mutual-transfer match."
+                        userFriendlyErrorMessage(error, "Unable to load the current mutual-transfer match.")
                     )
                 }
             )
@@ -518,7 +569,7 @@ class TransferMatchViewModel @Inject constructor(
                         loadCurrentMatch()
                     } else {
                         _uiState.value = TransferMatchUiState.Error(
-                            error.message ?: "Failed to accept match. Please try again."
+                            userFriendlyErrorMessage(error, "Failed to accept match. Please try again.")
                         )
                     }
                 }
@@ -558,9 +609,16 @@ class TransferMatchViewModel @Inject constructor(
                 },
                 onFailure = { error ->
                     _isSubmitting.value = false
-                    _uiState.value = TransferMatchUiState.Error(
-                        error.message ?: "Failed to confirm match. Please try again."
-                    )
+                    val isInvalidDecision = (error is TransferWorkerApiException && error.errorCode == "INVALID_DECISION") ||
+                        (error.cause is TransferWorkerApiException && (error.cause as TransferWorkerApiException).errorCode == "INVALID_DECISION") ||
+                        error.message.orEmpty().contains("INVALID_DECISION")
+                    if (isInvalidDecision) {
+                        loadCurrentMatch()
+                    } else {
+                        _uiState.value = TransferMatchUiState.Error(
+                            userFriendlyErrorMessage(error, "Failed to confirm match. Please try again.")
+                        )
+                    }
                 }
             )
         }
@@ -597,7 +655,7 @@ class TransferMatchViewModel @Inject constructor(
                 onFailure = { error ->
                     _isSubmitting.value = false
                     _uiState.value = TransferMatchUiState.Error(
-                        error.message ?: "Failed to reject match. Please try again."
+                        userFriendlyErrorMessage(error, "Failed to reject match. Please try again.")
                     )
                 }
             )

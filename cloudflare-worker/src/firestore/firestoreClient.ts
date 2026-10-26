@@ -419,35 +419,70 @@ export class FirestoreClient {
 
   /**
    * Queries matches with status IN ['PENDING_CONFIRMATION', 'CHAT_OPEN'].
+   * When nowIso is provided, restricts to matches with expiresAt <= nowIso
+   * ordered by expiresAt ASCENDING so expired matches are swept before unexpired ones.
    * Used by server-side expiry sweep.
    */
-  async queryPendingConfirmationMatches(limit = 100): Promise<FirestoreRawDocument[]> {
+  async queryPendingConfirmationMatches(limit = 100, nowIso?: string): Promise<FirestoreRawDocument[]> {
     const authHeader = await this.getAuthHeader();
     const url = `${this.baseUrl}:runQuery`;
 
-    const structuredQuery: Record<string, unknown> = {
-      from: [{ collectionId: "matches" }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: "status" },
-          op: "IN",
-          value: {
-            arrayValue: {
-              values: [
-                { stringValue: "PENDING_CONFIRMATION" },
-                { stringValue: "CHAT_OPEN" }
-              ]
-            }
+    const statusFilter = {
+      fieldFilter: {
+        field: { fieldPath: "status" },
+        op: "IN",
+        value: {
+          arrayValue: {
+            values: [
+              { stringValue: "PENDING_CONFIRMATION" },
+              { stringValue: "CHAT_OPEN" }
+            ]
           }
         }
-      },
-      limit,
-      orderBy: [
+      }
+    };
+
+    let where: Record<string, unknown> = statusFilter;
+    let orderBy: Array<Record<string, unknown>> = [
+      {
+        field: { fieldPath: "__name__" },
+        direction: "ASCENDING"
+      }
+    ];
+
+    if (nowIso) {
+      where = {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            statusFilter,
+            {
+              fieldFilter: {
+                field: { fieldPath: "expiresAt" },
+                op: "LESS_THAN_OR_EQUAL",
+                value: { stringValue: nowIso }
+              }
+            }
+          ]
+        }
+      };
+      orderBy = [
+        {
+          field: { fieldPath: "expiresAt" },
+          direction: "ASCENDING"
+        },
         {
           field: { fieldPath: "__name__" },
           direction: "ASCENDING"
         }
-      ]
+      ];
+    }
+
+    const structuredQuery: Record<string, unknown> = {
+      from: [{ collectionId: "matches" }],
+      where,
+      limit,
+      orderBy
     };
 
     const body = { structuredQuery };

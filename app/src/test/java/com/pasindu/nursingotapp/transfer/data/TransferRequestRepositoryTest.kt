@@ -640,7 +640,7 @@ class TransferRequestRepositoryTest {
             dao = fakeDao,
             profileDao = fakeProfileDao,
             tokenProvider = FakeTokenProvider(),
-            remoteDataSource = null,
+            remoteDataSource = FakeRemoteDataSource(null, null),
             workerApiClient = fakeWorker
         )
 
@@ -659,7 +659,7 @@ class TransferRequestRepositoryTest {
             dao = fakeDao,
             profileDao = fakeProfileDao,
             tokenProvider = FakeTokenProvider(),
-            remoteDataSource = null,
+            remoteDataSource = FakeRemoteDataSource(null, null),
             workerApiClient = fakeWorker
         )
 
@@ -698,7 +698,7 @@ class TransferRequestRepositoryTest {
             dao = fakeDao,
             profileDao = fakeProfileDao,
             tokenProvider = FakeTokenProvider(),
-            remoteDataSource = null,
+            remoteDataSource = FakeRemoteDataSource(null, null),
             workerApiClient = fakeWorker
         )
 
@@ -826,7 +826,7 @@ class TransferRequestRepositoryTest {
             dao = fakeDao,
             profileDao = fakeProfileDao,
             tokenProvider = FakeTokenProvider(),
-            remoteDataSource = null,
+            remoteDataSource = FakeRemoteDataSource(null, null),
             workerApiClient = fakeWorker
         )
 
@@ -1166,6 +1166,67 @@ class TransferRequestRepositoryTest {
     }
 
     @Test
+    fun `syncActiveRequest preserves EXPIRED matchStatus when secondary fetchMatchDoc fails offline`() = runTest {
+        fakeDao.upsert(
+            TransferActiveCacheEntity(
+                id = 1,
+                requestId = "nurse-a",
+                requestStatus = TransferRequestStatus.MATCHED.name,
+                currentHospitalId = "HOSP-A",
+                preferenceHospitalIdsJson = """["HOSP-B"]""",
+                grade = "Grade I",
+                matchCycleId = "match-offline-err",
+                matchType = "DIRECT_2_WAY",
+                matchStatus = "EXPIRED",
+                matchPayloadJson = "{}",
+                syncStatus = CacheSyncStatus.SYNCED.name,
+                updatedAt = 5000L
+            )
+        )
+
+        val remoteRequest = RemoteTransferRequestState(
+            status = "SEARCHING",
+            locked = false,
+            currentMatchId = null,
+            updatedAt = 6000L,
+            currentHospitalId = "HOSP-A"
+        )
+
+        val failingRemoteDataSource = object : TransferRemoteDataSource {
+            override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+                Result.success(remoteRequest)
+
+            override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+                Result.failure(java.io.IOException("Network unreachable (offline)"))
+
+            override fun observeMatchDoc(matchId: String) = kotlinx.coroutines.flow.flowOf(Result.success(null))
+            override suspend fun publishTransferRequest(
+                userId: String,
+                request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+            ): Result<Unit> = Result.success(Unit)
+            override suspend fun withdrawTransferRequest(userId: String): Result<Unit> = Result.success(Unit)
+        }
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            remoteDataSource = failingRemoteDataSource,
+            workerApiClient = FakeWorkerApiClient(),
+            tokenProvider = FakeTokenProvider()
+        )
+
+        val syncResult = repo.syncActiveRequest()
+        assertTrue("Expected ReturnedToPool on server release", syncResult is WorkerSyncResult.ReturnedToPool)
+
+        val updated = fakeDao.lastUpserted
+        assertNotNull(updated)
+        assertEquals(TransferRequestStatus.PENDING.name, updated?.requestStatus)
+        assertEquals("EXPIRED", updated?.matchStatus)
+        assertNull(updated?.matchCycleId)
+        assertEquals(5000L, updated?.updatedAt)
+    }
+
+    @Test
     fun `concurrent syncActiveRequest calls serialize via syncMutex and invoke findAndLockMatch once when match is locked`() = runTest {
         repository.saveRequest(
             currentHospitalId = "MOH2026-0010",
@@ -1313,5 +1374,304 @@ class TransferRequestRepositoryTest {
         assertEquals(1, maxConcurrentWorkerCalls)
         assertEquals("findAndLockMatch must be invoked only once across serialized sync calls", 1, findAndLockCalls)
         assertEquals("publishTransferRequest must be invoked only once", 1, publishCalls)
+    }
+
+    @Test
+    fun `concurrent syncActiveRequest calls serialize via syncMutex and invoke findAndLockMatch once when no match is found`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0010",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0332"))
+        )
+
+        var currentRemoteRequest: RemoteTransferRequestState? = null
+        var publishCalls = 0
+
+        val statefulRemote = object : TransferRemoteDataSource {
+            override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+                Result.success(currentRemoteRequest)
+
+            override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+                Result.success(null)
+
+            override suspend fun publishTransferRequest(
+                userId: String,
+                request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+            ): Result<Unit> {
+                publishCalls++
+                currentRemoteRequest = RemoteTransferRequestState(
+                    status = "SEARCHING",
+                    locked = false,
+                    currentMatchId = null,
+                    updatedAt = request.updatedAt,
+                    currentHospitalId = request.currentHospitalId
+                )
+                return Result.success(Unit)
+            }
+
+            override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
+                Result.success(Unit)
+
+            override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+                kotlinx.coroutines.flow.flowOf(Result.success(null))
+        }
+
+        val workerEntered = CompletableDeferred<Unit>()
+        val releaseWorker = CompletableDeferred<Unit>()
+        var findAndLockCalls = 0
+        var inFlightWorkerCalls = 0
+        var maxConcurrentWorkerCalls = 0
+
+        val gatingWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
+                findAndLockCalls++
+                inFlightWorkerCalls++
+                if (inFlightWorkerCalls > maxConcurrentWorkerCalls) {
+                    maxConcurrentWorkerCalls = inFlightWorkerCalls
+                }
+                workerEntered.complete(Unit)
+                releaseWorker.await()
+                inFlightWorkerCalls--
+
+                return WorkerSyncResult.NoMatch("No suitable match found")
+            }
+
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse =
+                error("Not used")
+
+            override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
+                WorkerWithdrawResponse(withdrawn = true)
+
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> =
+                emptyList()
+
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+        }
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = statefulRemote,
+            workerApiClient = gatingWorker
+        )
+
+        val firstCall = async(start = CoroutineStart.UNDISPATCHED) {
+            repo.syncActiveRequest()
+        }
+        workerEntered.await()
+
+        val secondCall = async(start = CoroutineStart.UNDISPATCHED) {
+            repo.syncActiveRequest()
+        }
+
+        assertEquals(1, findAndLockCalls)
+        assertEquals(1, publishCalls)
+
+        releaseWorker.complete(Unit)
+
+        val firstResult = firstCall.await()
+        val secondResult = secondCall.await()
+
+        assertTrue(firstResult is WorkerSyncResult.NoMatch)
+        assertTrue(secondResult is WorkerSyncResult.NoMatch)
+        assertEquals(1, maxConcurrentWorkerCalls)
+        assertEquals("findAndLockMatch must be invoked only once across serialized sync calls", 1, findAndLockCalls)
+        assertEquals("publishTransferRequest must be invoked only once", 1, publishCalls)
+    }
+
+    @Test
+    fun `subsequent sync after request changes triggers fresh publish and findAndLockMatch instead of returning cached result`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0010",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0332"))
+        )
+
+        var currentRemoteRequest: RemoteTransferRequestState? = null
+        var publishCalls = 0
+        var findAndLockCalls = 0
+
+        val statefulRemote = object : TransferRemoteDataSource {
+            override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+                Result.success(currentRemoteRequest)
+
+            override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+                Result.success(null)
+
+            override suspend fun publishTransferRequest(
+                userId: String,
+                request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+            ): Result<Unit> {
+                publishCalls++
+                currentRemoteRequest = RemoteTransferRequestState(
+                    status = "SEARCHING",
+                    locked = false,
+                    currentMatchId = null,
+                    updatedAt = request.updatedAt,
+                    currentHospitalId = request.currentHospitalId
+                )
+                return Result.success(Unit)
+            }
+
+            override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
+                Result.success(Unit)
+
+            override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+                kotlinx.coroutines.flow.flowOf(Result.success(null))
+        }
+
+        val testWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
+                findAndLockCalls++
+                return WorkerSyncResult.NoMatch("No match for attempt $findAndLockCalls")
+            }
+
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse =
+                error("Not used")
+
+            override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
+                WorkerWithdrawResponse(withdrawn = true)
+
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> =
+                emptyList()
+
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+        }
+
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = fakeProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = statefulRemote,
+            workerApiClient = testWorker
+        )
+
+        // Initial sync runs and yields NoMatch
+        val initialResult = repo.syncActiveRequest()
+        assertTrue(initialResult is WorkerSyncResult.NoMatch)
+        assertEquals("No match for attempt 1", (initialResult as WorkerSyncResult.NoMatch).message)
+        assertEquals(1, findAndLockCalls)
+        assertEquals(1, publishCalls)
+
+        // Nurse updates preferences
+        repo.saveRequest(
+            currentHospitalId = "MOH2026-0010",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0555"))
+        )
+
+        // Subsequent sync MUST NOT return cached result from attempt 1; it must run fresh
+        val subsequentResult = repo.syncActiveRequest()
+        assertTrue(subsequentResult is WorkerSyncResult.NoMatch)
+        assertEquals("No match for attempt 2", (subsequentResult as WorkerSyncResult.NoMatch).message)
+        assertEquals(2, findAndLockCalls)
+        assertEquals(2, publishCalls)
+    }
+
+    @Test
+    fun `subsequent sync after profile grade changes triggers fresh sync and republishes updated grade`() = runTest {
+        repository.saveRequest(
+            currentHospitalId = "MOH2026-0010",
+            rankedPreferences = RankedPreferences(listOf("MOH2026-0332"))
+        )
+
+        var currentRemoteRequest: RemoteTransferRequestState? = null
+        var lastPublishedRequest: com.pasindu.nursingotapp.transfer.data.model.TransferRequest? = null
+        var publishCalls = 0
+        var findAndLockCalls = 0
+
+        val statefulRemote = object : TransferRemoteDataSource {
+            override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+                Result.success(currentRemoteRequest)
+
+            override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+                Result.success(null)
+
+            override suspend fun publishTransferRequest(
+                userId: String,
+                request: com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+            ): Result<Unit> {
+                publishCalls++
+                lastPublishedRequest = request
+                currentRemoteRequest = RemoteTransferRequestState(
+                    status = "SEARCHING",
+                    locked = false,
+                    currentMatchId = null,
+                    updatedAt = request.updatedAt,
+                    currentHospitalId = request.currentHospitalId
+                )
+                return Result.success(Unit)
+            }
+
+            override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
+                Result.success(Unit)
+
+            override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+                kotlinx.coroutines.flow.flowOf(Result.success(null))
+        }
+
+        val testWorker = object : TransferWorkerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
+                findAndLockCalls++
+                return WorkerSyncResult.NoMatch("No match")
+            }
+
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse =
+                error("Not used")
+
+            override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
+                WorkerWithdrawResponse(withdrawn = true)
+
+            override suspend fun getMatchHistory(firebaseIdToken: String): List<com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem> =
+                emptyList()
+
+            override suspend fun getCompletionStatus(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+
+            override suspend fun reportCompletion(firebaseIdToken: String, matchId: String): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+                com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus(matchId, "CONFIRMED")
+        }
+
+        val mutableProfileDao = fakeProfileDao.copyForGrade("Grade I")
+        val repo = TransferRequestRepository(
+            dao = fakeDao,
+            profileDao = mutableProfileDao,
+            tokenProvider = FakeTokenProvider(),
+            remoteDataSource = statefulRemote,
+            workerApiClient = testWorker
+        )
+
+        val firstResult = repo.syncActiveRequest()
+        assertTrue(firstResult is WorkerSyncResult.NoMatch)
+        assertEquals(1, findAndLockCalls)
+        assertEquals("Grade I", lastPublishedRequest?.grade)
+
+        // Grade changes in profile to "Grade II"
+        mutableProfileDao.upsert(
+            ProfileEntity(
+                id = 1,
+                fullName = "Nurse Perera",
+                serviceNo = "SN-9876",
+                unit = "Ward 4",
+                paySheetNo = "PS-100",
+                grade = "Grade II",
+                basicSalary = 105000.0,
+                otRate = 450.0,
+                updatedAt = 2000L
+            )
+        )
+
+        // Subsequent sync MUST re-reconcile grade, update Room, and republish
+        val secondResult = repo.syncActiveRequest()
+        assertTrue(secondResult is WorkerSyncResult.NoMatch)
+        assertEquals(2, findAndLockCalls)
+        assertEquals(2, publishCalls)
+        assertEquals("Grade II", lastPublishedRequest?.grade)
     }
 }

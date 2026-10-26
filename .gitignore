@@ -23,3 +23,28 @@ cloudflare-worker/.wrangler/
 functions/node_modules/
 cloudflare-worker/node_modules/
 *.before_repair
+# Exported HTML reports (leaking local SDK paths)
+exportToHTML/
+
+# Kotlin compiler caches and logs
+.kotlin/
+
+# Hospital spreadsheet raw exports (preserves salary/finance spreadsheets)
+Sri_Lanka_Hospitals_*.xlsx
+!*salary*.xlsx
+!*Salary*.xlsx
+!*finance*.xlsx
+!*Finance*.xlsx
+
+# Root concatenated code dumps and build logs (preserves checklists and strategic plans)
+/all_code.txt
+/NursingApp_FullCode.txt
+/OTFormsSL_*.txt
+/ProjectCodeExport.txt
+/migration_financial_history.txt
+/ksp_error.txt
+/App_UI_Summary.txt
+!/*Checklist*.txt
+!/*checklist*.txt
+!/*Plan*.txt
+!/*PLAN*.txt

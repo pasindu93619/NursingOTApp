@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -79,6 +80,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.transfer.data.model.TransferChatMessage
 import com.pasindu.nursingotapp.ui.theme.Amber
+import com.pasindu.nursingotapp.ui.theme.TransferAmberSoft
+import com.pasindu.nursingotapp.ui.theme.TransferBlueSoft
+import com.pasindu.nursingotapp.ui.theme.TransferMintSoft
+import com.pasindu.nursingotapp.ui.theme.TransferRoseSoft
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.BorderMuted
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
@@ -96,10 +101,10 @@ import java.util.Date
 import java.util.Locale
 
 // Semantic pill tints
-private val SoftBluePill = Color(0xFFEAF6FF)
-private val SoftAmberPill = Color(0xFFFFF7ED)
-private val SoftGreenPill = Color(0xFFEAFBF5)
-private val SoftRedPill = Color(0xFFFFF1F2)
+private val SoftBluePill = TransferBlueSoft
+private val SoftAmberPill = TransferAmberSoft
+private val SoftGreenPill = TransferMintSoft
+private val SoftRedPill = TransferRoseSoft
 private val SoftRedBorder = CriticalRed.copy(alpha = 0.35f)
 
 /**
@@ -242,7 +247,7 @@ fun TransferChatScreen(
                             onClick = onBack,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp),
+                                .heightIn(min = 48.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Return to Transfer Hub", color = Slate, fontSize = 13.sp)
@@ -519,7 +524,7 @@ fun TransferChatScreen(
                         border = BorderStroke(1.dp, Amber.copy(alpha = 0.25f))
                     ) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("THE DEADLINES", color = Color(0xFF92400E), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+                            Text("THE DEADLINES", color = Color(0xFF92400E), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
                             Text("48 hours · initial match response window", color = Slate, fontSize = 11.sp)
                             Text("24 hours · after the first response, the response deadline may tighten to 24 hours from that response", color = Slate, fontSize = 11.sp, lineHeight = 15.sp)
                             Text("72 hours · chat window starts after everyone accepts", color = Slate, fontSize = 11.sp)
@@ -527,7 +532,7 @@ fun TransferChatScreen(
                     }
                     Text(
                         "Deadlines are enforced by the server. The deadline shown in this chat is the current authoritative deadline.",
-                        color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp
+                        color = TextSecondary, fontSize = 11.sp, lineHeight = 14.sp
                     )
                 }
             },
@@ -866,7 +871,7 @@ private fun HowItWorksStep(number: String, title: String, detail: String) {
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Surface(shape = CircleShape, color = SoftBluePill, modifier = Modifier.size(30.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Text(number, color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text(number, color = ClinicalPrimaryColor, fontSize = 11.sp, fontWeight = FontWeight.Black)
             }
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -917,7 +922,7 @@ private fun CoordinationStatusStrip(
                         Spacer(Modifier.width(8.dp))
                         Column {
                             Text("Agreement Finalized", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Slate)
-                            Text("Mutual transfer locked for processing", fontSize = 10.5.sp, color = TextSecondary)
+                            Text("Mutual transfer locked for processing", fontSize = 11.sp, color = TextSecondary)
                         }
                     }
                     TextButton(
@@ -973,7 +978,7 @@ private fun CoordinationStatusStrip(
                                         isExpired -> "Ended $deadlineLabel"
                                         else -> "Ends $deadlineLabel"
                                     },
-                                    fontSize = 10.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isExpired) CriticalRed else ClinicalPrimaryColor
                                 )
@@ -1012,7 +1017,7 @@ private fun CoordinationStatusStrip(
                             colors = ButtonDefaults.buttonColors(containerColor = Emerald),
                             shape = RoundedCornerShape(999.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
+                            modifier = Modifier.heightIn(min = 48.dp)
                         ) {
                             if (uiState.isSubmittingAction) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -1080,7 +1085,7 @@ private fun ChatMessageInputBar(
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.End,
                         color = if (text.length >= 500) CriticalRed else TextSecondary,
-                        fontSize = 10.sp
+                        fontSize = 11.sp
                     )
                 }
             )
@@ -1090,7 +1095,7 @@ private fun ChatMessageInputBar(
             Surface(
                 shape = CircleShape,
                 color = if (canSend) MedicalBlue else SurfaceMuted,
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 IconButton(
                     onClick = onSend,
@@ -1172,7 +1177,7 @@ private fun ChatConversationalWelcome(
             shape = RoundedCornerShape(999.dp),
             border = BorderStroke(1.dp, BorderMuted.copy(alpha = 0.6f)),
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-            modifier = Modifier.height(32.dp)
+            modifier = Modifier.heightIn(min = 48.dp)
         ) {
             Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(13.dp), tint = ClinicalPrimaryColor)
             Spacer(Modifier.width(6.dp))
@@ -1201,14 +1206,14 @@ private fun ChatMessageBubble(
             ) {
                 Text(
                     message.senderHospitalId,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Slate
                 )
                 if (message.senderGrade.isNotBlank()) {
                     Text(
                         " • ${message.senderGrade}",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         color = TextSecondary
                     )
                 }
@@ -1256,7 +1261,7 @@ private fun ChatMessageBubble(
 
                     Text(
                         text = formatMessageTime(message.createdAtMillis),
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         color = if (isCurrentUser) Color.White.copy(alpha = 0.75f) else TextSecondary
                     )
                 }
@@ -1324,7 +1329,7 @@ private fun MatchDetailsBottomSheet(
                 ) {
                     Text(
                         uiState.serverStatus,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         color = when (uiState.serverStatus) {
                             "CONFIRMED" -> Emerald
@@ -1409,7 +1414,7 @@ private fun MatchDetailsBottomSheet(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp),
+                        .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, CriticalRed.copy(alpha = 0.6f)),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = CriticalRed)
@@ -1481,7 +1486,7 @@ private fun DetailedParticipantCard(participant: TransferChatParticipant) {
                 )
                 Text(
                     participant.hospitalLocation,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     color = TextSecondary.copy(alpha = 0.8f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1501,7 +1506,7 @@ private fun DetailedParticipantCard(participant: TransferChatParticipant) {
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, tint = Emerald, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("Agreed", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald)
+                        Text("Agreed", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Emerald)
                     }
                 }
             } else {
@@ -1511,7 +1516,7 @@ private fun DetailedParticipantCard(participant: TransferChatParticipant) {
                 ) {
                     Text(
                         "Pending",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = TextSecondary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -1592,7 +1597,7 @@ private fun MessageDeliveryErrorBanner(
                     Text("Retry", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ClinicalPrimaryColor)
                 }
                 TextButton(onClick = onDismiss, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                    Text("Dismiss", fontSize = 10.sp, color = TextSecondary)
+                    Text("Dismiss", fontSize = 11.sp, color = TextSecondary)
                 }
             }
         }

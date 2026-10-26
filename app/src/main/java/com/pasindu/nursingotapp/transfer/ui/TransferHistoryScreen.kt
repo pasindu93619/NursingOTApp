@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -68,39 +70,6 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-data class TransferHistoryUiState(
-    val isLoading: Boolean = true,
-    val items: List<TransferMatchHistoryItem> = emptyList(),
-    val error: String? = null
-)
-
-@HiltViewModel
-class TransferHistoryViewModel @Inject constructor(
-    private val repository: TransferRequestRepository
-) : ViewModel() {
-    private val _uiState = MutableStateFlow(TransferHistoryUiState())
-    val uiState: StateFlow<TransferHistoryUiState> = _uiState.asStateFlow()
-
-    init { refresh() }
-
-    fun refresh() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            repository.getMatchHistory().fold(
-                onSuccess = { items ->
-                    _uiState.value = TransferHistoryUiState(isLoading = false, items = items)
-                },
-                onFailure = { error ->
-                    _uiState.value = TransferHistoryUiState(
-                        isLoading = false,
-                        error = error.message ?: "Could not load match history."
-                    )
-                }
-            )
-        }
-    }
-}
-
 @Composable
 fun TransferHistoryScreen(
     onBack: () -> Unit,
@@ -109,7 +78,11 @@ fun TransferHistoryScreen(
     val state by viewModel.uiState.collectAsState()
 
     Column(
-        modifier = Modifier.fillMaxSize().background(AppBackground)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppBackground)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 18.dp, top = 8.dp, bottom = 12.dp),
@@ -193,7 +166,7 @@ fun TransferHistoryScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("${state.items.size} past match${if (state.items.size == 1) "" else "es"}", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text("Newest outcomes first · private to your account", color = TextSecondary, fontSize = 10.sp)
+                                Text("Newest outcomes first · private to your account", color = TextSecondary, fontSize = 11.sp)
                             }
                             IconButton(onClick = viewModel::refresh, enabled = !state.isLoading) {
                                 Icon(Icons.Default.Refresh, contentDescription = "Refresh history", tint = ClinicalPrimaryColor)
@@ -238,14 +211,14 @@ private fun MatchHistoryCard(item: TransferMatchHistoryItem) {
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(if (item.matchType == "THREE_WAY") "3-way circular exchange" else "2-way direct exchange", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("Ended ${formatHistoryDate(item.endedAt)}", color = TextSecondary, fontSize = 10.sp)
+                    Text("Ended ${formatHistoryDate(item.endedAt)}", color = TextSecondary, fontSize = 11.sp)
                 }
                 Surface(shape = RoundedCornerShape(999.dp), color = if (expired) Color(0xFFFFF7ED) else Color(0xFFFFF1F2)) {
                     Text(
                         if (expired) "EXPIRED" else "CANCELLED",
                         color = if (expired) Color(0xFFB45309) else CriticalRed,
                         fontWeight = FontWeight.Black,
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                     )
                 }
@@ -258,7 +231,7 @@ private fun MatchHistoryCard(item: TransferMatchHistoryItem) {
                     Text(item.reason, color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
                 }
             }
-            Text("Match ID · ${item.matchId.take(8)}", color = TextSecondary, fontSize = 9.sp)
+            Text("Match ID · ${item.matchId.take(8)}", color = TextSecondary, fontSize = 11.sp)
         }
     }
 }

@@ -10,6 +10,8 @@ export interface Env {
   // Match configuration:
   MATCH_EXPIRATION_HOURS?: string;
   CANDIDATE_LIMIT?: string;
+  // Shared admin secret for protected sweep endpoint:
+  SWEEP_ADMIN_SECRET?: string;
 }
 
 export interface ScheduledEvent {

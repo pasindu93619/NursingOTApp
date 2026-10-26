@@ -896,7 +896,7 @@ async function findAndLockMatchInternal(
 
   validateCallerRequest(caller);
 
-  const candidateLimit = options.candidateLimit ?? 100;
+  const candidateLimit = options.candidateLimit ?? 500;
   const batchSize = 100;
   const rawCandidates: CandidateRequest[] = [];
   let offset = 0;
@@ -1618,7 +1618,7 @@ export async function sweepExpiredMatches(
   const batchSize = options?.batchSize ?? 100;
   const now = options?.now ? options.now() : new Date();
 
-  const pendingMatches = await firestoreClient.queryPendingConfirmationMatches(batchSize);
+  const pendingMatches = await firestoreClient.queryPendingConfirmationMatches(batchSize, now.toISOString());
 
   let scanned = 0;
   let expired = 0;

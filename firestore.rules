@@ -108,9 +108,8 @@ service cloud.firestore {
      * - Created, locked, and finalized exclusively by the trusted matching engine (Cloudflare Worker).
      * - Clients CANNOT create or delete match documents.
      * - Global collection queries (listing) are denied to prevent snooping.
-     * - A nurse can get/read a match ONLY if they are nurseAUid or nurseBUid.
-     * - Participants CANNOT change participants, match status, createdAt, expiresAt, or grade metadata.
-     * - Participants may ONLY update their own acceptance/rejection flag.
+     * - A nurse can get/read a match ONLY if they are nurseAUid, nurseBUid, or nurseCUid (for 3-way circular matches).
+     * - Direct client mutations are completely denied (create, update, delete: if false); all match decisions and state transitions are executed exclusively by the Cloudflare Worker.
      * - Same-grade is NOT enforced by the rules; cross-grade matching remains eligible.
      */
     match /matches/{matchId} {

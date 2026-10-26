@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OTFormsSL</string>
+    <string name="transfer_rules_title">ද්වි-පාර්ශ්වික සහ ත්‍රි-පාර්ශ්වික හුවමාරු නීති</string>
+    <string name="transfer_rules_summary">අනුකූල හෙද ශ්‍රේණි අතර පළමුව සෘජු ද්වි-පාර්ශ්වික හුවමාරුද, ඉන්පසු ත්‍රි-පාර්ශ්වික චක්‍රීය මාර්ගද සොයයි.</string>
+    <string name="transfer_match_waiting_partners">ඔබ එකඟ විය (%2$d න් %1$d). අනෙක් හෙද නිලධාරීන්ගේ ප්‍රතිචාරය අපේක්ෂාවෙන්.</string>
+    <string name="transfer_match_ended_pool">මෙම ගැලපීම අවසන් විය. ඔබගේ ඉල්ලීම නැවත සක්‍රීය සංචිතයට එක් කර ඇත.</string>
+    <string name="transfer_match_ended_completed">සියලුම දෙනා ස්ථාන මාරුව සම්පූර්ණ බව වාර්තා කර ඇත. ඔබගේ ස්ථාන මාරුව සාර්ථකයි!</string>
+    <string name="transfer_match_ended_withdrawn">ඔබගේ ස්ථාන මාරු ඉල්ලීම ඉල්ලා අස්කර ගෙන ඇත.</string>
+    <string name="transfer_offline_polling_banner">අන්තර්ජාල සබඳතාව අස්ථාවරයි — අවසන් වරට යාවත්කාලීන වූ තත්ත්වය පෙන්වයි.</string>
+</resources>

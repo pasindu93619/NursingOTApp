@@ -14,6 +14,7 @@ import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
+import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.ui.MatchDecisionStatus
@@ -100,6 +101,7 @@ class TransferMatchDecisionTest {
     }
 
     private class FakeRemoteDataSource : TransferRemoteDataSource {
+        var fetchRequestError: Throwable? = null
         var remoteRequest: RemoteTransferRequestState? = RemoteTransferRequestState(
             status = "MATCHED",
             locked = true,
@@ -131,7 +133,7 @@ class TransferMatchDecisionTest {
         )
 
         override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
-            Result.success(remoteRequest)
+            fetchRequestError?.let { Result.failure(it) } ?: Result.success(remoteRequest)
 
         override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
             Result.success(remoteMatch)
@@ -153,6 +155,7 @@ class TransferMatchDecisionTest {
         var lastCapturedRequest: DecisionRequest? = null
         var lastCapturedToken: String? = null
         var syncResult: WorkerSyncResult = WorkerSyncResult.NoMatch("No match")
+        var respondCallCount: Int = 0
 
         override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
             return syncResult
@@ -162,6 +165,7 @@ class TransferMatchDecisionTest {
             firebaseIdToken: String,
             payload: DecisionRequest
         ): DecisionResponse {
+            respondCallCount++
             lastCapturedToken = firebaseIdToken
             lastCapturedRequest = payload
             val res = respondResult ?: Result.success(
@@ -430,6 +434,7 @@ class TransferMatchDecisionTest {
         )
 
         viewModel.acceptMatch("MATCH-001")
+        assertTrue("isSubmitting should be true while in flight", viewModel.isSubmitting.value)
         testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
@@ -456,6 +461,7 @@ class TransferMatchDecisionTest {
         viewModel.rejectMatch("MATCH-001") {
             completed = true
         }
+        assertTrue("isSubmitting should be true while in flight", viewModel.isSubmitting.value)
         runCurrent()
 
         val state = viewModel.uiState.value
@@ -483,6 +489,7 @@ class TransferMatchDecisionTest {
         viewModel.acceptMatch("MATCH-001")
 
         testScheduler.runCurrent()
+        assertEquals(1, workerApiClient.respondCallCount)
         assertTrue("Expected initial AlreadyAccepted state, but actual UI state was: ${viewModel.uiState.value}", viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
         viewModel.onScreenExit()
     }
@@ -497,7 +504,7 @@ class TransferMatchDecisionTest {
 
         val state = viewModel.uiState.value
         assertTrue(state is TransferMatchUiState.Error)
-        assertEquals("Worker timeout 504", (state as TransferMatchUiState.Error).message)
+        assertEquals("The matching server timed out. Please check your connection and try again.", (state as TransferMatchUiState.Error).message)
         assertFalse(viewModel.isSubmitting.value)
     }
 
@@ -741,15 +748,17 @@ class TransferMatchDecisionTest {
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
-        testDispatcher.scheduler.runCurrent()
+        try {
+            testScheduler.runCurrent()
 
-        val state = viewModel.uiState.value
-        assertTrue("Expected AlreadyAccepted, but actual UI state was: $state", state is TransferMatchUiState.AlreadyAccepted)
-        val match = (state as TransferMatchUiState.AlreadyAccepted).match
-        assertEquals(MatchDecisionStatus.ACCEPTED, match.myStatus)
-        assertEquals(MatchDecisionStatus.PENDING, match.partnerStatus)
-
-        viewModel.onScreenExit()
+            val state = viewModel.uiState.value
+            assertTrue("Expected AlreadyAccepted, but actual UI state was: $state", state is TransferMatchUiState.AlreadyAccepted)
+            val match = (state as TransferMatchUiState.AlreadyAccepted).match
+            assertEquals(MatchDecisionStatus.ACCEPTED, match.myStatus)
+            assertEquals(MatchDecisionStatus.PENDING, match.partnerStatus)
+        } finally {
+            viewModel.onScreenExit()
+        }
     }
 
     // 17. B4: Match polling transitions to error/pool when NoMatch is received
@@ -793,29 +802,32 @@ class TransferMatchDecisionTest {
         tokenProvider.userId = "nurse-a"
 
         val viewModel = createViewModel()
-        testDispatcher.scheduler.runCurrent()
-        assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
+        try {
+            testScheduler.runCurrent()
+            assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
-        // Simulate the server-side match document being cancelled, then let the
-        // real polling coroutine perform its next sync cycle.
-        remoteDataSource.remoteMatch = RemoteMatchState(
-            matchId = "MATCH-B4",
-            matchType = "DIRECT_2_WAY",
-            directMatch = initialMatch.directMatch,
-            status = "CANCELLED",
-            createdAt = "2026-10-15T10:00:00Z",
-            expiresAt = "2026-10-15T12:00:00Z",
-            acceptedByA = true
-        )
-        testDispatcher.scheduler.advanceTimeBy(3_000L)
-        testDispatcher.scheduler.runCurrent()
+            // Simulate the server-side match document being cancelled, then let the
+            // real polling coroutine perform its next sync cycle.
+            remoteDataSource.remoteMatch = RemoteMatchState(
+                matchId = "MATCH-B4",
+                matchType = "DIRECT_2_WAY",
+                directMatch = initialMatch.directMatch,
+                status = "CANCELLED",
+                createdAt = "2026-10-15T10:00:00Z",
+                expiresAt = "2026-10-15T12:00:00Z",
+                acceptedByA = true
+            )
+            testScheduler.advanceTimeBy(3_000L)
+            testScheduler.runCurrent()
 
-        val finalState = viewModel.uiState.value
-        assertTrue("Polling a cancelled match should return the request to the pool", finalState is TransferMatchUiState.Error)
-        assertTrue(
-            (finalState as TransferMatchUiState.Error).message.contains("returned to the matching pool")
-        )
-        viewModel.onScreenExit()
+            val finalState = viewModel.uiState.value
+            assertTrue("Polling a cancelled match should return the request to the pool", finalState is TransferMatchUiState.Error)
+            assertTrue(
+                (finalState as TransferMatchUiState.Error).message.contains("returned to the matching pool")
+            )
+        } finally {
+            viewModel.onScreenExit()
+        }
     }
     // ---------------------------------------------------------------------------
     // MAL-02: Match Screen Polling Lifecycle Tests
@@ -979,5 +991,269 @@ class TransferMatchDecisionTest {
         vm.onScreenResume()
         assertFalse("onScreenResume must not start polling when not in waiting state", vm.isPollingActive)
         vm.onScreenExit()
+    }
+
+    // ---------------------------------------------------------------------------
+    // MAL-05: Degraded Connectivity / Offline Polling Failure Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `MAL-05 - two consecutive poll failures sets isOfflineOrDegraded to true`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-MAL05",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("Initial state must be MatchFound", vm.uiState.value is TransferMatchUiState.MatchFound)
+        assertFalse("Initially should not be degraded", vm.isOfflineOrDegraded.value)
+
+        // First network error during polling
+        remoteDataSource.fetchRequestError = java.io.IOException("Network timeout")
+        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("Single failure should not yet mark as degraded", vm.isOfflineOrDegraded.value)
+
+        // Second network error during polling
+        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Two consecutive failures must mark as degraded", vm.isOfflineOrDegraded.value)
+
+        // Next poll succeeds: degraded flag is reset
+        remoteDataSource.fetchRequestError = null
+        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("Successful poll resets degraded state", vm.isOfflineOrDegraded.value)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `MAL-05 - retryPolling resets offline flag and triggers fresh sync`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-MAL05-RETRY",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        // 2 failures
+        remoteDataSource.fetchRequestError = java.io.IOException("Offline")
+        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue(vm.isOfflineOrDegraded.value)
+
+        // User taps retry: network restored
+        remoteDataSource.fetchRequestError = null
+        vm.retryPolling()
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("retryPolling must clear degraded state", vm.isOfflineOrDegraded.value)
+        vm.onScreenExit()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Step 3 Domain Outcome & Validation Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun syncActiveRequest_returningRequestCompleted_transitionsToCompletedError() = runVmTest {
+        remoteDataSource.remoteRequest = null
+        remoteDataSource.remoteMatch = null
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.COMPLETED.name,
+            matchCycleId = null,
+            syncStatus = CacheSyncStatus.SYNCED.name
+        )
+        tokenProvider.userId = "nurse-a"
+
+        val vm = createViewModel()
+        try {
+            testScheduler.runCurrent()
+            val state = vm.uiState.value
+            assertTrue("Expected Error state on completed request", state is TransferMatchUiState.Error)
+            assertEquals("This mutual transfer has already been completed.", (state as TransferMatchUiState.Error).message)
+        } finally {
+            vm.onScreenExit()
+        }
+    }
+
+    @Test
+    fun syncActiveRequest_returningRequestWithdrawn_transitionsToWithdrawnError() = runVmTest {
+        remoteDataSource.remoteRequest = null
+        remoteDataSource.remoteMatch = null
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.WITHDRAWN.name,
+            matchCycleId = null,
+            syncStatus = CacheSyncStatus.SYNCED.name
+        )
+        tokenProvider.userId = "nurse-a"
+
+        val vm = createViewModel()
+        try {
+            testScheduler.runCurrent()
+            val state = vm.uiState.value
+            assertTrue("Expected Error state on withdrawn request", state is TransferMatchUiState.Error)
+            assertEquals("Your mutual transfer request has been withdrawn.", (state as TransferMatchUiState.Error).message)
+        } finally {
+            vm.onScreenExit()
+        }
+    }
+
+    @Test
+    fun syncActiveRequest_returningReturnedToPool_transitionsToReturnedToPoolError() = runVmTest {
+        remoteDataSource.remoteRequest = RemoteTransferRequestState(
+            status = "SEARCHING",
+            locked = false,
+            currentMatchId = null,
+            updatedAt = 5000L,
+            currentHospitalId = "HOSP-001"
+        )
+        remoteDataSource.remoteMatch = null
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.MATCHED.name,
+            matchCycleId = "MATCH-001",
+            matchStatus = "CANCELLED",
+            syncStatus = CacheSyncStatus.SYNCED.name
+        )
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        try {
+            testScheduler.runCurrent()
+            val state = vm.uiState.value
+            assertTrue("Expected Error state on returned to pool", state is TransferMatchUiState.Error)
+            assertEquals("This match has ended. Your request has been returned to the matching pool.", (state as TransferMatchUiState.Error).message)
+        } finally {
+            vm.onScreenExit()
+        }
+    }
+
+    @Test
+    fun nonParticipantUid_in2WayMatch_rejectedWithExplicitError() = runVmTest {
+        val directMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-2WAY-NONPART",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-001",
+                nurseBCurrentHospitalId = "HOSP-002",
+                nurseADestinationHospitalId = "HOSP-002",
+                nurseBDestinationHospitalId = "HOSP-001",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Direct 2-way"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z"
+        )
+
+        try {
+            val method = TransferMatchViewModel::class.java.getDeclaredMethod(
+                "toUiModel",
+                WorkerSyncResult.MatchFound::class.java,
+                String::class.java,
+                List::class.java
+            )
+            method.isAccessible = true
+            method.invoke(viewModel, directMatch, "nurse-intruder", emptyList<HospitalReference>())
+            org.junit.Assert.fail("Expected IllegalArgumentException for non-participant UID")
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            assertTrue(e.targetException is IllegalArgumentException)
+            assertTrue(e.targetException.message?.contains("is not a participant in 2-way match") == true)
+        }
+    }
+
+    @Test
+    fun nonParticipantUid_in3WayMatch_rejectedWithExplicitError() = runVmTest {
+        val threeWayMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-3WAY-NONPART",
+            matchType = "THREE_WAY",
+            threeWayMatch = WorkerThreeWayMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseCUid = "nurse-c",
+                nurseACurrentHospitalId = "HOSP-001",
+                nurseBCurrentHospitalId = "HOSP-002",
+                nurseCCurrentHospitalId = "HOSP-003",
+                nurseADestinationHospitalId = "HOSP-002",
+                nurseBDestinationHospitalId = "HOSP-003",
+                nurseCDestinationHospitalId = "HOSP-001",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                nurseCGrade = "Grade I",
+                isAllSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                nurseCPreferenceRank = 1,
+                combinedPreferenceRank = 3,
+                priorityReason = "3-way circular"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z"
+        )
+
+        try {
+            val method = TransferMatchViewModel::class.java.getDeclaredMethod(
+                "toUiModel",
+                WorkerSyncResult.MatchFound::class.java,
+                String::class.java,
+                List::class.java
+            )
+            method.isAccessible = true
+            method.invoke(viewModel, threeWayMatch, "nurse-intruder", emptyList<HospitalReference>())
+            org.junit.Assert.fail("Expected IllegalArgumentException for non-participant UID in 3-way match")
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            assertTrue(e.targetException is IllegalArgumentException)
+            assertTrue(e.targetException.message?.contains("is not a participant in 3-way match") == true)
+        }
     }
 }

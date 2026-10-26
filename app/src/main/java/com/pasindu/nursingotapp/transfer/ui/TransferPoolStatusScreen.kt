@@ -109,18 +109,18 @@ import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
+import com.pasindu.nursingotapp.ui.theme.TransferAmberSoft
+import com.pasindu.nursingotapp.ui.theme.TransferBlueSoft
+import com.pasindu.nursingotapp.ui.theme.TransferInk
+import com.pasindu.nursingotapp.ui.theme.TransferMintSoft
+import com.pasindu.nursingotapp.ui.theme.TransferPurpleSoft
+import com.pasindu.nursingotapp.ui.theme.TransferRoseSoft
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
 
-private val TransferBlueSoft = Color(0xFFEAF6FF)
-private val TransferPurpleSoft = Color(0xFFF3EEFF)
-private val TransferMintSoft = Color(0xFFEAFBF5)
-private val TransferAmberSoft = Color(0xFFFFF7ED)
-private val TransferRoseSoft = Color(0xFFFFF1F2)
-private val TransferInk = Color(0xFF12204A)
 
 /**
  * Formats a hospital's geographic location as "District • Province" or "RDHS • Province".
@@ -890,7 +890,7 @@ private fun MissionControlHeroCard(
                             Text(
                                 statusPillText,
                                 color = Color.White,
-                                fontSize = 10.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.6.sp
                             )
@@ -921,7 +921,7 @@ private fun MissionControlHeroCard(
                                     CacheSyncStatus.ERROR -> "Offline pending"
                                 },
                                 color = Color.White,
-                                fontSize = 9.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -960,7 +960,7 @@ private fun MissionControlHeroCard(
                     Text(
                         "Registered: ${formatTimestamp(request.updatedAt)}",
                         color = Color.White.copy(alpha = 0.80f),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )
 
@@ -971,7 +971,7 @@ private fun MissionControlHeroCard(
                         Text(
                             "Direct 2-Way Match",
                             color = Color.White.copy(alpha = 0.90f),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                         )
@@ -1015,7 +1015,7 @@ private fun TransferJourneyStepperCard(
                 Text(
                     "TRANSFER JOURNEY",
                     color = Slate,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.6.sp
                 )
@@ -1027,9 +1027,9 @@ private fun TransferJourneyStepperCard(
                     Text(
                         journeyState.stageLabel,
                         color = journeyState.badgeTextColor,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -1187,7 +1187,7 @@ private fun JourneyNode(
                 isCompleted -> Emerald
                 else -> TextSecondary
             },
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             fontWeight = if (isActive || isCompleted) FontWeight.Black else FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
@@ -1199,7 +1199,7 @@ private fun JourneyNode(
                 isCompleted -> Emerald
                 else -> TextSecondary.copy(alpha = 0.7f)
             },
-            fontSize = 8.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         )
@@ -1275,7 +1275,7 @@ private fun MatchReadinessCard(
                             else -> "MATCHING PROFILE READY"
                         },
                         color = Emerald,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 0.5.sp
                     )
@@ -1297,7 +1297,7 @@ private fun MatchReadinessCard(
                                 else -> "100% Complete"
                             },
                             color = Emerald,
-                            fontSize = 8.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
                         )
@@ -1323,7 +1323,7 @@ private fun MatchReadinessCard(
                 Text(
                     "All prerequisites satisfied • $preferenceCount of 3 destination choices ranked",
                     color = TextSecondary,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
         }
@@ -1371,14 +1371,14 @@ private fun OriginPostingCard(
                         Text(
                             "FROM • YOUR CURRENT POSTING",
                             color = ClinicalPrimaryColor,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
                         )
                         Text(
                             "Hospital you are departing from",
                             color = TextSecondary,
-                            fontSize = 10.5.sp
+                            fontSize = 11.sp
                         )
                     }
                 }
@@ -1401,7 +1401,7 @@ private fun OriginPostingCard(
                         Text(
                             "DEPARTURE",
                             color = ClinicalPrimaryColor,
-                            fontSize = 8.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -1427,7 +1427,7 @@ private fun OriginPostingCard(
                             Text(
                                 hospital.category,
                                 color = ClinicalPrimaryColor,
-                                fontSize = 9.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
@@ -1439,7 +1439,7 @@ private fun OriginPostingCard(
                         Text(
                             loc,
                             color = TextSecondary,
-                            fontSize = 10.5.sp,
+                            fontSize = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1478,7 +1478,7 @@ private fun DestinationsHeader(selectedCount: Int) {
             Text(
                 "Your ordered hospital preferences ($selectedCount of 3 ranked)",
                 color = TextSecondary,
-                fontSize = 10.5.sp
+                fontSize = 11.sp
             )
         }
 
@@ -1490,7 +1490,7 @@ private fun DestinationsHeader(selectedCount: Int) {
             Text(
                 "$selectedCount/3 Selected",
                 color = AiAccentColor,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -1545,7 +1545,7 @@ private fun RankedDestinationCard(
                     Text(
                         rankTitle,
                         color = accentColor,
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 0.5.sp
                     )
@@ -1569,7 +1569,7 @@ private fun RankedDestinationCard(
                             Text(
                                 hospital.category,
                                 color = accentColor,
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
@@ -1581,7 +1581,7 @@ private fun RankedDestinationCard(
                         Text(
                             loc,
                             color = TextSecondary,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1645,7 +1645,7 @@ private fun EmptyPreferenceSlotCard(
                 Text(
                     if (isLocked) "Locked while a match is active" else "Tap 'Edit Destination Preferences' to add a destination hospital",
                     color = TextSecondary.copy(alpha = if (isLocked) 0.6f else 0.75f),
-                    fontSize = 9.5.sp
+                    fontSize = 11.sp
                 )
             }
 
@@ -1701,15 +1701,15 @@ private fun CompactTransferRulesCard() {
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text(
-                            "Direct 2-Way Exchange Rules",
+                            "Exchange Matching Rules",
                             color = TransferInk,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "Pair-wise reciprocity • Grade-aware priority",
+                            "Direct 2-Way & 3-Way Circular • Grade-aware eligibility",
                             color = TextSecondary,
-                            fontSize = 9.5.sp
+                            fontSize = 11.sp
                         )
                     }
                 }
@@ -1729,10 +1729,10 @@ private fun CompactTransferRulesCard() {
             ) {
                 Column(modifier = Modifier.padding(top = 12.dp)) {
                     Text(
-                        "• Direct Reciprocal Match: Pair-wise exchange only (Nurse A ⇄ Nurse B). Both nurses must desire each other's hospital.\n" +
-                            "• Grade-Aware Matching: Compatible same-grade candidates are prioritized when available. If no compatible same-grade candidate is available, compatible candidates from other grades remain eligible.\n" +
-                            "• Real-Time Control: You can modify ranked destinations or cancel at any time.\n" +
-                            "• Immediate Pool Withdrawal: Cancelling unpublishes your entry immediately.",
+                        "• Direct & Circular Matching: Supports Direct 2-Way exchange (Nurse A ⇄ Nurse B) and 3-Way Circular exchange (Nurse A → Nurse B → Nurse C → Nurse A).\n" +
+                            "• Grade-Aware Matching: Compatible same-grade candidates are prioritized when available. Compatible candidates across eligible grades remain eligible.\n" +
+                            "• Real-Time Control: You can modify ranked destinations or withdraw at any time.\n" +
+                            "• Immediate Pool Withdrawal: Withdrawing unpublishes your entry immediately.",
                         color = TextSecondary,
                         fontSize = 11.sp,
                         lineHeight = 16.5.sp

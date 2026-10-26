@@ -9,6 +9,10 @@ interface TransferSyncScheduler {
     fun scheduleSync()
 }
 
+object NoOpTransferSyncScheduler : TransferSyncScheduler {
+    override fun scheduleSync() = Unit
+}
+
 @Singleton
 class WorkManagerTransferSyncScheduler @Inject constructor(
     @ApplicationContext private val context: Context

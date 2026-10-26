@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OTFormsSL</string>
+    <string name="transfer_rules_title">இருவழி மற்றும் மூவழி இடமாற்ற விதிகள்</string>
+    <string name="transfer_rules_summary">இணக்கமான செவிலியர் தரங்களில் முதலில் நேரடி இருவழி மாற்றங்களையும், பின்னர் மூவழி சுழற்சி வழிகளையும் தேடுகிறது.</string>
+    <string name="transfer_match_waiting_partners">நீங்கள் ஏற்றுக்கொண்டீர்கள் (%2$d இல் %1$d). மற்ற செவிலியர்களின் பதிலுக்காகக் காத்திருக்கிறது.</string>
+    <string name="transfer_match_ended_pool">இந்த இணைப்பு முடிவடைந்தது. உங்கள் கோரிக்கை மீண்டும் செயலில் உள்ள தொகுப்பில் உள்ளது.</string>
+    <string name="transfer_match_ended_completed">அனைத்துப் பங்கேற்பாளர்களும் இடமாற்றம் முடிந்ததாகப் பதிவு செய்துள்ளனர். உங்கள் இடமாற்றம் நிறைவடைந்தது!</string>
+    <string name="transfer_match_ended_withdrawn">உங்கள் இடமாற்றக் கோரிக்கை திரும்பப் பெறப்பட்டது.</string>
+    <string name="transfer_offline_polling_banner">இணைய இணைப்பு நிலையற்றது — கடைசியாக ஒத்திசைக்கப்பட்ட நிலை காட்டப்படுகிறது.</string>
+</resources>

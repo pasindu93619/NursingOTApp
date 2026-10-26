@@ -548,4 +548,50 @@ describe("Firestore REST Client (Mock-Only Offline Test Suite)", () => {
     assert.equal(fromFirestoreValue(fsFields.nil), null);
     assert.deepEqual(fromFirestoreValue(fsFields.tags), ["ot", "icu"]);
   });
+
+  // Test 18: queryPendingConfirmationMatches constructs composite query with expiresAt filter and ordering when nowIso is provided
+  test("18 - queryPendingConfirmationMatches constructs composite query with expiresAt filter and ordering when nowIso is provided", async () => {
+    let capturedRequestBody: any = null;
+
+    const transport = createMockTransport({
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:runQuery`]: async (req) => {
+        capturedRequestBody = await req.json();
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({
+      projectId: TEST_PROJECT_ID,
+      tokenProvider: mockTokenProvider,
+      transport
+    });
+
+    const testNowIso = "2026-10-27T12:00:00.000Z";
+    await client.queryPendingConfirmationMatches(50, testNowIso);
+
+    assert.ok(capturedRequestBody);
+    const sq = capturedRequestBody.structuredQuery;
+    assert.equal(sq.from[0].collectionId, "matches");
+    assert.equal(sq.limit, 50);
+
+    // Verify compositeFilter
+    const compositeFilter = sq.where.compositeFilter;
+    assert.equal(compositeFilter.op, "AND");
+    assert.equal(compositeFilter.filters.length, 2);
+
+    const statusFilter = compositeFilter.filters[0].fieldFilter;
+    assert.equal(statusFilter.field.fieldPath, "status");
+    assert.equal(statusFilter.op, "IN");
+
+    const expiresFilter = compositeFilter.filters[1].fieldFilter;
+    assert.equal(expiresFilter.field.fieldPath, "expiresAt");
+    assert.equal(expiresFilter.op, "LESS_THAN_OR_EQUAL");
+    assert.equal(expiresFilter.value.stringValue, testNowIso);
+
+    // Verify orderBy
+    assert.equal(sq.orderBy[0].field.fieldPath, "expiresAt");
+    assert.equal(sq.orderBy[0].direction, "ASCENDING");
+    assert.equal(sq.orderBy[1].field.fieldPath, "__name__");
+    assert.equal(sq.orderBy[1].direction, "ASCENDING");
+  });
 });

@@ -29,6 +29,21 @@ class TransferInstructionsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TransferInstructionsUiState())
     val uiState: StateFlow<TransferInstructionsUiState> = _uiState.asStateFlow()
 
+    private val _checkedItems = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val checkedItems: StateFlow<Map<String, Boolean>> = _checkedItems.asStateFlow()
+
+    fun toggleCheckItem(id: String) {
+        val current = _checkedItems.value.toMutableMap()
+        current[id] = !(current[id] ?: false)
+        _checkedItems.value = current
+    }
+
+    fun setItemChecked(id: String, checked: Boolean) {
+        val current = _checkedItems.value.toMutableMap()
+        current[id] = checked
+        _checkedItems.value = current
+    }
+
     fun load(matchId: String) {
         if (matchId.isBlank()) {
             _uiState.value = TransferInstructionsUiState(isLoading = false, error = "Missing match reference.")

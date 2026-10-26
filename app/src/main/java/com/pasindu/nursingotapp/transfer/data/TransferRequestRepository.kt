@@ -12,6 +12,7 @@ import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
+import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,17 +48,40 @@ private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
 class TransferRequestRepository @Inject constructor(
     private val dao: TransferActiveCacheDao,
     private val profileDao: ProfileDao,
-    private val tokenProvider: TransferTokenProvider? = null,
-    private val remoteDataSource: TransferRemoteDataSource? = null,
-    private val workerApiClient: TransferWorkerApiClient? = null,
+    private val tokenProvider: TransferTokenProvider,
+    private val remoteDataSource: TransferRemoteDataSource,
+    private val workerApiClient: TransferWorkerApiClient,
     private val logger: TransferSyncLogger = NoOpTransferSyncLogger
 ) {
+    // Secondary constructor for local DAO / offline unit testing
+    constructor(
+        dao: TransferActiveCacheDao,
+        profileDao: ProfileDao
+    ) : this(
+        dao = dao,
+        profileDao = profileDao,
+        tokenProvider = StubTransferTokenProvider,
+        remoteDataSource = StubTransferRemoteDataSource,
+        workerApiClient = StubTransferWorkerApiClient,
+        logger = NoOpTransferSyncLogger
+    )
 
     companion object {
         private const val TAG = "TransferSync"
     }
 
+    private data class CompletedSyncRecord(
+        val entityId: Int,
+        val updatedAt: Long,
+        val currentHospitalId: String?,
+        val preferenceHospitalIdsJson: String?,
+        val grade: String?,
+        val result: WorkerSyncResult
+    )
+
     private val syncMutex = Mutex()
+    private var syncFlightId: Long = 0L
+    private var lastCompletedSync: CompletedSyncRecord? = null
 
     // ---------------------------------------------------------------------------
     // JSON configuration — plain array, no surrounding whitespace.
@@ -117,7 +141,9 @@ class TransferRequestRepository @Inject constructor(
     suspend fun saveRequest(
         currentHospitalId: String,
         rankedPreferences: RankedPreferences
-    ) {
+    ) = syncMutex.withLock {
+        lastCompletedSync = null
+
         require(currentHospitalId.isNotBlank()) {
             "currentHospitalId must not be blank"
         }
@@ -198,8 +224,80 @@ class TransferRequestRepository @Inject constructor(
      * 5. On no match: sets SYNCED (request remains active in pool).
      * 6. On failure: does NOT delete Room request; retains local data and marks ERROR.
      */
-    suspend fun syncActiveRequest(): WorkerSyncResult = syncMutex.withLock {
-        syncActiveRequestLocked()
+    suspend fun syncActiveRequest(): WorkerSyncResult {
+        val callFlightId = syncFlightId
+        return syncMutex.withLock {
+            val cachedEntity = dao.getOnce()
+                ?: return@withLock WorkerSyncResult.NoMatch("No active local transfer request")
+
+            // Re-check state after acquiring lock: if a concurrent in-flight sync just finished
+            // for this exact request with SYNCED status, safely reuse its verified result.
+            if (syncFlightId > callFlightId && cachedEntity.syncStatus == CacheSyncStatus.SYNCED.name) {
+                val record = lastCompletedSync
+                if (record != null &&
+                    record.entityId == cachedEntity.id &&
+                    record.updatedAt == cachedEntity.updatedAt &&
+                    record.currentHospitalId == cachedEntity.currentHospitalId &&
+                    record.preferenceHospitalIdsJson == cachedEntity.preferenceHospitalIdsJson &&
+                    record.grade == cachedEntity.grade
+                ) {
+                    when (record.result) {
+                        is WorkerSyncResult.MatchFound -> {
+                            if (cachedEntity.requestStatus == TransferRequestStatus.MATCHED.name &&
+                                cachedEntity.matchCycleId == record.result.matchId
+                            ) {
+                                return@withLock record.result
+                            }
+                        }
+                        is WorkerSyncResult.NoMatch,
+                        is WorkerSyncResult.ReturnedToPool -> {
+                            if (cachedEntity.requestStatus == TransferRequestStatus.PENDING.name &&
+                                cachedEntity.matchCycleId == null
+                            ) {
+                                return@withLock record.result
+                            }
+                        }
+                        is WorkerSyncResult.RequestCompleted -> {
+                            if (cachedEntity.requestStatus == TransferRequestStatus.COMPLETED.name) {
+                                return@withLock record.result
+                            }
+                        }
+                        is WorkerSyncResult.RequestWithdrawn -> {
+                            if (cachedEntity.requestStatus == TransferRequestStatus.WITHDRAWN.name) {
+                                return@withLock record.result
+                            }
+                        }
+                        else -> {
+                            // Transient errors (NetworkError, AuthError, Conflict) are never reused
+                        }
+                    }
+                }
+            }
+
+            val result = syncActiveRequestLocked()
+            if (result is WorkerSyncResult.MatchFound ||
+                result is WorkerSyncResult.NoMatch ||
+                result is WorkerSyncResult.ReturnedToPool ||
+                result is WorkerSyncResult.RequestCompleted ||
+                result is WorkerSyncResult.RequestWithdrawn
+            ) {
+                val latest = dao.getOnce()
+                if (latest != null) {
+                    lastCompletedSync = CompletedSyncRecord(
+                        entityId = latest.id,
+                        updatedAt = latest.updatedAt,
+                        currentHospitalId = latest.currentHospitalId,
+                        preferenceHospitalIdsJson = latest.preferenceHospitalIdsJson,
+                        grade = latest.grade,
+                        result = result
+                    )
+                }
+            } else {
+                lastCompletedSync = null
+            }
+            syncFlightId++
+            result
+        }
     }
 
     private suspend fun syncActiveRequestLocked(): WorkerSyncResult {
@@ -239,11 +337,11 @@ class TransferRequestRepository @Inject constructor(
             return WorkerSyncResult.RequestWithdrawn("Request is withdrawn")
         }
 
-        val tp = tokenProvider ?: return WorkerSyncResult.AuthError("Token provider not configured")
-        val rds = remoteDataSource ?: return WorkerSyncResult.NetworkError("Remote data source not configured")
-        val api = workerApiClient ?: return WorkerSyncResult.NetworkError("Worker API client not configured")
+        if (tokenProvider is StubTransferTokenProvider || workerApiClient is StubTransferWorkerApiClient) {
+            return WorkerSyncResult.NoMatch("Offline stub client")
+        }
 
-        val userId = tp.getCurrentUserId()
+        val userId = tokenProvider.getCurrentUserId()
             ?: run {
                 logger.e(TAG, "Authentication failure: Unable to get user ID")
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
@@ -253,7 +351,7 @@ class TransferRequestRepository @Inject constructor(
         logger.d(TAG, "syncActiveRequest: authenticated user present")
 
         // Read server-owned state before publishing local SEARCHING data.
-        val remoteState = rds.fetchTransferRequest(userId).getOrElse { error ->
+        val remoteState = remoteDataSource.fetchTransferRequest(userId).getOrElse { error ->
             logger.e(
                 TAG,
                 "Firestore fetchTransferRequest FAILED: ${error.javaClass.simpleName}: ${error.message}",
@@ -291,7 +389,7 @@ class TransferRequestRepository @Inject constructor(
             !remoteState.currentMatchId.isNullOrBlank()
         ) {
             val matchId = remoteState.currentMatchId!!
-            val remoteMatch = rds.fetchMatchDoc(matchId).getOrElse { error ->
+            val remoteMatch = remoteDataSource.fetchMatchDoc(matchId).getOrElse { error ->
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
                 return WorkerSyncResult.NetworkError(
                     "Match was found on server but could not be read: ${error.message}",
@@ -357,15 +455,15 @@ class TransferRequestRepository @Inject constructor(
         if (isLocallyMatched) {
             val oldMatchCycleId = entity.matchCycleId
             val finalMatchStatus = if (!oldMatchCycleId.isNullOrBlank()) {
-                val matchDocResult = rds.fetchMatchDoc(oldMatchCycleId)
+                val matchDocResult = remoteDataSource.fetchMatchDoc(oldMatchCycleId)
                 val oldMatchDoc = matchDocResult.getOrNull()
                 val status = oldMatchDoc?.status?.trim()?.uppercase()
                 when {
                     status == "EXPIRED" -> "EXPIRED"
                     status == "CANCELLED" -> "CANCELLED"
-                    matchDocResult.isFailure && entity.matchStatus == "EXPIRED" -> "EXPIRED"
                     status != null -> status
                     entity.matchStatus == "EXPIRED" -> "EXPIRED"
+                    matchDocResult.isFailure -> entity.matchStatus ?: "CANCELLED"
                     else -> "CANCELLED"
                 }
             } else {
@@ -409,7 +507,7 @@ class TransferRequestRepository @Inject constructor(
 
         if (shouldPublishRemote) {
             logger.d(TAG, "Publishing transfer request to server")
-            val publishResult = rds.publishTransferRequest(userId, domain)
+            val publishResult = remoteDataSource.publishTransferRequest(userId, domain)
             if (publishResult.isFailure) {
                 val err = publishResult.exceptionOrNull()
                 logger.e(
@@ -433,7 +531,7 @@ class TransferRequestRepository @Inject constructor(
             )
         }
 
-        val token = tp.getFirebaseIdToken()
+        val token = tokenProvider.getFirebaseIdToken()
             ?: run {
                 logger.e(TAG, "Firebase ID token acquisition FAILED")
                 dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
@@ -442,7 +540,7 @@ class TransferRequestRepository @Inject constructor(
 
         logger.d(TAG, "Firebase ID token acquired successfully")
         logger.d(TAG, "Calling Cloudflare matching Worker")
-        val workerResult = api.findAndLockMatch(token)
+        val workerResult = workerApiClient.findAndLockMatch(token)
         logger.d(TAG, "Cloudflare matching Worker returned: ${workerResult::class.simpleName}")
 
         when (workerResult) {
@@ -492,18 +590,16 @@ class TransferRequestRepository @Inject constructor(
 
     suspend fun getCompletionStatus(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
-        val token = tokenProvider?.getFirebaseIdToken()
+        val token = tokenProvider.getFirebaseIdToken()
             ?: throw IllegalStateException("Authentication provider unavailable")
-        val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
-        api.getCompletionStatus(token, matchId)
+        workerApiClient.getCompletionStatus(token, matchId)
     }
 
     suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
-        val token = tokenProvider?.getFirebaseIdToken()
+        val token = tokenProvider.getFirebaseIdToken()
             ?: throw IllegalStateException("Authentication provider unavailable")
-        val api = workerApiClient ?: throw IllegalStateException("Transfer Worker API client unavailable")
-        val result = api.reportCompletion(token, matchId)
+        val result = workerApiClient.reportCompletion(token, matchId)
         if (result.status == "COMPLETED") {
             val cached = dao.getOnce()
             if (cached != null && cached.matchCycleId == matchId) {
@@ -530,10 +626,8 @@ class TransferRequestRepository @Inject constructor(
     }
 
     suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runSuspendCatching {
-        val tp = tokenProvider ?: error("Token provider not configured")
-        val api = workerApiClient ?: error("Worker API client not configured")
-        val token = tp.getFirebaseIdToken() ?: error("Authentication failure: Unable to get ID token")
-        api.getMatchHistory(token)
+        val token = tokenProvider.getFirebaseIdToken() ?: error("Authentication failure: Unable to get ID token")
+        workerApiClient.getMatchHistory(token)
     }
 
     /**
@@ -543,20 +637,12 @@ class TransferRequestRepository @Inject constructor(
      *
      * @throws Exception if backend withdrawal or Room delete fails.
      */
-    suspend fun clearRequest() {
-        val tp = tokenProvider
-        val api = workerApiClient
-        val remote = remoteDataSource
-
-        if (api != null && tp != null) {
-            val token = tp.getFirebaseIdToken()
+    suspend fun clearRequest() = syncMutex.withLock {
+        lastCompletedSync = null
+        if (tokenProvider !is StubTransferTokenProvider && workerApiClient !is StubTransferWorkerApiClient) {
+            val token = tokenProvider.getFirebaseIdToken()
                 ?: throw IllegalStateException("Authentication failure: Unable to get ID token")
-            api.withdrawRequest(token)
-        } else if (remote != null && tp != null) {
-            val userId = tp.getCurrentUserId()
-            if (userId != null) {
-                remote.withdrawTransferRequest(userId)
-            }
+            workerApiClient.withdrawRequest(token)
         }
         dao.clear()
     }
@@ -566,19 +652,16 @@ class TransferRequestRepository @Inject constructor(
      * Updates the local Room cache with the authoritative status upon success.
      */
     suspend fun respondToMatch(matchId: String, decision: Decision): Result<DecisionResponse> {
-        val tp = tokenProvider ?: return Result.failure(IllegalStateException("Token provider not configured"))
-        val api = workerApiClient ?: return Result.failure(IllegalStateException("Worker API client not configured"))
-
-        val token = tp.getFirebaseIdToken()
+        val token = tokenProvider.getFirebaseIdToken()
             ?: return Result.failure(IllegalStateException("Authentication failure: Unable to get ID token"))
 
         val response = try {
-            api.respondToMatch(token, DecisionRequest(matchId, decision))
+            workerApiClient.respondToMatch(token, DecisionRequest(matchId, decision))
         } catch (e: CancellationException) {
             throw e
         } catch (originalError: Throwable) {
             // Reconcile with authoritative match state if the worker call failed
-            if (remoteDataSource != null && (decision == Decision.LEAVE || decision == Decision.REJECT)) {
+            if (decision == Decision.LEAVE || decision == Decision.REJECT) {
                 val remoteMatch = remoteDataSource.fetchMatchDoc(matchId).getOrNull()
                 if (remoteMatch != null && remoteMatch.status == "CANCELLED") {
                     DecisionResponse(
@@ -628,6 +711,7 @@ class TransferRequestRepository @Inject constructor(
             }
         }
 
+        lastCompletedSync = null
         return Result.success(response)
     }
 
@@ -693,4 +777,60 @@ class TransferRequestRepository @Inject constructor(
             matchCycleId = this.matchCycleId
         )
     }
+}
+
+// ---------------------------------------------------------------------------
+// Offline / Test Stubs for secondary constructors
+// ---------------------------------------------------------------------------
+
+private object StubTransferTokenProvider : TransferTokenProvider {
+    override suspend fun getFirebaseIdToken(forceRefresh: Boolean): String? = "stub-id-token"
+    override suspend fun getCurrentUserId(): String? = "stub-user-id"
+}
+
+private object StubTransferRemoteDataSource : TransferRemoteDataSource {
+    override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> =
+        Result.success(null)
+
+    override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
+        Result.success(null)
+
+    override fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+        kotlinx.coroutines.flow.flowOf(Result.success(null))
+
+    override suspend fun publishTransferRequest(
+        userId: String,
+        request: TransferRequest
+    ): Result<Unit> = Result.success(Unit)
+
+    override suspend fun withdrawTransferRequest(userId: String): Result<Unit> =
+        Result.success(Unit)
+}
+
+private object StubTransferWorkerApiClient : TransferWorkerApiClient {
+    override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult =
+        WorkerSyncResult.NoMatch("Stub client")
+
+    override suspend fun respondToMatch(
+        firebaseIdToken: String,
+        payload: DecisionRequest
+    ): DecisionResponse = error("Stub client does not support respondToMatch")
+
+    override suspend fun withdrawRequest(firebaseIdToken: String): WorkerWithdrawResponse =
+        WorkerWithdrawResponse(withdrawn = true)
+
+    override suspend fun getMatchHistory(firebaseIdToken: String): List<TransferMatchHistoryItem> =
+        emptyList()
+
+    override suspend fun getCompletionStatus(
+        firebaseIdToken: String,
+        matchId: String
+    ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+        error("Stub client does not support getCompletionStatus")
+
+    override suspend fun reportCompletion(
+        firebaseIdToken: String,
+        matchId: String
+    ): com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus =
+        error("Stub client does not support reportCompletion")
 }

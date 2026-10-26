@@ -74,3 +74,28 @@ val md_theme_light_onSurface = TextPrimary
 val md_theme_light_surfaceVariant = SurfaceMuted
 val md_theme_light_onSurfaceVariant = TextSecondary
 val md_theme_light_outline = BorderMuted
+
+// Mutual Transfer centralized semantic tokens (Light Mode authoritative for clinical safety)
+val TransferSurfaceBackground = Color(0xFFF8FAFC)
+val TransferCardSurface = Color(0xFFFFFFFF)
+val TransferCardBorder = Color(0xFFE2E8F0)
+val TransferCardBorderInteractive = Color(0xFF94A3B8)
+val TransferInfoContainer = Color(0xFFEFF6FF)
+val OnTransferInfoContainer = Color(0xFF1E3A8A)
+val TransferThreeWayContainer = Color(0xFFF3E8FF)
+val OnTransferThreeWayContainer = Color(0xFF581C87)
+val TransferSuccessContainer = Color(0xFFECFDF5)
+val OnTransferSuccessContainer = Color(0xFF065F46)
+val TransferWarningContainer = Color(0xFFFFFBEB)
+val OnTransferWarningContainer = Color(0xFF92400E)
+val TransferDangerContainer = Color(0xFFFEF2F2)
+val OnTransferDangerContainer = Color(0xFF991B1B)
+
+// Shared pastel pill/badge colors used across transfer screens
+val TransferBlueSoft = Color(0xFFEAF6FF)
+val TransferMintSoft = Color(0xFFEAFBF5)
+val TransferAmberSoft = Color(0xFFFFF7ED)
+val TransferRoseSoft = Color(0xFFFFF1F2)
+val TransferPurpleSoft = Color(0xFFF3EEFF)
+val TransferSlateSoft = Color(0xFFF1F5F9)
+val TransferInk = Color(0xFF12204A)

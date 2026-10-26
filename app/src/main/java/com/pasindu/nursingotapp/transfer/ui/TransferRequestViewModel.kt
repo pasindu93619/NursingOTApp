@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+import com.pasindu.nursingotapp.transfer.worker.NoOpTransferSyncScheduler
 import com.pasindu.nursingotapp.transfer.worker.TransferSyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -19,12 +20,30 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
+
 @HiltViewModel
 class TransferRequestViewModel @Inject constructor(
     private val hospitalReferenceRepository: HospitalReferenceRepository,
     private val transferRequestRepository: TransferRequestRepository,
-    private val syncScheduler: TransferSyncScheduler? = null
+    private val syncScheduler: TransferSyncScheduler
 ) : ViewModel() {
+
+    constructor(
+        hospitalReferenceRepository: HospitalReferenceRepository,
+        transferRequestRepository: TransferRequestRepository
+    ) : this(
+        hospitalReferenceRepository = hospitalReferenceRepository,
+        transferRequestRepository = transferRequestRepository,
+        syncScheduler = NoOpTransferSyncScheduler
+    )
 
     // ---------------------------------------------------------------------------
     // Hospital directory (existing, unchanged behaviour)
@@ -129,7 +148,7 @@ class TransferRequestViewModel @Inject constructor(
             _isLoading.value = true
             _loadError.value = null
 
-            runCatching {
+            runSuspendCatching {
                 hospitalReferenceRepository.getAll()
             }.onSuccess { hospitals ->
                 _hospitalOptions.value = hospitals
@@ -184,15 +203,15 @@ class TransferRequestViewModel @Inject constructor(
             _isSubmitting.value = true
             _submitError.value = null
 
-            runCatching {
+            runSuspendCatching {
                 val prefs = RankedPreferences(preferenceHospitalIds)
                 transferRequestRepository.saveRequest(currentHospitalId, prefs)
             }.onSuccess {
                 // Schedule WorkManager resilient offline-first sync
-                syncScheduler?.scheduleSync()
+                syncScheduler.scheduleSync()
                 // Also trigger immediate background sync attempt if device is already online
                 viewModelScope.launch {
-                    runCatching { transferRequestRepository.syncActiveRequest() }
+                    runSuspendCatching { transferRequestRepository.syncActiveRequest() }
                 }
                 onSuccess()
             }.onFailure { error ->
@@ -221,7 +240,7 @@ class TransferRequestViewModel @Inject constructor(
             _isSubmitting.value = true
             _submitError.value = null
 
-            runCatching {
+            runSuspendCatching {
                 transferRequestRepository.clearRequest()
             }.onSuccess {
                 _isSubmitting.value = false
