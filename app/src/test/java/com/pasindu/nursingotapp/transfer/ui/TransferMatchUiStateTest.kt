@@ -89,4 +89,52 @@ class TransferMatchUiStateTest {
         assertEquals(MatchDecisionStatus.PENDING, model.participant2?.status)
         assertEquals(MatchDecisionStatus.PENDING, model.participant3?.status)
     }
+    @Test
+    fun stateFor_centralizedMapping_mapsAllStatusesCorrectly() {
+        val baseModel = createSampleMatchUiModel()
+
+        // 1. CHAT_OPEN -> ChatOpen
+        val chatOpenState = TransferMatchViewModel.stateFor(baseModel.copy(serverStatus = "CHAT_OPEN"))
+        assertTrue(chatOpenState is TransferMatchUiState.ChatOpen)
+        assertEquals("CHAT_OPEN", (chatOpenState as TransferMatchUiState.ChatOpen).match.serverStatus)
+
+        // 2. CONFIRMED -> Confirmed
+        val confirmedState = TransferMatchViewModel.stateFor(baseModel.copy(serverStatus = "CONFIRMED"))
+        assertTrue(confirmedState is TransferMatchUiState.Confirmed)
+        assertEquals("CONFIRMED", (confirmedState as TransferMatchUiState.Confirmed).match.serverStatus)
+
+        // 3. CANCELLED -> AlreadyRejected
+        val cancelledState = TransferMatchViewModel.stateFor(baseModel.copy(serverStatus = "CANCELLED"))
+        assertTrue(cancelledState is TransferMatchUiState.AlreadyRejected)
+        assertEquals("CANCELLED", (cancelledState as TransferMatchUiState.AlreadyRejected).match.serverStatus)
+
+        // 4. EXPIRED -> Expired
+        val expiredState = TransferMatchViewModel.stateFor(baseModel.copy(serverStatus = "EXPIRED"))
+        assertTrue(expiredState is TransferMatchUiState.Expired)
+        assertEquals("EXPIRED", (expiredState as TransferMatchUiState.Expired).match.serverStatus)
+
+        // 5. Otherwise, myStatus == ACCEPTED -> AlreadyAccepted
+        val acceptedState = TransferMatchViewModel.stateFor(
+            baseModel.copy(serverStatus = "PENDING_CONFIRMATION", myStatus = MatchDecisionStatus.ACCEPTED)
+        )
+        assertTrue(acceptedState is TransferMatchUiState.AlreadyAccepted)
+
+        // 6. Other statuses (e.g. PENDING_CONFIRMATION with myStatus PENDING) -> MatchFound
+        val matchFoundState = TransferMatchViewModel.stateFor(
+            baseModel.copy(serverStatus = "PENDING_CONFIRMATION", myStatus = MatchDecisionStatus.PENDING)
+        )
+        assertTrue(matchFoundState is TransferMatchUiState.MatchFound)
+
+        // 7. Unknown status with myStatus ACCEPTED -> AlreadyAccepted
+        val customAccepted = TransferMatchViewModel.stateFor(
+            baseModel.copy(serverStatus = "UNKNOWN_WAITING", myStatus = MatchDecisionStatus.ACCEPTED)
+        )
+        assertTrue(customAccepted is TransferMatchUiState.AlreadyAccepted)
+
+        // 8. Unknown status with myStatus PENDING -> MatchFound
+        val customPending = TransferMatchViewModel.stateFor(
+            baseModel.copy(serverStatus = "UNKNOWN_WAITING", myStatus = MatchDecisionStatus.PENDING)
+        )
+        assertTrue(customPending is TransferMatchUiState.MatchFound)
+    }
 }

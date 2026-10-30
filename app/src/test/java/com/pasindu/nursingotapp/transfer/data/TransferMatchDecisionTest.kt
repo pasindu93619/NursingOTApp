@@ -15,15 +15,19 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch
 import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
+import com.pasindu.nursingotapp.transfer.data.model.TransferWorkerApiException
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.ui.MatchDecisionStatus
+import com.pasindu.nursingotapp.transfer.ui.POLL_WARNING_MESSAGE
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchUiState
 import com.pasindu.nursingotapp.transfer.ui.TransferMatchViewModel
+import com.pasindu.nursingotapp.transfer.ui.calculatePollBackoff
 import com.pasindu.nursingotapp.transfer.ui.createSampleMatchUiModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -37,6 +41,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -96,7 +101,17 @@ class TransferMatchDecisionTest {
         var idToken: String? = "test-firebase-id-token",
         var userId: String? = "user-123"
     ) : TransferTokenProvider {
-        override suspend fun getFirebaseIdToken(forceRefresh: Boolean): String? = idToken
+        var refreshCount = 0
+        var refreshedToken: String? = null
+        override suspend fun getFirebaseIdToken(forceRefresh: Boolean): String? {
+            if (forceRefresh) {
+                refreshCount++
+                if (refreshedToken != null) {
+                    idToken = refreshedToken
+                }
+            }
+            return idToken
+        }
         override suspend fun getCurrentUserId(): String? = userId
     }
 
@@ -138,8 +153,26 @@ class TransferMatchDecisionTest {
         override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> =
             Result.success(remoteMatch)
 
-        override fun observeMatchDoc(matchId: String): kotlinx.coroutines.flow.Flow<Result<RemoteMatchState?>> =
-            kotlinx.coroutines.flow.flowOf(Result.success(remoteMatch))
+        var observeMatchDocCallCount = 0
+        var lastObservedMatchId: String? = null
+        val matchDocFlow = MutableSharedFlow<Result<RemoteMatchState?>>(replay = 1).apply {
+            tryEmit(Result.success(remoteMatch))
+        }
+
+        fun emitMatchDoc(match: RemoteMatchState?) {
+            remoteMatch = match
+            matchDocFlow.tryEmit(Result.success(match))
+        }
+
+        fun emitMatchDocError(error: Throwable) {
+            matchDocFlow.tryEmit(Result.failure(error))
+        }
+
+        override fun observeMatchDoc(matchId: String): kotlinx.coroutines.flow.Flow<Result<RemoteMatchState?>> {
+            observeMatchDocCallCount++
+            lastObservedMatchId = matchId
+            return matchDocFlow
+        }
 
         override suspend fun publishTransferRequest(
             userId: String,
@@ -738,7 +771,17 @@ class TransferMatchDecisionTest {
         // Exercise the WorkerSyncResult -> UI mapping path. A server-side MATCHED
         // request takes the repository's authoritative Firestore fast path instead.
         remoteDataSource.remoteRequest = null
-        remoteDataSource.remoteMatch = null
+        val fakeDoc = RemoteMatchState(
+            matchId = matchFound.matchId,
+            matchType = matchFound.matchType,
+            directMatch = matchFound.directMatch,
+            createdAt = matchFound.createdAt,
+            expiresAt = matchFound.expiresAt,
+            status = matchFound.status,
+            acceptedByA = matchFound.acceptedByA,
+            acceptedByB = matchFound.acceptedByB
+        )
+        remoteDataSource.emitMatchDoc(fakeDoc)
         dao.entity = dao.entity!!.copy(
             requestStatus = TransferRequestStatus.PENDING.name,
             matchCycleId = null,
@@ -807,24 +850,22 @@ class TransferMatchDecisionTest {
             assertTrue(viewModel.uiState.value is TransferMatchUiState.AlreadyAccepted)
 
             // Simulate the server-side match document being cancelled, then let the
-            // real polling coroutine perform its next sync cycle.
-            remoteDataSource.remoteMatch = RemoteMatchState(
-                matchId = "MATCH-B4",
-                matchType = "DIRECT_2_WAY",
-                directMatch = initialMatch.directMatch,
-                status = "CANCELLED",
-                createdAt = "2026-10-15T10:00:00Z",
-                expiresAt = "2026-10-15T12:00:00Z",
-                acceptedByA = true
+            // real-time snapshot listener deliver the updated match doc.
+            remoteDataSource.emitMatchDoc(
+                RemoteMatchState(
+                    matchId = "MATCH-B4",
+                    matchType = "DIRECT_2_WAY",
+                    directMatch = initialMatch.directMatch,
+                    status = "CANCELLED",
+                    createdAt = "2026-10-15T10:00:00Z",
+                    expiresAt = "2026-10-15T12:00:00Z",
+                    acceptedByA = true
+                )
             )
-            testScheduler.advanceTimeBy(3_000L)
             testScheduler.runCurrent()
 
             val finalState = viewModel.uiState.value
-            assertTrue("Polling a cancelled match should return the request to the pool", finalState is TransferMatchUiState.Error)
-            assertTrue(
-                (finalState as TransferMatchUiState.Error).message.contains("returned to the matching pool")
-            )
+            assertTrue("Listener on a cancelled match transitions to AlreadyRejected", finalState is TransferMatchUiState.AlreadyRejected)
         } finally {
             viewModel.onScreenExit()
         }
@@ -994,11 +1035,11 @@ class TransferMatchDecisionTest {
     }
 
     // ---------------------------------------------------------------------------
-    // MAL-05: Degraded Connectivity / Offline Polling Failure Tests
+    // Step 3.2: Robust Polling Error Handling & Backoff Tests
     // ---------------------------------------------------------------------------
 
     @Test
-    fun `MAL-05 - two consecutive poll failures sets isOfflineOrDegraded to true`() = runVmTest {
+    fun `Step 3_2 - consecutive poll failures - 1 and 2 failures do not show warning, 3 failures shows warning and degraded`() = runVmTest {
         val initialMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-MAL05",
             matchType = "DIRECT_2_WAY",
@@ -1029,28 +1070,43 @@ class TransferMatchDecisionTest {
 
         assertTrue("Initial state must be MatchFound", vm.uiState.value is TransferMatchUiState.MatchFound)
         assertFalse("Initially should not be degraded", vm.isOfflineOrDegraded.value)
+        assertNull("Initially poll warning must be null", vm.pollWarning.value)
 
-        // First network error during polling
+        // Listener disconnected, fallback polling starts
+        remoteDataSource.emitMatchDocError(java.io.IOException("Listener down"))
+        testDispatcher.scheduler.runCurrent()
+        assertTrue(vm.isFallbackPollingActive)
+
+        // First network error during fallback polling (delay 30s)
         remoteDataSource.fetchRequestError = java.io.IOException("Network timeout")
-        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
         testDispatcher.scheduler.runCurrent()
-        assertFalse("Single failure should not yet mark as degraded", vm.isOfflineOrDegraded.value)
+        assertFalse("Single failure should not mark as degraded", vm.isOfflineOrDegraded.value)
+        assertNull("Single failure should not set poll warning", vm.pollWarning.value)
 
-        // Second network error during polling
-        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        // Second network error during fallback polling (delay 30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
         testDispatcher.scheduler.runCurrent()
-        assertTrue("Two consecutive failures must mark as degraded", vm.isOfflineOrDegraded.value)
+        assertFalse("Two failures should not mark as degraded", vm.isOfflineOrDegraded.value)
+        assertNull("Two failures should not set poll warning", vm.pollWarning.value)
 
-        // Next poll succeeds: degraded flag is reset
+        // Third network error during fallback polling (delay 30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Three consecutive failures must mark as degraded", vm.isOfflineOrDegraded.value)
+        assertEquals("Three consecutive failures must set warning", POLL_WARNING_MESSAGE, vm.pollWarning.value)
+
+        // Next poll succeeds (delay 30s): failure counter and warning reset
         remoteDataSource.fetchRequestError = null
-        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
         testDispatcher.scheduler.runCurrent()
         assertFalse("Successful poll resets degraded state", vm.isOfflineOrDegraded.value)
+        assertNull("Successful poll clears poll warning", vm.pollWarning.value)
         vm.onScreenExit()
     }
 
     @Test
-    fun `MAL-05 - retryPolling resets offline flag and triggers fresh sync`() = runVmTest {
+    fun `Step 3_2 - retryPolling resets failure counter, warning, and degraded flag`() = runVmTest {
         val initialMatch = WorkerSyncResult.MatchFound(
             matchId = "MATCH-MAL05-RETRY",
             matchType = "DIRECT_2_WAY",
@@ -1079,19 +1135,232 @@ class TransferMatchDecisionTest {
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent()
 
-        // 2 failures
+        // Trigger listener error to engage fallback polling
+        remoteDataSource.emitMatchDocError(java.io.IOException("Offline"))
+        testDispatcher.scheduler.runCurrent()
+
+        // 3 failures during fallback polling (30s each)
         remoteDataSource.fetchRequestError = java.io.IOException("Offline")
-        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.advanceTimeBy(30_000L) // Failure 1
         testDispatcher.scheduler.runCurrent()
-        testDispatcher.scheduler.advanceTimeBy(3_000L)
+        testDispatcher.scheduler.advanceTimeBy(30_000L) // Failure 2
         testDispatcher.scheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(30_000L) // Failure 3
+        testDispatcher.scheduler.runCurrent()
+
         assertTrue(vm.isOfflineOrDegraded.value)
+        assertEquals(POLL_WARNING_MESSAGE, vm.pollWarning.value)
 
         // User taps retry: network restored
         remoteDataSource.fetchRequestError = null
         vm.retryPolling()
         testDispatcher.scheduler.runCurrent()
         assertFalse("retryPolling must clear degraded state", vm.isOfflineOrDegraded.value)
+        assertNull("retryPolling must clear poll warning", vm.pollWarning.value)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_2 - calculatePollBackoff schedule follows 3s, 6s, 12s, and capped at 30s`() {
+        assertEquals("0 failures: base delay 3s", 3_000L, calculatePollBackoff(0))
+        assertEquals("1 failure: 3s delay", 3_000L, calculatePollBackoff(1))
+        assertEquals("2 failures: 6s delay", 6_000L, calculatePollBackoff(2))
+        assertEquals("3 failures: 12s delay", 12_000L, calculatePollBackoff(3))
+        assertEquals("4 failures: capped at 30s", 30_000L, calculatePollBackoff(4))
+        assertEquals("5 failures: capped at 30s", 30_000L, calculatePollBackoff(5))
+        assertEquals("10 failures: capped at 30s", 30_000L, calculatePollBackoff(10))
+    }
+
+    @Test
+    fun `Step 3_2 - CancellationException does not increment failure count or set warning`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-CANCEL-TEST",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isPollingActive)
+        assertFalse(vm.isOfflineOrDegraded.value)
+        assertNull(vm.pollWarning.value)
+
+        // Screen exits -> cancels polling job cleanly
+        vm.onScreenExit()
+        testDispatcher.scheduler.runCurrent()
+
+        assertFalse(vm.isPollingActive)
+        assertFalse("Cancellation must not set degraded flag", vm.isOfflineOrDegraded.value)
+        assertNull("Cancellation must not set poll warning", vm.pollWarning.value)
+    }
+
+    @Test
+    fun `Step 3_2 - AuthError triggers token refresh once before counting as failure`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-AUTH-REFRESH",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("Initially token refresh count is 0", 0, tokenProvider.refreshCount)
+
+        // Trigger listener error to engage fallback polling
+        remoteDataSource.emitMatchDocError(java.io.IOException("Auth needed"))
+        testDispatcher.scheduler.runCurrent()
+
+        // Make fallback syncActiveRequest return AuthError by clearing user ID from token provider
+        tokenProvider.userId = null
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("First AuthError forces token refresh once", 1, tokenProvider.refreshCount)
+        assertNull("First AuthError should not count towards consecutive failures", vm.pollWarning.value)
+
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_2 - Polling continues after recoverable failures until terminal state`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-RECOVERABLE",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isPollingActive)
+
+        // Trigger listener error to engage fallback polling
+        remoteDataSource.emitMatchDocError(java.io.IOException("Socket timeout"))
+        testDispatcher.scheduler.runCurrent()
+
+        // Inject network error into fallback polling
+        remoteDataSource.fetchRequestError = java.io.IOException("Socket timeout")
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+
+        // Polling remains active despite network failure
+        assertTrue("Polling must remain active after recoverable failure", vm.isPollingActive)
+
+        // Restore network and listener delivers a terminal state (CONFIRMED)
+        remoteDataSource.fetchRequestError = null
+        remoteDataSource.emitMatchDoc(remoteDataSource.remoteMatch?.copy(status = "CONFIRMED"))
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("Terminal CONFIRMED state reached", vm.uiState.value is TransferMatchUiState.Confirmed)
+        assertFalse("Polling terminates once terminal state is reached", vm.isPollingActive)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_2 - worker error code EXPIRED maps to Expired UI state and stops polling`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-EXPIRED-TEST",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isPollingActive)
+
+        // Server responds with EXPIRED error
+        workerApiClient.respondResult = Result.failure(
+            TransferWorkerApiException(
+                errorCode = "EXPIRED",
+                statusCode = 410,
+                message = "The 48-hour decision window has expired"
+            )
+        )
+
+        vm.acceptMatch("MATCH-EXPIRED-TEST")
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("UI state must transition to Expired", vm.uiState.value is TransferMatchUiState.Expired)
+        assertFalse("Polling must terminate when match expires", vm.isPollingActive)
         vm.onScreenExit()
     }
 
@@ -1255,5 +1524,553 @@ class TransferMatchDecisionTest {
             assertTrue(e.targetException is IllegalArgumentException)
             assertTrue(e.targetException.message?.contains("is not a participant in 3-way match") == true)
         }
+    }
+    @Test
+    fun `MAL-02 - match polling stops immediately when server status transitions to EXPIRED`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Initially should be MatchFound", vm.uiState.value is TransferMatchUiState.MatchFound)
+        assertTrue("Polling should be active in waiting state", vm.isPollingActive)
+
+        // Snapshot listener delivers EXPIRED
+        remoteDataSource.emitMatchDoc(remoteDataSource.remoteMatch!!.copy(status = "EXPIRED"))
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("UI state must be Expired", vm.uiState.value is TransferMatchUiState.Expired)
+        assertFalse("Polling must terminate when match expires", vm.isPollingActive)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `MAL-02 - brand new match ID received during polling maps consistently and stops if terminal`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        assertTrue(vm.uiState.value is TransferMatchUiState.MatchFound)
+        assertTrue(vm.isPollingActive)
+
+        // A brand new match ID arrives and is observed
+        remoteDataSource.remoteRequest = remoteDataSource.remoteRequest!!.copy(currentMatchId = "MATCH-NEW-EXPIRED")
+        val expiredMatch = remoteDataSource.remoteMatch!!.copy(
+            matchId = "MATCH-NEW-EXPIRED",
+            status = "EXPIRED"
+        )
+        remoteDataSource.emitMatchDoc(expiredMatch)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("UI state must map to Expired for new match ID", vm.uiState.value is TransferMatchUiState.Expired)
+        assertEquals("MATCH-NEW-EXPIRED", (vm.uiState.value as TransferMatchUiState.Expired).match.matchId)
+        assertFalse("Polling must terminate and not loop endlessly on new expired match", vm.isPollingActive)
+        vm.onScreenExit()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Step 3.3: Firestore Snapshot Listener & Fallback Polling Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `Step 3_3 - listener receives match update and updates UI state`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isListenerActive)
+        assertFalse(vm.isFallbackPollingActive)
+        assertEquals("MATCH-001", remoteDataSource.lastObservedMatchId)
+
+        // Snapshot listener delivers partner accepted update
+        val updated = remoteDataSource.remoteMatch!!.copy(
+            acceptedByA = false,
+            acceptedByB = true
+        )
+        remoteDataSource.emitMatchDoc(updated)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.uiState.value is TransferMatchUiState.MatchFound)
+        val state = vm.uiState.value as TransferMatchUiState.MatchFound
+        assertEquals(MatchDecisionStatus.ACCEPTED, state.match.partnerStatus)
+        assertEquals(MatchDecisionStatus.PENDING, state.match.myStatus)
+        assertTrue(vm.isListenerActive)
+        assertFalse(vm.isFallbackPollingActive)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_3 - listener-driven terminal states stop monitoring immediately`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val terminalStatuses = listOf("CHAT_OPEN", "CONFIRMED", "CANCELLED", "EXPIRED")
+
+        for (terminal in terminalStatuses) {
+            val baseMatch = remoteDataSource.remoteMatch!!.copy(status = "PENDING_CONFIRMATION")
+            remoteDataSource.emitMatchDoc(baseMatch)
+            val vm = createViewModel()
+            testDispatcher.scheduler.runCurrent()
+            assertTrue("Listener must be active initially for $terminal", vm.isListenerActive)
+
+            remoteDataSource.emitMatchDoc(baseMatch.copy(status = terminal))
+            testDispatcher.scheduler.runCurrent()
+
+            assertFalse("Listener must terminate on $terminal", vm.isListenerActive)
+            assertFalse("Fallback must not run on $terminal", vm.isFallbackPollingActive)
+            assertFalse("isPollingActive must be false on $terminal", vm.isPollingActive)
+
+            val state = vm.uiState.value
+            when (terminal) {
+                "CHAT_OPEN" -> assertTrue(state is TransferMatchUiState.ChatOpen)
+                "CONFIRMED" -> assertTrue(state is TransferMatchUiState.Confirmed)
+                "CANCELLED" -> assertTrue(state is TransferMatchUiState.AlreadyRejected)
+                "EXPIRED" -> assertTrue(state is TransferMatchUiState.Expired)
+            }
+            vm.onScreenExit()
+        }
+    }
+
+    @Test
+    fun `Step 3_3 - healthy listener does not trigger fallback polling`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isListenerActive)
+        assertFalse(vm.isFallbackPollingActive)
+
+        // Advance virtual time by 90 seconds (longer than fallback polling intervals)
+        testDispatcher.scheduler.advanceTimeBy(90_000L)
+        testDispatcher.scheduler.runCurrent()
+
+        // Fallback polling should never have started because listener is healthy
+        assertTrue("Listener remains active", vm.isListenerActive)
+        assertFalse("Fallback polling must NOT be active while listener is healthy", vm.isFallbackPollingActive)
+        assertNull(vm.pollWarning.value)
+        assertFalse(vm.isOfflineOrDegraded.value)
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_3 - listener error activates 30-second fallback poll and sets warning at 3 failures`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isListenerActive)
+        assertFalse(vm.isFallbackPollingActive)
+
+        // Simulate listener error
+        remoteDataSource.emitMatchDocError(java.io.IOException("Firestore listener connection lost"))
+        testDispatcher.scheduler.runCurrent()
+
+        // Fallback polling starts immediately
+        assertTrue("Fallback polling should be active", vm.isFallbackPollingActive)
+
+        // Let fallback poll fail 1st time (delay 30s)
+        remoteDataSource.fetchRequestError = java.io.IOException("Sync network down")
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertNull("Single fallback failure should not set warning", vm.pollWarning.value)
+
+        // Let fallback poll fail 2nd time (delay 30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertNull("Two fallback failures should not set warning", vm.pollWarning.value)
+
+        // Let fallback poll fail 3rd time (delay 30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(POLL_WARNING_MESSAGE, vm.pollWarning.value)
+        assertTrue(vm.isOfflineOrDegraded.value)
+
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_3 - listener recovery stops fallback polling and clears warning`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        // Listener fails and triggers fallback
+        remoteDataSource.emitMatchDocError(java.io.IOException("Firestore listener error"))
+        testDispatcher.scheduler.runCurrent()
+        assertTrue(vm.isFallbackPollingActive)
+
+        // Fail 3 times to get warning
+        remoteDataSource.fetchRequestError = java.io.IOException("Network down")
+        testDispatcher.scheduler.advanceTimeBy(90_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(POLL_WARNING_MESSAGE, vm.pollWarning.value)
+        assertTrue(vm.isOfflineOrDegraded.value)
+
+        // Listener recovers and delivers healthy snapshot
+        remoteDataSource.emitMatchDoc(remoteDataSource.remoteMatch)
+        testDispatcher.scheduler.runCurrent()
+
+        assertFalse("Fallback polling must stop upon listener recovery", vm.isFallbackPollingActive)
+        assertNull("Poll warning must be cleared", vm.pollWarning.value)
+        assertFalse("Degraded state must be cleared", vm.isOfflineOrDegraded.value)
+
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_3 - changing match ID cancels previous listener and observes new match`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("MATCH-001", remoteDataSource.lastObservedMatchId)
+        val initialCallCount = remoteDataSource.observeMatchDocCallCount
+
+        // A new match proposal arrives from server with a different matchId
+        val newMatch = remoteDataSource.remoteMatch!!.copy(matchId = "MATCH-999")
+        remoteDataSource.remoteRequest = remoteDataSource.remoteRequest!!.copy(currentMatchId = "MATCH-999")
+        remoteDataSource.remoteMatch = newMatch
+        workerApiClient.syncResult = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-999",
+            matchType = "DIRECT_2_WAY",
+            directMatch = newMatch.directMatch,
+            createdAt = newMatch.createdAt,
+            expiresAt = newMatch.expiresAt,
+            status = "PENDING_CONFIRMATION"
+        )
+
+        vm.loadCurrentMatch()
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("MATCH-999", remoteDataSource.lastObservedMatchId)
+        assertEquals(initialCallCount + 1, remoteDataSource.observeMatchDocCallCount)
+        assertTrue(vm.isListenerActive)
+
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_3 - onScreenExit and onCleared remove listener and stop fallback polling`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.isListenerActive)
+
+        vm.onScreenExit()
+        assertFalse(vm.isListenerActive)
+        assertFalse(vm.isFallbackPollingActive)
+        assertFalse(vm.isPollingActive)
+
+        // Resume
+        vm.onScreenResume()
+        assertTrue(vm.isListenerActive)
+
+        // Trigger fallback then exit
+        remoteDataSource.emitMatchDocError(java.io.IOException("Error"))
+        testDispatcher.scheduler.runCurrent()
+        assertTrue(vm.isFallbackPollingActive)
+
+        vm.onScreenExit()
+        assertFalse(vm.isListenerActive)
+        assertFalse(vm.isFallbackPollingActive)
+        assertFalse(vm.isPollingActive)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Step 3.4: Token Refresh on HTTP 401 & Single Retry Tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `Step 3_4 - HTTP 401 on respondToMatch triggers forceRefresh and succeeds on retry`() = runVmTest {
+        tokenProvider.idToken = "expired-token"
+        tokenProvider.refreshedToken = "fresh-valid-token"
+
+        var callCount = 0
+        workerApiClient.respondResult = null
+        val originalRespond = workerApiClient
+
+        // First call fails with 401, second call succeeds
+        var capturedTokens = mutableListOf<String>()
+        val customApiClient = object : TransferWorkerApiClient by workerApiClient {
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                capturedTokens.add(firebaseIdToken)
+                callCount++
+                if (callCount == 1) {
+                    throw TransferWorkerApiException(
+                        errorCode = "UNAUTHENTICATED",
+                        statusCode = 401,
+                        message = "ID token expired"
+                    )
+                }
+                return DecisionResponse(
+                    matchId = payload.matchId,
+                    newStatus = "CONFIRMED",
+                    expiresAt = "2026-10-15T12:00:00Z",
+                    decisionApplied = true
+                )
+            }
+        }
+
+        val testRepo = TransferRequestRepository(
+            dao = dao,
+            profileDao = profileDao,
+            tokenProvider = tokenProvider,
+            remoteDataSource = remoteDataSource,
+            workerApiClient = customApiClient
+        )
+
+        val result = testRepo.respondToMatch("MATCH-001", Decision.ACCEPT)
+        assertTrue("Decision should succeed after retry", result.isSuccess)
+        assertEquals("Should have called worker twice (1 failure + 1 retry)", 2, callCount)
+        assertEquals("Token provider forceRefresh count should be 1", 1, tokenProvider.refreshCount)
+        assertEquals("First attempt used expired token", "expired-token", capturedTokens[0])
+        assertEquals("Second attempt used refreshed token", "fresh-valid-token", capturedTokens[1])
+    }
+
+    @Test
+    fun `Step 3_4 - repeated HTTP 401 terminates and does not enter infinite retry loop`() = runVmTest {
+        tokenProvider.idToken = "expired-token"
+        tokenProvider.refreshedToken = "still-invalid-token"
+
+        var callCount = 0
+        val customApiClient = object : TransferWorkerApiClient by workerApiClient {
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                callCount++
+                throw TransferWorkerApiException(
+                    errorCode = "UNAUTHENTICATED",
+                    statusCode = 401,
+                    message = "Persistent 401"
+                )
+            }
+        }
+
+        val testRepo = TransferRequestRepository(
+            dao = dao,
+            profileDao = profileDao,
+            tokenProvider = tokenProvider,
+            remoteDataSource = remoteDataSource,
+            workerApiClient = customApiClient
+        )
+
+        val result = testRepo.respondToMatch("MATCH-001", Decision.ACCEPT)
+        assertTrue("Persistent 401 should result in failure", result.isFailure)
+        assertEquals("Should only retry once, terminating after 2 calls total", 2, callCount)
+        assertEquals("Token provider forceRefresh count must be exactly 1", 1, tokenProvider.refreshCount)
+    }
+
+    @Test
+    fun `Step 3_4 - non-401 error does not trigger token refresh or retry`() = runVmTest {
+        tokenProvider.idToken = "valid-token"
+
+        var callCount = 0
+        val customApiClient = object : TransferWorkerApiClient by workerApiClient {
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                callCount++
+                throw TransferWorkerApiException(
+                    errorCode = "CONFLICT",
+                    statusCode = 409,
+                    message = "Conflict occurred"
+                )
+            }
+        }
+
+        val testRepo = TransferRequestRepository(
+            dao = dao,
+            profileDao = profileDao,
+            tokenProvider = tokenProvider,
+            remoteDataSource = remoteDataSource,
+            workerApiClient = customApiClient
+        )
+
+        val result = testRepo.respondToMatch("MATCH-001", Decision.ACCEPT)
+        assertTrue(result.isFailure)
+        assertEquals("Non-401 error must not be retried", 1, callCount)
+        assertEquals("forceRefresh must not be called on non-401 error", 0, tokenProvider.refreshCount)
+    }
+
+    @Test
+    fun `Step 3_4 - token refresh failure surfaces correctly without retry`() = runVmTest {
+        tokenProvider.idToken = "expired-token"
+        // Configure token provider to fail when forceRefresh is requested
+        val failingTokenProvider = object : TransferTokenProvider by tokenProvider {
+            override suspend fun getFirebaseIdToken(forceRefresh: Boolean): String? {
+                if (forceRefresh) return null
+                return "expired-token"
+            }
+        }
+
+        var callCount = 0
+        val customApiClient = object : TransferWorkerApiClient by workerApiClient {
+            override suspend fun respondToMatch(firebaseIdToken: String, payload: DecisionRequest): DecisionResponse {
+                callCount++
+                throw TransferWorkerApiException(
+                    errorCode = "UNAUTHENTICATED",
+                    statusCode = 401,
+                    message = "Expired token"
+                )
+            }
+        }
+
+        val testRepo = TransferRequestRepository(
+            dao = dao,
+            profileDao = profileDao,
+            tokenProvider = failingTokenProvider,
+            remoteDataSource = remoteDataSource,
+            workerApiClient = customApiClient
+        )
+
+        val result = testRepo.respondToMatch("MATCH-001", Decision.ACCEPT)
+        assertTrue(result.isFailure)
+        assertEquals("Should not retry if token refresh fails", 1, callCount)
+        assertTrue("Error message mentions authentication failure", result.exceptionOrNull()?.message?.contains("Authentication failure") == true)
+    }
+
+    @Test
+    fun `Step 3_4 - findAndLockMatch retries on AuthError with fresh token`() = runVmTest {
+        tokenProvider.idToken = "stale-token"
+        tokenProvider.refreshedToken = "fresh-token"
+
+        var callCount = 0
+        val capturedTokens = mutableListOf<String>()
+        val customApiClient = object : TransferWorkerApiClient by workerApiClient {
+            override suspend fun findAndLockMatch(firebaseIdToken: String): WorkerSyncResult {
+                callCount++
+                capturedTokens.add(firebaseIdToken)
+                return if (callCount == 1) {
+                    WorkerSyncResult.AuthError("Token expired")
+                } else {
+                    WorkerSyncResult.NoMatch("No matches available")
+                }
+            }
+        }
+
+        // Set local entity to non-MATCHED SEARCHING state
+        dao.entity = dao.entity!!.copy(
+            requestStatus = TransferRequestStatus.PENDING.name,
+            matchCycleId = null,
+            syncStatus = CacheSyncStatus.PENDING.name
+        )
+        remoteDataSource.remoteRequest = null
+
+        val testRepo = TransferRequestRepository(
+            dao = dao,
+            profileDao = profileDao,
+            tokenProvider = tokenProvider,
+            remoteDataSource = remoteDataSource,
+            workerApiClient = customApiClient
+        )
+
+        val syncResult = testRepo.syncActiveRequest()
+        assertTrue("Expected NoMatch after successful token refresh retry", syncResult is WorkerSyncResult.NoMatch)
+        assertEquals("Should have called findAndLockMatch twice", 2, callCount)
+        assertEquals("First call used stale token", "stale-token", capturedTokens[0])
+        assertEquals("Second call used fresh token", "fresh-token", capturedTokens[1])
+        assertEquals("forceRefresh count is 1", 1, tokenProvider.refreshCount)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Step 3.6: ViewModel Tests with Virtual Time (runTest + TestScheduler)
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `Step 3_6 - virtual time - new match ID already in CHAT_OPEN maps directly to ChatOpen without polling`() = runVmTest {
+        tokenProvider.userId = "user-123"
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("Initial state must be MatchFound", vm.uiState.value is TransferMatchUiState.MatchFound)
+        assertTrue("Polling active for initial waiting match", vm.isPollingActive)
+
+        // A brand new match ID arrives that is ALREADY in CHAT_OPEN state (Step 3.1)
+        val newMatchId = "MATCH-NEW-CHAT-OPEN"
+        remoteDataSource.remoteRequest = remoteDataSource.remoteRequest!!.copy(currentMatchId = newMatchId)
+        val chatOpenMatch = remoteDataSource.remoteMatch!!.copy(
+            matchId = newMatchId,
+            status = "CHAT_OPEN",
+            acceptedByA = true,
+            acceptedByB = true
+        )
+        remoteDataSource.emitMatchDoc(chatOpenMatch)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(
+            "New match arriving in CHAT_OPEN must immediately transition to ChatOpen UI state",
+            vm.uiState.value is TransferMatchUiState.ChatOpen
+        )
+        assertEquals(newMatchId, (vm.uiState.value as TransferMatchUiState.ChatOpen).match.matchId)
+        assertFalse(
+            "Polling must stop immediately when new match is CHAT_OPEN",
+            vm.isPollingActive
+        )
+        vm.onScreenExit()
+    }
+
+    @Test
+    fun `Step 3_6 - virtual time - three consecutive failures show warning and recovery resets counter`() = runVmTest {
+        val initialMatch = WorkerSyncResult.MatchFound(
+            matchId = "MATCH-VIRTUAL-TIME",
+            matchType = "DIRECT_2_WAY",
+            directMatch = WorkerDirectMatch(
+                nurseAUid = "user-123",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Mutual 1st preference"
+            ),
+            createdAt = "2026-10-15T10:00:00Z",
+            expiresAt = "2026-10-15T12:00:00Z",
+            status = "PENDING_CONFIRMATION"
+        )
+        workerApiClient.syncResult = initialMatch
+        tokenProvider.userId = "user-123"
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+
+        // 1. Snapshot listener disconnects, triggering fallback polling
+        remoteDataSource.emitMatchDocError(java.io.IOException("Listener connection lost"))
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Fallback polling active when listener reports error", vm.isFallbackPollingActive)
+
+        // 2. Simulate 3 consecutive poll failures using virtual time (no real delay)
+        remoteDataSource.fetchRequestError = java.io.IOException("Network unreachable")
+
+        // Failure 1 (virtual time +30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("1st failure must not display warning", vm.isOfflineOrDegraded.value)
+        assertNull(vm.pollWarning.value)
+
+        // Failure 2 (virtual time +30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("2nd failure must not display warning", vm.isOfflineOrDegraded.value)
+        assertNull(vm.pollWarning.value)
+
+        // Failure 3 (virtual time +30s)
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("3rd consecutive failure must show degraded state", vm.isOfflineOrDegraded.value)
+        assertEquals("3rd consecutive failure must show warning banner", POLL_WARNING_MESSAGE, vm.pollWarning.value)
+
+        // 3. Recovery: next poll succeeds using virtual time
+        remoteDataSource.fetchRequestError = null
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("Recovery must clear degraded state", vm.isOfflineOrDegraded.value)
+        assertNull("Recovery must clear poll warning banner", vm.pollWarning.value)
+
+        // 4. Verify counter was reset: a single subsequent failure does not show warning
+        remoteDataSource.fetchRequestError = java.io.IOException("Transient glitch")
+        testDispatcher.scheduler.advanceTimeBy(30_000L)
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("Single failure after recovery must not immediately re-show warning", vm.isOfflineOrDegraded.value)
+        assertNull(vm.pollWarning.value)
+
+        vm.onScreenExit()
     }
 }

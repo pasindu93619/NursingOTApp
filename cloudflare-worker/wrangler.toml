@@ -15,4 +15,4 @@ CANDIDATE_LIMIT = "500"
 # - SWEEP_ADMIN_SECRET: Shared secret required for POST /api/matching/sweep-expired
 
 [triggers]
-crons = ["0 * * * *"]
+crons = ["*/5 * * * *"]

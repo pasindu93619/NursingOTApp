@@ -401,4 +401,14 @@ class TransferRequestViewModelTest {
         assertEquals("HOSP-001", active?.currentHospitalId)
         assertEquals(listOf("HOSP-002"), active?.rankedPreferences?.hospitalIds)
     }
+
+    @Test
+    fun `Step 3_2 - pool polling initial warning is null and stopPolling stops polling`() = runTest {
+        val viewModel = createViewModel()
+        assertNull("Initially poll warning should be null", viewModel.pollWarning.value)
+        viewModel.startAutomaticMatchPolling()
+        assertTrue(viewModel.isPollingActive)
+        viewModel.stopAutomaticMatchPolling()
+        assertFalse(viewModel.isPollingActive)
+    }
 }

@@ -11,14 +11,52 @@ interface SalaryStep2027Dao {
     @Query("SELECT * FROM salary_steps_2027 ORDER BY grade ASC, salaryStep ASC")
     fun observeAll(): Flow<List<SalaryStep2027Entity>>
 
-    @Query("SELECT * FROM salary_steps_2027 WHERE grade = :grade ORDER BY salaryStep ASC")
+    @Query(
+        """
+        SELECT * FROM salary_steps_2027
+        WHERE (
+            grade = :grade
+            OR (UPPER(TRIM(:grade)) IN ('GRADE III', 'GRADE 3', '3', 'III') AND grade = 'III')
+            OR (UPPER(TRIM(:grade)) IN ('GRADE II', 'GRADE 2', '2', 'II') AND grade = 'II')
+            OR (UPPER(TRIM(:grade)) IN ('GRADE I', 'GRADE 1', '1', 'I') AND grade = 'I')
+        )
+        ORDER BY salaryStep ASC
+        """
+    )
     fun observeForGrade(grade: String): Flow<List<SalaryStep2027Entity>>
 
-    @Query("SELECT * FROM salary_steps_2027 WHERE grade = :grade AND salaryStep = :salaryStep LIMIT 1")
+    @Query(
+        """
+        SELECT * FROM salary_steps_2027
+        WHERE (
+            grade = :grade
+            OR (UPPER(TRIM(:grade)) IN ('GRADE III', 'GRADE 3', '3', 'III') AND grade = 'III')
+            OR (UPPER(TRIM(:grade)) IN ('GRADE II', 'GRADE 2', '2', 'II') AND grade = 'II')
+            OR (UPPER(TRIM(:grade)) IN ('GRADE I', 'GRADE 1', '1', 'I') AND grade = 'I')
+        )
+        AND salaryStep = :salaryStep
+        LIMIT 1
+        """
+    )
     suspend fun find(grade: String, salaryStep: Int): SalaryStep2027Entity?
 
-    @Query("SELECT * FROM salary_steps_2027 WHERE grade = :grade AND ABS(currentBasicSalary2026 - :currentBasicSalary) < 0.01 LIMIT 1")
+    @Query(
+        """
+        SELECT * FROM salary_steps_2027
+        WHERE (
+            grade = :grade
+            OR (UPPER(TRIM(:grade)) IN ('GRADE III', 'GRADE 3', '3', 'III') AND grade = 'III')
+            OR (UPPER(TRIM(:grade)) IN ('GRADE II', 'GRADE 2', '2', 'II') AND grade = 'II')
+            OR (UPPER(TRIM(:grade)) IN ('GRADE I', 'GRADE 1', '1', 'I') AND grade = 'I')
+        )
+        AND ABS(currentBasicSalary2026 - :currentBasicSalary) < 0.01
+        LIMIT 1
+        """
+    )
     suspend fun findByCurrentBasic(grade: String, currentBasicSalary: Double): SalaryStep2027Entity?
+
+    @Query("SELECT * FROM salary_steps_2027 WHERE ABS(currentBasicSalary2026 - :currentBasicSalary) < 0.01")
+    suspend fun findByBasicSalary(currentBasicSalary: Double): List<SalaryStep2027Entity>
 
     @Query("SELECT COUNT(*) FROM salary_steps_2027")
     suspend fun count(): Int

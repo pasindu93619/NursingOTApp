@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Person
@@ -214,6 +215,7 @@ fun TransferPoolStatusScreen(
     loadError: String? = null,
     isSubmitting: Boolean = false,
     submitError: String? = null,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onEditRequest: () -> Unit,
     onWithdrawRequest: () -> Unit,
@@ -243,6 +245,7 @@ fun TransferPoolStatusScreen(
                 loadError = loadError,
                 isSubmitting = isSubmitting,
                 submitError = submitError,
+                pollWarning = pollWarning,
                 onBack = onBack,
                 onEdit = onEditRequest,
                 onWithdrawClick = { showWithdrawDialog = true },
@@ -275,6 +278,7 @@ private fun ActivePoolMissionControlView(
     loadError: String?,
     isSubmitting: Boolean,
     submitError: String?,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onWithdrawClick: () -> Unit,
@@ -371,6 +375,38 @@ private fun ActivePoolMissionControlView(
                             contentDescription = headerStatus.contentDescription,
                             tint = headerStatus.tintColor,
                             modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 1.5 Polling Warning Banner (if any)
+        if (pollWarning != null) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = TransferAmberSoft,
+                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = Amber,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            pollWarning,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Slate,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }

@@ -1,7 +1,9 @@
 // com/pasindu/nursingotapp/MainActivity.kt
 package com.pasindu.nursingotapp
 
+import android.content.Intent
 import android.graphics.Color as AndroidColor
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,17 +11,27 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.pasindu.nursingotapp.transfer.notification.TransferNotificationHelper
 import com.pasindu.nursingotapp.ui.navigation.AppNavigation
 import com.pasindu.nursingotapp.ui.theme.NursingOTAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import android.os.Build
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val _notificationIntent = mutableStateOf<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Capture incoming notification intent on cold start; do not re-deliver on configuration change
+        if (savedInstanceState == null) {
+            _notificationIntent.value = intent
+        }
 
         // Keep the clinical app light-first while allowing Compose to control
         // content/inset behavior consistently across modern Android devices.
@@ -46,9 +58,22 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    AppNavigation(
+                        notificationIntent = _notificationIntent.value,
+                        onNotificationIntentConsumed = {
+                            _notificationIntent.value = null
+                            intent?.removeExtra(TransferNotificationHelper.EXTRA_NOTIFICATION_TYPE)
+                            intent?.removeExtra(TransferNotificationHelper.EXTRA_MATCH_ID)
+                        }
+                    )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        _notificationIntent.value = intent
     }
 }

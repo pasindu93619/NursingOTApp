@@ -244,6 +244,7 @@ fun TransferMatchScreen(
     uiState: TransferMatchUiState = TransferMatchUiState.MatchFound(createSampleMatchUiModel()),
     isSubmitting: Boolean = false,
     isOfflineOrDegraded: Boolean = false,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onAcceptMatch: (matchId: String) -> Unit = {},
     onConfirmMatch: (matchId: String) -> Unit = {},
@@ -297,15 +298,19 @@ fun TransferMatchScreen(
                 MatchFoundContentView(
                     match = uiState.match,
                     isSubmitting = isSubmitting,
+                    isOfflineOrDegraded = isOfflineOrDegraded,
+                    pollWarning = pollWarning,
                     onBack = onBack,
                     onAcceptClick = { onAcceptMatch(uiState.match.matchId) },
-                    onRejectClick = { showRejectConfirmDialog = true }
+                    onRejectClick = { showRejectConfirmDialog = true },
+                    onRetry = onRetry
                 )
             }
             is TransferMatchUiState.AlreadyAccepted -> {
                 MatchAcceptedView(
                     match = uiState.match,
                     isOfflineOrDegraded = isOfflineOrDegraded,
+                    pollWarning = pollWarning,
                     onBack = onBack,
                     onRetry = onRetry
                 )
@@ -367,9 +372,12 @@ fun TransferMatchScreen(
 private fun MatchFoundContentView(
     match: TransferMatchUiModel,
     isSubmitting: Boolean = false,
+    isOfflineOrDegraded: Boolean = false,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onAcceptClick: () -> Unit,
-    onRejectClick: () -> Unit
+    onRejectClick: () -> Unit,
+    onRetry: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -433,6 +441,50 @@ private fun MatchFoundContentView(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+        }
+
+        if (isOfflineOrDegraded || pollWarning != null) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MatchAmberSoft,
+                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = "Warning",
+                                tint = Amber,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                pollWarning ?: "Connection problem, retrying…",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Slate
+                            )
+                        }
+                        TextButton(onClick = onRetry) {
+                            Text(
+                                "Retry",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Amber
+                            )
+                        }
                     }
                 }
             }
@@ -1611,6 +1663,7 @@ private fun MatchLoadingView(onBack: () -> Unit) {
 private fun MatchAcceptedView(
     match: TransferMatchUiModel,
     isOfflineOrDegraded: Boolean = false,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onRetry: () -> Unit = {}
 ) {
@@ -1671,7 +1724,7 @@ private fun MatchAcceptedView(
 
         Spacer(Modifier.height(16.dp))
 
-        if (isOfflineOrDegraded) {
+        if (isOfflineOrDegraded || pollWarning != null) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MatchAmberSoft,
@@ -1695,7 +1748,7 @@ private fun MatchAcceptedView(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Connection unstable — showing last synced status.",
+                            pollWarning ?: "Connection problem, retrying…",
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = Slate

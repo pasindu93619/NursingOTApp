@@ -3,7 +3,10 @@ package com.pasindu.nursingotapp.ui.navigation
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
+import kotlinx.coroutines.runBlocking
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -52,6 +55,7 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.notification.TransferNotificationHelper
 import com.pasindu.nursingotapp.transfer.ui.TransferChatNavigationEvent
 import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
@@ -88,7 +92,10 @@ private val rootDestinations = listOf(
 )
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    notificationIntent: Intent? = null,
+    onNotificationIntentConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val viewModel: NursingViewModel = hiltViewModel()
     val userProfile by viewModel.userProfile.collectAsState()
@@ -97,6 +104,18 @@ fun AppNavigation() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showRootNavigation = rootDestinations.any { it.route == currentRoute }
+
+    LaunchedEffect(notificationIntent) {
+        val targetIntent = notificationIntent ?: return@LaunchedEffect
+        val type = targetIntent.getStringExtra(TransferNotificationHelper.EXTRA_NOTIFICATION_TYPE)
+        val destination = TransferNotificationHelper.resolveNotificationDestination(type)
+        if (destination != null) {
+            navController.navigate(destination) {
+                launchSingleTop = true
+            }
+        }
+        onNotificationIntentConsumed()
+    }
 
     fun navigateTo(route: String) {
         if (currentRoute == route) return
@@ -319,6 +338,8 @@ fun AppNavigation() {
                         }
                     }
 
+                    val transferPollWarning by transferRequestViewModel.pollWarning.collectAsState()
+
                     TransferPoolStatusScreen(
                         activeRequest = activeTransferRequest,
                         hospitalOptions = transferHospitalOptions,
@@ -326,6 +347,7 @@ fun AppNavigation() {
                         loadError = transferHospitalLoadError,
                         isSubmitting = transferIsSubmitting,
                         submitError = transferSubmitError,
+                        pollWarning = transferPollWarning,
                         onBack = { navController.popBackStack() },
                         onEditRequest = {
                             navController.navigate("transfer_request?mode=edit") {
@@ -382,12 +404,14 @@ fun AppNavigation() {
                 val matchUiState by matchViewModel.uiState.collectAsState()
                 val isSubmitting by matchViewModel.isSubmitting.collectAsState()
                 val isOfflineOrDegraded by matchViewModel.isOfflineOrDegraded.collectAsState()
+                val matchPollWarning by matchViewModel.pollWarning.collectAsState()
 
                 // Once every participant has accepted, the authoritative state is CHAT_OPEN.
                 // Move directly into the live coordination channel instead of requiring a
                 // second tap on the match summary. Terminal CONFIRMED matches remain read-only.
-                LaunchedEffect(matchUiState) {
-                    if (matchUiState is TransferMatchUiState.ChatOpen) {
+                val chatOpenMatchId = (matchUiState as? TransferMatchUiState.ChatOpen)?.match?.matchId
+                LaunchedEffect(chatOpenMatchId) {
+                    if (!chatOpenMatchId.isNullOrBlank()) {
                         navController.navigate("transfer_chat") {
                             popUpTo("transfer_match") { inclusive = true }
                             launchSingleTop = true
@@ -399,12 +423,14 @@ fun AppNavigation() {
                     uiState = matchUiState,
                     isSubmitting = isSubmitting,
                     isOfflineOrDegraded = isOfflineOrDegraded,
+                    pollWarning = matchPollWarning,
                     onBack = { navController.popBackStack() },
                     onAcceptMatch = { matchViewModel.acceptMatch(it) },
                     onConfirmMatch = { matchViewModel.confirmMatch(it) },
                     onRejectMatch = { matchViewModel.rejectMatch(it) },
                     onOpenChat = {
                         navController.navigate("transfer_chat") {
+                            popUpTo("transfer_match") { inclusive = true }
                             launchSingleTop = true
                         }
                     },
@@ -645,6 +671,19 @@ private fun generateOtPdf(
     val dbLogs = viewModel.dailyLogs.value
     val dbProfile = viewModel.userProfile.value
     if (dbProfile == null) return null
+
+    val resolvedRates = runBlocking { viewModel.payRateResolver.resolve(dbProfile) }
+    if (resolvedRates == null) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(
+                context,
+                "Salary step not matched. Check grade and basic salary in Profile.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        return null
+    }
+
     val configuredOtRate = viewModel.configuredOtRate.value
     val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 } ?: dbProfile.otRate.coerceAtLeast(0.0)
     val profile = UserProfile(
@@ -675,9 +714,7 @@ private fun generateOtPdf(
         )
     }
     val period = Period(LocalDate.parse(start), LocalDate.parse(end))
-    val matched2027Basic = viewModel.matchedSalary2027.value?.basicSalary2027
-    val workingDayRate = matched2027Basic?.takeIf { it > 0.0 }?.div(30.0)
-        ?: profile.basicSalary.coerceAtLeast(0.0) / 30.0
+    val workingDayRate = resolvedRates.phRate
     val calculation = WeeklyOtCalculator.calculate(
         logs = logs,
         claimStart = period.claimStart,
@@ -694,7 +731,8 @@ private fun generateOtPdf(
         otAmountRs = calculation.otAmountRs,
         phAmountRs = calculation.phAmountRs,
         doAmountRs = calculation.doAmountRs,
-        totalAmountRs = calculation.totalAmountRs
+        totalAmountRs = calculation.totalAmountRs,
+        ratesMissing = false
     )
     return PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
 }

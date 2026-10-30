@@ -167,7 +167,7 @@ function evalTransferRequestUpdate(auth, userId, existing, next) {
   if (auth == null || auth.uid !== userId) return false;
   if (existing.firebaseUid !== auth.uid || next.firebaseUid !== auth.uid) return false;
   if (existing.locked !== false || next.locked !== false) return false;
-  if (next.currentMatchId !== existing.currentMatchId) return false;
+  if ((next.currentMatchId ?? null) !== (existing.currentMatchId ?? null)) return false;
   if (next.status !== "SEARCHING" && next.status !== "WITHDRAWN") return false;
   if (typeof next.currentHospitalId !== "string" || next.currentHospitalId.length === 0) return false;
   if (!Array.isArray(next.preferenceHospitalIds) || next.preferenceHospitalIds.length < 1 || next.preferenceHospitalIds.length > 3) return false;
@@ -335,8 +335,23 @@ test("user cannot forge or change currentMatchId", () => {
   };
   assert.equal(evalTransferRequestCreate(auth, "nurse-A", forgedMatchCreate), false);
 
-  const existing = { ...forgedMatchCreate, currentMatchId: null };
-  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", existing, { ...existing, currentMatchId: "forged-match-999" }), false);
+  const validWithNull = { ...forgedMatchCreate, currentMatchId: null };
+  const validWithoutField = { ...forgedMatchCreate };
+  delete validWithoutField.currentMatchId;
+
+  // Step 2.1: create allows currentMatchId == null or omitted
+  assert.equal(evalTransferRequestCreate(auth, "nurse-A", validWithNull), true);
+  assert.equal(evalTransferRequestCreate(auth, "nurse-A", validWithoutField), true);
+
+  // Step 2.1: update tolerates missing and null interchangeably
+  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", validWithNull, validWithNull), true);
+  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", validWithoutField, validWithoutField), true);
+  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", validWithNull, validWithoutField), true);
+  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", validWithoutField, validWithNull), true);
+
+  // Attempting to set or forge currentMatchId is rejected
+  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", validWithNull, { ...validWithNull, currentMatchId: "forged-match-999" }), false);
+  assert.equal(evalTransferRequestUpdate(auth, "nurse-A", validWithoutField, { ...validWithoutField, currentMatchId: "forged-match-999" }), false);
 });
 
 test("user cannot create MATCHED or MATCH_PENDING state", () => {

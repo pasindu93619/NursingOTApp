@@ -1,37 +1,51 @@
 package com.pasindu.nursingotapp.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pasindu.nursingotapp.ui.theme.BorderMuted
+import com.pasindu.nursingotapp.ui.theme.MedicalBlue
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
+import com.pasindu.nursingotapp.ui.theme.Slate
 
 @Composable
 fun ProfileSectionCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     iconColor: Color,
     title: String,
     subtitle: String,
@@ -39,26 +53,50 @@ fun ProfileSectionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        shape = RoundedCornerShape(NursingDimensions.Radius.large),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = NursingDimensions.Elevation.card),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
     ) {
-        Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            modifier = Modifier.padding(NursingDimensions.Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.Surface(
-                    modifier = Modifier.size(54.dp),
-                    shape = RoundedCornerShape(17.dp),
-                    color = iconColor.copy(alpha = 0.11f)
+                Surface(
+                    modifier = Modifier.size(46.dp),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.medium),
+                    color = iconColor.copy(alpha = 0.12f)
                 ) {
-                    Icon(icon, null, tint = iconColor, modifier = Modifier.padding(14.dp))
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(NursingDimensions.Spacing.md))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(title, color = Color(0xFF0F172A), fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(subtitle, color = Color(0xFF64748B), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = title,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = subtitle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal
+                    )
                 }
             }
-            androidx.compose.material3.HorizontalDivider(color = Color(0xFFE2E8F0))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                thickness = 1.dp
+            )
             content()
         }
     }
@@ -77,23 +115,50 @@ fun ProfileTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
-        label = { Text(label) },
+        label = { Text(label, fontSize = 13.sp) },
         singleLine = true,
+        shape = RoundedCornerShape(NursingDimensions.Radius.medium),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        leadingIcon = leadingText?.let { { Text(it, fontWeight = FontWeight.Black, color = Color(0xFF1976D2)) } }
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        leadingIcon = leadingText?.let {
+            {
+                Text(
+                    text = it,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     )
 }
 
 @Composable
-fun AllowanceField(label: String, value: String, onValueChange: (String) -> Unit, accent: Color) {
-    androidx.compose.material3.Surface(
+fun AllowanceField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    accent: Color
+) {
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = accent.copy(alpha = 0.06f),
-        shape = RoundedCornerShape(18.dp)
+        color = accent.copy(alpha = 0.04f),
+        shape = RoundedCornerShape(NursingDimensions.Radius.medium),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Text(label, color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            ProfileTextField(label, value, onValueChange, keyboardType = KeyboardType.Number, leadingText = "Rs.")
+        Column(modifier = Modifier.padding(NursingDimensions.Spacing.sm)) {
+            ProfileTextField(
+                label = label,
+                value = value,
+                onValueChange = onValueChange,
+                keyboardType = KeyboardType.Number,
+                leadingText = "Rs."
+            )
         }
     }
 }
@@ -105,30 +170,98 @@ fun AllowanceEditorRow(
     onAmountChange: (String) -> Unit,
     onDelete: () -> Unit
 ) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        ProfileTextField("Allowance name", row.name, onNameChange, Modifier.weight(1f))
-        Spacer(modifier = Modifier.width(8.dp))
-        ProfileTextField("Amount", row.amount, onAmountChange, Modifier.width(130.dp), KeyboardType.Number, "Rs.")
-        IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, "Delete", tint = Color(0xFFEF4444)) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(NursingDimensions.Radius.medium),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(NursingDimensions.Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ProfileTextField(
+                label = "Allowance name",
+                value = row.name,
+                onValueChange = onNameChange,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(NursingDimensions.Spacing.sm))
+            ProfileTextField(
+                label = "Amount",
+                value = row.amount,
+                onValueChange = onAmountChange,
+                modifier = Modifier.width(130.dp),
+                keyboardType = KeyboardType.Number,
+                leadingText = "Rs."
+            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun CurrentBasicCard(value: Double) {
-    androidx.compose.material3.Surface(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFEFF6FF),
-        shape = RoundedCornerShape(20.dp)
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+        shape = RoundedCornerShape(NursingDimensions.Radius.large),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Payments, null, tint = Color(0xFF1976D2), modifier = Modifier.size(30.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("CURRENT BASIC", color = Color(0xFF64748B), fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Text("Rs. ${formatMoney(value)}", color = Color(0xFF1976D2), fontSize = 26.sp, fontWeight = FontWeight.Black)
+        Row(
+            modifier = Modifier.padding(NursingDimensions.Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Payments,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
-            androidx.compose.material3.Surface(color = Color(0xFFDBEAFE), shape = RoundedCornerShape(50.dp)) {
-                Text("FROM PROFILE", color = Color(0xFF1976D2), modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp), fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Spacer(modifier = Modifier.width(NursingDimensions.Spacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "CURRENT BASIC SALARY (2026)",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    text = "Rs. ${formatMoney(value)}",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(NursingDimensions.Radius.pill)
+            ) {
+                Text(
+                    text = "CONFIRMED",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
             }
         }
     }
@@ -136,36 +269,103 @@ fun CurrentBasicCard(value: Double) {
 
 @Composable
 fun SalaryMatchCard(grade: String, step: Int, currentBasic: Double, basic2027: Double, dayRate: Double) {
-    androidx.compose.material3.Surface(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFECFDF5),
-        shape = RoundedCornerShape(20.dp)
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+        shape = RoundedCornerShape(NursingDimensions.Radius.large),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f))
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(NursingDimensions.Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column {
-                    Text("SALARY TABLE MATCH", color = Color(0xFF059669), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    Text("Grade $grade • Step $step", color = Color(0xFF0F172A), fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        text = "SALARY TABLE MATCH",
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = "Grade $grade • Step $step",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                Text("MATCHED", color = Color(0xFF059669), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Surface(
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.pill)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "MATCHED",
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
-            Text("2026 basic  Rs. ${formatMoney(currentBasic)}", color = Color(0xFF64748B), fontSize = 10.sp)
-            Text("2027 paid/basic  Rs. ${formatMoney(basic2027)}", color = Color(0xFF0F172A), fontSize = 15.sp, fontWeight = FontWeight.Black)
-            Text("PH / DO rate  Rs. ${formatMoney(dayRate)} / day", color = Color(0xFF059669), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "2026 basic: Rs. ${formatMoney(currentBasic)}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp
+            )
+            Text(
+                text = "2027 basic: Rs. ${formatMoney(basic2027)}",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Authoritative PH / DO rate: Rs. ${formatMoney(dayRate)} / day",
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
 @Composable
 fun PreviewRow(label: String, amount: Double, color: Color) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        Text("Rs. ${formatMoney(amount)}", color = color, fontSize = 13.sp, fontWeight = FontWeight.Black)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.75f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Normal
+        )
+        Text(
+            text = "Rs. ${formatMoney(amount)}",
+            color = color,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
-
-@Composable
-private fun ProfileScreenPreviewOnly() {}
 
 private fun formatMoney(value: Double): String =
     java.text.NumberFormat.getNumberInstance(java.util.Locale.US).apply {

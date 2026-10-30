@@ -45,7 +45,15 @@ data class AdvancedFinanceUiState(
     val otherDeduction: Double = 0.0,
     val errorMessage: String? = null
 ) {
-    val currentBasicSalary: Double get() = profile?.basicSalary ?: 0.0
+    val currentBasicSalary: Double
+        get() {
+            val is2027OrLater = (claimStart?.year ?: 0) >= 2027
+            return if (is2027OrLater && basisSalary2027 != null && basisSalary2027!! > 0.0) {
+                basisSalary2027!!
+            } else {
+                profile?.basicSalary ?: 0.0
+            }
+        }
     val riskAllowance: Double get() = compensation?.riskAllowance ?: 0.0
     val claAllowance: Double get() = compensation?.claAllowance ?: 0.0
     val additionalAllowancesTotal: Double get() = compensation?.additionalAllowancesTotal ?: 0.0
@@ -60,13 +68,15 @@ data class AdvancedFinanceUiState(
     val phRate: Double get() = payRateSettings?.phRate?.coerceAtLeast(0.0) ?: 0.0
     val doRate: Double get() = payRateSettings?.doRate?.coerceAtLeast(0.0) ?: 0.0
     val basisSalary2027: Double? get() = payRateSettings?.basisSalary2027
+    val ratesMissing: Boolean
+        get() = periodSummary?.ratesMissing == true || phRate <= 0.0 || doRate <= 0.0
     val totalNormalHours: Double get() = periodSummary?.totalNormalHours?.toDouble() ?: 0.0
     val totalOTHours: Double get() = periodSummary?.totalOTHours?.toDouble() ?: 0.0
     val totalPHDays: Int get() = periodSummary?.totalPHDays ?: 0
     val totalDODays: Int get() = periodSummary?.totalDODays ?: 0
-    val otAmountRs: Double get() = totalOTHours * otRate
-    val phAmountRs: Double get() = totalPHDays * phRate
-    val doAmountRs: Double get() = totalDODays * doRate
+    val otAmountRs: Double get() = periodSummary?.otAmountRs ?: (totalOTHours * otRate)
+    val phAmountRs: Double get() = periodSummary?.phAmountRs ?: (totalPHDays * phRate)
+    val doAmountRs: Double get() = periodSummary?.doAmountRs ?: (totalDODays * doRate)
     val grossEarnings: Double get() = currentBasicSalary + riskAllowance + claAllowance + additionalAllowancesTotal + otAmountRs + phAmountRs + doAmountRs
     val estimatedNetSalary: Double get() = grossEarnings - paysheetDeductions
     val hasEnteredDeductions: Boolean

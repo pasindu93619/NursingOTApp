@@ -71,7 +71,7 @@ service cloud.firestore {
         && request.resource.data.firebaseUid == request.auth.uid
         && request.resource.data.status == 'SEARCHING'
         && request.resource.data.locked == false
-        && request.resource.data.currentMatchId == null
+        && (!('currentMatchId' in request.resource.data) || request.resource.data.currentMatchId == null)
         && request.resource.data.currentHospitalId is string
         && request.resource.data.currentHospitalId.size() > 0
         && request.resource.data.preferenceHospitalIds is list
@@ -86,7 +86,7 @@ service cloud.firestore {
         && request.resource.data.firebaseUid == request.auth.uid
         && resource.data.locked == false
         && request.resource.data.locked == false
-        && request.resource.data.currentMatchId == resource.data.currentMatchId
+        && request.resource.data.get('currentMatchId', null) == resource.data.get('currentMatchId', null)
         && (request.resource.data.status == 'SEARCHING' || request.resource.data.status == 'WITHDRAWN')
         && request.resource.data.currentHospitalId is string
         && request.resource.data.currentHospitalId.size() > 0

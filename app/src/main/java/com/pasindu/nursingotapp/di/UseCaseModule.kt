@@ -22,7 +22,6 @@ import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeletePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.FindPaySheetDocumentUseCase
-import com.pasindu.nursingotapp.domain.usecase.GenerateOtPdfUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveAllDailyEntriesUseCase
@@ -34,6 +33,7 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObservePaySheetDocumentsUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
+import com.pasindu.nursingotapp.domain.usecase.PayRateResolver
 import com.pasindu.nursingotapp.domain.usecase.SaveDailyEntryUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
@@ -61,6 +61,7 @@ object UseCaseModule {
     @Provides fun provideMatchSalaryStepUseCase(dao: SalaryStep2027Dao) = MatchSalaryStepUseCase(dao)
     @Provides fun provideApplyMatched2027DayRateUseCase(dao: PayRateSettingsDao) = ApplyMatched2027DayRateUseCase(dao)
     @Provides fun provideApplyFinancePolicyRatesUseCase(matchSalaryStepUseCase: MatchSalaryStepUseCase, applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase) = ApplyFinancePolicyRatesUseCase(matchSalaryStepUseCase, applyMatched2027DayRateUseCase)
+    @Provides fun providePayRateResolver(matchSalaryStepUseCase: MatchSalaryStepUseCase, applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase) = PayRateResolver(matchSalaryStepUseCase, applyMatched2027DayRateUseCase)
     @Provides fun provideCalculateDailyEntryHoursUseCase() = CalculateDailyEntryHoursUseCase()
     @Provides fun provideCalculateFinanceSummaryUseCase() = CalculateFinanceSummaryUseCase()
     @Provides fun provideEnsureManualPayRateRecordUseCase(dao: PayRateSettingsDao) = EnsureManualPayRateRecordUseCase(dao)
@@ -82,5 +83,4 @@ object UseCaseModule {
     @Provides fun provideFindPaySheetDocumentUseCase(dao: PaySheetDocumentDao) = FindPaySheetDocumentUseCase(dao)
     @Provides fun provideSavePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = SavePaySheetDocumentUseCase(dao)
     @Provides fun provideDeletePaySheetDocumentUseCase(dao: PaySheetDocumentDao) = DeletePaySheetDocumentUseCase(dao)
-    @Provides fun provideGenerateOtPdfUseCase() = GenerateOtPdfUseCase()
 }

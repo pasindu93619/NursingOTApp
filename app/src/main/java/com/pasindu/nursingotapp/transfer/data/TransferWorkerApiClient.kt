@@ -276,10 +276,21 @@ class HttpTransferWorkerApiClient @Inject constructor(
                     else connection.errorStream ?: connection.inputStream
                 val responseBody = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
                 if (responseCode !in 200..299) {
-                    throw Exception("Server returned HTTP $responseCode: $responseBody")
+                    val parsed = runCatching {
+                        json.parseToJsonElement(responseBody).jsonObject
+                    }.getOrNull()
+                    val errCode = parsed?.get("error")?.jsonPrimitive?.contentOrNull
+                    val errMsg = parsed?.get("message")?.jsonPrimitive?.contentOrNull ?: responseBody
+                    throw TransferWorkerApiException(
+                        errorCode = errCode,
+                        statusCode = responseCode,
+                        message = errMsg.ifBlank { "Server returned HTTP $responseCode" }
+                    )
                 }
                 json.decodeFromString(TransferMatchHistoryResponse.serializer(), responseBody).items
             } catch (e: CancellationException) {
+                throw e
+            } catch (e: TransferWorkerApiException) {
                 throw e
             } catch (e: Exception) {
                 throw Exception("Unable to load mutual transfer history: ${e.message}", e)
@@ -326,9 +337,22 @@ class HttpTransferWorkerApiClient @Inject constructor(
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream ?: connection.inputStream
             val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw Exception("Server returned HTTP $code: $body")
+            if (code !in 200..299) {
+                val parsed = runCatching {
+                    json.parseToJsonElement(body).jsonObject
+                }.getOrNull()
+                val errCode = parsed?.get("error")?.jsonPrimitive?.contentOrNull
+                val errMsg = parsed?.get("message")?.jsonPrimitive?.contentOrNull ?: body
+                throw TransferWorkerApiException(
+                    errorCode = errCode,
+                    statusCode = code,
+                    message = errMsg.ifBlank { "Server returned HTTP $code" }
+                )
+            }
             json.decodeFromString(TransferCompletionStatus.serializer(), body)
         } catch (e: CancellationException) {
+            throw e
+        } catch (e: TransferWorkerApiException) {
             throw e
         } catch (e: Exception) {
             throw Exception("Unable to ${if (report) "record" else "load"} transfer completion: ${e.message}", e)

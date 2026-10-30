@@ -10,7 +10,8 @@ import {
   FirestoreError,
   type HttpTransport,
   type TokenProvider,
-  type FirestoreRawDocument
+  type FirestoreRawDocument,
+  type FirestoreWrite
 } from "../src/firestore/firestoreClient.ts";
 import type { Env, GoogleJwk } from "../src/types.ts";
 
@@ -62,6 +63,34 @@ function createMockTransport(
     }
 
     return handler(req);
+  };
+}
+
+function createMockRequestDoc(
+  uid: string,
+  options: {
+    currentMatchId?: string | null;
+    locked?: boolean;
+    status?: string;
+    updateTime?: string;
+  } = {}
+): FirestoreRawDocument {
+  return {
+    name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/${uid}`,
+    updateTime: options.updateTime ?? "2026-10-02T10:00:00.000Z",
+    fields: {
+      firebaseUid: { stringValue: uid },
+      currentHospitalId: { stringValue: "HOSP-001" },
+      preferredHospitalIds: { arrayValue: { values: [{ stringValue: "HOSP-002" }] } },
+      nurseGrade: { stringValue: "Grade I" },
+      status: { stringValue: options.status ?? "MATCHED" },
+      locked: { booleanValue: options.locked ?? true },
+      currentMatchId: options.currentMatchId === null
+        ? { nullValue: null }
+        : { stringValue: options.currentMatchId ?? "match-1" },
+      createdAt: { timestampValue: "2026-10-01T12:00:00Z" },
+      updatedAt: { timestampValue: "2026-10-02T10:00:00Z" }
+    }
   };
 }
 
@@ -436,7 +465,9 @@ describe("Server-Side Match Decision Accept/Reject Suite", () => {
     const transport = createMockTransport({
       [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-1`]: () =>
         new Response(JSON.stringify(matchDoc), { status: 200 })
-    });
+,
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 })    });
 
     const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
 
@@ -923,7 +954,9 @@ describe("Server-Side Match Decision Accept/Reject Suite", () => {
     const transport = createMockTransport({
       [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-3w-1`]: () =>
         new Response(JSON.stringify(matchDoc), { status: 200 })
-    });
+,
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 })    });
 
     const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
     await assert.rejects(
@@ -1241,7 +1274,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/respond", () => {
   });
 
   test("12 - Worker returns 401 Unauthorized when Authorization header is missing", async () => {
-    const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+    const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
     const req = new Request("http://localhost/api/matching/respond", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1253,7 +1286,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/respond", () => {
   });
 
   test("13 - Worker returns 405 MethodNotAllowed when using GET", async () => {
-    const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+    const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
     const req = new Request("http://localhost/api/matching/respond", {
       method: "GET"
     });
@@ -1283,7 +1316,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/respond", () => {
     };
 
     try {
-      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
       const req = new Request("http://localhost/api/matching/respond", {
         method: "POST",
         headers: {
@@ -1331,7 +1364,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/respond", () => {
     };
 
     try {
-      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
       const req = new Request("http://localhost/api/matching/respond", {
         method: "POST",
         headers: {
@@ -2047,7 +2080,9 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
     const transport = createMockTransport({
       [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-chat-expired`]: () =>
         new Response(JSON.stringify(matchDoc), { status: 200 })
-    });
+,
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 })    });
 
     const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
 
@@ -2105,4 +2140,410 @@ describe("Mutual Transfer Phase 2 Workflow State Machine Suite", () => {
     assert.equal(result.newStatus, "CONFIRMED");
     assert.equal(result.decisionApplied, true);
   });
+
+  // --- Phase 1, Step 1.1 Tests: Inline Expiry in respondToMatch ---
+
+  test("Step 1.1: REJECT after deadline returns EXPIRED and unlocks both participants for 2-way match", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-exp-2w", "nurse-a", "nurse-b", {
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", {
+      currentMatchId: "match-exp-2w",
+      locked: true,
+      status: "MATCHED"
+    });
+    const docB = createMockRequestDoc("nurse-b", {
+      currentMatchId: "match-exp-2w",
+      locked: true,
+      status: "MATCHED"
+    });
+
+    let committedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-2w`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-exp-2w", "REJECT", client);
+
+    assert.equal(result.matchId, "match-exp-2w");
+    assert.equal(result.newStatus, "EXPIRED");
+    assert.equal(result.decisionApplied, true);
+
+    assert.equal(committedWrites.length, 3);
+    const matchWrite = committedWrites[0];
+    assert.match(matchWrite.update?.name ?? "", /matches\/match-exp-2w$/);
+    assert.equal(matchWrite.update?.fields?.status?.stringValue, "EXPIRED");
+    assert.match(
+      matchWrite.update?.fields?.terminalReason?.stringValue ?? "",
+      /match deadline passed/i
+    );
+
+    const writeA = committedWrites.find((w) => w.update?.name?.endsWith("nurse-a"));
+    assert(writeA);
+    assert.equal(writeA.update?.fields?.locked?.booleanValue, false);
+    assert.equal(writeA.update?.fields?.currentMatchId?.nullValue, null);
+    assert.equal(writeA.update?.fields?.status?.stringValue, "SEARCHING");
+
+    const writeB = committedWrites.find((w) => w.update?.name?.endsWith("nurse-b"));
+    assert(writeB);
+    assert.equal(writeB.update?.fields?.locked?.booleanValue, false);
+    assert.equal(writeB.update?.fields?.currentMatchId?.nullValue, null);
+    assert.equal(writeB.update?.fields?.status?.stringValue, "SEARCHING");
+  });
+
+  test("Step 1.1: REJECT after deadline returns EXPIRED and unlocks all three participants for 3-way match", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockThreeWayMatchDoc("match-exp-3w", "nurse-a", "nurse-b", "nurse-c", {
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-exp-3w", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-exp-3w", locked: true, status: "MATCHED" });
+    const docC = createMockRequestDoc("nurse-c", { currentMatchId: "match-exp-3w", locked: true, status: "MATCHED" });
+
+    let committedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-3w`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-c`]: () =>
+        new Response(JSON.stringify(docC), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-b", "match-exp-3w", "REJECT", client);
+
+    assert.equal(result.matchId, "match-exp-3w");
+    assert.equal(result.newStatus, "EXPIRED");
+    assert.equal(result.decisionApplied, true);
+
+    assert.equal(committedWrites.length, 4);
+    for (const uid of ["nurse-a", "nurse-b", "nurse-c"]) {
+      const pWrite = committedWrites.find((w) => w.update?.name?.endsWith(uid));
+      assert(pWrite, `Expected unlock write for ${uid}`);
+      assert.equal(pWrite.update?.fields?.locked?.booleanValue, false);
+      assert.equal(pWrite.update?.fields?.currentMatchId?.nullValue, null);
+      assert.equal(pWrite.update?.fields?.status?.stringValue, "SEARCHING");
+    }
+  });
+
+  test("Step 1.1: LEAVE on expired CHAT_OPEN match returns EXPIRED and unlocks participants", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-exp-chat", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-exp-chat", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-exp-chat", locked: true, status: "MATCHED" });
+
+    let committedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-chat`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-exp-chat", "LEAVE", client);
+
+    assert.equal(result.matchId, "match-exp-chat");
+    assert.equal(result.newStatus, "EXPIRED");
+    assert.equal(result.decisionApplied, true);
+    assert.equal(committedWrites.length, 3);
+  });
+
+  test("Step 1.1: ACCEPT or CONFIRM after deadline throws 410 EXPIRED and executes inline expiry", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-exp-accept", "nurse-a", "nurse-b", {
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-exp-accept", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-exp-accept", locked: true, status: "MATCHED" });
+
+    let committedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-accept`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-exp-accept", "ACCEPT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "EXPIRED");
+        assert.equal(err.statusCode, 410);
+        return true;
+      }
+    );
+
+    assert.equal(committedWrites.length, 3);
+    assert.equal(committedWrites[0].update?.fields?.status?.stringValue, "EXPIRED");
+  });
+
+  test("Step 1.1: CONFIRM after deadline on CHAT_OPEN match throws 410 EXPIRED and executes inline expiry", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-exp-confirm", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-exp-confirm", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-exp-confirm", locked: true, status: "MATCHED" });
+
+    let committedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-confirm`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-exp-confirm", "CONFIRM", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "EXPIRED");
+        assert.equal(err.statusCode, 410);
+        return true;
+      }
+    );
+
+    assert.equal(committedWrites.length, 3);
+    assert.equal(committedWrites[0].update?.fields?.status?.stringValue, "EXPIRED");
+  });
+
+  test("Step 1.1: Repeated REJECT or LEAVE on already EXPIRED match is idempotent", async () => {
+    const expiredMatchDoc = createMockMatchDoc("match-already-expired", "nurse-a", "nurse-b", {
+      status: "EXPIRED"
+    });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-already-expired`]: () =>
+        new Response(JSON.stringify(expiredMatchDoc), { status: 200 })
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    const resultReject = await respondToMatch("nurse-a", "match-already-expired", "REJECT", client);
+    assert.equal(resultReject.matchId, "match-already-expired");
+    assert.equal(resultReject.newStatus, "EXPIRED");
+    assert.equal(resultReject.decisionApplied, true);
+
+    const resultLeave = await respondToMatch("nurse-b", "match-already-expired", "LEAVE", client);
+    assert.equal(resultLeave.matchId, "match-already-expired");
+    assert.equal(resultLeave.newStatus, "EXPIRED");
+    assert.equal(resultLeave.decisionApplied, true);
+  });
+
+  test("Step 1.1: Participant with different currentMatchId is NOT unlocked on expiry", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-exp-stale", "nurse-a", "nurse-b", {
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", {
+      currentMatchId: "match-exp-stale",
+      locked: true,
+      status: "MATCHED"
+    });
+    const docB = createMockRequestDoc("nurse-b", {
+      currentMatchId: "newer-match-888",
+      locked: true,
+      status: "MATCHED"
+    });
+
+    let committedWrites: FirestoreWrite[] = [];
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-stale`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: async (req: Request) => {
+        const body = (await req.json()) as { writes: FirestoreWrite[] };
+        committedWrites = body.writes;
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-exp-stale", "REJECT", client);
+
+    assert.equal(result.newStatus, "EXPIRED");
+    assert.equal(committedWrites.length, 2);
+    const writeB = committedWrites.find((w) => w.update?.name?.endsWith("nurse-b"));
+    assert.equal(writeB, undefined);
+  });
+
+  test("Step 1.1: Concurrency conflict during inline expiry catches FirestoreError safely", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-exp-conflict", "nurse-a", "nurse-b", {
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-exp-conflict", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-exp-conflict", locked: true, status: "MATCHED" });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-exp-conflict`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(
+          JSON.stringify({ error: { code: 409, message: "Precondition failed: updateTime mismatch", status: "ABORTED" } }),
+          { status: 409 }
+        )
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+    const result = await respondToMatch("nurse-a", "match-exp-conflict", "REJECT", client);
+
+    assert.equal(result.matchId, "match-exp-conflict");
+    assert.equal(result.newStatus, "EXPIRED");
+    assert.equal(result.decisionApplied, true);
+  });
+
+  test("Step 1.1: Concurrency conflict where match was confirmed throws 409 ALREADY_CONFIRMED to prevent false success", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const staleMatchDoc = createMockMatchDoc("match-conflict-confirmed", "nurse-a", "nurse-b", {
+      status: "CHAT_OPEN",
+      expiresAt: expiredTime
+    });
+
+    const freshConfirmedDoc = createMockMatchDoc("match-conflict-confirmed", "nurse-a", "nurse-b", {
+      status: "CONFIRMED",
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-conflict-confirmed", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-conflict-confirmed", locked: true, status: "MATCHED" });
+
+    let getMatchCount = 0;
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-conflict-confirmed`]: () => {
+        getMatchCount++;
+        return new Response(JSON.stringify(getMatchCount === 1 ? staleMatchDoc : freshConfirmedDoc), { status: 200 });
+      },
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(
+          JSON.stringify({ error: { code: 409, message: "Precondition failed: updateTime mismatch", status: "ABORTED" } }),
+          { status: 409 }
+        )
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-conflict-confirmed", "REJECT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof MatchServiceError);
+        assert.equal(err.code, "ALREADY_CONFIRMED");
+        assert.equal(err.statusCode, 409);
+        return true;
+      }
+    );
+  });
+
+  test("Step 1.1: Non-concurrency FirestoreError during inline expiry is not swallowed", async () => {
+    const expiredTime = new Date(Date.now() - 3600 * 1000).toISOString();
+    const matchDoc = createMockMatchDoc("match-server-err", "nurse-a", "nurse-b", {
+      expiresAt: expiredTime
+    });
+
+    const docA = createMockRequestDoc("nurse-a", { currentMatchId: "match-server-err", locked: true, status: "MATCHED" });
+    const docB = createMockRequestDoc("nurse-b", { currentMatchId: "match-server-err", locked: true, status: "MATCHED" });
+
+    const transport = createMockTransport({
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/match-server-err`]: () =>
+        new Response(JSON.stringify(matchDoc), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-a`]: () =>
+        new Response(JSON.stringify(docA), { status: 200 }),
+      [`GET /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents/transferRequests/nurse-b`]: () =>
+        new Response(JSON.stringify(docB), { status: 200 }),
+      [`POST /v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents:commit`]: () =>
+        new Response(
+          JSON.stringify({ error: { code: 500, message: "Internal server error in datastore", status: "INTERNAL" } }),
+          { status: 500 }
+        )
+    });
+
+    const client = new FirestoreClient({ projectId: TEST_PROJECT_ID, tokenProvider: mockTokenProvider, transport });
+
+    await assert.rejects(
+      async () => {
+        await respondToMatch("nurse-a", "match-server-err", "REJECT", client);
+      },
+      (err: unknown) => {
+        assert(err instanceof FirestoreError);
+        assert.equal(err.statusCode, 500);
+        return true;
+      }
+    );
+  });
+
 });

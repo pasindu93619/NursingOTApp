@@ -84,7 +84,7 @@ describe("Worker Malformed JSON Hardening Suite", () => {
         return new Response("Not found", { status: 404 });
       };
 
-      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
       const request = new Request("http://localhost/api/matching/respond", {
         method: "POST",
         headers: {
@@ -115,7 +115,7 @@ describe("Worker Malformed JSON Hardening Suite", () => {
         return new Response("Not found", { status: 404 });
       };
 
-      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+      const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
       const request = new Request("http://localhost/api/matching/completion", {
         method: "POST",
         headers: {

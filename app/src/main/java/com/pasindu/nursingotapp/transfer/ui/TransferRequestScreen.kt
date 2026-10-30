@@ -26,6 +26,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.activity.compose.BackHandler
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -154,6 +161,18 @@ fun TransferRequestScreen(
     var pickerMode by remember { mutableStateOf<PickerMode?>(null) }
     var showProfileNotice by remember { mutableStateOf(false) }
     var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showNotificationRationaleDialog by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        val current = currentHospital ?: return@rememberLauncherForActivityResult
+        onSubmit(
+            current.hospitalId,
+            preferences.map { it.hospitalId }
+        )
+    }
 
     var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
 
@@ -689,10 +708,23 @@ fun TransferRequestScreen(
                 Button(
                     onClick = {
                         val current = currentHospital ?: return@Button
-                        onSubmit(
-                            current.hospitalId,
-                            preferences.map { it.hospitalId }
-                        )
+                        val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                        } else {
+                            true
+                        }
+
+                        if (!hasNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            showNotificationRationaleDialog = true
+                        } else {
+                            onSubmit(
+                                current.hospitalId,
+                                preferences.map { it.hospitalId }
+                            )
+                        }
                     },
                     enabled = canSubmit && !isRequestLocked,
                     modifier = Modifier
@@ -815,6 +847,67 @@ fun TransferRequestScreen(
                     )
                 }
             }
+        )
+    }
+
+    if (showNotificationRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showNotificationRationaleDialog = false
+                val current = currentHospital ?: return@AlertDialog
+                onSubmit(
+                    current.hospitalId,
+                    preferences.map { it.hospitalId }
+                )
+            },
+            title = {
+                Text(
+                    "Stay updated on matches",
+                    fontWeight = FontWeight.Black,
+                    color = TransferInk
+                )
+            },
+            text = {
+                Text(
+                    "Enable notifications to receive timely alerts when a mutual transfer match is found, accepted, or confirmed. You can still search for matches without notifications.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationRationaleDialog = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            val current = currentHospital ?: return@TextButton
+                            onSubmit(
+                                current.hospitalId,
+                                preferences.map { it.hospitalId }
+                            )
+                        }
+                    }
+                ) {
+                    Text("Enable alerts", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationRationaleDialog = false
+                        val current = currentHospital ?: return@TextButton
+                        onSubmit(
+                            current.hospitalId,
+                            preferences.map { it.hospitalId }
+                        )
+                    }
+                ) {
+                    Text("Not now", color = TextSecondary, fontWeight = FontWeight.Normal)
+                }
+            },
+            containerColor = Color.White,
+            titleContentColor = TransferInk,
+            textContentColor = TextSecondary
         )
     }
 }

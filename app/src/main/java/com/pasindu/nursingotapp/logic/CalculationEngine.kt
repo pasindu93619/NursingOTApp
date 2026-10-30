@@ -32,11 +32,12 @@ object CalculationEngine {
         val effectiveOtRate = payRates?.otRate?.takeIf { it > 0.0 }
             ?: profileEntity.otRate.coerceAtLeast(0.0)
 
-        val effectivePhRate = payRates?.phRate?.takeIf { it > 0.0 }
-            ?: 0.0
+        val phRate = payRates?.phRate?.takeIf { it > 0.0 }
+        val doRate = payRates?.doRate?.takeIf { it > 0.0 }
+        val ratesMissing = payRates == null || phRate == null || doRate == null
 
-        val effectiveDoRate = payRates?.doRate?.takeIf { it > 0.0 }
-            ?: 0.0
+        val effectivePhRate = phRate ?: 0.0
+        val effectiveDoRate = doRate ?: 0.0
 
         val dailyLogs = entries
             .map { entity ->
@@ -76,7 +77,8 @@ object CalculationEngine {
             otAmountRs = result.otAmountRs,
             phAmountRs = result.phAmountRs,
             doAmountRs = result.doAmountRs,
-            totalAmountRs = result.totalAmountRs
+            totalAmountRs = result.totalAmountRs,
+            ratesMissing = ratesMissing
         )
 
         return Pair(dailyLogs, summary)
@@ -84,7 +86,7 @@ object CalculationEngine {
 
     data class PayRates(
         val otRate: Double,
-        val phRate: Double,
-        val doRate: Double
+        val phRate: Double? = null,
+        val doRate: Double? = null
     )
 }

@@ -30,8 +30,8 @@ class CalculateFinanceSummaryUseCase {
             payRates = payRates?.let { settings ->
                 CalculationEngine.PayRates(
                     otRate = settings.otRate.coerceAtLeast(0.0),
-                    phRate = settings.phRate.coerceAtLeast(0.0),
-                    doRate = settings.doRate.coerceAtLeast(0.0)
+                    phRate = settings.phRate.takeIf { it > 0.0 },
+                    doRate = settings.doRate.takeIf { it > 0.0 }
                 )
             }
         ).second

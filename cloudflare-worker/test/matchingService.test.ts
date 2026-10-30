@@ -2017,6 +2017,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
 
     const response = await worker.fetch(request, {
       FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      ENVIRONMENT: "test",
       MATCH_EXPIRATION_HOURS: "48"
     });
 
@@ -2036,6 +2037,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     });
     const respMissing = await worker.fetch(requestMissing, {
       FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      ENVIRONMENT: "test",
       MATCH_EXPIRATION_HOURS: "48",
       SWEEP_ADMIN_SECRET: testSecret
     });
@@ -2052,6 +2054,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     });
     const respWrong = await worker.fetch(requestWrong, {
       FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      ENVIRONMENT: "test",
       MATCH_EXPIRATION_HOURS: "48",
       SWEEP_ADMIN_SECRET: testSecret
     });
@@ -2083,6 +2086,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
 
       const response = await worker.fetch(request, {
         FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "test",
         MATCH_EXPIRATION_HOURS: "48",
         SWEEP_ADMIN_SECRET: testSecret
       });
@@ -2122,6 +2126,7 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
 
       const response = await worker.fetch(request, {
         FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "test",
         MATCH_EXPIRATION_HOURS: "48",
         SWEEP_ADMIN_SECRET: testSecret
       });

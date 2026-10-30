@@ -28,7 +28,7 @@ object DatabaseProviderCentralized {
                 .addMigrations(*DatabaseMigrationRegistry.ALL_MIGRATIONS)
                 .build()
                 .also {
-                    SalaryTableSeeder.seedIfNeeded(it.salaryStep2027Dao())
+                    SalaryTableSeeder.startSeeding(it)
                     instance = it
                 }
         }

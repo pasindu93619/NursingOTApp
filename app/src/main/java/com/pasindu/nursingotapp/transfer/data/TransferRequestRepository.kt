@@ -14,6 +14,7 @@ import com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus
 import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.data.model.WorkerWithdrawResponse
 import com.pasindu.nursingotapp.transfer.data.model.TransferMatchHistoryItem
+import com.pasindu.nursingotapp.transfer.data.model.TransferWorkerApiException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -108,6 +109,12 @@ class TransferRequestRepository @Inject constructor(
         dao.observe().map { entity -> entity?.toDomain() }
 
     /**
+     * Exposes real-time snapshot updates for the active mutual-transfer match document.
+     */
+    fun observeMatchDoc(matchId: String): Flow<Result<RemoteMatchState?>> =
+        remoteDataSource.observeMatchDoc(matchId)
+
+    /**
      * Returns the current active request snapshot, or `null` if none exists.
      *
      * This is a one-shot suspend read. Prefer [observeActiveRequest] for
@@ -121,6 +128,39 @@ class TransferRequestRepository @Inject constructor(
      * mutual-transfer match to the signed-in nurse.
      */
     suspend fun getCurrentUserId(): String? = tokenProvider?.getCurrentUserId()
+
+    /**
+     * Forces a fresh Firebase ID token from the provider, bypassing internal token caches.
+     */
+    suspend fun refreshAuthToken(): String? = tokenProvider?.getFirebaseIdToken(forceRefresh = true)
+
+    /**
+     * Executes an authenticated Cloudflare Worker API call with automatic 401 token refresh and single retry.
+     * Prevents infinite loops by allowing at most one refresh and retry attempt.
+     */
+    private suspend fun <T> withAuthenticatedWorkerCall(block: suspend (token: String) -> T): T {
+        val initialToken = tokenProvider?.getFirebaseIdToken(forceRefresh = false)
+            ?: throw IllegalStateException("Authentication failure: Unable to get ID token")
+
+        return try {
+            block(initialToken)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            val is401 = (e is TransferWorkerApiException && e.statusCode == 401) ||
+                (e.cause is TransferWorkerApiException && (e.cause as TransferWorkerApiException).statusCode == 401) ||
+                (e.message?.contains("401") == true)
+
+            if (is401) {
+                logger.d(TAG, "Worker call failed with HTTP 401; forcing token refresh and retrying once")
+                val freshToken = tokenProvider?.getFirebaseIdToken(forceRefresh = true)
+                    ?: throw IllegalStateException("Authentication failure: Refresh token expired or unavailable", e)
+                block(freshToken)
+            } else {
+                throw e
+            }
+        }
+    }
 
     /**
      * Persists a new or updated transfer request to Room.
@@ -531,16 +571,28 @@ class TransferRequestRepository @Inject constructor(
             )
         }
 
-        val token = tokenProvider.getFirebaseIdToken()
-            ?: run {
-                logger.e(TAG, "Firebase ID token acquisition FAILED")
-                dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
-                return WorkerSyncResult.AuthError("Authentication failure: Unable to get ID token")
+        logger.d(TAG, "Calling Cloudflare matching Worker with authenticated token retry")
+        val workerResult = try {
+            val initialToken = tokenProvider.getFirebaseIdToken(forceRefresh = false)
+                ?: run {
+                    logger.e(TAG, "Firebase ID token acquisition FAILED")
+                    dao.upsert(entity.copy(syncStatus = CacheSyncStatus.ERROR.name))
+                    return WorkerSyncResult.AuthError("Authentication failure: Unable to get ID token")
+                }
+            var res = workerApiClient.findAndLockMatch(initialToken)
+            if (res is WorkerSyncResult.AuthError) {
+                logger.d(TAG, "findAndLockMatch returned AuthError; forcing token refresh and retrying once")
+                val freshToken = tokenProvider.getFirebaseIdToken(forceRefresh = true)
+                if (freshToken != null) {
+                    res = workerApiClient.findAndLockMatch(freshToken)
+                }
             }
-
-        logger.d(TAG, "Firebase ID token acquired successfully")
-        logger.d(TAG, "Calling Cloudflare matching Worker")
-        val workerResult = workerApiClient.findAndLockMatch(token)
+            res
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            WorkerSyncResult.NetworkError("Worker communication error: ${e.message}", e)
+        }
         logger.d(TAG, "Cloudflare matching Worker returned: ${workerResult::class.simpleName}")
 
         when (workerResult) {
@@ -590,16 +642,16 @@ class TransferRequestRepository @Inject constructor(
 
     suspend fun getCompletionStatus(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
-        val token = tokenProvider.getFirebaseIdToken()
-            ?: throw IllegalStateException("Authentication provider unavailable")
-        workerApiClient.getCompletionStatus(token, matchId)
+        withAuthenticatedWorkerCall { token ->
+            workerApiClient.getCompletionStatus(token, matchId)
+        }
     }
 
     suspend fun reportCompletion(matchId: String): Result<com.pasindu.nursingotapp.transfer.data.model.TransferCompletionStatus> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
-        val token = tokenProvider.getFirebaseIdToken()
-            ?: throw IllegalStateException("Authentication provider unavailable")
-        val result = workerApiClient.reportCompletion(token, matchId)
+        val result = withAuthenticatedWorkerCall { token ->
+            workerApiClient.reportCompletion(token, matchId)
+        }
         if (result.status == "COMPLETED") {
             val cached = dao.getOnce()
             if (cached != null && cached.matchCycleId == matchId) {
@@ -626,8 +678,9 @@ class TransferRequestRepository @Inject constructor(
     }
 
     suspend fun getMatchHistory(): Result<List<TransferMatchHistoryItem>> = runSuspendCatching {
-        val token = tokenProvider.getFirebaseIdToken() ?: error("Authentication failure: Unable to get ID token")
-        workerApiClient.getMatchHistory(token)
+        withAuthenticatedWorkerCall { token ->
+            workerApiClient.getMatchHistory(token)
+        }
     }
 
     /**
@@ -640,9 +693,9 @@ class TransferRequestRepository @Inject constructor(
     suspend fun clearRequest() = syncMutex.withLock {
         lastCompletedSync = null
         if (tokenProvider !is StubTransferTokenProvider && workerApiClient !is StubTransferWorkerApiClient) {
-            val token = tokenProvider.getFirebaseIdToken()
-                ?: throw IllegalStateException("Authentication failure: Unable to get ID token")
-            workerApiClient.withdrawRequest(token)
+            withAuthenticatedWorkerCall { token ->
+                workerApiClient.withdrawRequest(token)
+            }
         }
         dao.clear()
     }
@@ -652,11 +705,10 @@ class TransferRequestRepository @Inject constructor(
      * Updates the local Room cache with the authoritative status upon success.
      */
     suspend fun respondToMatch(matchId: String, decision: Decision): Result<DecisionResponse> {
-        val token = tokenProvider.getFirebaseIdToken()
-            ?: return Result.failure(IllegalStateException("Authentication failure: Unable to get ID token"))
-
         val response = try {
-            workerApiClient.respondToMatch(token, DecisionRequest(matchId, decision))
+            withAuthenticatedWorkerCall { token ->
+                workerApiClient.respondToMatch(token, DecisionRequest(matchId, decision))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (originalError: Throwable) {

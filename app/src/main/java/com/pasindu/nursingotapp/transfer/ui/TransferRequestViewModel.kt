@@ -7,6 +7,7 @@ import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
 import com.pasindu.nursingotapp.transfer.worker.NoOpTransferSyncScheduler
 import com.pasindu.nursingotapp.transfer.worker.TransferSyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,7 +34,8 @@ private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
 class TransferRequestViewModel @Inject constructor(
     private val hospitalReferenceRepository: HospitalReferenceRepository,
     private val transferRequestRepository: TransferRequestRepository,
-    private val syncScheduler: TransferSyncScheduler
+    private val syncScheduler: TransferSyncScheduler,
+    private val logger: com.pasindu.nursingotapp.transfer.data.TransferSyncLogger = com.pasindu.nursingotapp.transfer.data.NoOpTransferSyncLogger
 ) : ViewModel() {
 
     constructor(
@@ -42,8 +44,18 @@ class TransferRequestViewModel @Inject constructor(
     ) : this(
         hospitalReferenceRepository = hospitalReferenceRepository,
         transferRequestRepository = transferRequestRepository,
-        syncScheduler = NoOpTransferSyncScheduler
+        syncScheduler = NoOpTransferSyncScheduler,
+        logger = com.pasindu.nursingotapp.transfer.data.NoOpTransferSyncLogger
     )
+
+    private var consecutivePollFailures = 0
+    private var hasAttemptedAuthRefresh = false
+    private val _pollWarning = MutableStateFlow<String?>(null)
+    val pollWarning: StateFlow<String?> = _pollWarning.asStateFlow()
+
+    companion object {
+        private const val TAG = "TransferRequestViewModel"
+    }
 
     // ---------------------------------------------------------------------------
     // Hospital directory (existing, unchanged behaviour)
@@ -117,14 +129,54 @@ class TransferRequestViewModel @Inject constructor(
 
                 if (shouldPoll) {
                     try {
-                        transferRequestRepository.syncActiveRequest()
+                        val syncResult = transferRequestRepository.syncActiveRequest()
+                        when (syncResult) {
+                            is WorkerSyncResult.MatchFound,
+                            is WorkerSyncResult.NoMatch,
+                            is WorkerSyncResult.ReturnedToPool,
+                            is WorkerSyncResult.RequestCompleted,
+                            is WorkerSyncResult.RequestWithdrawn -> {
+                                consecutivePollFailures = 0
+                                hasAttemptedAuthRefresh = false
+                                _pollWarning.value = null
+                            }
+                            is WorkerSyncResult.AuthError -> {
+                                logger.e(TAG, "AuthError during pool polling: ${syncResult.message}")
+                                if (!hasAttemptedAuthRefresh) {
+                                    hasAttemptedAuthRefresh = true
+                                    transferRequestRepository.refreshAuthToken()
+                                } else {
+                                    consecutivePollFailures++
+                                    if (consecutivePollFailures >= 3) {
+                                        _pollWarning.value = POLL_WARNING_MESSAGE
+                                    }
+                                }
+                            }
+                            is WorkerSyncResult.NetworkError -> {
+                                logger.e(TAG, "NetworkError during pool polling: ${syncResult.message}", syncResult.cause)
+                                consecutivePollFailures++
+                                if (consecutivePollFailures >= 3) {
+                                    _pollWarning.value = POLL_WARNING_MESSAGE
+                                }
+                            }
+                            else -> {}
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Throwable) {
-                        // Ignore transient exceptions during polling
+                        logger.e(TAG, "poll failed", e)
+                        consecutivePollFailures++
+                        if (consecutivePollFailures >= 3) {
+                            _pollWarning.value = POLL_WARNING_MESSAGE
+                        }
                     }
                 }
-                delay(pollIntervalMs)
+                val delayMs = if (consecutivePollFailures > 0) {
+                    calculatePollBackoff(consecutivePollFailures, pollIntervalMs)
+                } else {
+                    pollIntervalMs
+                }
+                delay(delayMs)
             }
         }
     }
