@@ -3,7 +3,10 @@ package com.pasindu.nursingotapp.ui.navigation
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
+import kotlinx.coroutines.runBlocking
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -23,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -32,7 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.navigation.compose.composable
+import androidx.navigation.navigation
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -48,6 +55,7 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.transfer.notification.TransferNotificationHelper
 import com.pasindu.nursingotapp.transfer.ui.TransferChatNavigationEvent
 import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferChatViewModel
@@ -84,33 +92,35 @@ private val rootDestinations = listOf(
 )
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    notificationIntent: Intent? = null,
+    onNotificationIntentConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val viewModel: NursingViewModel = hiltViewModel()
     val userProfile by viewModel.userProfile.collectAsState()
-    val transferRequestViewModel: TransferRequestViewModel = hiltViewModel()
-    val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
-    val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
-    val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
-    val activeTransferRequest by transferRequestViewModel.activeRequest.collectAsState()
-    val transferIsSubmitting by transferRequestViewModel.isSubmitting.collectAsState()
-    val transferSubmitError by transferRequestViewModel.submitError.collectAsState()
     val context = LocalContext.current
     val animDuration = NursingMotion.pageTransitionDurationMs
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showRootNavigation = rootDestinations.any { it.route == currentRoute }
 
+    LaunchedEffect(notificationIntent) {
+        val targetIntent = notificationIntent ?: return@LaunchedEffect
+        val type = targetIntent.getStringExtra(TransferNotificationHelper.EXTRA_NOTIFICATION_TYPE)
+        val destination = TransferNotificationHelper.resolveNotificationDestination(type)
+        if (destination != null) {
+            navController.navigate(destination) {
+                launchSingleTop = true
+            }
+        }
+        onNotificationIntentConsumed()
+    }
+
     fun navigateTo(route: String) {
         if (currentRoute == route) return
 
-        val targetRoute = if (route == "transfer_request" && activeTransferRequest != null) {
-            "transfer_pool_status"
-        } else {
-            route
-        }
-
-        navController.navigate(targetRoute) {
+        navController.navigate(route) {
             launchSingleTop = true
             restoreState = false
         }
@@ -213,58 +223,161 @@ fun AppNavigation() {
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable("transfer_request") {
-                TransferRequestScreen(
-                    profile = userProfile,
-                    hospitalOptions = transferHospitalOptions,
-                    hospitalDirectoryLoading = transferHospitalLoading,
-                    hospitalDirectoryError = transferHospitalLoadError,
-                    onRetryHospitalDirectory = transferRequestViewModel::retry,
-                    onBack = { navController.popBackStack() },
-                    activeRequest = activeTransferRequest,
-                    onSubmit = { currentHospitalId, preferenceHospitalIds ->
-                        transferRequestViewModel.submitRequest(
-                            currentHospitalId = currentHospitalId,
-                            preferenceHospitalIds = preferenceHospitalIds,
-                            onSuccess = {
-                                navController.navigate("transfer_pool_status") {
-                                    popUpTo("transfer_request") { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            }
-                        )
+            navigation(
+                startDestination = "transfer_request",
+                route = "transfer_graph"
+            ) {
+                composable(
+                    route = "transfer_request?mode={mode}",
+                    arguments = listOf(
+                        navArgument("mode") {
+                            type = NavType.StringType
+                            defaultValue = "create"
+                            nullable = true
+                        }
+                    )
+                ) { backStackEntry ->
+                    val mode = backStackEntry.arguments?.getString("mode") ?: "create"
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry("transfer_graph")
                     }
-                )
-            }
-            composable("transfer_pool_status") {
-                TransferPoolStatusScreen(
-                    activeRequest = activeTransferRequest,
-                    hospitalOptions = transferHospitalOptions,
-                    isLoadingHospitals = transferHospitalLoading,
-                    loadError = transferHospitalLoadError,
-                    isSubmitting = transferIsSubmitting,
-                    submitError = transferSubmitError,
-                    onBack = { navController.popBackStack() },
-                    onEditRequest = {
-                        navController.navigate("transfer_request") {
-                            launchSingleTop = true
+                    val transferRequestViewModel: TransferRequestViewModel = hiltViewModel(parentEntry)
+                    val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
+                    val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
+                    val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
+                    val activeTransferRequest by transferRequestViewModel.activeRequest.collectAsState()
+                    val lifecycleOwner = LocalLifecycleOwner.current
+
+                    DisposableEffect(lifecycleOwner) {
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                            when (event) {
+                                androidx.lifecycle.Lifecycle.Event.ON_START,
+                                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                                    transferRequestViewModel.startAutomaticMatchPolling()
+                                }
+                                androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
+                                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                                    transferRequestViewModel.stopAutomaticMatchPolling()
+                                }
+                                else -> {}
+                            }
                         }
-                    },
-                    onWithdrawRequest = {
-                        transferRequestViewModel.withdrawRequest()
-                    },
-                    onCreateNewRequest = {
-                        navController.navigate("transfer_request") {
-                            launchSingleTop = true
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                            transferRequestViewModel.stopAutomaticMatchPolling()
                         }
-                    },
-                    onRetryHospitals = transferRequestViewModel::retry,
-                    onOpenMatch = {
-                        val status = activeTransferRequest?.matchStatus?.trim()?.uppercase()
-                        val matchId = activeTransferRequest?.matchCycleId?.orEmpty()
-                        if (status == "CONFIRMED" || status == "AWAITING_COMPLETION" || status == "COMPLETED") {
-                            if (!matchId.isNullOrBlank()) {
-                                navController.navigate("transfer_instructions/${Uri.encode(matchId)}") {
+                    }
+
+                    LaunchedEffect(activeTransferRequest, mode) {
+                        if (mode != "edit" &&
+                            activeTransferRequest != null &&
+                            activeTransferRequest?.requestStatus != com.pasindu.nursingotapp.transfer.data.model.TransferRequestStatus.COMPLETED
+                        ) {
+                            navController.navigate("transfer_pool_status") {
+                                popUpTo("transfer_request") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+
+                    TransferRequestScreen(
+                        profile = userProfile,
+                        hospitalOptions = transferHospitalOptions,
+                        hospitalDirectoryLoading = transferHospitalLoading,
+                        hospitalDirectoryError = transferHospitalLoadError,
+                        onRetryHospitalDirectory = transferRequestViewModel::retry,
+                        onBack = { navController.popBackStack() },
+                        activeRequest = activeTransferRequest,
+                        onSubmit = { currentHospitalId, preferenceHospitalIds ->
+                            transferRequestViewModel.submitRequest(
+                                currentHospitalId = currentHospitalId,
+                                preferenceHospitalIds = preferenceHospitalIds,
+                                onSuccess = {
+                                    navController.navigate("transfer_pool_status") {
+                                        popUpTo("transfer_request") { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                    )
+                }
+
+                composable("transfer_pool_status") { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry("transfer_graph")
+                    }
+                    val transferRequestViewModel: TransferRequestViewModel = hiltViewModel(parentEntry)
+                    val transferHospitalOptions by transferRequestViewModel.hospitalOptions.collectAsState()
+                    val transferHospitalLoading by transferRequestViewModel.isLoading.collectAsState()
+                    val transferHospitalLoadError by transferRequestViewModel.loadError.collectAsState()
+                    val activeTransferRequest by transferRequestViewModel.activeRequest.collectAsState()
+                    val transferIsSubmitting by transferRequestViewModel.isSubmitting.collectAsState()
+                    val transferSubmitError by transferRequestViewModel.submitError.collectAsState()
+                    val lifecycleOwner = LocalLifecycleOwner.current
+
+                    DisposableEffect(lifecycleOwner) {
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                            when (event) {
+                                androidx.lifecycle.Lifecycle.Event.ON_START,
+                                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                                    transferRequestViewModel.startAutomaticMatchPolling()
+                                }
+                                androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
+                                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                                    transferRequestViewModel.stopAutomaticMatchPolling()
+                                }
+                                else -> {}
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                            transferRequestViewModel.stopAutomaticMatchPolling()
+                        }
+                    }
+
+                    val transferPollWarning by transferRequestViewModel.pollWarning.collectAsState()
+
+                    TransferPoolStatusScreen(
+                        activeRequest = activeTransferRequest,
+                        hospitalOptions = transferHospitalOptions,
+                        isLoadingHospitals = transferHospitalLoading,
+                        loadError = transferHospitalLoadError,
+                        isSubmitting = transferIsSubmitting,
+                        submitError = transferSubmitError,
+                        pollWarning = transferPollWarning,
+                        onBack = { navController.popBackStack() },
+                        onEditRequest = {
+                            navController.navigate("transfer_request?mode=edit") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onWithdrawRequest = {
+                            transferRequestViewModel.withdrawRequest()
+                        },
+                        onCreateNewRequest = {
+                            navController.navigate("transfer_request?mode=create") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onRetryHospitals = transferRequestViewModel::retry,
+                        onOpenMatch = {
+                            val status = activeTransferRequest?.matchStatus?.trim()?.uppercase()
+                            val matchId = activeTransferRequest?.matchCycleId?.orEmpty()
+                            if (status == "CONFIRMED" || status == "AWAITING_COMPLETION" || status == "COMPLETED") {
+                                if (!matchId.isNullOrBlank()) {
+                                    navController.navigate("transfer_instructions/${Uri.encode(matchId)}") {
+                                        launchSingleTop = true
+                                    }
+                                } else {
+                                    navController.navigate("transfer_match") {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            } else if (status == "CHAT_OPEN") {
+                                navController.navigate("transfer_chat") {
                                     launchSingleTop = true
                                 }
                             } else {
@@ -272,22 +385,14 @@ fun AppNavigation() {
                                     launchSingleTop = true
                                 }
                             }
-                        } else if (status == "CHAT_OPEN") {
-                            navController.navigate("transfer_chat") {
-                                launchSingleTop = true
-                            }
-                        } else {
-                            navController.navigate("transfer_match") {
+                        },
+                        onOpenHistory = {
+                            navController.navigate("transfer_history") {
                                 launchSingleTop = true
                             }
                         }
-                    },
-                    onOpenHistory = {
-                        navController.navigate("transfer_history") {
-                            launchSingleTop = true
-                        }
-                    }
-                )
+                    )
+                }
             }
             composable("transfer_history") {
                 TransferHistoryScreen(
@@ -297,12 +402,16 @@ fun AppNavigation() {
             composable("transfer_match") {
                 val matchViewModel: TransferMatchViewModel = hiltViewModel()
                 val matchUiState by matchViewModel.uiState.collectAsState()
+                val isSubmitting by matchViewModel.isSubmitting.collectAsState()
+                val isOfflineOrDegraded by matchViewModel.isOfflineOrDegraded.collectAsState()
+                val matchPollWarning by matchViewModel.pollWarning.collectAsState()
 
                 // Once every participant has accepted, the authoritative state is CHAT_OPEN.
                 // Move directly into the live coordination channel instead of requiring a
                 // second tap on the match summary. Terminal CONFIRMED matches remain read-only.
-                LaunchedEffect(matchUiState) {
-                    if (matchUiState is TransferMatchUiState.ChatOpen) {
+                val chatOpenMatchId = (matchUiState as? TransferMatchUiState.ChatOpen)?.match?.matchId
+                LaunchedEffect(chatOpenMatchId) {
+                    if (!chatOpenMatchId.isNullOrBlank()) {
                         navController.navigate("transfer_chat") {
                             popUpTo("transfer_match") { inclusive = true }
                             launchSingleTop = true
@@ -312,26 +421,22 @@ fun AppNavigation() {
 
                 TransferMatchScreen(
                     uiState = matchUiState,
+                    isSubmitting = isSubmitting,
+                    isOfflineOrDegraded = isOfflineOrDegraded,
+                    pollWarning = matchPollWarning,
                     onBack = { navController.popBackStack() },
-                    onAcceptMatch = { matchId ->
-                        matchViewModel.acceptMatch(matchId)
-                    },
-                    onConfirmMatch = { matchId ->
-                        matchViewModel.confirmMatch(matchId)
-                    },
-                    onRejectMatch = { matchId ->
-                        matchViewModel.rejectMatch(matchId) {
-                            navController.popBackStack()
-                        }
-                    },
+                    onAcceptMatch = { matchViewModel.acceptMatch(it) },
+                    onConfirmMatch = { matchViewModel.confirmMatch(it) },
+                    onRejectMatch = { matchViewModel.rejectMatch(it) },
                     onOpenChat = {
                         navController.navigate("transfer_chat") {
+                            popUpTo("transfer_match") { inclusive = true }
                             launchSingleTop = true
                         }
                     },
-                    onRetry = {
-                        matchViewModel.resetState()
-                    }
+                    onRetry = { matchViewModel.retryPolling() },
+                    onScreenResume = { matchViewModel.onScreenResume() },
+                    onScreenExit = { matchViewModel.onScreenExit() }
                 )
             }
             composable("transfer_chat") {
@@ -395,11 +500,15 @@ fun AppNavigation() {
                     instructionsViewModel.load(matchId)
                 }
 
+                val checkedItems by instructionsViewModel.checkedItems.collectAsState()
+
                 TransferInstructionsScreen(
                     matchId = matchId,
                     matchType = state.matchType.ifBlank { "DIRECT_2_WAY" },
                     participants = state.participants,
                     isLoading = state.isLoading,
+                    checkedItems = checkedItems,
+                    onToggleCheckItem = { instructionsViewModel.toggleCheckItem(it) },
                     onBack = { navController.popBackStack() },
                     onOpenChat = {
                         navController.navigate("transfer_chat") {
@@ -562,6 +671,19 @@ private fun generateOtPdf(
     val dbLogs = viewModel.dailyLogs.value
     val dbProfile = viewModel.userProfile.value
     if (dbProfile == null) return null
+
+    val resolvedRates = runBlocking { viewModel.payRateResolver.resolve(dbProfile) }
+    if (resolvedRates == null) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(
+                context,
+                "Salary step not matched. Check grade and basic salary in Profile.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        return null
+    }
+
     val configuredOtRate = viewModel.configuredOtRate.value
     val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 } ?: dbProfile.otRate.coerceAtLeast(0.0)
     val profile = UserProfile(
@@ -592,9 +714,7 @@ private fun generateOtPdf(
         )
     }
     val period = Period(LocalDate.parse(start), LocalDate.parse(end))
-    val matched2027Basic = viewModel.matchedSalary2027.value?.basicSalary2027
-    val workingDayRate = matched2027Basic?.takeIf { it > 0.0 }?.div(30.0)
-        ?: profile.basicSalary.coerceAtLeast(0.0) / 30.0
+    val workingDayRate = resolvedRates.phRate
     val calculation = WeeklyOtCalculator.calculate(
         logs = logs,
         claimStart = period.claimStart,
@@ -611,7 +731,8 @@ private fun generateOtPdf(
         otAmountRs = calculation.otAmountRs,
         phAmountRs = calculation.phAmountRs,
         doAmountRs = calculation.doAmountRs,
-        totalAmountRs = calculation.totalAmountRs
+        totalAmountRs = calculation.totalAmountRs,
+        ratesMissing = false
     )
     return PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
 }

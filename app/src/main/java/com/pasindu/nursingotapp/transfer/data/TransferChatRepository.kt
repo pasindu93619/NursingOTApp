@@ -7,6 +7,7 @@ import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.pasindu.nursingotapp.transfer.data.model.TransferChatError
 import com.pasindu.nursingotapp.transfer.data.model.TransferChatMessage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -155,6 +156,8 @@ class FirestoreTransferChatRepository @Inject constructor(
                     hasPendingWrites = true
                 )
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(mapFirestoreException(e))
         }

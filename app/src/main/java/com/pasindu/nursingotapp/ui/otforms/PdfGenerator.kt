@@ -194,7 +194,7 @@ class PdfGenerator(private val context: Context) {
         blocks.add(LeaveBlock(currentStart, currentEnd, currentType, currentCount)); return blocks
     }
     private fun filterFullWeekLogs(logs: List<DailyLog>, period: Period): List<DailyLog> { val firstSunday = period.claimStart.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)); val lastSaturday = period.claimEnd.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY)); if (firstSunday.isAfter(lastSaturday)) return emptyList(); return logs.filter { !it.date.isBefore(firstSunday) && !it.date.isAfter(lastSaturday) } }
-    private fun formatDouble(value: Double): String = String.format(Locale.US, "%.2f", value)
+    private fun formatDouble(value: Double): String = com.pasindu.nursingotapp.domain.calculation.FinancialFormatUtils.formatMoney(value)
     private fun formatFloat(value: Float): String = if (value % 1 == 0f) String.format(Locale.US, "%02d", value.toInt()) else String.format(Locale.US, "%04.1f", value)
     private fun formatHrs(value: Float): String { if (value <= 0f) return ""; return "${formatFloat(value)}h" }
     private fun formatHoursForEquation(value: Float): String = if (value % 1 == 0f) value.toInt().toString() else String.format(Locale.US, "%.1f", value)

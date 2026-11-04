@@ -146,4 +146,35 @@ class TransferChatDataTest {
         assertTrue("canLeave must remain true when only sendError is present", sendErrorOpenState.canLeave)
         assertNull("error must remain null when only sendError is present", sendErrorOpenState.error)
     }
+
+    @Test
+    fun transferParticipantBuilder_rejectsNonParticipantUid() {
+        val matchFound = com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult.MatchFound(
+            matchId = "match-test",
+            matchType = "DIRECT_2_WAY",
+            directMatch = com.pasindu.nursingotapp.transfer.data.model.WorkerDirectMatch(
+                nurseAUid = "nurse-a",
+                nurseBUid = "nurse-b",
+                nurseACurrentHospitalId = "HOSP-A",
+                nurseBCurrentHospitalId = "HOSP-B",
+                nurseADestinationHospitalId = "HOSP-B",
+                nurseBDestinationHospitalId = "HOSP-A",
+                nurseAGrade = "Grade I",
+                nurseBGrade = "Grade I",
+                isSameGrade = true,
+                nurseAPreferenceRank = 1,
+                nurseBPreferenceRank = 1,
+                combinedPreferenceRank = 2,
+                priorityReason = "Pair-wise match"
+            ),
+            createdAt = "2026-10-20T10:00:00Z",
+            expiresAt = "2026-10-20T12:00:00Z"
+        )
+        val participants = com.pasindu.nursingotapp.transfer.ui.TransferParticipantBuilder.buildParticipants(
+            matchFound = matchFound,
+            currentUid = "nurse-intruder",
+            hospitals = emptyList()
+        )
+        assertTrue("buildParticipants must return emptyList for non-participant", participants.isEmpty())
+    }
 }

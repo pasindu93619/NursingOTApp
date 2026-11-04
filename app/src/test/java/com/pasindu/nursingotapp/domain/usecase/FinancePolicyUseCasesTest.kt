@@ -94,8 +94,20 @@ class FinancePolicyUseCasesTest {
         override suspend fun find(grade: String, salaryStep: Int): SalaryStep2027Entity? =
             rows.firstOrNull { it.grade == grade && it.salaryStep == salaryStep }
 
-        override suspend fun findByCurrentBasic(grade: String, currentBasicSalary: Double): SalaryStep2027Entity? =
-            rows.firstOrNull { it.grade == grade && kotlin.math.abs(it.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
+        override suspend fun findByCurrentBasic(grade: String, currentBasicSalary: Double): SalaryStep2027Entity? {
+            val normGrade = when (grade.trim().uppercase()) {
+                "GRADE III", "GRADE 3", "3", "III" -> "III"
+                "GRADE II", "GRADE 2", "2", "II" -> "II"
+                "GRADE I", "GRADE 1", "1", "I" -> "I"
+                else -> grade.trim()
+            }
+            return rows.firstOrNull {
+                (it.grade == grade || it.grade == normGrade) && kotlin.math.abs(it.currentBasicSalary2026 - currentBasicSalary) < 0.01
+            }
+        }
+
+        override suspend fun findByBasicSalary(currentBasicSalary: Double): List<SalaryStep2027Entity> =
+            rows.filter { kotlin.math.abs(it.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
 
         override suspend fun count(): Int = rows.size
         override suspend fun clearAll() = Unit

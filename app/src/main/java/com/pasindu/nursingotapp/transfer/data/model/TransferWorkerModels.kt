@@ -112,10 +112,23 @@ sealed interface WorkerSyncResult {
     }
 
     data class NoMatch(val message: String) : WorkerSyncResult
+    data class RequestCompleted(val message: String) : WorkerSyncResult
+    data class RequestWithdrawn(val message: String) : WorkerSyncResult
+    data class ReturnedToPool(val message: String) : WorkerSyncResult
     data class Conflict(val message: String) : WorkerSyncResult
     data class AuthError(val message: String) : WorkerSyncResult
     data class NetworkError(val message: String, val cause: Throwable? = null) : WorkerSyncResult
 }
+
+/**
+ * Typed exception thrown when the matching worker returns a structured API error response.
+ */
+class TransferWorkerApiException(
+    val errorCode: String?,
+    val statusCode: Int,
+    override val message: String,
+    cause: Throwable? = null
+) : Exception(message, cause)
 
 /**
  * Decision request payload for initial accept/reject and chat confirmation.

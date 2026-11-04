@@ -27,120 +27,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-data class TransferCompletionUiState(
-    val isLoading: Boolean = true,
-    val isSubmitting: Boolean = false,
-    val status: TransferCompletionStatus? = null,
-    val error: String? = null
-) {
-    val friendlyStatusText: String
-        get() = when (status?.status?.trim()?.uppercase()) {
-            "CONFIRMED" -> "Agreement Confirmed"
-            "AWAITING_COMPLETION" -> "Awaiting Physical Transfer Completion"
-            "COMPLETED" -> "Transfer Finalized & Completed"
-            "CANCELLED" -> "Match Cancelled"
-            "EXPIRED" -> "Match Expired"
-            else -> status?.status?.replace('_', ' ') ?: "Unknown"
-        }
-}
-
-private fun friendlyCompletionError(error: Throwable): String {
-    val detail = error.message.orEmpty()
-    return when {
-        detail.contains("HTTP 404", ignoreCase = true) ||
-            detail.contains("NotFound", ignoreCase = true) ||
-            detail.contains("Endpoint '/api/matching/completion' not found", ignoreCase = true) ->
-            "The transfer status service is not available right now. Your completion report has not been confirmed by the server. Please try again later."
-        detail.contains("HTTP 401", ignoreCase = true) ||
-            detail.contains("Unauthorized", ignoreCase = true) ->
-            "Your session needs to be refreshed before we can check the transfer. Please sign in again and retry."
-        detail.contains("HTTP 403", ignoreCase = true) ->
-            "This transfer record could not be verified for your account. Please return to the match and try again."
-        else ->
-            "We couldn't update your transfer status just now. Your report has not been confirmed by the server. Check your connection and try again."
-    }
-}
-
-@HiltViewModel
-class TransferCompletionViewModel @Inject constructor(
-    private val repository: TransferRequestRepository
-) : ViewModel() {
-    private val _uiState = MutableStateFlow(TransferCompletionUiState())
-    val uiState: StateFlow<TransferCompletionUiState> = _uiState.asStateFlow()
-
-    private var autoRefreshJob: kotlinx.coroutines.Job? = null
-
-    fun load(matchId: String, isManualOrInitial: Boolean = true) {
-        if (matchId.isBlank()) {
-            _uiState.value = TransferCompletionUiState(isLoading = false, error = "Missing match reference.")
-            return
-        }
-        viewModelScope.launch {
-            if (isManualOrInitial && _uiState.value.status == null) {
-                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            }
-            repository.getCompletionStatus(matchId).fold(
-                onSuccess = { status ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        status = status,
-                        error = null
-                    )
-                },
-                onFailure = { error ->
-                    // Preserve existing status if we already loaded it, showing transient error banner
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = friendlyCompletionError(error)
-                    )
-                }
-            )
-        }
-    }
-
-    fun startAutoRefresh(matchId: String) {
-        if (autoRefreshJob?.isActive == true || matchId.isBlank()) return
-        autoRefreshJob = viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(20_000L)
-                val current = _uiState.value
-                if (current.status?.status == "COMPLETED") {
-                    break
-                }
-                load(matchId, isManualOrInitial = false)
-            }
-        }
-    }
-
-    fun stopAutoRefresh() {
-        autoRefreshJob?.cancel()
-        autoRefreshJob = null
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        stopAutoRefresh()
-    }
-
-    fun reportComplete(matchId: String) {
-        val current = _uiState.value
-        if (current.isSubmitting || current.status?.callerReportedComplete == true || current.status?.status == "COMPLETED") return
-        viewModelScope.launch {
-            _uiState.value = current.copy(isSubmitting = true, error = null)
-            repository.reportCompletion(matchId).fold(
-                onSuccess = { status ->
-                    _uiState.value = _uiState.value.copy(isSubmitting = false, status = status, error = null)
-                },
-                onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(isSubmitting = false, error = friendlyCompletionError(error))
-                }
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.runtime.Composable
@@ -152,15 +41,36 @@ fun TransferCompletionScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showReportConfirmation by remember { mutableStateOf(false) }
+
     androidx.compose.runtime.LaunchedEffect(matchId) {
         viewModel.load(matchId)
-        viewModel.startAutoRefresh(matchId)
     }
-    androidx.compose.runtime.DisposableEffect(matchId) {
+
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, matchId) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START,
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    val currentStatus = state.status?.status?.trim()?.uppercase()
+                    if (currentStatus != "COMPLETED" && currentStatus != "CANCELLED" && currentStatus != "EXPIRED") {
+                        viewModel.startAutoRefresh(matchId)
+                    }
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    viewModel.stopAutoRefresh()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             viewModel.stopAutoRefresh()
         }
     }
+
     val status = state.status
     val completed = status?.status == "COMPLETED"
     val reported = status?.callerReportedComplete == true
@@ -251,42 +161,34 @@ fun TransferCompletionScreen(
                 }
             }
 
-            state.error?.let { message ->
-                androidx.compose.material3.Surface(
-                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    color = com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.08f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, com.pasindu.nursingotapp.ui.theme.CriticalRed.copy(alpha = 0.28f))
-                ) {
-                    androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-                        androidx.compose.material3.Text("Status check paused", style = androidx.compose.material3.MaterialTheme.typography.titleSmall, color = com.pasindu.nursingotapp.ui.theme.CriticalRed)
-                        androidx.compose.material3.Text(message, color = com.pasindu.nursingotapp.ui.theme.TextPrimary)
-                    }
-                }
-                androidx.compose.material3.OutlinedButton(onClick = { viewModel.load(matchId) }) { androidx.compose.material3.Text("Try again") }
+            if (state.error != null) {
+                androidx.compose.material3.Text(
+                    text = state.error.orEmpty(),
+                    color = com.pasindu.nursingotapp.ui.theme.CriticalRed,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
 
-            if (!state.isLoading && status != null && !completed) {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { viewModel.load(matchId) },
-                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                ) {
-                    androidx.compose.material3.Text("Refresh team progress")
-                }
-            }
-
-            if (!state.isLoading && status != null && !reported && !completed &&
-                (status.status == "CONFIRMED" || status.status == "AWAITING_COMPLETION")
-            ) {
+            if (!completed && !reported && (status?.status == "CONFIRMED" || status?.status == "AWAITING_COMPLETION")) {
                 androidx.compose.material3.Button(
                     onClick = { showReportConfirmation = true },
                     enabled = !state.isSubmitting,
-                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = com.pasindu.nursingotapp.ui.theme.Emerald
+                    )
                 ) {
-                    if (state.isSubmitting) androidx.compose.material3.CircularProgressIndicator(
-                        modifier = androidx.compose.ui.Modifier.size(18.dp),
-                        strokeWidth = 2.dp
-                    ) else androidx.compose.material3.Text("I confirm my transfer is complete")
+                    if (state.isSubmitting) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = androidx.compose.ui.graphics.Color.White,
+                            modifier = androidx.compose.ui.Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        androidx.compose.material3.Text("Report Physical Transfer Complete", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
                 }
             }
 

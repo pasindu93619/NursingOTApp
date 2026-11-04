@@ -4,7 +4,7 @@ import {
   extractBearerToken,
   verifyFirebaseIdToken
 } from "./auth/firebaseAuth.ts";
-import { FirestoreClient } from "./firestore/firestoreClient.ts";
+import { FirestoreClient, FirestoreError, type HttpTransport } from "./firestore/firestoreClient.ts";
 import { createServiceAccountTokenProvider } from "./auth/serviceAccountAuth.ts";
 import type { MatchDecisionRequest } from "./types.ts";
 import {
@@ -36,6 +36,17 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
+export function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 function errorResponse(error: string, message: string, status = 400): Response {
   return jsonResponse(
     {
@@ -58,21 +69,86 @@ async function safeJsonParse<T = unknown>(request: Request): Promise<{ ok: true;
   }
 }
 
-function resolveTokenProvider(env: Env): (() => Promise<string>) | Response {
+interface TokenCacheEntry {
+  value: string;
+  expiresAtMs: number;
+}
+
+let tokenCache: TokenCacheEntry | null = null;
+let tokenInFlight: Promise<string> | null = null;
+
+export const TOKEN_CACHE_TTL_MS = 50 * 60 * 1000; // 50 minutes early refresh per plan
+
+export function getTokenCache(): TokenCacheEntry | null {
+  return tokenCache;
+}
+
+export function clearTokenCache(): void {
+  tokenCache = null;
+  tokenInFlight = null;
+}
+
+export function withTokenCache(inner: () => Promise<string>): () => Promise<string> {
+  return async () => {
+    if (tokenCache && tokenCache.expiresAtMs > Date.now()) {
+      return tokenCache.value;
+    }
+    if (!tokenInFlight) {
+      tokenInFlight = inner()
+        .then((token) => {
+          tokenCache = {
+            value: token,
+            expiresAtMs: Date.now() + TOKEN_CACHE_TTL_MS
+          };
+          return token;
+        })
+        .finally(() => {
+          tokenInFlight = null;
+        });
+    }
+    return tokenInFlight;
+  };
+}
+
+export function createWorkerTransport(baseTransport?: HttpTransport): HttpTransport {
+  const fetcher = baseTransport || globalThis.fetch.bind(globalThis);
+  return async (input, init) => {
+    const response = await fetcher(input, init);
+    if (response.status === 401) {
+      clearTokenCache();
+    }
+    return response;
+  };
+}
+
+export function createWorkerFirestoreClient(
+  projectId: string,
+  tokenProvider: () => Promise<string>,
+  baseTransport?: HttpTransport
+): FirestoreClient {
+  return new FirestoreClient({
+    projectId,
+    tokenProvider,
+    transport: createWorkerTransport(baseTransport)
+  });
+}
+
+export function resolveTokenProvider(env: Env): (() => Promise<string>) | Response {
   if (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL && env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-    return createServiceAccountTokenProvider({
+    const innerProvider = createServiceAccountTokenProvider({
       clientEmail: env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
       privateKey: env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
     });
+    return withTokenCache(innerProvider);
   }
-  if (env.ENVIRONMENT === "production") {
-    return errorResponse(
-      "ConfigError",
-      "Firebase service account credentials missing in production environment",
-      500
-    );
+  if (env.ENVIRONMENT === "test" || env.ENVIRONMENT === "development") {
+    return withTokenCache(async () => "mock-access-token");
   }
-  return async () => "mock-access-token";
+  return errorResponse(
+    "ConfigError",
+    "Firebase service account credentials missing in production environment",
+    500
+  );
 }
 
 export default {
@@ -135,7 +211,7 @@ export default {
         if (tokenProviderResult instanceof Response) {
           return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
 
         const parseResult = await safeJsonParse<MatchDecisionRequest>(request);
         if (!parseResult.ok) {
@@ -181,7 +257,7 @@ export default {
         if (tokenProviderResult instanceof Response) {
           return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
 
         const result = await withdrawTransferRequest(callerUid, firestoreClient);
         return jsonResponse(result, 200);
@@ -208,7 +284,7 @@ export default {
         const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
         const tokenProviderResult = resolveTokenProvider(env);
         if (tokenProviderResult instanceof Response) return tokenProviderResult;
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
         const result = await getMatchHistory(verifiedResult.uid, firestoreClient);
         return jsonResponse({ items: result }, 200);
       } catch (err: unknown) {
@@ -229,7 +305,7 @@ export default {
         const verifiedResult = await verifyFirebaseIdToken(token, { projectId });
         const tokenProviderResult = resolveTokenProvider(env);
         if (tokenProviderResult instanceof Response) return tokenProviderResult;
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
         if (request.method === "GET") {
           const matchId = new URL(request.url).searchParams.get("matchId") ?? "";
           const result = await getTransferCompletionStatus(verifiedResult.uid, matchId, firestoreClient);
@@ -276,7 +352,7 @@ export default {
         if (tokenProviderResult instanceof Response) {
           return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
 
         if (!env.MATCH_EXPIRATION_HOURS || env.MATCH_EXPIRATION_HOURS.trim().length === 0) {
           return errorResponse(
@@ -343,16 +419,31 @@ export default {
         return errorResponse("MethodNotAllowed", "Method not allowed. Use POST.", 405);
       }
       try {
-        const authHeader = request.headers.get("Authorization");
-        const token = extractBearerToken(authHeader);
+        if (!env.SWEEP_ADMIN_SECRET || env.SWEEP_ADMIN_SECRET.trim().length === 0) {
+          return errorResponse(
+            "ConfigError",
+            "SWEEP_ADMIN_SECRET is not configured",
+            500
+          );
+        }
+
+        const providedSecret =
+          request.headers.get("X-Sweep-Admin-Secret") ||
+          (request.headers.get("Authorization")?.startsWith("Bearer ")
+            ? request.headers.get("Authorization")!.substring(7).trim()
+            : null);
+
+        if (!providedSecret || !constantTimeEqual(providedSecret, env.SWEEP_ADMIN_SECRET.trim())) {
+          return errorResponse("Unauthorized", "Invalid or missing sweep admin secret", 401);
+        }
+
         const projectId = env.FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
-        await verifyFirebaseIdToken(token, { projectId });
 
         const tokenProviderResult = resolveTokenProvider(env);
         if (tokenProviderResult instanceof Response) {
           return tokenProviderResult;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
 
         const result = await sweepExpiredMatches(firestoreClient);
         return jsonResponse(result, 200);
@@ -381,7 +472,7 @@ export default {
           console.error("[SCHEDULED_SWEEP_CONFIG_ERROR] Failed to resolve token provider");
           return;
         }
-        const firestoreClient = new FirestoreClient({ projectId, tokenProvider: tokenProviderResult });
+        const firestoreClient = createWorkerFirestoreClient(projectId, tokenProviderResult);
         const result = await sweepExpiredMatches(firestoreClient);
         console.log("[SCHEDULED_SWEEP_COMPLETED]", result);
       } catch (err: unknown) {

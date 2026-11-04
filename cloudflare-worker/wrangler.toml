@@ -7,10 +7,12 @@ compatibility_flags = ["nodejs_compat"]
 FIREBASE_PROJECT_ID = "nursing-super-app"
 ENVIRONMENT = "production"
 MATCH_EXPIRATION_HOURS = "48"
+CANDIDATE_LIMIT = "500"
 
 # SECRETS (Do NOT commit real values to git! Set via: wrangler secret put <NAME>)
 # - FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL: Google Cloud service account email
 # - FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY: Google Cloud service account private key (PEM)
+# - SWEEP_ADMIN_SECRET: Shared secret required for POST /api/matching/sweep-expired
 
 [triggers]
-crons = ["0 * * * *"]
+crons = ["*/5 * * * *"]

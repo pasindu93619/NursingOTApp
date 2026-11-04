@@ -16,6 +16,7 @@ import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateDailyEntryHoursUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
+import com.pasindu.nursingotapp.domain.usecase.PayRateResolver
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveOtRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
@@ -47,6 +48,7 @@ class NursingViewModel @Inject constructor(
     private val saveProfileSettingsUseCase: SaveProfileSettingsUseCase,
     private val matchSalaryStepUseCase: MatchSalaryStepUseCase,
     private val applyMatched2027DayRateUseCase: ApplyMatched2027DayRateUseCase,
+    val payRateResolver: PayRateResolver,
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val saveDailyEntryUseCase: SaveDailyEntryUseCase,
     private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase,
@@ -203,7 +205,7 @@ class NursingViewModel @Inject constructor(
         _matchedSalary2027.value?.basicSalary2027?.let { applyMatched2027DayRateUseCase(it) }
     }
 
-    fun matchSalaryStep(grade: String, currentBasicSalary: Double) = launchOperation(setOperationState) {
+    fun matchSalaryStep(grade: String = "", currentBasicSalary: Double) = launchOperation(setOperationState) {
         _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
     }
 

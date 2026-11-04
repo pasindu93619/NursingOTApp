@@ -13,6 +13,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,6 +76,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pasindu.nursingotapp.ui.theme.TransferAmberSoft
+import com.pasindu.nursingotapp.ui.theme.TransferBlueSoft
+import com.pasindu.nursingotapp.ui.theme.TransferMintSoft
+import com.pasindu.nursingotapp.ui.theme.TransferPurpleSoft
+import com.pasindu.nursingotapp.ui.theme.TransferRoseSoft
 import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.BorderMuted
@@ -156,11 +163,11 @@ sealed interface TransferMatchUiState {
 // Color Tokens (reused from Mutual Transfer visual palette)
 // -----------------------------------------------------------------------------
 
-private val MatchBlueSoft = Color(0xFFEAF6FF)
-private val MatchMintSoft = Color(0xFFEAFBF5)
-private val MatchAmberSoft = Color(0xFFFFF7ED)
-private val MatchRoseSoft = Color(0xFFFFF1F2)
-private val MatchPurpleSoft = Color(0xFFF3EEFF)
+private val MatchBlueSoft = TransferBlueSoft
+private val MatchMintSoft = TransferMintSoft
+private val MatchAmberSoft = TransferAmberSoft
+private val MatchRoseSoft = TransferRoseSoft
+private val MatchPurpleSoft = TransferPurpleSoft
 
 // -----------------------------------------------------------------------------
 // Sample Preview Data Factory (For testability and previews)
@@ -235,13 +242,40 @@ fun createSampleThreeWayMatchUiModel(): TransferMatchUiModel {
 @Composable
 fun TransferMatchScreen(
     uiState: TransferMatchUiState = TransferMatchUiState.MatchFound(createSampleMatchUiModel()),
+    isSubmitting: Boolean = false,
+    isOfflineOrDegraded: Boolean = false,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onAcceptMatch: (matchId: String) -> Unit = {},
     onConfirmMatch: (matchId: String) -> Unit = {},
     onRejectMatch: (matchId: String) -> Unit = {},
     onOpenChat: () -> Unit = {},
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    onScreenResume: () -> Unit = {},
+    onScreenExit: () -> Unit = {}
 ) {
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START,
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    onScreenResume()
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    onScreenExit()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            onScreenExit()
+        }
+    }
+
     var showRejectConfirmDialog by remember { mutableStateOf(false) }
 
     Box(
@@ -263,15 +297,22 @@ fun TransferMatchScreen(
             is TransferMatchUiState.MatchFound -> {
                 MatchFoundContentView(
                     match = uiState.match,
+                    isSubmitting = isSubmitting,
+                    isOfflineOrDegraded = isOfflineOrDegraded,
+                    pollWarning = pollWarning,
                     onBack = onBack,
                     onAcceptClick = { onAcceptMatch(uiState.match.matchId) },
-                    onRejectClick = { showRejectConfirmDialog = true }
+                    onRejectClick = { showRejectConfirmDialog = true },
+                    onRetry = onRetry
                 )
             }
             is TransferMatchUiState.AlreadyAccepted -> {
                 MatchAcceptedView(
                     match = uiState.match,
-                    onBack = onBack
+                    isOfflineOrDegraded = isOfflineOrDegraded,
+                    pollWarning = pollWarning,
+                    onBack = onBack,
+                    onRetry = onRetry
                 )
             }
             is TransferMatchUiState.ChatOpen -> {
@@ -330,9 +371,13 @@ fun TransferMatchScreen(
 @Composable
 private fun MatchFoundContentView(
     match: TransferMatchUiModel,
+    isSubmitting: Boolean = false,
+    isOfflineOrDegraded: Boolean = false,
+    pollWarning: String? = null,
     onBack: () -> Unit,
     onAcceptClick: () -> Unit,
-    onRejectClick: () -> Unit
+    onRejectClick: () -> Unit,
+    onRetry: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -401,6 +446,50 @@ private fun MatchFoundContentView(
             }
         }
 
+        if (isOfflineOrDegraded || pollWarning != null) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MatchAmberSoft,
+                    border = BorderStroke(1.dp, Amber.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = "Warning",
+                                tint = Amber,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                pollWarning ?: "Connection problem, retrying…",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Slate
+                            )
+                        }
+                        TextButton(onClick = onRetry) {
+                            Text(
+                                "Retry",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Amber
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 2. FLAGSHIP HERO: Mutual Connection Announced
         item {
             MatchFoundHeroCard(match = match)
@@ -446,6 +535,7 @@ private fun MatchFoundContentView(
         // 8. ACTION AREA (ACCEPT / REJECT)
         item {
             MatchActionArea(
+                isSubmitting = isSubmitting,
                 onAcceptClick = onAcceptClick,
                 onRejectClick = onRejectClick
             )
@@ -733,7 +823,7 @@ private fun ReciprocalExchangeConnectionCard(match: TransferMatchUiModel) {
                     Text(
                         "PROPOSED EXCHANGE",
                         color = Purple,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         letterSpacing = 0.4.sp
@@ -800,7 +890,7 @@ private fun ReciprocalExchangeConnectionCard(match: TransferMatchUiModel) {
                             Text(
                                 "RECIPROCAL",
                                 color = MedicalBlue,
-                                fontSize = 10.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
@@ -888,7 +978,7 @@ private fun OfficerExchangeRow(
                         Text(
                             grade,
                             color = Slate,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
@@ -905,7 +995,7 @@ private fun OfficerExchangeRow(
                             Text(
                                 if (isAccepted) "ACCEPTED" else "DECLINED",
                                 color = if (isAccepted) Emerald else CriticalRed,
-                                fontSize = 9.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                             )
@@ -958,7 +1048,7 @@ private fun BilateralJourneyRouteCard(match: TransferMatchUiModel) {
             Text(
                 "TRANSFER JOURNEY VISUALIZATION",
                 color = TextSecondary,
-                fontSize = 10.5.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.6.sp
             )
@@ -1003,7 +1093,7 @@ private fun RouteRow(
             Text(
                 tag,
                 color = tagColor,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.5.sp
             )
@@ -1077,7 +1167,7 @@ private fun ThreeWayCircularExchangeCard(match: TransferMatchUiModel) {
                     Text(
                         "3-WAY CIRCULAR EXCHANGE",
                         color = Purple,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         letterSpacing = 0.4.sp
@@ -1188,7 +1278,7 @@ private fun CircularTransitionRibbon(
                     Text(
                         fromLabel,
                         color = MedicalBlue,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black
                     )
                     Icon(
@@ -1202,7 +1292,7 @@ private fun CircularTransitionRibbon(
                     Text(
                         toLabel,
                         color = MedicalBlue,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
@@ -1242,7 +1332,7 @@ private fun ThreeWayCircularJourneyRouteCard(match: TransferMatchUiModel) {
             Text(
                 "CIRCULAR 3-WAY TRANSFER JOURNEY",
                 color = TextSecondary,
-                fontSize = 10.5.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.6.sp
             )
@@ -1330,7 +1420,7 @@ private fun GradeCompatibilityCard(match: TransferMatchUiModel) {
                 Text(
                     "GRADE COMPATIBILITY",
                     color = if (isSameGrade) Emerald else TextSecondary,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.5.sp
                 )
@@ -1419,6 +1509,7 @@ private fun OfficialMinistryNoticeCard(isThreeWay: Boolean = false) {
 
 @Composable
 private fun MatchActionArea(
+    isSubmitting: Boolean = false,
     onAcceptClick: () -> Unit,
     onRejectClick: () -> Unit
 ) {
@@ -1429,6 +1520,7 @@ private fun MatchActionArea(
         // Accept Button
         Button(
             onClick = onAcceptClick,
+            enabled = !isSubmitting,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
@@ -1436,25 +1528,34 @@ private fun MatchActionArea(
             colors = ButtonDefaults.buttonColors(containerColor = Emerald),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
-            Icon(
-                Icons.Default.Check,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                "ACCEPT MUTUAL TRANSFER",
-                color = Color.White,
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.4.sp
-            )
+            if (isSubmitting) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "ACCEPT MUTUAL TRANSFER",
+                    color = Color.White,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.4.sp
+                )
+            }
         }
 
         // Decline Button
         OutlinedButton(
             onClick = onRejectClick,
+            enabled = !isSubmitting,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -1561,17 +1662,33 @@ private fun MatchLoadingView(onBack: () -> Unit) {
 @Composable
 private fun MatchAcceptedView(
     match: TransferMatchUiModel,
-    onBack: () -> Unit
+    isOfflineOrDegraded: Boolean = false,
+    pollWarning: String? = null,
+    onBack: () -> Unit,
+    onRetry: () -> Unit = {}
 ) {
+    val totalParticipants = if (match.matchType == "THREE_WAY") 3 else 2
+    val acceptedCount = 1 + if (match.matchType == "THREE_WAY") {
+        (if (match.participant2?.status == MatchDecisionStatus.ACCEPTED) 1 else 0) +
+        (if (match.participant3?.status == MatchDecisionStatus.ACCEPTED) 1 else 0)
+    } else {
+        if (match.partnerStatus == MatchDecisionStatus.ACCEPTED) 1 else 0
+    }
+    val descriptionText = if (match.matchType == "THREE_WAY") {
+        "You have accepted this transfer proposal. Waiting for other nurses to accept ($acceptedCount of $totalParticipants nurses accepted)."
+    } else {
+        "You have accepted this transfer proposal. Waiting for your partner nurse to accept ($acceptedCount of $totalParticipants nurses accepted)."
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
-            modifier = Modifier.size(80.dp),
+            modifier = Modifier.size(72.dp),
             shape = CircleShape,
             color = MatchMintSoft,
             border = BorderStroke(2.dp, Emerald)
@@ -1581,12 +1698,12 @@ private fun MatchAcceptedView(
                     Icons.Default.CheckCircle,
                     contentDescription = "Accepted",
                     tint = Emerald,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(40.dp)
                 )
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
 
         Text(
             "MATCH ACCEPTED",
@@ -1598,7 +1715,7 @@ private fun MatchAcceptedView(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            "You have accepted this transfer proposal. Waiting for your partner nurse to accept.",
+            descriptionText,
             fontSize = 13.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center,
@@ -1607,28 +1724,78 @@ private fun MatchAcceptedView(
 
         Spacer(Modifier.height(16.dp))
 
-        Surface(
-            shape = RoundedCornerShape(999.dp),
-            color = MatchMintSoft,
-            border = BorderStroke(1.dp, Emerald.copy(alpha = 0.4f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+        if (isOfflineOrDegraded || pollWarning != null) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MatchAmberSoft,
+                border = BorderStroke(1.dp, Amber.copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
             ) {
-                CircularProgressIndicator(
-                    color = Emerald,
-                    modifier = Modifier.size(12.dp),
-                    strokeWidth = 2.dp
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "Syncing partner response automatically...",
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Emerald
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = Amber,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            pollWarning ?: "Connection problem, retrying…",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Slate
+                        )
+                    }
+                    TextButton(onClick = onRetry) {
+                        Text(
+                            "Retry",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Amber
+                        )
+                    }
+                }
             }
+        } else {
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = MatchMintSoft,
+                border = BorderStroke(1.dp, Emerald.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        color = Emerald,
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Syncing partner response automatically...",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Emerald
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        if (match.matchType == "THREE_WAY" && match.participant2 != null && match.participant3 != null) {
+            ThreeWayCircularJourneyRouteCard(match = match)
+        } else {
+            BilateralJourneyRouteCard(match = match)
         }
 
         Spacer(Modifier.height(12.dp))

@@ -22,7 +22,8 @@ data class PeriodSummary(
     val otAmountRs: Double = 0.0,
     val phAmountRs: Double = 0.0,
     val doAmountRs: Double = 0.0,
-    val totalAmountRs: Double = 0.0
+    val totalAmountRs: Double = 0.0,
+    val ratesMissing: Boolean = false
 )
 
 data class Period(

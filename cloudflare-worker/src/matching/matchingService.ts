@@ -3,6 +3,7 @@ import {
   FirestoreError,
   getMatchDocPath,
   getTransferRequestDocPath,
+  type FirestoreRawDocument,
   type FirestoreValue,
   type FirestoreWrite
 } from "../firestore/firestoreClient.ts";
@@ -129,6 +130,82 @@ export const SLIDING_WINDOW_HOURS = 24; // 24 hours after first response
  *      - Otherwise remains CHAT_OPEN awaiting remaining confirmations.
  *    - ACCEPT is invalid here; accepting a match is never final confirmation.
  */
+/**
+ * Expires an active match inline and authoritatively unlocks its participants.
+ *
+ * Invariants:
+ * 1. Sets match doc status to "EXPIRED" with terminalReason and updatedAt.
+ * 2. Unlocks each participant whose currentMatchId still matches this matchId (locked=false, currentMatchId=null, status="SEARCHING").
+ * 3. Commits atomically with updateTime preconditions to prevent overwriting concurrent state transitions.
+ * 4. Returns the count of unlocked participants.
+ */
+export async function expireMatchNow(
+  matchId: string,
+  rawMatch: FirestoreRawDocument,
+  firestoreClient: FirestoreClient
+): Promise<number> {
+  const fields = rawMatch.fields ?? {};
+  const nurseAUid = readStringField(fields, "nurseAUid");
+  const nurseBUid = readStringField(fields, "nurseBUid");
+  const nurseCUid = readStringField(fields, "nurseCUid");
+
+  const participantUids: string[] = [];
+  if (nurseAUid) participantUids.push(nurseAUid);
+  if (nurseBUid) participantUids.push(nurseBUid);
+  if (nurseCUid) participantUids.push(nurseCUid);
+
+  const writeMatch: FirestoreWrite = {
+    update: {
+      name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
+      fields: {
+        status: { stringValue: "EXPIRED" },
+        terminalReason: { stringValue: "The match deadline passed before the workflow was completed." },
+        updatedAt: { integerValue: Date.now().toString() }
+      }
+    },
+    updateMask: { fieldPaths: ["status", "terminalReason", "updatedAt"] },
+    currentDocument: rawMatch.updateTime
+      ? { updateTime: rawMatch.updateTime }
+      : { exists: true }
+  };
+
+  const writes: FirestoreWrite[] = [writeMatch];
+  let participantsToUnlockCount = 0;
+
+  for (const uid of participantUids) {
+    try {
+      const doc = await firestoreClient.getRequestDoc(uid);
+      if (doc && doc.currentMatchId === matchId) {
+        participantsToUnlockCount += 1;
+        writes.push({
+          update: {
+            name: getTransferRequestDocPath(firestoreClient.getProjectId(), doc.firebaseUid),
+            fields: {
+              locked: { booleanValue: false },
+              currentMatchId: { nullValue: null },
+              status: { stringValue: "SEARCHING" },
+              updatedAt: { integerValue: Date.now().toString() }
+            }
+          },
+          updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
+          currentDocument: doc.updateTime
+            ? { updateTime: doc.updateTime }
+            : { exists: true }
+        });
+      }
+    } catch (readErr: unknown) {
+      throw new MatchServiceError(
+        `Failed to read participant request ${uid} during expiry: ${readErr instanceof Error ? readErr.message : "Unknown error"}`,
+        500,
+        "PARTICIPANT_READ_FAILED"
+      );
+    }
+  }
+
+  await firestoreClient.commitAtomicMatch(writes);
+  return participantsToUnlockCount;
+}
+
 export async function respondToMatch(
   callerUid: string,
   matchId: string,
@@ -157,12 +234,15 @@ export async function respondToMatch(
   const nurseBUid = getString("nurseBUid");
   const nurseCUid = getString("nurseCUid");
   const status = getString("status");
-  const expiresAtStr = getString("expiresAt");
-  const firstResponseAtStr = getString("firstResponseAt");
-  const chatDeadlineStr = getString("chatDeadline");
+  const expiresAtMs = readDeadlineMs(fields, "expiresAtMs", "expiresAt");
+  const firstResponseAtMs = readDeadlineMs(fields, "firstResponseAtMs", "firstResponseAt");
+  const chatDeadlineMs = readDeadlineMs(fields, "chatDeadlineMs", "chatDeadline");
+  const expiresAtStr = getString("expiresAt") ?? (expiresAtMs !== undefined ? new Date(expiresAtMs).toISOString() : "");
+  const firstResponseAtStr = getString("firstResponseAt") ?? (firstResponseAtMs !== undefined ? new Date(firstResponseAtMs).toISOString() : undefined);
+  const chatDeadlineStr = getString("chatDeadline") ?? (chatDeadlineMs !== undefined ? new Date(chatDeadlineMs).toISOString() : undefined);
   const updateTime = rawMatch.updateTime;
 
-  if (!nurseAUid || !nurseBUid || !status || !expiresAtStr) {
+  if (!nurseAUid || !nurseBUid || !status || expiresAtMs === undefined) {
     throw new MatchServiceError("Malformed match document", 500, "MALFORMED_MATCH_DOC");
   }
 
@@ -249,6 +329,17 @@ export async function respondToMatch(
         decisionApplied: true
       };
     }
+    // If the match is already EXPIRED, a late REJECT or LEAVE is idempotent.
+    if (status === "EXPIRED" && (decision === "REJECT" || decision === "LEAVE")) {
+      return {
+        matchId,
+        newStatus: "EXPIRED",
+        expiresAt: expiresAtStr,
+        chatDeadline: chatDeadlineStr,
+        firstResponseAt: firstResponseAtStr,
+        decisionApplied: true
+      };
+    }
     throw new MatchServiceError("Match is not awaiting confirmation or chat finalization", 409, "INVALID_STATUS");
   }
 
@@ -272,8 +363,48 @@ export async function respondToMatch(
   }
 
   const now = new Date();
-  const expiresAt = new Date(expiresAtStr);
-  if (now > expiresAt) {
+  const expiresAt = new Date(expiresAtMs);
+  if (now.getTime() > expiresAtMs) {
+    try {
+      await expireMatchNow(matchId, rawMatch, firestoreClient);
+    } catch (err) {
+      const isConcurrencyConflict =
+        err instanceof FirestoreError &&
+        (err.statusCode === 409 ||
+          err.code === "ABORTED" ||
+          err.code === "FAILED_PRECONDITION");
+      if (!isConcurrencyConflict) throw err;
+
+      // On concurrency conflict, inspect authoritative fresh document to prevent false success.
+      const freshRawMatch = await firestoreClient.getMatchDoc(matchId).catch(() => null);
+      if (freshRawMatch) {
+        const freshFields = freshRawMatch.fields ?? {};
+        const freshStatus = readStringField(freshFields, "status")?.toUpperCase();
+        if (freshStatus === "CONFIRMED") {
+          throw new MatchServiceError("Match has already been confirmed", 409, "ALREADY_CONFIRMED");
+        }
+        if (freshStatus === "CANCELLED" && (decision === "REJECT" || decision === "LEAVE")) {
+          return {
+            matchId,
+            newStatus: "CANCELLED",
+            expiresAt: expiresAtStr,
+            chatDeadline: chatDeadlineStr,
+            firstResponseAt: firstResponseAtStr,
+            decisionApplied: true
+          };
+        }
+      }
+    }
+    if (decision === "REJECT" || decision === "LEAVE") {
+      return {
+        matchId,
+        newStatus: "EXPIRED",
+        expiresAt: expiresAtStr,
+        chatDeadline: chatDeadlineStr,
+        firstResponseAt: firstResponseAtStr,
+        decisionApplied: true
+      };
+    }
     throw new MatchServiceError("Match deadline has expired", 410, "EXPIRED");
   }
 
@@ -333,14 +464,14 @@ export async function respondToMatch(
       (isParticipantB ? false : Boolean(getBool("acceptedByB"))) ||
       (hasParticipantC && !isParticipantC ? Boolean(getBool("acceptedByC")) : false);
 
-    if (!firstResponseAtStr && !anyPriorResponse) {
+    if (firstResponseAtMs === undefined && !anyPriorResponse) {
       newFirstResponseAtStr = now.toISOString();
       matchFieldsToUpdate.firstResponseAt = { stringValue: newFirstResponseAtStr };
       matchFieldsToUpdate.firstResponseAtMs = { integerValue: now.getTime().toString() };
       updateMaskFieldPaths.push("firstResponseAt", "firstResponseAtMs");
 
       const slidingDeadline = new Date(now.getTime() + SLIDING_WINDOW_HOURS * 3600 * 1000);
-      if (slidingDeadline < expiresAt) {
+      if (slidingDeadline.getTime() < expiresAtMs) {
         newExpiresAtStr = slidingDeadline.toISOString();
         matchFieldsToUpdate.expiresAt = { stringValue: newExpiresAtStr };
         matchFieldsToUpdate.expiresAtMs = { integerValue: slidingDeadline.getTime().toString() };
@@ -506,9 +637,12 @@ export async function respondToMatch(
         if (freshRawMatch) {
           const freshFields = freshRawMatch.fields ?? {};
           const freshStatus = readStringField(freshFields, "status") ?? "PENDING_CONFIRMATION";
-          const freshExpiresAt = readStringField(freshFields, "expiresAt") ?? newExpiresAtStr;
-          const freshChatDeadline = readStringField(freshFields, "chatDeadline") ?? newChatDeadlineStr;
-          const freshFirstResponseAt = readStringField(freshFields, "firstResponseAt") ?? newFirstResponseAtStr;
+          const freshExpiresAtMs = readDeadlineMs(freshFields, "expiresAtMs", "expiresAt");
+          const freshChatDeadlineMs = readDeadlineMs(freshFields, "chatDeadlineMs", "chatDeadline");
+          const freshFirstResponseAtMs = readDeadlineMs(freshFields, "firstResponseAtMs", "firstResponseAt");
+          const freshExpiresAt = readStringField(freshFields, "expiresAt") ?? (freshExpiresAtMs !== undefined ? new Date(freshExpiresAtMs).toISOString() : newExpiresAtStr);
+          const freshChatDeadline = readStringField(freshFields, "chatDeadline") ?? (freshChatDeadlineMs !== undefined ? new Date(freshChatDeadlineMs).toISOString() : newChatDeadlineStr);
+          const freshFirstResponseAt = readStringField(freshFields, "firstResponseAt") ?? (freshFirstResponseAtMs !== undefined ? new Date(freshFirstResponseAtMs).toISOString() : newFirstResponseAtStr);
           const freshAccepted = readBooleanField(freshFields, acceptedKey);
           const freshRejected = readBooleanField(freshFields, rejectedKey);
           const freshConfirmed = readBooleanField(freshFields, confirmedKey);
@@ -574,7 +708,7 @@ export async function respondToMatch(
  * 4. Executes concurrency-safe atomic lock via Firestore :commit with precondition updateTime.
  * 5. Guarantees zero partial locking: if any participant or match doc fails, entire commit aborts.
  */
-function readStringField(
+export function readStringField(
   fields: Record<string, FirestoreValue>,
   key: string
 ): string | undefined {
@@ -584,7 +718,7 @@ function readStringField(
     : undefined;
 }
 
-function readBooleanField(
+export function readBooleanField(
   fields: Record<string, FirestoreValue>,
   key: string
 ): boolean | undefined {
@@ -594,7 +728,7 @@ function readBooleanField(
     : undefined;
 }
 
-function readIntegerField(
+export function readIntegerField(
   fields: Record<string, FirestoreValue>,
   key: string
 ): number | undefined {
@@ -602,6 +736,18 @@ function readIntegerField(
   if (!value || typeof value !== "object" || !("integerValue" in value)) return undefined;
   const parsed = Number(value.integerValue);
   return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+export function readDeadlineMs(
+  fields: Record<string, FirestoreValue>,
+  msKey: string,
+  isoKey: string
+): number | undefined {
+  const ms = readIntegerField(fields, msKey);
+  if (ms !== undefined) return ms;
+  const iso = readStringField(fields, isoKey);
+  const parsed = iso ? Date.parse(iso) : NaN;
+  return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 /**
@@ -622,10 +768,11 @@ async function recoverExistingMatch(
 
   const fields = rawMatch.fields ?? {};
   const status = readStringField(fields, "status")?.toUpperCase();
-  const expiresAt = readStringField(fields, "expiresAt");
+  const expiresAtMs = readDeadlineMs(fields, "expiresAtMs", "expiresAt");
+  const expiresAt = readStringField(fields, "expiresAt") ?? (expiresAtMs !== undefined ? new Date(expiresAtMs).toISOString() : undefined);
   const currentTime = now ?? new Date();
   const isTimedStage = status === "PENDING_CONFIRMATION" || status === "CHAT_OPEN";
-  const isExpired = isTimedStage && expiresAt ? currentTime.getTime() > new Date(expiresAt).getTime() : false;
+  const isExpired = isTimedStage && expiresAtMs !== undefined ? currentTime.getTime() > expiresAtMs : false;
 
   if (
     status === "CANCELLED" ||
@@ -896,7 +1043,7 @@ async function findAndLockMatchInternal(
 
   validateCallerRequest(caller);
 
-  const candidateLimit = options.candidateLimit ?? 100;
+  const candidateLimit = options.candidateLimit ?? 500;
   const batchSize = 100;
   const rawCandidates: CandidateRequest[] = [];
   let offset = 0;
@@ -1618,7 +1765,7 @@ export async function sweepExpiredMatches(
   const batchSize = options?.batchSize ?? 100;
   const now = options?.now ? options.now() : new Date();
 
-  const pendingMatches = await firestoreClient.queryPendingConfirmationMatches(batchSize);
+  const pendingMatches = await firestoreClient.queryPendingConfirmationMatches(batchSize, now.toISOString());
 
   let scanned = 0;
   let expired = 0;
@@ -1636,76 +1783,17 @@ export async function sweepExpiredMatches(
       const status = readStringField(fields, "status")?.toUpperCase();
       if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") continue;
 
-      const expiresAtStr = readStringField(fields, "expiresAt");
-      if (!expiresAtStr) continue;
+      const expiresAtMs = readDeadlineMs(fields, "expiresAtMs", "expiresAt");
+      if (expiresAtMs === undefined) continue;
 
-      const expiresAt = new Date(expiresAtStr);
-      if (now.getTime() <= expiresAt.getTime()) {
+      if (now.getTime() <= expiresAtMs) {
         // Not expired yet
         continue;
       }
 
-      // Match has expired
-      const nurseAUid = readStringField(fields, "nurseAUid");
-      const nurseBUid = readStringField(fields, "nurseBUid");
-      const nurseCUid = readStringField(fields, "nurseCUid");
-
-      const participantUids: string[] = [];
-      if (nurseAUid) participantUids.push(nurseAUid);
-      if (nurseBUid) participantUids.push(nurseBUid);
-      if (nurseCUid) participantUids.push(nurseCUid);
-
-      const writeMatch: FirestoreWrite = {
-        update: {
-          name: getMatchDocPath(firestoreClient.getProjectId(), matchId),
-          fields: {
-            status: { stringValue: "EXPIRED" },
-            terminalReason: { stringValue: "The match deadline passed before the workflow was completed." },
-            updatedAt: { integerValue: Date.now().toString() }
-          }
-        },
-        updateMask: { fieldPaths: ["status", "terminalReason", "updatedAt"] },
-        currentDocument: rawMatch.updateTime
-          ? { updateTime: rawMatch.updateTime }
-          : { exists: true }
-      };
-
-      const writes: FirestoreWrite[] = [writeMatch];
-      let participantsToUnlockCount = 0;
-
-      for (const uid of participantUids) {
-        try {
-          const doc = await firestoreClient.getRequestDoc(uid);
-          if (doc && doc.currentMatchId === matchId) {
-            participantsToUnlockCount += 1;
-            writes.push({
-              update: {
-                name: getTransferRequestDocPath(firestoreClient.getProjectId(), doc.firebaseUid),
-                fields: {
-                  locked: { booleanValue: false },
-                  currentMatchId: { nullValue: null },
-                  status: { stringValue: "SEARCHING" },
-                  updatedAt: { integerValue: Date.now().toString() }
-                }
-              },
-              updateMask: { fieldPaths: ["locked", "currentMatchId", "status", "updatedAt"] },
-              currentDocument: doc.updateTime
-                ? { updateTime: doc.updateTime }
-                : { exists: true }
-            });
-          }
-        } catch (readErr: unknown) {
-          throw new MatchServiceError(
-            `Failed to read participant request ${uid} during expiry sweep: ${readErr instanceof Error ? readErr.message : "Unknown error"}`,
-            500,
-            "PARTICIPANT_READ_FAILED"
-          );
-        }
-      }
-
-      await firestoreClient.commitAtomicMatch(writes);
+      const unlockedCount = await expireMatchNow(matchId, rawMatch, firestoreClient);
       expired += 1;
-      unlockedParticipants += participantsToUnlockCount;
+      unlockedParticipants += unlockedCount;
     } catch (err: unknown) {
       errors += 1;
       console.error("[SWEEP_EXPIRED_MATCH_ERROR]", {
@@ -1893,4 +1981,120 @@ export async function withdrawTransferRequest(
     matchCancelled,
     cancelledMatchId
   };
+}
+
+export interface BackfillDeadlinesResult {
+  scanned: number;
+  updated: number;
+  skipped: number;
+  dryRun: boolean;
+  errors: Array<{ matchId: string; error: string }>;
+}
+
+export interface BackfillDeadlinesOptions {
+  dryRun?: boolean;
+}
+
+/**
+ * Idempotent one-off backfill: Derives missing *Ms fields (expiresAtMs, chatDeadlineMs, firstResponseAtMs)
+ * from corresponding ISO timestamp strings on active matches (PENDING_CONFIRMATION or CHAT_OPEN).
+ *
+ * Safety Invariants:
+ * - Completely idempotent: if *Ms fields already exist, documents are skipped.
+ * - Does not overwrite existing *Ms fields.
+ * - Defaults to dry-run mode (dryRun: true) to prevent accidental live writes.
+ * - Concurrency-safe: uses document updateTime precondition on commits.
+ */
+export async function backfillMatchDeadlines(
+  matches: FirestoreRawDocument[],
+  firestoreClient: FirestoreClient,
+  options: BackfillDeadlinesOptions = { dryRun: true }
+): Promise<BackfillDeadlinesResult> {
+  const isDryRun = options.dryRun !== false;
+  let scanned = 0;
+  let updated = 0;
+  let skipped = 0;
+  const errors: Array<{ matchId: string; error: string }> = [];
+
+  for (const matchDoc of matches) {
+    scanned += 1;
+    const matchId = matchDoc.name ? matchDoc.name.split("/").pop() ?? "" : "";
+    if (!matchId) continue;
+
+    const fields = matchDoc.fields ?? {};
+    const status = readStringField(fields, "status")?.toUpperCase();
+    if (status !== "PENDING_CONFIRMATION" && status !== "CHAT_OPEN") {
+      skipped += 1;
+      continue;
+    }
+
+    const fieldsToUpdate: Record<string, FirestoreValue> = {};
+    const fieldPaths: string[] = [];
+
+    // 1. expiresAtMs
+    const hasExpiresAtMs = readIntegerField(fields, "expiresAtMs") !== undefined;
+    const expiresAtIso = readStringField(fields, "expiresAt");
+    if (!hasExpiresAtMs && expiresAtIso) {
+      const parsed = Date.parse(expiresAtIso);
+      if (!Number.isNaN(parsed)) {
+        fieldsToUpdate.expiresAtMs = { integerValue: parsed.toString() };
+        fieldPaths.push("expiresAtMs");
+      }
+    }
+
+    // 2. chatDeadlineMs
+    const hasChatDeadlineMs = readIntegerField(fields, "chatDeadlineMs") !== undefined;
+    const chatDeadlineIso = readStringField(fields, "chatDeadline");
+    if (!hasChatDeadlineMs && chatDeadlineIso) {
+      const parsed = Date.parse(chatDeadlineIso);
+      if (!Number.isNaN(parsed)) {
+        fieldsToUpdate.chatDeadlineMs = { integerValue: parsed.toString() };
+        fieldPaths.push("chatDeadlineMs");
+      }
+    }
+
+    // 3. firstResponseAtMs
+    const hasFirstResponseAtMs = readIntegerField(fields, "firstResponseAtMs") !== undefined;
+    const firstResponseAtIso = readStringField(fields, "firstResponseAt");
+    if (!hasFirstResponseAtMs && firstResponseAtIso) {
+      const parsed = Date.parse(firstResponseAtIso);
+      if (!Number.isNaN(parsed)) {
+        fieldsToUpdate.firstResponseAtMs = { integerValue: parsed.toString() };
+        fieldPaths.push("firstResponseAtMs");
+      }
+    }
+
+    if (fieldPaths.length === 0) {
+      skipped += 1;
+      continue;
+    }
+
+    if (isDryRun) {
+      updated += 1;
+      continue;
+    }
+
+    try {
+      const projectId = firestoreClient.getProjectId();
+      const write: FirestoreWrite = {
+        update: {
+          name: getMatchDocPath(projectId, matchId),
+          fields: fieldsToUpdate
+        },
+        updateMask: { fieldPaths },
+        currentDocument: matchDoc.updateTime
+          ? { updateTime: matchDoc.updateTime }
+          : { exists: true }
+      };
+      await firestoreClient.commitAtomicMatch([write]);
+      updated += 1;
+    } catch (err: unknown) {
+      errors.push({
+        matchId,
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
+  return { scanned, updated, skipped, dryRun: isDryRun, errors };
 }

@@ -57,6 +57,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,13 +82,13 @@ import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
+import com.pasindu.nursingotapp.ui.theme.TransferAmberSoft
+import com.pasindu.nursingotapp.ui.theme.TransferBlueSoft
+import com.pasindu.nursingotapp.ui.theme.TransferMintSoft
+import com.pasindu.nursingotapp.ui.theme.TransferPurpleSoft
+import com.pasindu.nursingotapp.ui.theme.TransferSlateSoft
 
 // Dedicated soft surface palettes consistent with NursingOTApp transfer design system
-private val TransferMintSoft = Color(0xFFEAFBF5)
-private val TransferBlueSoft = Color(0xFFEAF6FF)
-private val TransferAmberSoft = Color(0xFFFFF7ED)
-private val TransferPurpleSoft = Color(0xFFF3EEFF)
-private val TransferSlateSoft = Color(0xFFF1F5F9)
 
 /**
  * Categorization of documentation items to prevent presenting unverified paperwork as mandatory.
@@ -139,12 +141,21 @@ fun TransferInstructionsScreen(
     matchType: String = "DIRECT_2_WAY",
     participants: List<TransferChatParticipant> = emptyList(),
     isLoading: Boolean = false,
+    checkedItems: Map<String, Boolean> = emptyMap(),
+    onToggleCheckItem: (String) -> Unit = {},
     onBack: () -> Unit,
     onOpenChat: (() -> Unit)? = null,
     onProceedToCompletion: () -> Unit
 ) {
-    // Local in-session checklist state (persists across user toggles within screen lifetime)
-    val checkedItems = remember { mutableStateMapOf<String, Boolean>() }
+    // Local saveable checklist fallback + ViewModel-backed delegation (E10)
+    val localCheckedItems = rememberSaveable { mutableStateMapOf<String, Boolean>() }
+    val effectiveIsChecked: (String) -> Boolean = { id ->
+        checkedItems[id] ?: localCheckedItems[id] ?: false
+    }
+    val effectiveToggle: (String) -> Unit = { id ->
+        onToggleCheckItem(id)
+        localCheckedItems[id] = !(localCheckedItems[id] ?: false)
+    }
 
     // Checklist definition grounded strictly in verified administrative guidelines
     val documentItems = remember {
@@ -226,7 +237,7 @@ fun TransferInstructionsScreen(
     }
 
     val totalCount = documentItems.size
-    val checkedCount = documentItems.count { checkedItems[it.id] == true }
+    val checkedCount = documentItems.count { effectiveIsChecked(it.id) }
     val progress = if (totalCount > 0) checkedCount.toFloat() / totalCount else 0f
 
     Scaffold(
@@ -347,11 +358,11 @@ fun TransferInstructionsScreen(
 
             items(documentItems.size) { index ->
                 val item = documentItems[index]
-                val isChecked = checkedItems[item.id] == true
+                val isChecked = effectiveIsChecked(item.id)
                 DocumentChecklistItemCard(
                     item = item,
                     isChecked = isChecked,
-                    onToggle = { checkedItems[item.id] = !isChecked }
+                    onToggle = { effectiveToggle(item.id) }
                 )
             }
 
@@ -479,7 +490,7 @@ private fun TransferRouteOverviewCard(
                     Text(
                         text = if (isThreeWay) "3-WAY CIRCULAR TRANSFER" else "DIRECT 2-WAY MUTUAL SWAP",
                         color = if (isThreeWay) Purple else MedicalBlue,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.4.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -501,7 +512,7 @@ private fun TransferRouteOverviewCard(
             if (participants.isNotEmpty()) {
                 Text(
                     text = "PARTICIPATING STATIONS",
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextSecondary,
                     letterSpacing = 0.5.sp
@@ -538,7 +549,7 @@ private fun TransferRouteOverviewCard(
                                 color = TextPrimary
                             )
                             Text(
-                                text = "${participant.hospitalName} ΓÇó ${participant.hospitalLocation}",
+                                text = "${participant.hospitalName} • ${participant.hospitalLocation}",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -821,9 +832,7 @@ private fun DocumentChecklistItemCard(
                         checkedColor = Emerald,
                         uncheckedColor = Slate.copy(alpha = 0.5f)
                     ),
-                    modifier = Modifier
-                        .padding(top = 0.dp)
-                        .size(24.dp)
+                    modifier = Modifier.padding(top = 0.dp)
                 )
 
                 Spacer(Modifier.width(12.dp))
@@ -840,7 +849,7 @@ private fun DocumentChecklistItemCard(
                         ) {
                             Text(
                                 text = badgeText,
-                                fontSize = 9.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = badgeTextColor,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -849,7 +858,7 @@ private fun DocumentChecklistItemCard(
 
                         IconButton(
                             onClick = { isExpanded = !isExpanded },
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
                             Icon(
                                 imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -866,7 +875,7 @@ private fun DocumentChecklistItemCard(
                         text = item.title,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
-                        color = if (isChecked) TextPrimary else TextPrimary
+                        color = if (isChecked) Slate.copy(alpha = 0.65f) else TextPrimary
                     )
 
                     Spacer(Modifier.height(2.dp))
@@ -904,7 +913,7 @@ private fun DocumentChecklistItemCard(
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = note,
-                                        fontSize = 10.5.sp,
+                                        fontSize = 11.sp,
                                         color = Slate,
                                         lineHeight = 14.5.sp
                                     )

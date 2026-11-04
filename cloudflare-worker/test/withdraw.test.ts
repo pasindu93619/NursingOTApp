@@ -489,7 +489,7 @@ describe("Transfer Request Authoritative Withdrawal Suite", () => {
 
   // 8. HTTP Endpoint POST /api/matching/withdraw requires Bearer token
   test("8 - POST /api/matching/withdraw rejects requests missing Bearer token with 401", async () => {
-    const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID };
+    const env: Env = { FIREBASE_PROJECT_ID: TEST_PROJECT_ID, ENVIRONMENT: "test" };
     const request = new Request("http://localhost/api/matching/withdraw", {
       method: "POST"
     });
@@ -530,6 +530,7 @@ describe("Transfer Request Authoritative Withdrawal Suite", () => {
 
       const env: Env = {
         FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "test",
         FIREBASE_SERVICE_ACCOUNT_KEY: JSON.stringify({
           client_email: "test@app.iam.gserviceaccount.com",
           private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...\n-----END PRIVATE KEY-----\n"

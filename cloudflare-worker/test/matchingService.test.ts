@@ -2009,33 +2009,66 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
     assert.equal(match2Write.update?.fields?.status?.stringValue, "EXPIRED");
   });
 
-  // 36. Endpoint POST /api/matching/sweep-expired rejects unauthorized callers with 401
-  test("36 - Endpoint POST /api/matching/sweep-expired rejects unauthorized callers with 401", async () => {
+  // 36. Endpoint POST /api/matching/sweep-expired returns 500 ConfigError when SWEEP_ADMIN_SECRET is missing
+  test("36 - Endpoint POST /api/matching/sweep-expired returns 500 when SWEEP_ADMIN_SECRET is unconfigured", async () => {
     const request = new Request("https://worker.local/api/matching/sweep-expired", {
       method: "POST"
     });
 
     const response = await worker.fetch(request, {
       FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      ENVIRONMENT: "test",
       MATCH_EXPIRATION_HOURS: "48"
     });
 
-    assert.equal(response.status, 401);
-    const body = (await response.json()) as { error: string };
-    assert.equal(body.error, "Unauthorized");
+    assert.equal(response.status, 500);
+    const body = (await response.json()) as { error: string; message: string };
+    assert.equal(body.error, "ConfigError");
+    assert.match(body.message, /SWEEP_ADMIN_SECRET/);
   });
 
-  // 36b. Endpoint POST /api/matching/sweep-expired succeeds when authenticated with valid token
-  test("36b - Endpoint POST /api/matching/sweep-expired executes sweep when authenticated", async () => {
-    const token = await createSignedTestJwt(defaultHeader, defaultPayload, keyPair.privateKey);
+  // 36b. Endpoint POST /api/matching/sweep-expired rejects unauthorized callers with 401 when secret is missing or wrong
+  test("36b - Endpoint POST /api/matching/sweep-expired rejects unauthorized callers with 401", async () => {
+    const testSecret = "correct-admin-secret-test-123";
+
+    // 1. Missing header
+    const requestMissing = new Request("https://worker.local/api/matching/sweep-expired", {
+      method: "POST"
+    });
+    const respMissing = await worker.fetch(requestMissing, {
+      FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      ENVIRONMENT: "test",
+      MATCH_EXPIRATION_HOURS: "48",
+      SWEEP_ADMIN_SECRET: testSecret
+    });
+    assert.equal(respMissing.status, 401);
+    const bodyMissing = (await respMissing.json()) as { error: string };
+    assert.equal(bodyMissing.error, "Unauthorized");
+
+    // 2. Incorrect secret header
+    const requestWrong = new Request("https://worker.local/api/matching/sweep-expired", {
+      method: "POST",
+      headers: {
+        "X-Sweep-Admin-Secret": "wrong-secret-value"
+      }
+    });
+    const respWrong = await worker.fetch(requestWrong, {
+      FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+      ENVIRONMENT: "test",
+      MATCH_EXPIRATION_HOURS: "48",
+      SWEEP_ADMIN_SECRET: testSecret
+    });
+    assert.equal(respWrong.status, 401);
+  });
+
+  // 36c. Endpoint POST /api/matching/sweep-expired succeeds when authenticated with valid X-Sweep-Admin-Secret
+  test("36c - Endpoint POST /api/matching/sweep-expired executes sweep when valid admin secret provided", async () => {
+    const testSecret = "valid-secret-987";
     const originalFetch = globalThis.fetch;
     let queryCalled = false;
 
     globalThis.fetch = (async (input: string | URL | Request) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes("service_accounts/v1/jwk")) {
-        return new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 });
-      }
       if (url.includes(":runQuery")) {
         queryCalled = true;
         return new Response(JSON.stringify([]), { status: 200 });
@@ -2047,19 +2080,58 @@ describe("Cloudflare Worker Endpoint: POST /api/matching/find-and-lock", async (
       const request = new Request("https://worker.local/api/matching/sweep-expired", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`
+          "X-Sweep-Admin-Secret": testSecret
         }
       });
 
       const response = await worker.fetch(request, {
         FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
-        MATCH_EXPIRATION_HOURS: "48"
+        ENVIRONMENT: "test",
+        MATCH_EXPIRATION_HOURS: "48",
+        SWEEP_ADMIN_SECRET: testSecret
       });
 
       assert.equal(response.status, 200);
       const body = (await response.json()) as { scanned: number; expired: number };
       assert.equal(body.scanned, 0);
       assert.equal(body.expired, 0);
+      assert.equal(queryCalled, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  // 36d. Endpoint POST /api/matching/sweep-expired succeeds when valid secret passed via Bearer Authorization
+  test("36d - Endpoint POST /api/matching/sweep-expired executes sweep with Bearer secret", async () => {
+    const testSecret = "bearer-secret-456";
+    const originalFetch = globalThis.fetch;
+    let queryCalled = false;
+
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes(":runQuery")) {
+        queryCalled = true;
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      throw new Error(`Unexpected URL in test: ${url}`);
+    }) as typeof fetch;
+
+    try {
+      const request = new Request("https://worker.local/api/matching/sweep-expired", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${testSecret}`
+        }
+      });
+
+      const response = await worker.fetch(request, {
+        FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "test",
+        MATCH_EXPIRATION_HOURS: "48",
+        SWEEP_ADMIN_SECRET: testSecret
+      });
+
+      assert.equal(response.status, 200);
       assert.equal(queryCalled, true);
     } finally {
       globalThis.fetch = originalFetch;

@@ -25,7 +25,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.activity.compose.BackHandler
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -77,13 +87,13 @@ import com.pasindu.nursingotapp.ui.theme.SurfaceMuted
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
+import com.pasindu.nursingotapp.ui.theme.TransferBlueSoft
+import com.pasindu.nursingotapp.ui.theme.TransferInk
+import com.pasindu.nursingotapp.ui.theme.TransferMintSoft
+import com.pasindu.nursingotapp.ui.theme.TransferPurpleSoft
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
 
-private val TransferBlueSoft = Color(0xFFEAF6FF)
-private val TransferPurpleSoft = Color(0xFFF3EEFF)
-private val TransferMintSoft = Color(0xFFEAFBF5)
-private val TransferInk = Color(0xFF12204A)
 
 /**
  * Formats a hospital's geographic location as "District • Province" or "RDHS • Province".
@@ -151,6 +161,18 @@ fun TransferRequestScreen(
     var pickerMode by remember { mutableStateOf<PickerMode?>(null) }
     var showProfileNotice by remember { mutableStateOf(false) }
     var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showNotificationRationaleDialog by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        val current = currentHospital ?: return@rememberLauncherForActivityResult
+        onSubmit(
+            current.hospitalId,
+            preferences.map { it.hospitalId }
+        )
+    }
 
     var initializedFromActiveRequest by remember(activeRequest?.updatedAt) { mutableStateOf(false) }
 
@@ -199,10 +221,16 @@ fun TransferRequestScreen(
         else -> "ADD PREFERRED DESTINATIONS"
     }
 
+    BackHandler(enabled = hasUnsavedChanges && !isRequestLocked) {
+        showUnsavedChangesDialog = true
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AppBackground)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -230,7 +258,7 @@ fun TransferRequestScreen(
                         modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
                     ) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Slate
                         )
@@ -293,7 +321,7 @@ fun TransferRequestScreen(
                                     Text(
                                         "MUTUAL TRANSFER",
                                         color = Color.White.copy(alpha = .72f),
-                                        fontSize = 9.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Black,
                                         letterSpacing = 1.7.sp
                                     )
@@ -347,7 +375,7 @@ fun TransferRequestScreen(
                                         Text(
                                             "REQUEST READINESS",
                                             color = Color.White.copy(alpha = .72f),
-                                            fontSize = 8.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Black,
                                             letterSpacing = 1.2.sp
                                         )
@@ -355,7 +383,7 @@ fun TransferRequestScreen(
                                         Text(
                                             requestReadinessLabel,
                                             color = Color.White,
-                                            fontSize = 8.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Black
                                         )
                                     }
@@ -494,7 +522,7 @@ fun TransferRequestScreen(
                                     text = "${preferences.size} / 3 selected",
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     color = if (preferences.size == 3) Emerald else AiAccentColor,
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -565,7 +593,7 @@ fun TransferRequestScreen(
                                     Text(
                                         "All 3 preferences selected. Remove an option to swap.",
                                         color = TransferInk,
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -606,21 +634,21 @@ fun TransferRequestScreen(
                             Text(
                                 "MATCHING RULE",
                                 color = Emerald,
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.2.sp
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(
-                                "Same nursing grade",
+                                "Compatible Grade & Exchange Rules",
                                 color = TransferInk,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                "Your grade comes from the existing nurse profile. The current MVP searches for a direct two-nurse exchange.",
+                                "Your grade comes from your nurse profile. The matching engine evaluates Direct 2-Way (A ⇄ B) and 3-Way Circular (A → B → C → A) exchanges with compatible nursing grade eligibility.",
                                 color = TextSecondary,
-                                fontSize = 9.5.sp,
+                                fontSize = 11.sp,
                                 lineHeight = 13.5.sp
                             )
                         }
@@ -670,7 +698,7 @@ fun TransferRequestScreen(
                             currentHospital == null -> TextSecondary
                             else -> AiAccentColor
                         },
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = if (canSubmit) FontWeight.Bold else FontWeight.SemiBold
                     )
                 }
@@ -680,10 +708,23 @@ fun TransferRequestScreen(
                 Button(
                     onClick = {
                         val current = currentHospital ?: return@Button
-                        onSubmit(
-                            current.hospitalId,
-                            preferences.map { it.hospitalId }
-                        )
+                        val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                        } else {
+                            true
+                        }
+
+                        if (!hasNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            showNotificationRationaleDialog = true
+                        } else {
+                            onSubmit(
+                                current.hospitalId,
+                                preferences.map { it.hospitalId }
+                            )
+                        }
                     },
                     enabled = canSubmit && !isRequestLocked,
                     modifier = Modifier
@@ -808,6 +849,67 @@ fun TransferRequestScreen(
             }
         )
     }
+
+    if (showNotificationRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showNotificationRationaleDialog = false
+                val current = currentHospital ?: return@AlertDialog
+                onSubmit(
+                    current.hospitalId,
+                    preferences.map { it.hospitalId }
+                )
+            },
+            title = {
+                Text(
+                    "Stay updated on matches",
+                    fontWeight = FontWeight.Black,
+                    color = TransferInk
+                )
+            },
+            text = {
+                Text(
+                    "Enable notifications to receive timely alerts when a mutual transfer match is found, accepted, or confirmed. You can still search for matches without notifications.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationRationaleDialog = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            val current = currentHospital ?: return@TextButton
+                            onSubmit(
+                                current.hospitalId,
+                                preferences.map { it.hospitalId }
+                            )
+                        }
+                    }
+                ) {
+                    Text("Enable alerts", color = ClinicalPrimaryColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationRationaleDialog = false
+                        val current = currentHospital ?: return@TextButton
+                        onSubmit(
+                            current.hospitalId,
+                            preferences.map { it.hospitalId }
+                        )
+                    }
+                ) {
+                    Text("Not now", color = TextSecondary, fontWeight = FontWeight.Normal)
+                }
+            },
+            containerColor = Color.White,
+            titleContentColor = TransferInk,
+            textContentColor = TextSecondary
+        )
+    }
 }
 
 @Composable
@@ -840,7 +942,7 @@ private fun TransferStepCard(
                         Text(
                             number,
                             color = if (completed) Emerald else accent,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -852,7 +954,7 @@ private fun TransferStepCard(
                     Text(
                         eyebrow,
                         color = if (completed) Emerald else accent,
-                        fontSize = 8.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.2.sp
                     )
@@ -866,7 +968,7 @@ private fun TransferStepCard(
                     Text(
                         subtitle,
                         color = TextSecondary,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         lineHeight = 13.5.sp
                     )
                 }
@@ -913,7 +1015,7 @@ private fun ProfileContextCard(profile: ProfileEntity?, onMissingProfile: () -> 
                 Text(
                     "YOUR NURSING PROFILE",
                     color = AiAccentColor,
-                    fontSize = 8.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.2.sp
                 )
@@ -929,7 +1031,7 @@ private fun ProfileContextCard(profile: ProfileEntity?, onMissingProfile: () -> 
                 Text(
                     if (profile == null) "Grade is required for matching" else "Grade: " + profile.grade,
                     color = TextSecondary,
-                    fontSize = 9.5.sp
+                    fontSize = 11.sp
                 )
             }
             if (profile == null) {
@@ -1002,7 +1104,7 @@ private fun HospitalSelectionCard(
                     Text(
                         helper,
                         color = TextSecondary,
-                        fontSize = 9.5.sp
+                        fontSize = 11.sp
                     )
                 }
                 Surface(
@@ -1075,7 +1177,7 @@ private fun HospitalSelectionCard(
                                 hospital.category,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 color = accent,
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -1083,7 +1185,7 @@ private fun HospitalSelectionCard(
                             Text(
                                 hospital.administeringAuthority,
                                 color = TextSecondary,
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -1105,7 +1207,7 @@ private fun HospitalSelectionCard(
                         Text(
                             locationText,
                             color = TextSecondary,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1216,7 +1318,7 @@ private fun PreferenceRow(
                             rankTitle,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             color = AiAccentColor,
-                            fontSize = 8.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -1228,7 +1330,7 @@ private fun PreferenceRow(
                             hospital.category,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             color = TextSecondary,
-                            fontSize = 8.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1248,7 +1350,7 @@ private fun PreferenceRow(
                     Text(
                         locationText,
                         color = TextSecondary,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1331,7 +1433,7 @@ private fun AddPreferenceCard(
                 Text(
                     subtitle,
                     color = TextSecondary,
-                    fontSize = 9.sp
+                    fontSize = 11.sp
                 )
             }
             Icon(
@@ -1412,7 +1514,7 @@ private fun HospitalPickerDialog(
                         Text(
                             "HOSPITAL DIRECTORY • 2026",
                             color = ClinicalPrimaryColor,
-                            fontSize = 8.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 1.4.sp
                         )
@@ -1426,7 +1528,7 @@ private fun HospitalPickerDialog(
                         Text(
                             "Choose from the official reference list",
                             color = TextSecondary,
-                            fontSize = 9.sp
+                            fontSize = 11.sp
                         )
                     }
 
@@ -1541,7 +1643,7 @@ private fun HospitalPickerDialog(
                             },
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             color = AiAccentColor,
-                            fontSize = 8.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -1553,7 +1655,7 @@ private fun HospitalPickerDialog(
                         else if (matchingHospitals.size > 80) "Showing first 80 results"
                         else "Tap a hospital to select",
                         color = TextSecondary,
-                        fontSize = 8.5.sp
+                        fontSize = 11.sp
                     )
                 }
 
@@ -1591,7 +1693,7 @@ private fun HospitalPickerDialog(
                                 Text(
                                     "Loading the verified 2026 hospital reference data...",
                                     color = TextSecondary,
-                                    fontSize = 9.sp
+                                    fontSize = 11.sp
                                 )
                             }
                         }
@@ -1628,7 +1730,7 @@ private fun HospitalPickerDialog(
                                 Text(
                                     loadError,
                                     color = TextSecondary,
-                                    fontSize = 8.5.sp,
+                                    fontSize = 11.sp,
                                     maxLines = 3,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1678,7 +1780,7 @@ private fun HospitalPickerDialog(
                                 Text(
                                     "Type a hospital name, district, province or RDHS division to find eligible transfer destinations.",
                                     color = TextSecondary,
-                                    fontSize = 9.sp
+                                    fontSize = 11.sp
                                 )
                             }
                         }
@@ -1719,7 +1821,7 @@ private fun HospitalPickerDialog(
                                         "Try a hospital name, district, province or RDHS division."
                                     },
                                     color = TextSecondary,
-                                    fontSize = 9.sp
+                                    fontSize = 11.sp
                                 )
                             }
                         }
@@ -1756,7 +1858,7 @@ private fun HospitalPickerDialog(
                                 Text(
                                     "No hospital matches \"$query\". Try a hospital name, district, province or RDHS division.",
                                     color = TextSecondary,
-                                    fontSize = 9.sp
+                                    fontSize = 11.sp
                                 )
                             }
                         }
@@ -1819,7 +1921,7 @@ private fun HospitalPickerDialog(
                                                         hospital.category,
                                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                                                         color = ClinicalPrimaryColor,
-                                                        fontSize = 8.5.sp,
+                                                        fontSize = 11.sp,
                                                         fontWeight = FontWeight.Bold
                                                     )
                                                 }
@@ -1827,7 +1929,7 @@ private fun HospitalPickerDialog(
                                                     Text(
                                                         hospital.administeringAuthority,
                                                         color = TextSecondary,
-                                                        fontSize = 8.sp,
+                                                        fontSize = 11.sp,
                                                         fontWeight = FontWeight.Medium,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
@@ -1849,7 +1951,7 @@ private fun HospitalPickerDialog(
                                                 Text(
                                                     locationText,
                                                     color = TextSecondary,
-                                                    fontSize = 9.sp,
+                                                    fontSize = 11.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )

@@ -7,21 +7,55 @@ import com.pasindu.nursingotapp.transfer.data.TransferRequestRepository
 import com.pasindu.nursingotapp.transfer.data.model.HospitalReference
 import com.pasindu.nursingotapp.transfer.data.model.RankedPreferences
 import com.pasindu.nursingotapp.transfer.data.model.TransferRequest
+import com.pasindu.nursingotapp.transfer.data.model.WorkerSyncResult
+import com.pasindu.nursingotapp.transfer.worker.NoOpTransferSyncScheduler
 import com.pasindu.nursingotapp.transfer.worker.TransferSyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
 
 @HiltViewModel
 class TransferRequestViewModel @Inject constructor(
     private val hospitalReferenceRepository: HospitalReferenceRepository,
     private val transferRequestRepository: TransferRequestRepository,
-    private val syncScheduler: TransferSyncScheduler? = null
+    private val syncScheduler: TransferSyncScheduler,
+    private val logger: com.pasindu.nursingotapp.transfer.data.TransferSyncLogger = com.pasindu.nursingotapp.transfer.data.NoOpTransferSyncLogger
 ) : ViewModel() {
+
+    constructor(
+        hospitalReferenceRepository: HospitalReferenceRepository,
+        transferRequestRepository: TransferRequestRepository
+    ) : this(
+        hospitalReferenceRepository = hospitalReferenceRepository,
+        transferRequestRepository = transferRequestRepository,
+        syncScheduler = NoOpTransferSyncScheduler,
+        logger = com.pasindu.nursingotapp.transfer.data.NoOpTransferSyncLogger
+    )
+
+    private var consecutivePollFailures = 0
+    private var hasAttemptedAuthRefresh = false
+    private val _pollWarning = MutableStateFlow<String?>(null)
+    val pollWarning: StateFlow<String?> = _pollWarning.asStateFlow()
+
+    companion object {
+        private const val TAG = "TransferRequestViewModel"
+    }
 
     // ---------------------------------------------------------------------------
     // Hospital directory (existing, unchanged behaviour)
@@ -55,21 +89,23 @@ class TransferRequestViewModel @Inject constructor(
 
     private var automaticPollingJob: kotlinx.coroutines.Job? = null
 
+    val isPollingActive: Boolean
+        get() = automaticPollingJob?.isActive == true
+
     init {
         loadHospitals()
         observeActiveRequest()
-        startAutomaticMatchPolling()
     }
 
     /**
      * Keeps an active SEARCHING request synchronized with the server while this
-     * ViewModel is alive. The server is authoritative; syncActiveRequest() first
+     * destination is active. The server is authoritative; syncActiveRequest() first
      * checks for a remote MATCHED state before publishing local SEARCHING data.
      */
-    private fun startAutomaticMatchPolling() {
-        automaticPollingJob?.cancel()
+    fun startAutomaticMatchPolling() {
+        if (automaticPollingJob?.isActive == true) return
         automaticPollingJob = viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 val request = _activeRequest.value
                 val pollIntervalMs = if (request != null && (
                     request.matchStatus.equals("PENDING_CONFIRMATION", ignoreCase = true) ||
@@ -92,19 +128,67 @@ class TransferRequestViewModel @Inject constructor(
                 )
 
                 if (shouldPoll) {
-                    runCatching {
-                        transferRequestRepository.syncActiveRequest()
+                    try {
+                        val syncResult = transferRequestRepository.syncActiveRequest()
+                        when (syncResult) {
+                            is WorkerSyncResult.MatchFound,
+                            is WorkerSyncResult.NoMatch,
+                            is WorkerSyncResult.ReturnedToPool,
+                            is WorkerSyncResult.RequestCompleted,
+                            is WorkerSyncResult.RequestWithdrawn -> {
+                                consecutivePollFailures = 0
+                                hasAttemptedAuthRefresh = false
+                                _pollWarning.value = null
+                            }
+                            is WorkerSyncResult.AuthError -> {
+                                logger.e(TAG, "AuthError during pool polling: ${syncResult.message}")
+                                if (!hasAttemptedAuthRefresh) {
+                                    hasAttemptedAuthRefresh = true
+                                    transferRequestRepository.refreshAuthToken()
+                                } else {
+                                    consecutivePollFailures++
+                                    if (consecutivePollFailures >= 3) {
+                                        _pollWarning.value = POLL_WARNING_MESSAGE
+                                    }
+                                }
+                            }
+                            is WorkerSyncResult.NetworkError -> {
+                                logger.e(TAG, "NetworkError during pool polling: ${syncResult.message}", syncResult.cause)
+                                consecutivePollFailures++
+                                if (consecutivePollFailures >= 3) {
+                                    _pollWarning.value = POLL_WARNING_MESSAGE
+                                }
+                            }
+                            else -> {}
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        logger.e(TAG, "poll failed", e)
+                        consecutivePollFailures++
+                        if (consecutivePollFailures >= 3) {
+                            _pollWarning.value = POLL_WARNING_MESSAGE
+                        }
                     }
                 }
-                delay(pollIntervalMs)
+                val delayMs = if (consecutivePollFailures > 0) {
+                    calculatePollBackoff(consecutivePollFailures, pollIntervalMs)
+                } else {
+                    pollIntervalMs
+                }
+                delay(delayMs)
             }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    fun stopAutomaticMatchPolling() {
         automaticPollingJob?.cancel()
         automaticPollingJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAutomaticMatchPolling()
     }
 
     // ---------------------------------------------------------------------------
@@ -116,7 +200,7 @@ class TransferRequestViewModel @Inject constructor(
             _isLoading.value = true
             _loadError.value = null
 
-            runCatching {
+            runSuspendCatching {
                 hospitalReferenceRepository.getAll()
             }.onSuccess { hospitals ->
                 _hospitalOptions.value = hospitals
@@ -171,15 +255,15 @@ class TransferRequestViewModel @Inject constructor(
             _isSubmitting.value = true
             _submitError.value = null
 
-            runCatching {
+            runSuspendCatching {
                 val prefs = RankedPreferences(preferenceHospitalIds)
                 transferRequestRepository.saveRequest(currentHospitalId, prefs)
             }.onSuccess {
                 // Schedule WorkManager resilient offline-first sync
-                syncScheduler?.scheduleSync()
+                syncScheduler.scheduleSync()
                 // Also trigger immediate background sync attempt if device is already online
                 viewModelScope.launch {
-                    runCatching { transferRequestRepository.syncActiveRequest() }
+                    runSuspendCatching { transferRequestRepository.syncActiveRequest() }
                 }
                 onSuccess()
             }.onFailure { error ->
@@ -208,7 +292,7 @@ class TransferRequestViewModel @Inject constructor(
             _isSubmitting.value = true
             _submitError.value = null
 
-            runCatching {
+            runSuspendCatching {
                 transferRequestRepository.clearRequest()
             }.onSuccess {
                 _isSubmitting.value = false

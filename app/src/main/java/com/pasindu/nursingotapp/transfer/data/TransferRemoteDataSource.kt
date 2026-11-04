@@ -10,6 +10,7 @@ import com.pasindu.nursingotapp.transfer.data.model.WorkerThreeWayMatch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -101,12 +102,21 @@ interface TransferRemoteDataSource {
     suspend fun withdrawTransferRequest(userId: String): Result<Unit>
 }
 
+private inline fun <T> runSuspendCatching(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
+
 @Singleton
 class FirestoreTransferRemoteDataSource @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : TransferRemoteDataSource {
 
-    override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> = runCatching {
+    override suspend fun fetchTransferRequest(userId: String): Result<RemoteTransferRequestState?> = runSuspendCatching {
         require(userId.isNotBlank()) { "userId must not be blank" }
 
         val snapshot = firestore.collection("transferRequests")
@@ -114,7 +124,7 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
             .get()
             .await()
 
-        if (!snapshot.exists()) return@runCatching null
+        if (!snapshot.exists()) return@runSuspendCatching null
 
         val updatedAt = readUpdatedAtMillis(snapshot)
 
@@ -144,7 +154,7 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
         }
     }
 
-    override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> = runCatching {
+    override suspend fun fetchMatchDoc(matchId: String): Result<RemoteMatchState?> = runSuspendCatching {
         require(matchId.isNotBlank()) { "matchId must not be blank" }
 
         val snapshot = firestore.collection("matches")
@@ -152,7 +162,7 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
             .get()
             .await()
 
-        if (!snapshot.exists()) return@runCatching null
+        if (!snapshot.exists()) return@runSuspendCatching null
 
         fun string(name: String): String = snapshot.getString(name).orEmpty()
         fun int(name: String): Int = (snapshot.getLong(name) ?: 0L).toInt()
@@ -423,7 +433,7 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
     override suspend fun publishTransferRequest(
         userId: String,
         request: TransferRequest
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = runSuspendCatching {
         require(userId.isNotBlank()) { "userId must not be blank" }
 
         val data = mapOf(
@@ -443,7 +453,7 @@ class FirestoreTransferRemoteDataSource @Inject constructor(
             .await()
     }
 
-    override suspend fun withdrawTransferRequest(userId: String): Result<Unit> = runCatching {
+    override suspend fun withdrawTransferRequest(userId: String): Result<Unit> = runSuspendCatching {
         require(userId.isNotBlank()) { "userId must not be blank" }
 
         firestore.collection("transferRequests")

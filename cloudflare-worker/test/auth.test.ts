@@ -363,4 +363,141 @@ test("Cloudflare Worker Firebase Auth Test Suite", async (t) => {
       resetJwksCache();
     }
   });
+
+  // ---------------------------------------------------------------------------
+  await t.test("12 - Unset ENVIRONMENT blocks mock access token with 500 ConfigError", async () => {
+    resetJwksCache();
+    const validToken = await createSignedTestJwt(defaultHeader, defaultPayload, keyPair.privateKey);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("service_accounts/v1/jwk")) {
+        return new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 });
+      }
+      return originalFetch(url);
+    };
+
+    try {
+      const unsetEnv: Env = {
+        FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        MATCH_EXPIRATION_HOURS: "48"
+      };
+
+      const req = new Request("https://worker.local/api/matching/respond", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${validToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ matchId: "any-match", decision: "ACCEPT" })
+      });
+
+      const res = await worker.fetch(req, unsetEnv);
+      assert.equal(res.status, 500);
+      const body = (await res.json()) as { error: string; message: string };
+      assert.equal(body.error, "ConfigError");
+      assert.match(body.message, /Firebase service account credentials missing in production environment/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetJwksCache();
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  await t.test("13 - Unexpected ENVIRONMENT ('staging') blocks mock access token with 500 ConfigError", async () => {
+    resetJwksCache();
+    const validToken = await createSignedTestJwt(defaultHeader, defaultPayload, keyPair.privateKey);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("service_accounts/v1/jwk")) {
+        return new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 });
+      }
+      return originalFetch(url);
+    };
+
+    try {
+      const stagingEnv: Env = {
+        FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "staging",
+        MATCH_EXPIRATION_HOURS: "48"
+      };
+
+      const req = new Request("https://worker.local/api/matching/respond", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${validToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ matchId: "any-match", decision: "ACCEPT" })
+      });
+
+      const res = await worker.fetch(req, stagingEnv);
+      assert.equal(res.status, 500);
+      const body = (await res.json()) as { error: string; message: string };
+      assert.equal(body.error, "ConfigError");
+      assert.match(body.message, /Firebase service account credentials missing in production environment/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetJwksCache();
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  await t.test("14 - ENVIRONMENT='development' permits mock access token", async () => {
+    resetJwksCache();
+    const validToken = await createSignedTestJwt(defaultHeader, defaultPayload, keyPair.privateKey);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("service_accounts/v1/jwk")) {
+        return new Response(JSON.stringify({ keys: [publicJwk] }), { status: 200 });
+      }
+      if (urlStr.includes("/matches/any-match")) {
+        return new Response(JSON.stringify({
+          name: `projects/${TEST_PROJECT_ID}/databases/(default)/documents/matches/any-match`,
+          updateTime: "2026-10-02T12:00:00.000Z",
+          fields: {
+            nurseAUid: { stringValue: "verified-nurse-uid-12345" },
+            nurseBUid: { stringValue: "user-456" },
+            nurseACurrentHospitalId: { stringValue: "HOSP-001" },
+            nurseBCurrentHospitalId: { stringValue: "HOSP-002" },
+            status: { stringValue: "PENDING_CONFIRMATION" },
+            expiresAt: { stringValue: new Date(Date.now() + 48 * 3600 * 1000).toISOString() }
+          }
+        }), { status: 200 });
+      }
+      if (urlStr.includes("/documents:commit")) {
+        return new Response(JSON.stringify({ commitTime: "2026-10-02T12:00:00Z" }), { status: 200 });
+      }
+      return originalFetch(url);
+    };
+
+    try {
+      const devEnv: Env = {
+        FIREBASE_PROJECT_ID: TEST_PROJECT_ID,
+        ENVIRONMENT: "development",
+        MATCH_EXPIRATION_HOURS: "48"
+      };
+
+      const req = new Request("https://worker.local/api/matching/respond", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${validToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ matchId: "any-match", decision: "ACCEPT" })
+      });
+
+      const res = await worker.fetch(req, devEnv);
+      assert.equal(res.status, 200);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetJwksCache();
+    }
+  });
+
 });

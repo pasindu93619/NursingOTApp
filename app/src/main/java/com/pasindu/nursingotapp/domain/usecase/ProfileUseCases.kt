@@ -3,10 +3,12 @@ package com.pasindu.nursingotapp.domain.usecase
 import com.pasindu.nursingotapp.data.local.dao.PayRateSettingsDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileCompensationDao
 import com.pasindu.nursingotapp.data.local.dao.ProfileDao
+import com.pasindu.nursingotapp.data.local.SalaryTableSeeder
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
+import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 
@@ -64,13 +66,19 @@ class SaveOtRateUseCase(private val dao: PayRateSettingsDao) {
 }
 
 class MatchSalaryStepUseCase(private val salaryDao: SalaryStep2027Dao) {
-    suspend operator fun invoke(grade: String, currentBasicSalary: Double) =
-        if (grade.isBlank() || currentBasicSalary <= 0.0) {
-            null
+    suspend operator fun invoke(grade: String? = null, currentBasicSalary: Double): SalaryStep2027Entity? {
+        if (currentBasicSalary <= 0.0) return null
+        SalaryTableSeeder.awaitSeeding()
+        val trimmedGrade = grade?.trim().orEmpty()
+        return if (trimmedGrade.isNotBlank()) {
+            salaryDao.findByCurrentBasic(trimmedGrade, currentBasicSalary)
+                ?.takeIf { row -> abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
         } else {
-            salaryDao.findByCurrentBasic(grade.trim(), currentBasicSalary)
-                ?.takeIf { row -> kotlin.math.abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
+            val matchingRows = salaryDao.findByBasicSalary(currentBasicSalary)
+                .filter { row -> abs(row.currentBasicSalary2026 - currentBasicSalary) < 0.01 }
+            if (matchingRows.size == 1) matchingRows.first() else null
         }
+    }
 }
 
 class ApplyMatched2027DayRateUseCase(private val dao: PayRateSettingsDao) {

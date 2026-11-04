@@ -1,4 +1,4 @@
-import test, { describe, before } from "node:test";
+import test, { describe, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   createServiceAccountJwtAssertion,
@@ -10,7 +10,9 @@ import {
   OAUTH_JWT_GRANT_TYPE,
   DEFAULT_DATASTORE_SCOPE
 } from "../src/auth/serviceAccountAuth.ts";
-import type { HttpTransport } from "../src/firestore/firestoreClient.ts";
+import { FirestoreClient, FirestoreError, type HttpTransport } from "../src/firestore/firestoreClient.ts";
+import { withTokenCache, clearTokenCache, getTokenCache, createWorkerTransport, TOKEN_CACHE_TTL_MS, resolveTokenProvider } from "../src/index.ts";
+import type { Env } from "../src/types.ts";
 
 const FAKE_CLIENT_EMAIL = "nursing-transfer-sa@nursing-super-app-test.iam.gserviceaccount.com";
 const FAKE_TOKEN_ENDPOINT = "https://oauth.example.invalid/token";
@@ -382,4 +384,319 @@ describe("Service Account OAuth / Web Crypto RS256 Test Suite", () => {
     assert.equal(typeof token, "string");
     assert.equal(token, "token-compatible-123");
   });
+
+  // ---------------------------------------------------------------------------
+  // Phase 1, Step 1.2: Google Access Token Caching & Concurrency Tests
+  // ---------------------------------------------------------------------------
+  describe("Phase 1, Step 1.2: Token Caching & In-Flight Coalescing", () => {
+    test("Step 1.2: Two sequential requests reuse one valid token and trigger inner provider once", async () => {
+      clearTokenCache();
+      let acquireCount = 0;
+      const innerProvider = async () => {
+        acquireCount++;
+        return `token-${acquireCount}`;
+      };
+
+      const cachedProvider = withTokenCache(innerProvider);
+      const token1 = await cachedProvider();
+      const token2 = await cachedProvider();
+
+      assert.equal(token1, "token-1");
+      assert.equal(token2, "token-1");
+      assert.equal(acquireCount, 1);
+    });
+
+    test("Step 1.2: After clearTokenCache, the next request fetches a fresh token", async () => {
+      clearTokenCache();
+      let acquireCount = 0;
+      const innerProvider = async () => {
+        acquireCount++;
+        return `fresh-token-${acquireCount}`;
+      };
+
+      const cachedProvider = withTokenCache(innerProvider);
+      const token1 = await cachedProvider();
+      assert.equal(token1, "fresh-token-1");
+      assert.equal(acquireCount, 1);
+
+      clearTokenCache();
+      const token2 = await cachedProvider();
+      assert.equal(token2, "fresh-token-2");
+      assert.equal(acquireCount, 2);
+    });
+
+    test("Step 1.2: Concurrent requests share in-flight acquisition and call inner provider once", async () => {
+      clearTokenCache();
+      let acquireCount = 0;
+      const innerProvider = async () => {
+        acquireCount++;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return `concurrent-token-${acquireCount}`;
+      };
+
+      const cachedProvider = withTokenCache(innerProvider);
+      const [t1, t2, t3, t4] = await Promise.all([
+        cachedProvider(),
+        cachedProvider(),
+        cachedProvider(),
+        cachedProvider()
+      ]);
+
+      assert.equal(t1, "concurrent-token-1");
+      assert.equal(t2, "concurrent-token-1");
+      assert.equal(t3, "concurrent-token-1");
+      assert.equal(t4, "concurrent-token-1");
+      assert.equal(acquireCount, 1);
+    });
+
+    test("Step 1.2: Token acquisition failure does not leave stuck promise or poison subsequent attempts", async () => {
+      clearTokenCache();
+      let attempt = 0;
+      const innerProvider = async () => {
+        attempt++;
+        if (attempt === 1) {
+          throw new Error("OAuth network failure");
+        }
+        return "recovered-token";
+      };
+
+      const cachedProvider = withTokenCache(innerProvider);
+
+      await assert.rejects(
+        async () => {
+          await cachedProvider();
+        },
+        (err: Error) => err.message === "OAuth network failure"
+      );
+
+      const recovered = await cachedProvider();
+      assert.equal(recovered, "recovered-token");
+      assert.equal(attempt, 2);
+    });
+
+    test("Step 1.2: Firestore 401 response invalidates tokenCache without masking error", async () => {
+      clearTokenCache();
+      let acquireCount = 0;
+      const innerProvider = async () => {
+        acquireCount++;
+        return `token-v${acquireCount}`;
+      };
+
+      const cachedProvider = withTokenCache(innerProvider);
+      const initialToken = await cachedProvider();
+      assert.equal(initialToken, "token-v1");
+      assert.equal(getTokenCache()?.value, "token-v1");
+
+      const mockTransport: HttpTransport = async () => {
+        return new Response(JSON.stringify({ error: { code: 401, message: "Invalid Credentials" } }), {
+          status: 401
+        });
+      };
+
+      const client = new FirestoreClient({
+        projectId: "test-proj",
+        tokenProvider: cachedProvider,
+        transport: createWorkerTransport(mockTransport)
+      });
+
+      await assert.rejects(
+        async () => {
+          await client.getMatchDoc("any-match");
+        },
+        (err: unknown) => {
+          assert(err instanceof FirestoreError);
+          assert.equal(err.statusCode, 401);
+          return true;
+        }
+      );
+
+      assert.equal(getTokenCache(), null);
+
+      const freshToken = await cachedProvider();
+      assert.equal(freshToken, "token-v2");
+      assert.equal(acquireCount, 2);
+    });
+
+    test("Step 1.2: Token expires early at 50 minutes and refetches after expiry", async () => {
+      clearTokenCache();
+      let acquireCount = 0;
+      const innerProvider = async () => {
+        acquireCount++;
+        return `token-epoch-${acquireCount}`;
+      };
+
+      const cachedProvider = withTokenCache(innerProvider);
+      const token1 = await cachedProvider();
+      assert.equal(token1, "token-epoch-1");
+
+      const entry = getTokenCache();
+      assert.ok(entry);
+      assert.equal(entry.value, "token-epoch-1");
+      const remainingMs = entry.expiresAtMs - Date.now();
+      assert.ok(remainingMs > 49 * 60 * 1000 && remainingMs <= 50 * 60 * 1000);
+
+      // Advance expiry past 50 minutes
+      entry.expiresAtMs = Date.now() - 1000;
+
+      const token2 = await cachedProvider();
+      assert.equal(token2, "token-epoch-2");
+      assert.equal(acquireCount, 2);
+    });
+
+    test("Step 1.2: withTokenCache wrapping createServiceAccountTokenProvider reuses OAuth access token", async () => {
+      clearTokenCache();
+      let oauthRequestCount = 0;
+      const transport = createMockTransport({
+        [`POST ${FAKE_TOKEN_ENDPOINT}`]: () => {
+          oauthRequestCount++;
+          return new Response(
+            JSON.stringify({
+              access_token: `oauth-token-${oauthRequestCount}`,
+              token_type: "Bearer",
+              expires_in: 3600
+            }),
+            { status: 200 }
+          );
+        }
+      });
+
+      const rawProvider = createServiceAccountTokenProvider({
+        clientEmail: FAKE_CLIENT_EMAIL,
+        privateKey: testPemPrivateKey,
+        tokenEndpoint: FAKE_TOKEN_ENDPOINT,
+        transport
+      });
+
+      const cached = withTokenCache(rawProvider);
+
+      const t1 = await cached();
+      const t2 = await cached();
+
+      assert.equal(t1, "oauth-token-1");
+      assert.equal(t2, "oauth-token-1");
+      assert.equal(oauthRequestCount, 1);
+
+      clearTokenCache();
+      const t3 = await cached();
+      assert.equal(t3, "oauth-token-2");
+      assert.equal(oauthRequestCount, 2);
+    });
+  });
+
+
+  describe("Phase 1, Step 1.3: Fail Closed Credentials (resolveTokenProvider)", () => {
+    beforeEach(() => {
+      clearTokenCache();
+    });
+    test("Step 1.3: ENVIRONMENT='test' without credentials returns mock token provider", async () => {
+      const provider = resolveTokenProvider({ ENVIRONMENT: "test" });
+      assert.equal(typeof provider, "function");
+      if (typeof provider === "function") {
+        const token = await provider();
+        assert.equal(token, "mock-access-token");
+      }
+    });
+
+    test("Step 1.3: ENVIRONMENT='development' without credentials returns mock token provider", async () => {
+      const provider = resolveTokenProvider({ ENVIRONMENT: "development" });
+      assert.equal(typeof provider, "function");
+      if (typeof provider === "function") {
+        const token = await provider();
+        assert.equal(token, "mock-access-token");
+      }
+    });
+
+    test("Step 1.3: Unset ENVIRONMENT (empty object) without credentials returns 500 ConfigError", async () => {
+      const result = resolveTokenProvider({});
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string; message: string };
+      assert.equal(body.error, "ConfigError");
+      assert.match(body.message, /Firebase service account credentials missing in production environment/i);
+    });
+
+    test("Step 1.3: Empty ENVIRONMENT='' without credentials returns 500 ConfigError", async () => {
+      const result = resolveTokenProvider({ ENVIRONMENT: "" });
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string; message: string };
+      assert.equal(body.error, "ConfigError");
+      assert.match(body.message, /Firebase service account credentials missing in production environment/i);
+    });
+
+    test("Step 1.3: Unexpected ENVIRONMENT='staging' without credentials returns 500 ConfigError", async () => {
+      const result = resolveTokenProvider({ ENVIRONMENT: "staging" });
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string; message: string };
+      assert.equal(body.error, "ConfigError");
+      assert.match(body.message, /Firebase service account credentials missing in production environment/i);
+    });
+
+    test("Step 1.3: Unexpected ENVIRONMENT='prod' without credentials returns 500 ConfigError", async () => {
+      const result = resolveTokenProvider({ ENVIRONMENT: "prod" });
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string };
+      assert.equal(body.error, "ConfigError");
+    });
+
+    test("Step 1.3: ENVIRONMENT='production' without credentials returns 500 ConfigError", async () => {
+      const result = resolveTokenProvider({ ENVIRONMENT: "production" });
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string };
+      assert.equal(body.error, "ConfigError");
+    });
+
+    test("Step 1.3: Valid service account credentials return real token provider regardless of ENVIRONMENT", async () => {
+      const testEnvs: (string | undefined)[] = [
+        "production",
+        "staging",
+        "prod",
+        "preview",
+        "test",
+        "development",
+        "",
+        undefined
+      ];
+
+      for (const envVal of testEnvs) {
+        const env: Env = {
+          ENVIRONMENT: envVal,
+          FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL: FAKE_CLIENT_EMAIL,
+          FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY: testPemPrivateKey
+        };
+
+        const result = resolveTokenProvider(env);
+        assert.equal(
+          typeof result,
+          "function",
+          `Expected callable provider for ENVIRONMENT=${String(envVal)} with credentials`
+        );
+      }
+    });
+
+    test("Step 1.3: Incomplete service account credentials (missing private key) fail closed when ENVIRONMENT is not test/dev", async () => {
+      const result = resolveTokenProvider({
+        ENVIRONMENT: "production",
+        FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL: FAKE_CLIENT_EMAIL
+      });
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string };
+      assert.equal(body.error, "ConfigError");
+    });
+
+    test("Step 1.3: Incomplete service account credentials (missing client email) fail closed when ENVIRONMENT is unset", async () => {
+      const result = resolveTokenProvider({
+        FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY: testPemPrivateKey
+      });
+      assert.ok(result instanceof Response);
+      assert.equal(result.status, 500);
+      const body = (await result.json()) as { error: string };
+      assert.equal(body.error, "ConfigError");
+    });
+  });
+
 });

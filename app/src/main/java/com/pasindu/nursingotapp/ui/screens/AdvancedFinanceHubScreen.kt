@@ -419,8 +419,22 @@ private fun PayRatesSummary(state: AdvancedFinanceUiState) {
     FinanceCard {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RateBox(Modifier.weight(1f), "OT", formatRs(state.otRate), "per hour", Purple, FinancePurpleSoft)
-            RateBox(Modifier.weight(1f), "PH", formatRs(state.phRate), "per day", Amber, FinanceAmberSoft)
-            RateBox(Modifier.weight(1f), "Working DO", formatRs(state.doRate), "per day", Emerald, FinanceMintSoft)
+            RateBox(
+                Modifier.weight(1f),
+                "PH",
+                if (state.ratesMissing || state.phRate <= 0.0) "Rate not matched, check profile" else formatRs(state.phRate),
+                "per day",
+                Amber,
+                FinanceAmberSoft
+            )
+            RateBox(
+                Modifier.weight(1f),
+                "Working DO",
+                if (state.ratesMissing || state.doRate <= 0.0) "Rate not matched, check profile" else formatRs(state.doRate),
+                "per day",
+                Emerald,
+                FinanceMintSoft
+            )
         }
         Spacer(Modifier.height(10.dp))
         Text("Grade ${state.profile?.grade.orEmpty()} • Step ${state.profile?.salaryStep ?: "—"}", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
@@ -479,7 +493,7 @@ private fun PayRatesDetailsCard(state: AdvancedFinanceUiState, viewModel: Advanc
         RateBox(
             Modifier.fillMaxWidth(),
             "PH",
-            formatRs(state.phRate),
+            if (state.ratesMissing || state.phRate <= 0.0) "Rate not matched, check profile" else formatRs(state.phRate),
             "From 2027 basic ÷ 30",
             Amber,
             FinanceAmberSoft
@@ -487,7 +501,7 @@ private fun PayRatesDetailsCard(state: AdvancedFinanceUiState, viewModel: Advanc
         RateBox(
             Modifier.fillMaxWidth(),
             "Working DO",
-            formatRs(state.doRate),
+            if (state.ratesMissing || state.doRate <= 0.0) "Rate not matched, check profile" else formatRs(state.doRate),
             "From 2027 basic ÷ 30",
             Emerald,
             FinanceMintSoft
@@ -638,4 +652,4 @@ private fun GuideItem(title: String, description: String) {
 private fun formatHours(value: Double): String = if (value % 1.0 == 0.0) "${value.toInt()}h" else "%.1fh".format(Locale.US, value)
 
 private fun Double.oneDecimal(): String = "%.1f".format(Locale.US, this)
-private fun formatRs(value: Double): String = "Rs. " + NumberFormat.getNumberInstance(Locale.US).format(value)
+private fun formatRs(value: Double): String = com.pasindu.nursingotapp.domain.calculation.FinancialFormatUtils.formatRs(value)

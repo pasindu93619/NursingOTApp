@@ -10,11 +10,15 @@ import javax.inject.Inject
 interface TransferSyncLogger {
     fun d(tag: String, message: String)
     fun e(tag: String, message: String, throwable: Throwable? = null)
+    fun w(tag: String, message: String, throwable: Throwable? = null) {
+        // default no-op
+    }
 }
 
 object NoOpTransferSyncLogger : TransferSyncLogger {
     override fun d(tag: String, message: String) = Unit
     override fun e(tag: String, message: String, throwable: Throwable?) = Unit
+    override fun w(tag: String, message: String, throwable: Throwable?) = Unit
 }
 
 class AndroidTransferSyncLogger @Inject constructor() : TransferSyncLogger {
@@ -27,6 +31,14 @@ class AndroidTransferSyncLogger @Inject constructor() : TransferSyncLogger {
             Log.e(tag, message, throwable)
         } else {
             Log.e(tag, message)
+        }
+    }
+
+    override fun w(tag: String, message: String, throwable: Throwable?) {
+        if (throwable != null) {
+            Log.w(tag, message, throwable)
+        } else {
+            Log.w(tag, message)
         }
     }
 }

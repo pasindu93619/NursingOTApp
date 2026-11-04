@@ -29,7 +29,7 @@ object DatabaseModule {
             .addMigrations(*DatabaseMigrationRegistry.ALL_MIGRATIONS)
             .build()
 
-        SalaryTableSeeder.seedIfNeeded(database.salaryStep2027Dao())
+        SalaryTableSeeder.startSeeding(database)
         return database
     }
 }
