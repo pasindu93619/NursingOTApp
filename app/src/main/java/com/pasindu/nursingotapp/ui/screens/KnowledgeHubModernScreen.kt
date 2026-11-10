@@ -17,24 +17,25 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalLibrary
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -45,9 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
-import com.pasindu.nursingotapp.ui.CircularItem
+import com.pasindu.nursingotapp.domain.model.EvidenceAccessClass
+import com.pasindu.nursingotapp.domain.model.EvidenceArticleItem
 import com.pasindu.nursingotapp.ui.FlashcardItem
 import com.pasindu.nursingotapp.ui.KnowledgeHubViewModel
+import com.pasindu.nursingotapp.ui.components.EvidenceArticleReaderSheet
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 
 private val KHBackground = Color(0xFFF5F8FC)
 private val KHInk = Color(0xFF10233F)
@@ -66,10 +70,13 @@ private val KHHero = Brush.linearGradient(
 @Composable
 fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
     val viewModel: KnowledgeHubViewModel = hiltViewModel()
-    val circulars by viewModel.circulars.collectAsState()
     val flashcards by viewModel.flashcards.collectAsState()
     val cpdLogs by viewModel.cpdLogs.collectAsState()
     val bookmarkedCircularIds by viewModel.bookmarkedCircularIds.collectAsState()
+    val evidenceArticles by viewModel.evidenceArticles.collectAsState()
+    val savedArticles by viewModel.savedArticles.collectAsState()
+    val selectedArticleForReading by viewModel.selectedArticleForReading.collectAsState()
+
     var tab by remember { mutableIntStateOf(0) }
     var showAdd by remember { mutableStateOf(false) }
     var selectedCategory by rememberSaveable { mutableStateOf("All") }
@@ -91,7 +98,7 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
                     Column {
                         Text("Knowledge Hub", color = KHInk, fontWeight = FontWeight.Black)
                         Text(
-                            "Learn • Track • Stay current",
+                            "Evidence • Practice • Continuous Learning",
                             color = KHSlate,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold
@@ -102,7 +109,7 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
             )
         },
         floatingActionButton = {
-            if (tab == 1) {
+            if (tab == 2) {
                 ExtendedFloatingActionButton(
                     onClick = { showAdd = true },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -116,7 +123,9 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding(),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 top = 0.dp,
@@ -125,24 +134,50 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item { KnowledgeHeroModern(total, target, progress) }
+            item {
+                KnowledgeHeroModern(
+                    total = total,
+                    target = target,
+                    progress = progress,
+                    evidenceCount = evidenceArticles.size,
+                    savedCount = savedArticles.size
+                )
+            }
             item { KnowledgeTabs(tab) { tab = it } }
             when (tab) {
                 0 -> item {
-                    CircularsModern(
-                        circulars = circulars,
+                    LibraryModern(
+                        articles = evidenceArticles,
                         selectedCategory = selectedCategory,
                         searchQuery = searchQuery,
-                        bookmarkedCircularIds = bookmarkedCircularIds,
+                        bookmarkedIds = bookmarkedCircularIds,
                         onCategorySelected = { selectedCategory = it },
                         onSearchQueryChanged = { searchQuery = it },
+                        onArticleClick = viewModel::openArticleReader,
                         onBookmarkToggle = viewModel::toggleCircularBookmark
                     )
                 }
-                1 -> item { CpdModern(cpdLogs, total, target, progress) }
-                2 -> item { FlashcardsModern(flashcards) }
+                1 -> item {
+                    SavedModern(
+                        savedArticles = savedArticles,
+                        onArticleClick = viewModel::openArticleReader,
+                        onBookmarkToggle = viewModel::toggleCircularBookmark,
+                        onExploreLibrary = { tab = 0 }
+                    )
+                }
+                2 -> item { CpdModern(cpdLogs, total, target, progress) }
+                3 -> item { FlashcardsModern(flashcards) }
             }
         }
+    }
+
+    selectedArticleForReading?.let { article ->
+        EvidenceArticleReaderSheet(
+            article = article,
+            isBookmarked = article.id in bookmarkedCircularIds,
+            onBookmarkToggle = { viewModel.toggleCircularBookmark(article.id) },
+            onDismiss = viewModel::closeArticleReader
+        )
     }
 
     if (showAdd) {
@@ -157,7 +192,13 @@ fun KnowledgeHubModernScreen(onNavigateBack: () -> Unit) {
 }
 
 @Composable
-private fun KnowledgeHeroModern(total: Int, target: Int, progress: Float) {
+private fun KnowledgeHeroModern(
+    total: Int,
+    target: Int,
+    progress: Float,
+    evidenceCount: Int,
+    savedCount: Int
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -168,7 +209,7 @@ private fun KnowledgeHeroModern(total: Int, target: Int, progress: Float) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "NURSE LEARNING COMMAND CENTER",
+                        "CLINICAL KNOWLEDGE & EVIDENCE CENTER",
                         color = Color.White.copy(alpha = 0.75f),
                         fontSize = 8.sp,
                         fontWeight = FontWeight.Black,
@@ -181,7 +222,7 @@ private fun KnowledgeHeroModern(total: Int, target: Int, progress: Float) {
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        "Ministry updates, CPD progress and focused revision — together.",
+                        "Global guidelines, national circulars, CPD tracking and bedside pearls — together.",
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 11.sp,
                         lineHeight = 16.sp
@@ -200,9 +241,9 @@ private fun KnowledgeHeroModern(total: Int, target: Int, progress: Float) {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                HeroMetric("CPD", "$total/$target", Modifier.weight(1f))
-                HeroMetric("LEARNING", "LOCAL", Modifier.weight(1f))
-                HeroMetric("FLASHCARDS", "${progressPercent(progress)}%", Modifier.weight(1f))
+                HeroMetric("EVIDENCE", "$evidenceCount ITEMS", Modifier.weight(1f))
+                HeroMetric("SAVED", "$savedCount SAVED", Modifier.weight(1f))
+                HeroMetric("CPD", "$total/$target PTS", Modifier.weight(1f))
             }
         }
     }
@@ -237,7 +278,8 @@ private fun HeroMetric(label: String, value: String, modifier: Modifier) {
 @Composable
 private fun KnowledgeTabs(selected: Int, onSelected: (Int) -> Unit) {
     val tabs = listOf(
-        "Circulars" to Icons.Default.Newspaper,
+        "Library" to Icons.Default.LocalLibrary,
+        "Saved" to Icons.Default.Bookmark,
         "CPD" to Icons.Default.MenuBook,
         "Study" to Icons.Default.AutoAwesome
     )
@@ -281,19 +323,19 @@ private fun KnowledgeTabs(selected: Int, onSelected: (Int) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CircularsModern(
-    circulars: List<CircularItem>,
+private fun LibraryModern(
+    articles: List<EvidenceArticleItem>,
     selectedCategory: String,
     searchQuery: String,
-    bookmarkedCircularIds: Set<String>,
+    bookmarkedIds: Set<String>,
     onCategorySelected: (String) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
+    onArticleClick: (EvidenceArticleItem) -> Unit,
     onBookmarkToggle: (String) -> Unit
 ) {
-    val categories = remember(circulars) {
-        listOf("All") + circulars
+    val categories = remember(articles) {
+        listOf("All") + articles
             .asSequence()
             .map { it.category.trim() }
             .filter { it.isNotBlank() }
@@ -310,14 +352,17 @@ private fun CircularsModern(
 
     val normalizedQuery = searchQuery.trim()
 
-    val filteredCirculars = remember(circulars, selectedCategory, normalizedQuery) {
-        circulars.filter { item ->
+    val filteredArticles = remember(articles, selectedCategory, normalizedQuery) {
+        articles.filter { item ->
             val matchesCategory = selectedCategory == "All" ||
                     item.category.equals(selectedCategory, ignoreCase = true)
             val matchesSearch = normalizedQuery.isBlank() ||
                     item.title.contains(normalizedQuery, ignoreCase = true) ||
                     item.category.contains(normalizedQuery, ignoreCase = true) ||
                     item.summary.contains(normalizedQuery, ignoreCase = true) ||
+                    item.source.displayName.contains(normalizedQuery, ignoreCase = true) ||
+                    item.keyRecommendations.any { it.contains(normalizedQuery, ignoreCase = true) } ||
+                    item.bedsideActions.any { it.contains(normalizedQuery, ignoreCase = true) } ||
                     item.id.contains(normalizedQuery, ignoreCase = true)
             matchesCategory && matchesSearch
         }
@@ -325,9 +370,9 @@ private fun CircularsModern(
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionHeading(
-            "Ministry updates",
-            "Search and filter professional notices.",
-            Icons.Default.Newspaper,
+            "Evidence & Clinical Discovery",
+            "Search verified international guidelines and national standards.",
+            Icons.Default.LocalLibrary,
             KHSoftBlue,
             KHBlue
         )
@@ -335,9 +380,17 @@ private fun CircularsModern(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChanged,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    stateDescription = if (selectedCategory == "All") {
+                        "Active filter: All clinical guidelines"
+                    } else {
+                        "Active filter: $selectedCategory"
+                    }
+                },
             singleLine = true,
-            placeholder = { Text("Search Ministry updates…") },
+            placeholder = { Text("Search clinical guidelines, evidence, protocols…") },
             leadingIcon = {
                 Icon(Icons.Default.Search, contentDescription = "Search")
             },
@@ -394,97 +447,205 @@ private fun CircularsModern(
             }
         }
 
-        if (filteredCirculars.isEmpty()) {
+        if (filteredArticles.isEmpty()) {
             val hasSearch = normalizedQuery.isNotBlank()
             EmptyLearning(
                 when {
-                    hasSearch -> "No matching circulars"
-                    selectedCategory == "All" -> "No circulars available"
-                    else -> "No circulars in this category"
+                    hasSearch -> "No matching clinical evidence"
+                    selectedCategory == "All" -> "No articles available"
+                    else -> "No guidelines in this category"
                 },
                 when {
-                    hasSearch -> "Try a different search term or category."
-                    selectedCategory == "All" -> "Saved Ministry updates will appear here."
-                    else -> "Choose another category to view available Ministry updates."
+                    hasSearch -> "Try adjusting your search terms or selecting another category."
+                    selectedCategory == "All" -> "Clinical guidelines will appear here."
+                    else -> "Choose another category to explore available evidence."
                 },
-                Icons.Default.Newspaper
+                Icons.Default.LocalLibrary
             )
         } else {
-            filteredCirculars.forEach { item ->
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            filteredArticles.forEach { item ->
+                EvidenceArticleCard(
+                    item = item,
+                    isBookmarked = item.id in bookmarkedIds,
+                    onCardClick = { onArticleClick(item) },
+                    onBookmarkToggle = { onBookmarkToggle(item.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EvidenceArticleCard(
+    item: EvidenceArticleItem,
+    isBookmarked: Boolean,
+    onCardClick: () -> Unit,
+    onBookmarkToggle: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onCardClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Surface(
+                    color = KHSoftBlue,
+                    shape = RoundedCornerShape(9.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Text(
+                        item.source.displayName,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = KHBlue,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
+                Surface(
+                    color = KHSoftPurple,
+                    shape = RoundedCornerShape(9.dp)
+                ) {
+                    Text(
+                        item.documentType.name.replace("_", " "),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                        color = KHPurple,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (item.isSimulationOrUnverified) {
+                    Spacer(Modifier.width(6.dp))
+                    Surface(
+                        color = Color(0xFFFEF3C7),
+                        shape = RoundedCornerShape(9.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                color = KHSoftBlue,
-                                shape = RoundedCornerShape(9.dp)
-                            ) {
-                                Text(
-                                    item.category,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                    color = KHBlue,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
-                            Spacer(Modifier.weight(1f))
-                            Text(item.date, color = KHSlate, fontSize = 9.sp)
-                            val bookmarked = item.id in bookmarkedCircularIds
-                            IconButton(
-                                onClick = { onBookmarkToggle(item.id) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (bookmarked) {
-                                        Icons.Default.Bookmark
-                                    } else {
-                                        Icons.Default.BookmarkBorder
-                                    },
-                                    contentDescription = if (bookmarked) {
-                                        "Remove bookmark"
-                                    } else {
-                                        "Bookmark circular"
-                                    },
-                                    tint = if (bookmarked) KHPurple else KHSlate
-                                )
-                            }
-                        }
                         Text(
-                            item.title,
-                            color = KHInk,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black,
-                            lineHeight = 20.sp
+                            "SIMULATION",
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                            color = Color(0xFF92400E),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black
                         )
-                        Text(
-                            item.summary,
-                            color = KHSlate,
-                            fontSize = 11.sp,
-                            lineHeight = 17.sp
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.LocalLibrary,
-                                contentDescription = null,
-                                tint = KHPurple,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(Modifier.width(5.dp))
-                            Text(
-                                "Reference ${item.id}",
-                                color = KHPurple,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
                 }
+                Spacer(Modifier.weight(1f))
+                IconButton(
+                    onClick = onBookmarkToggle,
+                    modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                ) {
+                    Icon(
+                        imageVector = if (isBookmarked) {
+                            Icons.Default.Bookmark
+                        } else {
+                            Icons.Default.BookmarkBorder
+                        },
+                        contentDescription = if (isBookmarked) {
+                            "Remove bookmark"
+                        } else {
+                            "Bookmark article"
+                        },
+                        tint = if (isBookmarked) KHPurple else KHSlate
+                    )
+                }
+            }
+
+            Text(
+                item.title,
+                color = KHInk,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
+                lineHeight = 20.sp
+            )
+
+            Text(
+                item.summary,
+                color = KHSlate,
+                fontSize = 11.sp,
+                lineHeight = 17.sp,
+                maxLines = 3
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    color = when (item.accessClass) {
+                        EvidenceAccessClass.CLASS_A_FULL_TEXT -> KHSoftMint
+                        EvidenceAccessClass.CLASS_B_ABSTRACT -> KHSoftBlue
+                        EvidenceAccessClass.CLASS_C_EXTERNAL_LINK -> Color(0xFFFFF4E5)
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        when (item.accessClass) {
+                            EvidenceAccessClass.CLASS_A_FULL_TEXT -> "Full In-App Text"
+                            EvidenceAccessClass.CLASS_B_ABSTRACT -> "Summary & Abstract"
+                            EvidenceAccessClass.CLASS_C_EXTERNAL_LINK -> "External Portal"
+                        },
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        color = when (item.accessClass) {
+                            EvidenceAccessClass.CLASS_A_FULL_TEXT -> KHMint
+                            EvidenceAccessClass.CLASS_B_ABSTRACT -> KHBlue
+                            EvidenceAccessClass.CLASS_C_EXTERNAL_LINK -> Color(0xFFD97706)
+                        },
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                Text(
+                    item.publicationDate,
+                    color = KHSlate,
+                    fontSize = 9.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedModern(
+    savedArticles: List<EvidenceArticleItem>,
+    onArticleClick: (EvidenceArticleItem) -> Unit,
+    onBookmarkToggle: (String) -> Unit,
+    onExploreLibrary: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionHeading(
+            "Personal Saved Library",
+            "Bookmarked clinical guidelines, evidence and reference documents.",
+            Icons.Default.Bookmark,
+            KHSoftPurple,
+            KHPurple
+        )
+
+        if (savedArticles.isEmpty()) {
+            EmptyLearning(
+                "No saved guidelines yet",
+                "Tap the bookmark icon on any clinical guideline or circular in the Library to save it here for quick bedside access.",
+                Icons.Default.Bookmark
+            )
+        } else {
+            savedArticles.forEach { item ->
+                EvidenceArticleCard(
+                    item = item,
+                    isBookmarked = true,
+                    onCardClick = { onArticleClick(item) },
+                    onBookmarkToggle = { onBookmarkToggle(item.id) }
+                )
             }
         }
     }

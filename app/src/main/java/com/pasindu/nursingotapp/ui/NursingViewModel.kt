@@ -14,6 +14,7 @@ import com.pasindu.nursingotapp.data.local.entity.SalaryStep2027Entity
 import com.pasindu.nursingotapp.domain.model.DailyLog
 import com.pasindu.nursingotapp.domain.usecase.ApplyMatched2027DayRateUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateDailyEntryHoursUseCase
+import com.pasindu.nursingotapp.domain.usecase.DeleteDailyEntryByIdUseCase
 import com.pasindu.nursingotapp.domain.usecase.GetDailyEntryForDateUseCase
 import com.pasindu.nursingotapp.domain.usecase.MatchSalaryStepUseCase
 import com.pasindu.nursingotapp.domain.usecase.PayRateResolver
@@ -30,6 +31,7 @@ import com.pasindu.nursingotapp.ui.model.DailyEntryUiModel
 import com.pasindu.nursingotapp.ui.state.ViewModelOperationState
 import com.pasindu.nursingotapp.ui.state.launchOperation
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +54,7 @@ class NursingViewModel @Inject constructor(
     private val observeClaimDailyEntriesUseCase: ObserveClaimDailyEntriesUseCase,
     private val saveDailyEntryUseCase: SaveDailyEntryUseCase,
     private val getDailyEntryForDateUseCase: GetDailyEntryForDateUseCase,
+    private val deleteDailyEntryByIdUseCase: DeleteDailyEntryByIdUseCase,
     private val calculateDailyEntryHoursUseCase: CalculateDailyEntryHoursUseCase,
     private val profileAdditionalAllowanceDao: ProfileAdditionalAllowanceDao,
     private val claimPeriodDao: ClaimPeriodDao,
@@ -209,10 +212,17 @@ class NursingViewModel @Inject constructor(
         _matchedSalary2027.value = matchSalaryStepUseCase(grade, currentBasicSalary)
     }
 
-    fun loadEntriesForClaim(claimPeriodId: Long) = viewModelScope.launch {
-        observeClaimDailyEntriesUseCase(claimPeriodId).collect { entries ->
-            _dailyLogs.value = entries.map { it.toUiModel() }
+    private var entriesJob: Job? = null
+
+    fun loadEntriesForClaim(claimPeriodId: Long): Job {
+        entriesJob?.cancel()
+        val job = viewModelScope.launch {
+            observeClaimDailyEntriesUseCase(claimPeriodId).collect { entries ->
+                _dailyLogs.value = entries.map { it.toUiModel() }
+            }
         }
+        entriesJob = job
+        return job
     }
 
     fun saveDailyEntry(
@@ -255,6 +265,10 @@ class NursingViewModel @Inject constructor(
 
     suspend fun getDailyEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? =
         getDailyEntryForDateUseCase(claimPeriodId, date)
+
+    fun deleteDailyEntry(id: Long) = launchOperation(setOperationState) {
+        deleteDailyEntryByIdUseCase(id)
+    }
 
     fun calculateDailyEntryHours(
         logs: List<DailyLog>,

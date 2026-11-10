@@ -31,6 +31,12 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
         }
+        create("verification") {
+            initWith(buildTypes.getByName("debug"))
+            applicationIdSuffix = ".verification"
+            versionNameSuffix = "-verification"
+            matchingFallbacks += listOf("debug")
+        }
     }
 
     compileOptions {

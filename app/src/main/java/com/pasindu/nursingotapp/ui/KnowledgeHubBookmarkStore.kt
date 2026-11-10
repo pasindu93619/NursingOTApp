@@ -2,15 +2,20 @@ package com.pasindu.nursingotapp.ui
 
 import android.content.Context
 
-class KnowledgeHubBookmarkStore(context: Context) {
+interface BookmarkStore {
+    fun getBookmarkedIds(): Set<String>
+    fun setBookmarked(id: String, bookmarked: Boolean)
+}
+
+class KnowledgeHubBookmarkStore(context: Context) : BookmarkStore {
 
     private val preferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun getBookmarkedIds(): Set<String> =
+    override fun getBookmarkedIds(): Set<String> =
         preferences.getStringSet(KEY_BOOKMARKED_IDS, emptySet()).orEmpty()
 
-    fun setBookmarked(id: String, bookmarked: Boolean) {
+    override fun setBookmarked(id: String, bookmarked: Boolean) {
         val ids = getBookmarkedIds().toMutableSet()
         if (bookmarked) {
             ids.add(id)

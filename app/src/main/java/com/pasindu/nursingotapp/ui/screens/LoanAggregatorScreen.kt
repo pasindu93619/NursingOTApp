@@ -104,22 +104,23 @@ fun LoanCalculatorScreen(
     fun calculateLoan() {
         val loanAmount =
             principal
-                .replace(",", "")
+                .replace(',', '.')
                 .toDoubleOrNull()
                 ?: 0.0
 
         val annualInterest =
             interestRate
-                .replace(",", "")
+                .replace(',', '.')
                 .toDoubleOrNull()
                 ?: 0.0
 
         val loanYears =
             years
-                .toIntOrNull()
-                ?: 0
+                .replace(',', '.')
+                .toDoubleOrNull()
+                ?: 0.0
 
-        val months = loanYears * 12
+        val months = (loanYears * 12.0).toInt()
 
         if (
             loanAmount <= 0.0 ||
@@ -424,7 +425,7 @@ fun LoanCalculatorScreen(
                             keyboardOptions =
                                 KeyboardOptions(
                                     keyboardType =
-                                        KeyboardType.Number
+                                        KeyboardType.Decimal
                                 ),
                             singleLine = true,
                             shape =
@@ -739,7 +740,7 @@ fun LoanCalculatorScreen(
                             label =
                                 "Loan Period",
                             value =
-                                "${years.toIntOrNull() ?: 0} years",
+                                "${years.replace(',', '.').toDoubleOrNull()?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "0"} years",
                             valueColor =
                                 Slate
                         )

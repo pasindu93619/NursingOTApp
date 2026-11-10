@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,7 +46,10 @@ private val IvMintSoft = Color(0xFFEAFBF5)
 private val IvHeroGradient = Brush.horizontalGradient(listOf(Color(0xFF1769E8), Color(0xFF149FE3), Color(0xFF4B78F2), Color(0xFF7B5CEB)))
 
 @Composable
-fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
+fun IvDripCalculatorCard(
+    modifier: Modifier = Modifier,
+    onNavigateBack: (() -> Unit)? = null
+) {
     val haptic = LocalHapticFeedback.current
     var mode by remember { mutableStateOf(InfusionMode.GRAVITY) }
     var volumeMl by remember { mutableStateOf("") }
@@ -68,25 +72,25 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
     var showSync by remember { mutableStateOf(false) }
 
     val dropsPerMinute = remember(volumeMl, timeHours, timeMinutes, dropFactor) {
-        val volume = volumeMl.toFloatOrNull() ?: 0f
-        val hours = timeHours.toIntOrNull() ?: 0
-        val minutes = timeMinutes.toIntOrNull() ?: 0
-        val totalMinutes = hours * 60 + minutes
-        if (volume > 0f && totalMinutes > 0) ((volume * dropFactor) / totalMinutes).roundToInt() else 0
+        val volume = volumeMl.replace(',', '.').toFloatOrNull() ?: 0f
+        val hours = timeHours.replace(',', '.').toDoubleOrNull() ?: 0.0
+        val minutes = timeMinutes.replace(',', '.').toDoubleOrNull() ?: 0.0
+        val totalMinutes = hours * 60.0 + minutes
+        if (volume > 0f && totalMinutes > 0.0) ((volume * dropFactor) / totalMinutes).roundToInt() else 0
     }
 
     val pumpRateMlHr = remember(pumpMode, pumpVolume, pumpHours, weightKg, doseMcg, drugMg, bagMl, currentRate, oldDose, newDose) {
         when (pumpMode) {
             PumpCalcMode.BASIC -> {
-                val v = pumpVolume.toFloatOrNull() ?: 0f
-                val h = pumpHours.toFloatOrNull() ?: 0f
+                val v = pumpVolume.replace(',', '.').toFloatOrNull() ?: 0f
+                val h = pumpHours.replace(',', '.').toFloatOrNull() ?: 0f
                 if (h > 0f) (Math.round((v / h) * 10.0) / 10.0).toFloat() else 0f
             }
             PumpCalcMode.DOSE -> {
-                val w = weightKg.toFloatOrNull() ?: 0f
-                val d = doseMcg.toFloatOrNull() ?: 0f
-                val mg = drugMg.toFloatOrNull() ?: 0f
-                val ml = bagMl.toFloatOrNull() ?: 0f
+                val w = weightKg.replace(',', '.').toFloatOrNull() ?: 0f
+                val d = doseMcg.replace(',', '.').toFloatOrNull() ?: 0f
+                val mg = drugMg.replace(',', '.').toFloatOrNull() ?: 0f
+                val ml = bagMl.replace(',', '.').toFloatOrNull() ?: 0f
                 if (mg > 0f && ml > 0f) {
                     val mgPerHour = (w * d * 60f) / 1000f
                     val concentration = mg / ml
@@ -94,21 +98,29 @@ fun IvDripCalculatorCard(modifier: Modifier = Modifier) {
                 } else 0f
             }
             PumpCalcMode.TITRATION -> {
-                val r = currentRate.toFloatOrNull() ?: 0f
-                val old = oldDose.toFloatOrNull() ?: 0f
-                val next = newDose.toFloatOrNull() ?: 0f
+                val r = currentRate.replace(',', '.').toFloatOrNull() ?: 0f
+                val old = oldDose.replace(',', '.').toFloatOrNull() ?: 0f
+                val next = newDose.replace(',', '.').toFloatOrNull() ?: 0f
                 if (old > 0f) (Math.round((r * (next / old)) * 10.0) / 10.0).toFloat() else 0f
             }
         }
     }
 
     Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = IvSurface), shape = RoundedCornerShape(28.dp), elevation = CardDefaults.cardElevation(3.dp)) {
-        Column(Modifier.padding(18.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.imePadding().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.fillMaxWidth().background(IvHeroGradient, RoundedCornerShape(22.dp)).padding(20.dp)) {
-                Column {
-                    Text("CLINICAL TOOL", color = Color.White.copy(alpha = 0.75f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                    Text("IV Drip Sync", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
-                    Text("Simple infusion arithmetic, clear results, fewer taps.", color = Color.White.copy(alpha = 0.86f), fontSize = 11.sp)
+                Row(verticalAlignment = Alignment.Top) {
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("CLINICAL TOOL", color = Color.White.copy(alpha = 0.75f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                        Text("IV Drip Sync", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                        Text("Simple infusion arithmetic, clear results, fewer taps.", color = Color.White.copy(alpha = 0.86f), fontSize = 11.sp)
+                    }
                 }
             }
 
@@ -172,8 +184,8 @@ private fun GravityContent(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         OutlinedTextField(value = volume, onValueChange = onVolume, label = { Text("Total volume (mL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = hours, onValueChange = onHours, label = { Text("Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(16.dp))
-            OutlinedTextField(value = minutes, onValueChange = onMinutes, label = { Text("Minutes") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(16.dp))
+            OutlinedTextField(value = hours, onValueChange = onHours, label = { Text("Hours") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(16.dp))
+            OutlinedTextField(value = minutes, onValueChange = onMinutes, label = { Text("Minutes") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(16.dp))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

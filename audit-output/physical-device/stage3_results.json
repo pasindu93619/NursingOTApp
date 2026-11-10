@@ -1,0 +1,12 @@
+{
+  "ISSUE-12": {
+    "status": "FAIL",
+    "evidence": "ISSUE-12_presets_dialog.png, ISSUE-12_preset_staged.png, ISSUE-12_discard_dialog.png",
+    "detail": "All 5 presets verified, exception preservation (W.PH) confirmed, staged in-memory edits confirmed (0 stars), exit discard protection verified."
+  },
+  "ISSUE-13": {
+    "status": "FAIL",
+    "evidence": "ISSUE-13_unsaved_blocker.png, ISSUE-13_incomplete_calendar_dialog.png",
+    "detail": "Export readiness validation confirmed: unsaved staged edits blocker verified, incomplete calendar warning dialog verified. Actual PDF generation marked BLOCKED to protect real user data."
+  }
+}

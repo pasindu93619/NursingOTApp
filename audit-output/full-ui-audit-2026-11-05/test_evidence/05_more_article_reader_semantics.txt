@@ -1,0 +1,325 @@
+=== ROOT NODE 0 ===
+Printing with useUnmergedTree = 'false'
+Node #76 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #77 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #78 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsContainer = 'true'
+       |-Node #1321 at (l=0.0, t=110.0, r=1080.0, b=2267.0)px
+          |-Node #1322 at (l=0.0, t=110.0, r=1080.0, b=2267.0)px
+            IsContainer = 'true'
+             |-Node #1340 at (l=0.0, t=290.0, r=1080.0, b=2267.0)px
+             | CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@6614b27'
+             | IsTraversalGroup = 'true'
+             | VerticalScrollAxisRange = 'ScrollAxisRange(value=1953.0, maxValue=2053.0, reverseScrolling=false)'
+             | Actions = [GetScrollViewportLength, IndexForKey, ScrollBy, ScrollByOffset, ScrollToIndex]
+             |  |-Node #1390 at (l=45.0, t=-663.0, r=733.0, b=-595.0)px
+             |  | Text = '[Evidence & Clinical Discovery]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1391 at (l=45.0, t=-595.0, r=865.0, b=-527.0)px
+             |  | Text = '[Search verified international guidelines and national standards.]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1392 at (l=921.0, t=-652.0, r=1035.0, b=-538.0)px
+             |  | IsContainer = 'true'
+             |  |-Node #1394 at (l=45.0, t=-499.0, r=1035.0, b=-273.0)px
+             |  | ContentDataType = 'AndroidContentDataType(androidAutofillType=1)'
+             |  | ContentDescription = '[Search]'
+             |  | EditableText = ''
+             |  | Focused = 'false'
+             |  | ImeAction = 'Default'
+             |  | InputText = ''
+             |  | IsEditable = 'true'
+             |  | Text = '[Search clinical guidelines, evidence, protocols…]'
+             |  | TextSelectionRange = 'TextRange(0, 0)'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, InsertTextAtCursor, OnAutofillText, OnClick, OnLongClick, PasteText, PerformImeAction, RequestFocus, SetSelection, SetText, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |-Node #1406 at (l=45.0, t=-245.0, r=1035.0, b=-110.0)px
+             |  | HorizontalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=860.0, reverseScrolling=false)'
+             |  | IsTraversalGroup = 'true'
+             |  | Actions = [ScrollBy, ScrollByOffset]
+             |  |  |-Node #1407 at (l=48.0, t=-222.0, r=178.0, b=-132.0)px
+             |  |  | Focused = 'false'
+             |  |  | Role = 'Checkbox'
+             |  |  | Selected = 'true'
+             |  |  | Text = '[All]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  |  | MergeDescendants = 'true'
+             |  |  |-Node #1411 at (l=203.0, t=-222.0, r=466.0, b=-132.0)px
+             |  |  | Focused = 'false'
+             |  |  | Role = 'Checkbox'
+             |  |  | Selected = 'false'
+             |  |  | Text = '[Critical Care]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  |  | MergeDescendants = 'true'
+             |  |  |-Node #1415 at (l=489.0, t=-222.0, r=861.0, b=-132.0)px
+             |  |  | Focused = 'false'
+             |  |  | Role = 'Checkbox'
+             |  |  | Selected = 'false'
+             |  |  | Text = '[Infection Prevention]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  |  | MergeDescendants = 'true'
+             |  |  |-Node #1419 at (l=884.0, t=-222.0, r=1226.0, b=-132.0)px
+             |  |  | Focused = 'false'
+             |  |  | Role = 'Checkbox'
+             |  |  | Selected = 'false'
+             |  |  | Text = '[Medication Safety]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  |  | MergeDescendants = 'true'
+             |  |  |-Node #1423 at (l=1249.0, t=-222.0, r=1586.0, b=-132.0)px
+             |  |  | Focused = 'false'
+             |  |  | Role = 'Checkbox'
+             |  |  | Selected = 'false'
+             |  |  | Text = '[Ministry Circulars]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  |  | MergeDescendants = 'true'
+             |  |  |-Node #1427 at (l=1609.0, t=-222.0, r=1895.0, b=-132.0)px
+             |  |    Focused = 'false'
+             |  |    Role = 'Checkbox'
+             |  |    Selected = 'false'
+             |  |    Text = '[Patient Safety]'
+             |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1431 at (l=45.0, t=-82.0, r=1035.0, b=554.0)px
+             |  | Focused = 'false'
+             |  | IsContainer = 'true'
+             |  | Text = '[WHO South-East Asia, CLINICAL PRACTICE GUIDELINE, Clinical Management of Severe Dengue & Critical Phase Fluid Resuscitation, Comprehensive protocol detailing hourly fluid titrations, hematocrit monitoring, and early recognition of plasma leakage in adult and pediatric dengue patients., Full In-App Text, 2024-03-15]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |  |-Node #1441 at (l=855.0, t=-37.0, r=990.0, b=98.0)px
+             |  |    ContentDescription = '[Bookmark article]'
+             |  |    Focused = 'false'
+             |  |    Role = 'Button'
+             |  |    Actions = [OnClick, RequestFocus]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1450 at (l=45.0, t=582.0, r=1035.0, b=1218.0)px
+             |  | Focused = 'false'
+             |  | IsContainer = 'true'
+             |  | Text = '[Europe PMC Open Access, EMERGENCY PROTOCOL, Surviving Sepsis Campaign: Hour-1 Bundle & Nursing Operational Protocols, Evidence-based bedside framework focusing on rapid recognition, blood cultures prior to antibiotics, broad-spectrum antimicrobial administration, and lactate clearance., Full In-App Text, 2024-06-20]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |  |-Node #1460 at (l=855.0, t=627.0, r=990.0, b=762.0)px
+             |  |    ContentDescription = '[Bookmark article]'
+             |  |    Focused = 'false'
+             |  |    Role = 'Button'
+             |  |    Actions = [OnClick, RequestFocus]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1469 at (l=45.0, t=1246.0, r=1035.0, b=1882.0)px
+             |  | Focused = 'false'
+             |  | IsContainer = 'true'
+             |  | Text = '[RNAO Best Practice, CLINICAL PRACTICE GUIDELINE, Assessment & Management of Pressure Injuries for Interprofessional Teams, Registered Nurses' Association of Ontario practice guideline on comprehensive skin risk assessment (Braden scale), microclimate control, and pressure redistribution., Summary & Abstract, 2023-11-10]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |  |-Node #1479 at (l=855.0, t=1291.0, r=990.0, b=1426.0)px
+             |  |    ContentDescription = '[Bookmark article]'
+             |  |    Focused = 'false'
+             |  |    Role = 'Button'
+             |  |    Actions = [OnClick, RequestFocus]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1488 at (l=45.0, t=1910.0, r=1035.0, b=2546.0)px
+             |  | Focused = 'false'
+             |  | IsContainer = 'true'
+             |  | Text = '[Ministry of Health Sri Lanka, MEDICATION SAFETY UPDATE, High-Alert Medication Safety & Dual-Verification Standard for IV Infusions, National Sri Lankan Ministry of Health protocol establishing mandatory independent double-checking rules for potassium chloride, heparin, insulin, and cytotoxic agents., Full In-App Text, 2025-08-14]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |  |-Node #1498 at (l=855.0, t=1955.0, r=990.0, b=2090.0)px
+             |  |    ContentDescription = '[Bookmark article]'
+             |  |    Focused = 'false'
+             |  |    Role = 'Button'
+             |  |    Actions = [OnClick, RequestFocus]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1507 at (l=45.0, t=2574.0, r=1035.0, b=3162.0)px
+             |  | Focused = 'false'
+             |  | IsContainer = 'true'
+             |  | Text = '[Ministry of Health Sri Lanka, GOVERNMENT CIRCULAR, Infection Control & PPE Protocols in Oncology Units, Updated Ministry of Health standard operating procedures for central line dressing changes and cytotoxic waste disposal., Full In-App Text, 2026-05-12]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |  |-Node #1517 at (l=855.0, t=2619.0, r=990.0, b=2754.0)px
+             |  |    ContentDescription = '[Bookmark article]'
+             |  |    Focused = 'false'
+             |  |    Role = 'Button'
+             |  |    Actions = [OnClick, RequestFocus]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1526 at (l=45.0, t=3190.0, r=1035.0, b=3778.0)px
+             |  | Focused = 'false'
+             |  | IsContainer = 'true'
+             |  | Text = '[Ministry of Health Sri Lanka, GOVERNMENT CIRCULAR, Emergency Resuscitation & Defibrillator Checklist Compliance, Mandatory daily shift verification of crash cart emergency trays and pediatric laryngoscope blade readiness., Full In-App Text, 2026-06-01]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |  | MergeDescendants = 'true'
+             |  |  |-Node #1536 at (l=855.0, t=3235.0, r=990.0, b=3370.0)px
+             |  |    ContentDescription = '[Bookmark article]'
+             |  |    Focused = 'false'
+             |  |    Role = 'Button'
+             |  |    Actions = [OnClick, RequestFocus]
+             |  |    MergeDescendants = 'true'
+             |  |-Node #1545 at (l=45.0, t=3806.0, r=1035.0, b=4442.0)px
+             |    Focused = 'false'
+             |    IsContainer = 'true'
+             |    Text = '[Ministry of Health Sri Lanka, GOVERNMENT CIRCULAR, Revised Night Shift Resting Hours and Roster Allocation, Guidelines ensuring maximum consecutive night shift limits to mitigate clinical fatigue and safeguard medication administration., Full In-App Text, 2026-07-15]'
+             |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             |    MergeDescendants = 'true'
+             |     |-Node #1555 at (l=855.0, t=3851.0, r=990.0, b=3986.0)px
+             |       ContentDescription = '[Bookmark article]'
+             |       Focused = 'false'
+             |       Role = 'Button'
+             |       Actions = [OnClick, RequestFocus]
+             |       MergeDescendants = 'true'
+             |-Node #1325 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+               IsContainer = 'true'
+                |-Node #1326 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+                   |-Node #1328 at (l=22.0, t=143.0, r=135.0, b=256.0)px
+                   | ContentDescription = '[Back]'
+                   | Focused = 'false'
+                   | Role = 'Button'
+                   | Actions = [OnClick, RequestFocus]
+                   | MergeDescendants = 'true'
+                   |-Node #1330 at (l=157.0, t=132.0, r=684.0, b=268.0)px
+                      |-Node #1332 at (l=157.0, t=132.0, r=509.0, b=200.0)px
+                      | Text = '[Knowledge Hub]'
+                      | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+                      |-Node #1333 at (l=157.0, t=200.0, r=684.0, b=268.0)px
+                        Text = '[Evidence • Practice • Continuous Learning]'
+                        Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+
+========================================
+
+=== ROOT NODE 1 ===
+Printing with useUnmergedTree = 'false'
+Node #1564 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #1565 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   [IsDialog]
+    |-Node #1566 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsTraversalGroup = 'true'
+       |-Node #1567 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+       | ContentDescription = '[Close sheet]'
+       | TraversalIndex = '1.0'
+       | Actions = [OnClick]
+       | MergeDescendants = 'true'
+       |-Node #1568 at (l=0.0, t=0.0, r=1080.0, b=2208.0)px
+         IsContainer = 'true'
+         PaneTitle = 'Bottom sheet'
+         TraversalIndex = '0.0'
+          |-Node #1569 at (l=0.0, t=0.0, r=1080.0, b=2075.0)px
+             |-Node #1570 at (l=495.0, t=0.0, r=585.0, b=135.0)px
+             | ContentDescription = '[Drag handle]'
+             | IsContainer = 'true'
+             | Actions = [Dismiss]
+             | MergeDescendants = 'true'
+             |-Node #1575 at (l=56.0, t=158.0, r=416.0, b=248.0)px
+             | IsContainer = 'true'
+             |  |-Node #1576 at (l=84.0, t=169.0, r=388.0, b=237.0)px
+             |    Text = '[WHO South-East Asia]'
+             |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |-Node #1578 at (l=731.0, t=135.0, r=866.0, b=270.0)px
+             | ContentDescription = '[Bookmark article]'
+             | Focused = 'false'
+             | Role = 'Button'
+             | Actions = [OnClick, RequestFocus]
+             | MergeDescendants = 'true'
+             |-Node #1580 at (l=889.0, t=135.0, r=1024.0, b=270.0)px
+             | ContentDescription = '[Close reader]'
+             | Focused = 'false'
+             | Role = 'Button'
+             | Actions = [OnClick, RequestFocus]
+             | MergeDescendants = 'true'
+             |-Node #1583 at (l=56.0, t=307.0, r=1024.0, b=1872.0)px
+             | IsTraversalGroup = 'true'
+             | VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=1754.0, reverseScrolling=false)'
+             | Actions = [ScrollBy, ScrollByOffset]
+             |  |-Node #1585 at (l=56.0, t=352.0, r=1024.0, b=574.0)px
+             |  | Text = '[Clinical Management of Severe Dengue & Critical Phase Fluid Resuscitation]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1587 at (l=56.0, t=591.0, r=369.0, b=659.0)px
+             |  | Text = '[Published: 2024-03-15]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1588 at (l=397.0, t=591.0, r=765.0, b=659.0)px
+             |  | Text = '[•  ISBN 978-92-9022-247-7]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1589 at (l=56.0, t=704.0, r=1024.0, b=1071.0)px
+             |  | IsContainer = 'true'
+             |  |  |-Node #1592 at (l=95.0, t=743.0, r=633.0, b=811.0)px
+             |  |  | Text = '[AT-A-GLANCE CLINICAL SUMMARY]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |  |-Node #1593 at (l=95.0, t=828.0, r=985.0, b=1032.0)px
+             |  |    Text = '[Comprehensive protocol detailing hourly fluid titrations, hematocrit monitoring, and early recognition of plasma leakage in adult and pediatric dengue patients.]'
+             |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1594 at (l=56.0, t=1116.0, r=1024.0, b=1476.0)px
+             |  | IsContainer = 'true'
+             |  |  |-Node #1599 at (l=157.0, t=1155.0, r=828.0, b=1223.0)px
+             |  |  | Text = '[SAFETY WARNINGS & CONTRAINDICATIONS]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |  |-Node #1600 at (l=95.0, t=1240.0, r=985.0, b=1330.0)px
+             |  |  | Text = '[•  Contraindicated: Intramuscular injections and NSAIDs (e.g., Diclofenac, Ibuprofen) due to severe hemorrhage risk.]'
+             |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |  |-Node #1601 at (l=95.0, t=1347.0, r=985.0, b=1437.0)px
+             |  |    Text = '[•  Colloid infusion (e.g. Dextran 40) is reserved strictly for refractory shock unresponsive to crystalloids.]'
+             |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1603 at (l=56.0, t=1521.0, r=662.0, b=1589.0)px
+             |  | Text = '[Key Clinical Recommendations]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1605 at (l=56.0, t=1612.0, r=112.0, b=1668.0)px
+             |  | IsContainer = 'true'
+             |  |  |-Node #1607 at (l=76.0, t=1612.0, r=93.0, b=1668.0)px
+             |  |    Text = '[1]'
+             |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1608 at (l=135.0, t=1612.0, r=1024.0, b=1756.0)px
+             |  | Text = '[Monitor vital signs and urine output hourly during the critical phase (leakage window typically lasting 24-48 hours).]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1610 at (l=56.0, t=1779.0, r=112.0, b=1835.0)px
+             |  | IsContainer = 'true'
+             |  |  |-Node #1612 at (l=76.0, t=1779.0, r=93.0, b=1835.0)px
+             |  |    Text = '[2]'
+             |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1613 at (l=135.0, t=1779.0, r=1024.0, b=1875.0)px
+             |  | Text = '[Target minimum urine output of 0.5 mL/kg/hour in adults (1.0 mL/kg/hour in pediatrics).]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1615 at (l=56.0, t=1898.0, r=112.0, b=1954.0)px
+             |  | IsContainer = 'true'
+             |  |  |-Node #1617 at (l=76.0, t=1898.0, r=93.0, b=1954.0)px
+             |  |    Text = '[3]'
+             |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1618 at (l=135.0, t=1898.0, r=1024.0, b=2042.0)px
+             |  | Text = '[Avoid excessive isotonic crystalloid boluses; step down fluid rates as hematocrit stabilizes to prevent pulmonary edema.]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1620 at (l=56.0, t=2087.0, r=542.0, b=2155.0)px
+             |  | Text = '[Bedside Nursing Actions]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1623 at (l=124.0, t=2178.0, r=1024.0, b=2274.0)px
+             |  | Text = '[Maintain dedicated hourly fluid balance chart (intake vs output).]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1626 at (l=124.0, t=2297.0, r=1024.0, b=2393.0)px
+             |  | Text = '[Report immediately if platelet count falls below 50,000/uL with mucosal bleeding.]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1629 at (l=124.0, t=2416.0, r=1024.0, b=2512.0)px
+             |  | Text = '[Place two large-bore peripheral cannulae if signs of significant hemoconcentration arise.]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1631 at (l=56.0, t=2557.0, r=422.0, b=2625.0)px
+             |  | Text = '[Document Content]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1632 at (l=56.0, t=2642.0, r=1024.0, b=3101.0)px
+             |  | Text = '[Dengue continues to represent a significant public health priority in tropical South-East Asia. The hallmark of severe dengue is increased vascular permeability resulting in plasma leakage into extravascular spaces. The critical phase typically begins around defervescence (days 3 to 7 of illness) and persists for 24 to 48 hours. Judicious, volume-restricted fluid resuscitation guided by sequential hematocrit monitoring remains the cornerstone of reducing dengue mortality to below 0.5%.]'
+             |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |  |-Node #1633 at (l=56.0, t=3146.0, r=1024.0, b=3508.0)px
+             |    IsContainer = 'true'
+             |     |-Node #1635 at (l=90.0, t=3180.0, r=560.0, b=3248.0)px
+             |     | Text = '[SOURCE ATTRIBUTION & PROVENANCE]'
+             |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |     |-Node #1636 at (l=90.0, t=3259.0, r=651.0, b=3327.0)px
+             |     | Text = '[Official Issuing Body: WHO South-East Asia]'
+             |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |     |-Node #1637 at (l=90.0, t=3338.0, r=990.0, b=3474.0)px
+             |       Text = '[Licence: Open Access - World Health Organization (CC BY-NC-SA 3.0 IGO)]'
+             |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |-Node #1639 at (l=56.0, t=1872.0, r=1024.0, b=2075.0)px
+               IsContainer = 'true'
+                |-Node #1641 at (l=56.0, t=1906.0, r=526.0, b=2041.0)px
+                | Focused = 'false'
+                | Role = 'Button'
+                | Text = '[Save for Shift]'
+                | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+                | MergeDescendants = 'true'
+                |-Node #1646 at (l=554.0, t=1906.0, r=1024.0, b=2041.0)px
+                  Focused = 'false'
+                  Role = 'Button'
+                  Text = '[Original Source]'
+                  Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+                  MergeDescendants = 'true'

@@ -1,0 +1,503 @@
+=== ROOT NODE 0 ===
+Printing with useUnmergedTree = 'false'
+Node #76 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #77 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #78 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsContainer = 'true'
+       |-Node #854 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |  |-Node #855 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |    IsContainer = 'true'
+       |     |-Node #878 at (l=0.0, t=290.0, r=1080.0, b=2042.0)px
+       |     | IsTraversalGroup = 'true'
+       |     | VerticalScrollAxisRange = 'ScrollAxisRange(value=1514.0, maxValue=7323.0, reverseScrolling=false)'
+       |     | Actions = [ScrollBy, ScrollByOffset]
+       |     |  |-Node #885 at (l=45.0, t=-1196.0, r=1035.0, b=-402.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #887 at (l=101.0, t=-1140.0, r=979.0, b=-458.0)px
+       |     |  |     |-Node #890 at (l=101.0, t=-1140.0, r=449.0, b=-1026.0)px
+       |     |  |     | IsContainer = 'true'
+       |     |  |     |  |-Node #891 at (l=135.0, t=-1117.0, r=415.0, b=-1049.0)px
+       |     |  |     |    Text = '[THIS CLAIM PERIOD]'
+       |     |  |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #892 at (l=855.0, t=-1140.0, r=979.0, b=-1016.0)px
+       |     |  |     | IsContainer = 'true'
+       |     |  |     |-Node #895 at (l=101.0, t=-974.0, r=411.0, b=-906.0)px
+       |     |  |     | Text = '[Estimated Net Pay]'
+       |     |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #896 at (l=101.0, t=-906.0, r=444.0, b=-800.0)px
+       |     |  |     | Text = '[Rs. 0.00]'
+       |     |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #899 at (l=101.0, t=-758.0, r=526.0, b=-554.0)px
+       |     |  |     | IsContainer = 'true'
+       |     |  |     |  |-Node #901 at (l=135.0, t=-724.0, r=211.0, b=-656.0)px
+       |     |  |     |  | Text = '[GROSS]'
+       |     |  |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |  |-Node #902 at (l=135.0, t=-656.0, r=296.0, b=-588.0)px
+       |     |  |     |    Text = '[Rs. 0.00]'
+       |     |  |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #903 at (l=554.0, t=-758.0, r=979.0, b=-554.0)px
+       |     |  |     | IsContainer = 'true'
+       |     |  |     |  |-Node #905 at (l=588.0, t=-724.0, r=618.0, b=-656.0)px
+       |     |  |     |  | Text = '[OT]'
+       |     |  |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |  |-Node #906 at (l=588.0, t=-656.0, r=749.0, b=-588.0)px
+       |     |  |     |    Text = '[Rs. 0.00]'
+       |     |  |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #908 at (l=101.0, t=-526.0, r=720.0, b=-458.0)px
+       |     |  |       Text = '[Calculated from the current saved finance data.]'
+       |     |  |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #910 at (l=51.0, t=-363.0, r=403.0, b=-295.0)px
+       |     |  | Text = '[01 • EARNINGS OVERVIEW]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #911 at (l=51.0, t=-295.0, r=625.0, b=-227.0)px
+       |     |  | Text = '[Your money at a glance]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #912 at (l=51.0, t=-227.0, r=541.0, b=-159.0)px
+       |     |  | Text = '[A clear summary of this claim period.]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #914 at (l=45.0, t=-120.0, r=276.0, b=227.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #916 at (l=73.0, t=-92.0, r=146.0, b=-19.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #919 at (l=73.0, t=-5.0, r=143.0, b=63.0)px
+       |     |  |  | Text = '[Gross]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #920 at (l=73.0, t=63.0, r=202.0, b=131.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #921 at (l=73.0, t=131.0, r=126.0, b=199.0)px
+       |     |  |    Text = '[Total]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #922 at (l=299.0, t=-120.0, r=529.0, b=227.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #924 at (l=327.0, t=-92.0, r=400.0, b=-19.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #927 at (l=327.0, t=-5.0, r=361.0, b=63.0)px
+       |     |  |  | Text = '[OT]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #928 at (l=327.0, t=63.0, r=456.0, b=131.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #929 at (l=327.0, t=131.0, r=378.0, b=199.0)px
+       |     |  |    Text = '[0.0 h]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #930 at (l=552.0, t=-120.0, r=782.0, b=227.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #932 at (l=580.0, t=-92.0, r=653.0, b=-19.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #935 at (l=580.0, t=-5.0, r=716.0, b=63.0)px
+       |     |  |  | Text = '[Deductions]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #936 at (l=580.0, t=63.0, r=606.0, b=131.0)px
+       |     |  |  | Text = '[—]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #937 at (l=580.0, t=131.0, r=598.0, b=199.0)px
+       |     |  |    Text = '[—]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #938 at (l=805.0, t=-120.0, r=1035.0, b=227.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #940 at (l=833.0, t=-92.0, r=906.0, b=-19.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #943 at (l=833.0, t=-5.0, r=927.0, b=63.0)px
+       |     |  |  | Text = '[Net Pay]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #944 at (l=833.0, t=63.0, r=962.0, b=131.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #945 at (l=833.0, t=131.0, r=948.0, b=199.0)px
+       |     |  |    Text = '[Take home]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #947 at (l=51.0, t=266.0, r=358.0, b=334.0)px
+       |     |  | Text = '[02 • WORKLOAD PULSE]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #948 at (l=51.0, t=334.0, r=734.0, b=402.0)px
+       |     |  | Text = '[Your duty & OT contribution]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #949 at (l=51.0, t=402.0, r=698.0, b=470.0)px
+       |     |  | Text = '[Work inputs behind the current financial estimate.]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #950 at (l=45.0, t=509.0, r=1035.0, b=1493.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #954 at (l=90.0, t=597.0, r=208.0, b=715.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #958 at (l=236.0, t=554.0, r=560.0, b=622.0)px
+       |     |  |  | Text = '[Workload Pulse]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #959 at (l=236.0, t=622.0, r=814.0, b=758.0)px
+       |     |  |  | Text = '[0 full Sunday–Saturday week(s) • 36h standard each]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #960 at (l=814.0, t=602.0, r=990.0, b=710.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #961 at (l=842.0, t=622.0, r=962.0, b=690.0)px
+       |     |  |  |    Text = '[0h target]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #963 at (l=90.0, t=837.0, r=839.0, b=905.0)px
+       |     |  |  | Text = '[No full Sunday–Saturday week is inside this claim period.]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #966 at (l=90.0, t=973.0, r=528.0, b=1179.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #968 at (l=121.0, t=1004.0, r=249.0, b=1072.0)px
+       |     |  |  |  | Text = '[Normal Duty]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #970 at (l=121.0, t=1080.0, r=207.0, b=1148.0)px
+       |     |  |  |    Text = '[0.0 h]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #971 at (l=551.0, t=973.0, r=990.0, b=1179.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #973 at (l=582.0, t=1004.0, r=677.0, b=1072.0)px
+       |     |  |  |  | Text = '[Overtime]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #975 at (l=582.0, t=1080.0, r=668.0, b=1148.0)px
+       |     |  |  |    Text = '[0.0 h]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #978 at (l=90.0, t=1242.0, r=528.0, b=1448.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #980 at (l=121.0, t=1273.0, r=153.0, b=1341.0)px
+       |     |  |  |  | Text = '[PH]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #982 at (l=121.0, t=1349.0, r=231.0, b=1417.0)px
+       |     |  |  |    Text = '[0 days]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #983 at (l=551.0, t=1242.0, r=990.0, b=1448.0)px
+       |     |  |    IsContainer = 'true'
+       |     |  |     |-Node #985 at (l=582.0, t=1273.0, r=613.0, b=1341.0)px
+       |     |  |     | Text = '[DO]'
+       |     |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #987 at (l=582.0, t=1349.0, r=692.0, b=1417.0)px
+       |     |  |       Text = '[0 days]'
+       |     |  |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #989 at (l=51.0, t=1532.0, r=330.0, b=1600.0)px
+       |     |  | Text = '[03 • FINANCE TOOLS]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #990 at (l=51.0, t=1600.0, r=549.0, b=1668.0)px
+       |     |  | Text = '[Open what you need]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #991 at (l=51.0, t=1668.0, r=653.0, b=1736.0)px
+       |     |  | Text = '[Quick access without hiding the detailed data.]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #994 at (l=45.0, t=1775.0, r=528.0, b=1979.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[My Salary, Full breakdown]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #1004 at (l=551.0, t=1775.0, r=1035.0, b=1979.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[Pay Rates, Current rates]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #1015 at (l=45.0, t=2002.0, r=528.0, b=2206.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[Loan / Advance, Commitment inputs]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #1025 at (l=551.0, t=2002.0, r=1035.0, b=2206.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[Pay Sheet Bank, Saved documents]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #1035 at (l=45.0, t=2245.0, r=1035.0, b=2465.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[Pay Sheet Bank, Open saved pay sheets]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #1045 at (l=45.0, t=2504.0, r=1035.0, b=3269.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #1049 at (l=90.0, t=2560.0, r=204.0, b=2674.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1053 at (l=229.0, t=2549.0, r=528.0, b=2617.0)px
+       |     |  |  | Text = '[Quick Insights]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1054 at (l=229.0, t=2617.0, r=677.0, b=2685.0)px
+       |     |  |  | Text = '[Facts from the current saved state]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1056 at (l=90.0, t=2753.0, r=990.0, b=3025.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #1058 at (l=124.0, t=2787.0, r=552.0, b=2855.0)px
+       |     |  |  |  | Text = '[Estimated net pay: Rs. 0.00]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1059 at (l=124.0, t=2855.0, r=956.0, b=2991.0)px
+       |     |  |  |    Text = '[OT contributes Rs. 0.00. Listed paysheet deductions are Rs. 0.00.]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1061 at (l=90.0, t=3088.0, r=990.0, b=3224.0)px
+       |     |  |    Text = '[No percentage trend is shown because this state does not provide a previous-period comparison.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1063 at (l=51.0, t=3308.0, r=374.0, b=3376.0)px
+       |     |  | Text = '[04 • MONEY MOVEMENT]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1064 at (l=51.0, t=3376.0, r=637.0, b=3444.0)px
+       |     |  | Text = '[How your money moves]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1065 at (l=51.0, t=3444.0, r=930.0, b=3512.0)px
+       |     |  | Text = '[Each component comes from the same deterministic finance state.]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1066 at (l=45.0, t=3551.0, r=1035.0, b=5477.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #1071 at (l=90.0, t=3596.0, r=681.0, b=3664.0)px
+       |     |  |  | Text = '[How Your Money Moves]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1072 at (l=90.0, t=3664.0, r=579.0, b=3732.0)px
+       |     |  |  | Text = '[Gross → deductions → estimated net]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1073 at (l=877.0, t=3610.0, r=990.0, b=3718.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #1074 at (l=905.0, t=3630.0, r=962.0, b=3698.0)px
+       |     |  |  |    Text = '[LIVE]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1076 at (l=90.0, t=3811.0, r=990.0, b=3957.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #1077 at (l=129.0, t=3850.0, r=951.0, b=3918.0)px
+       |     |  |  |     |-Node #1079 at (l=129.0, t=3850.0, r=234.0, b=3918.0)px
+       |     |  |  |     | Text = '[GROSS]'
+       |     |  |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |     |-Node #1080 at (l=757.0, t=3850.0, r=951.0, b=3918.0)px
+       |     |  |  |       Text = '[Rs. 0.00]'
+       |     |  |  |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1083 at (l=90.0, t=4052.0, r=172.0, b=4134.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1087 at (l=197.0, t=4025.0, r=275.0, b=4093.0)px
+       |     |  |  | Text = '[Basic]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1088 at (l=197.0, t=4093.0, r=353.0, b=4161.0)px
+       |     |  |  | Text = '[Added to gross]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1089 at (l=861.0, t=4059.0, r=990.0, b=4127.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1092 at (l=90.0, t=4248.0, r=172.0, b=4330.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1096 at (l=197.0, t=4221.0, r=237.0, b=4289.0)px
+       |     |  |  | Text = '[OT]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1097 at (l=197.0, t=4289.0, r=353.0, b=4357.0)px
+       |     |  |  | Text = '[Added to gross]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1098 at (l=861.0, t=4255.0, r=990.0, b=4323.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1101 at (l=90.0, t=4444.0, r=172.0, b=4526.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1105 at (l=197.0, t=4417.0, r=239.0, b=4485.0)px
+       |     |  |  | Text = '[PH]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1106 at (l=197.0, t=4485.0, r=353.0, b=4553.0)px
+       |     |  |  | Text = '[Added to gross]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1107 at (l=861.0, t=4451.0, r=990.0, b=4519.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1110 at (l=90.0, t=4640.0, r=172.0, b=4722.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1114 at (l=197.0, t=4613.0, r=240.0, b=4681.0)px
+       |     |  |  | Text = '[DO]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1115 at (l=197.0, t=4681.0, r=353.0, b=4749.0)px
+       |     |  |  | Text = '[Added to gross]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1116 at (l=861.0, t=4647.0, r=990.0, b=4715.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1119 at (l=90.0, t=4836.0, r=172.0, b=4918.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1123 at (l=197.0, t=4809.0, r=360.0, b=4877.0)px
+       |     |  |  | Text = '[Allowances]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1124 at (l=197.0, t=4877.0, r=353.0, b=4945.0)px
+       |     |  |  | Text = '[Added to gross]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1125 at (l=861.0, t=4843.0, r=990.0, b=4911.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1129 at (l=90.0, t=5069.0, r=172.0, b=5151.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |-Node #1133 at (l=197.0, t=5042.0, r=358.0, b=5110.0)px
+       |     |  |  | Text = '[Deductions]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1134 at (l=197.0, t=5110.0, r=320.0, b=5178.0)px
+       |     |  |  | Text = '[Not entered]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1135 at (l=964.0, t=5076.0, r=990.0, b=5144.0)px
+       |     |  |  | Text = '[—]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1138 at (l=90.0, t=5286.0, r=990.0, b=5432.0)px
+       |     |  |    IsContainer = 'true'
+       |     |  |     |-Node #1139 at (l=129.0, t=5325.0, r=951.0, b=5393.0)px
+       |     |  |        |-Node #1141 at (l=129.0, t=5325.0, r=380.0, b=5393.0)px
+       |     |  |        | Text = '[ESTIMATED NET]'
+       |     |  |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |        |-Node #1142 at (l=757.0, t=5325.0, r=951.0, b=5393.0)px
+       |     |  |          Text = '[Rs. 0.00]'
+       |     |  |          Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1144 at (l=51.0, t=5516.0, r=339.0, b=5584.0)px
+       |     |  | Text = '[05 • PAY RATES USED]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1145 at (l=51.0, t=5584.0, r=628.0, b=5652.0)px
+       |     |  | Text = '[Current rate references]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1146 at (l=51.0, t=5652.0, r=693.0, b=5720.0)px
+       |     |  | Text = '[Reference values used by this financial summary.]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1147 at (l=45.0, t=5759.0, r=1035.0, b=6574.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #1151 at (l=90.0, t=5804.0, r=374.0, b=6081.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #1153 at (l=121.0, t=5835.0, r=155.0, b=5903.0)px
+       |     |  |  |  | Text = '[OT]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1155 at (l=121.0, t=5914.0, r=250.0, b=5982.0)px
+       |     |  |  |  | Text = '[Rs. 0.00]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1156 at (l=121.0, t=5982.0, r=207.0, b=6050.0)px
+       |     |  |  |    Text = '[per hour]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1157 at (l=397.0, t=5804.0, r=682.0, b=6217.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #1159 at (l=428.0, t=5835.0, r=464.0, b=5903.0)px
+       |     |  |  |  | Text = '[PH]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1161 at (l=428.0, t=5914.0, r=651.0, b=6118.0)px
+       |     |  |  |  | Text = '[Rate not matched, check profile]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1162 at (l=428.0, t=6118.0, r=503.0, b=6186.0)px
+       |     |  |  |    Text = '[per day]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1163 at (l=705.0, t=5804.0, r=990.0, b=6217.0)px
+       |     |  |  | IsContainer = 'true'
+       |     |  |  |  |-Node #1165 at (l=736.0, t=5835.0, r=876.0, b=5903.0)px
+       |     |  |  |  | Text = '[Working DO]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1167 at (l=736.0, t=5914.0, r=959.0, b=6118.0)px
+       |     |  |  |  | Text = '[Rate not matched, check profile]'
+       |     |  |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |  |-Node #1168 at (l=736.0, t=6118.0, r=811.0, b=6186.0)px
+       |     |  |  |    Text = '[per day]'
+       |     |  |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1170 at (l=90.0, t=6285.0, r=389.0, b=6353.0)px
+       |     |  |  | Text = '[Grade  • Step —]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1171 at (l=90.0, t=6373.0, r=470.0, b=6441.0)px
+       |     |  |  | Text = '[OT • From , Step grade policy]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1172 at (l=90.0, t=6461.0, r=621.0, b=6529.0)px
+       |     |  |    Text = '[PH / Working DO • From 2027 basic ÷ 30]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1174 at (l=51.0, t=6613.0, r=480.0, b=6681.0)px
+       |     |  | Text = '[06 • FINANCIAL COMMITMENTS]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1175 at (l=51.0, t=6681.0, r=769.0, b=6749.0)px
+       |     |  | Text = '[What reduces take-home pay]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1176 at (l=51.0, t=6749.0, r=745.0, b=6817.0)px
+       |     |  | Text = '[Current listed deductions and external commitments.]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1177 at (l=45.0, t=6856.0, r=1035.0, b=7462.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #1181 at (l=90.0, t=6901.0, r=363.0, b=6969.0)px
+       |     |  |  | Text = '[Paysheet deductions]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1182 at (l=881.0, t=6901.0, r=990.0, b=6969.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1184 at (l=90.0, t=6989.0, r=295.0, b=7057.0)px
+       |     |  |  | Text = '[Loan / Advance]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1185 at (l=881.0, t=6989.0, r=990.0, b=7057.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1187 at (l=90.0, t=7077.0, r=299.0, b=7145.0)px
+       |     |  |  | Text = '[Other deduction]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1188 at (l=881.0, t=7077.0, r=990.0, b=7145.0)px
+       |     |  |  | Text = '[Rs. 0.00]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #1190 at (l=90.0, t=7199.0, r=990.0, b=7417.0)px
+       |     |  |    IsContainer = 'true'
+       |     |  |     |-Node #1193 at (l=124.0, t=7233.0, r=421.0, b=7301.0)px
+       |     |  |     | Text = '[External commitments]'
+       |     |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #1194 at (l=847.0, t=7233.0, r=956.0, b=7301.0)px
+       |     |  |     | Text = '[Rs. 0.00]'
+       |     |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #1197 at (l=124.0, t=7315.0, r=382.0, b=7383.0)px
+       |     |  |     | Text = '[Estimated available]'
+       |     |  |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |     |-Node #1198 at (l=815.0, t=7315.0, r=956.0, b=7383.0)px
+       |     |  |       Text = '[Rs. 0.00]'
+       |     |  |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #1199 at (l=45.0, t=7501.0, r=1035.0, b=7733.0)px
+       |     |    Focused = 'false'
+       |     |    IsContainer = 'true'
+       |     |    Text = '[Financial Planning, Review your current financial picture]'
+       |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |    MergeDescendants = 'true'
+       |     |-Node #858 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+       |       IsContainer = 'true'
+       |        |-Node #859 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+       |           |-Node #861 at (l=22.0, t=143.0, r=135.0, b=256.0)px
+       |           | ContentDescription = '[Back]'
+       |           | Focused = 'false'
+       |           | Role = 'Button'
+       |           | Actions = [OnClick, RequestFocus]
+       |           | MergeDescendants = 'true'
+       |           |-Node #863 at (l=157.0, t=132.0, r=627.0, b=268.0)px
+       |           |  |-Node #865 at (l=157.0, t=132.0, r=622.0, b=200.0)px
+       |           |  | Text = '[Advanced Finance]'
+       |           |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |           |  |-Node #866 at (l=157.0, t=200.0, r=627.0, b=268.0)px
+       |           |    Text = '[Duty • Earnings • Loans • Pay Sheet]'
+       |           |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |           |-Node #869 at (l=843.0, t=143.0, r=1046.0, b=257.0)px
+       |             Focused = 'false'
+       |             Text = '[Guide]'
+       |             Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |             MergeDescendants = 'true'
+       |-Node #226 at (l=0.0, t=2042.0, r=1080.0, b=2400.0)px
+       | IsContainer = 'true'
+       |  |-Node #227 at (l=0.0, t=2042.0, r=1080.0, b=2267.0)px
+       |    [SelectableGroup]
+       |     |-Node #228 at (l=0.0, t=2042.0, r=197.0, b=2267.0)px
+       |     | Focused = 'false'
+       |     | Role = 'Tab'
+       |     | Selected = 'false'
+       |     | Text = '[Home]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #237 at (l=220.0, t=2042.0, r=417.0, b=2267.0)px
+       |     | Focused = 'false'
+       |     | Role = 'Tab'
+       |     | Selected = 'false'
+       |     | Text = '[Work]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #246 at (l=440.0, t=2042.0, r=638.0, b=2267.0)px
+       |     | Focused = 'false'
+       |     | Role = 'Tab'
+       |     | Selected = 'false'
+       |     | Text = '[Clinical]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #255 at (l=661.0, t=2042.0, r=859.0, b=2267.0)px
+       |     | Focused = 'false'
+       |     | Role = 'Tab'
+       |     | Selected = 'true'
+       |     | Text = '[Finance]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #264 at (l=882.0, t=2042.0, r=1080.0, b=2267.0)px
+       |       Focused = 'false'
+       |       Role = 'Tab'
+       |       Selected = 'false'
+       |       Text = '[More]'
+       |       Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |       MergeDescendants = 'true'
+       |-Node #851 at (l=911.0, t=1873.0, r=1024.0, b=1986.0)px
+         ContentDescription = '[Open NursingOS Guide for this screen]'
+         Focused = 'false'
+         Role = 'Button'
+         Actions = [OnClick, RequestFocus]
+         MergeDescendants = 'true'

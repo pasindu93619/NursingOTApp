@@ -1,0 +1,84 @@
+Printing with useUnmergedTree = 'false'
+Node #1 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #2 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #50 at (l=0.0, t=290.0, r=1080.0, b=465.0)px
+    | IsContainer = 'true'
+    |  |-Node #53 at (l=45.0, t=336.0, r=426.0, b=420.0)px
+    |  | IsContainer = 'true'
+    |  |  |-Node #57 at (l=110.0, t=344.0, r=403.0, b=412.0)px
+    |  |    Text = '[Deadline unavailable]'
+    |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+    |  |-Node #59 at (l=449.0, t=344.0, r=714.0, b=412.0)px
+    |  | Text = '[Step 2: Coordinate]'
+    |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+    |  |-Node #60 at (l=714.0, t=310.0, r=1035.0, b=445.0)px
+    |    Focused = 'false'
+    |    Role = 'Button'
+    |    Text = '[Confirm Match]'
+    |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+    |    MergeDescendants = 'true'
+    |-Node #66 at (l=0.0, t=465.0, r=1080.0, b=2007.0)px
+    | CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@f490516'
+    | IsTraversalGroup = 'true'
+    | VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=0.0, reverseScrolling=false)'
+    | Actions = [GetScrollViewportLength, IndexForKey, ScrollBy, ScrollByOffset, ScrollToIndex]
+    |  |-Node #69 at (l=467.0, t=578.0, r=613.0, b=724.0)px
+    |  | IsContainer = 'true'
+    |  |-Node #73 at (l=253.0, t=763.0, r=828.0, b=831.0)px
+    |  | Text = '[Mutual Transfer Coordination]'
+    |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+    |  |-Node #75 at (l=101.0, t=842.0, r=979.0, b=986.0)px
+    |  | Text = '[Say hello to your transfer partner! Use this secure channel to coordinate shift handovers, unit assignments, and handover dates.]'
+    |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+    |  |-Node #77 at (l=334.0, t=1020.0, r=747.0, b=1155.0)px
+    |    Focused = 'false'
+    |    Role = 'Button'
+    |    Text = '[View Match Details]'
+    |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+    |    MergeDescendants = 'true'
+    |-Node #5 at (l=0.0, t=0.0, r=1080.0, b=290.0)px
+    | IsContainer = 'true'
+    |  |-Node #6 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+    |     |-Node #8 at (l=22.0, t=143.0, r=135.0, b=256.0)px
+    |     | ContentDescription = '[Back]'
+    |     | Focused = 'false'
+    |     | Role = 'Button'
+    |     | Actions = [OnClick, RequestFocus]
+    |     | MergeDescendants = 'true'
+    |     |-Node #10 at (l=157.0, t=121.0, r=686.0, b=279.0)px
+    |     |  |-Node #11 at (l=157.0, t=121.0, r=686.0, b=279.0)px
+    |     |    ContentDescription = '[View Details]'
+    |     |    Focused = 'false'
+    |     |    IsContainer = 'true'
+    |     |    Text = '[B, Partner (Nurse B), TH Karapitiya • Grade III]'
+    |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+    |     |    MergeDescendants = 'true'
+    |     |-Node #24 at (l=945.0, t=143.0, r=1058.0, b=256.0)px
+    |       ContentDescription = '[More actions]'
+    |       Focused = 'false'
+    |       Role = 'Button'
+    |       Actions = [OnClick, RequestFocus]
+    |       MergeDescendants = 'true'
+    |-Node #29 at (l=0.0, t=2007.0, r=1080.0, b=2267.0)px
+       |-Node #30 at (l=0.0, t=2007.0, r=1080.0, b=2267.0)px
+         IsContainer = 'true'
+          |-Node #32 at (l=34.0, t=2030.0, r=888.0, b=2244.0)px
+          | ContentDataType = 'AndroidContentDataType(androidAutofillType=1)'
+          | EditableText = ''
+          | Focused = 'false'
+          | ImeAction = 'Default'
+          | InputText = ''
+          | IsEditable = 'true'
+          | Text = '[Type coordination message..., 0/500]'
+          | TextSelectionRange = 'TextRange(0, 0)'
+          | Actions = [ClearTextSubstitution, GetTextLayoutResult, InsertTextAtCursor, OnAutofillText, OnClick, OnLongClick, PasteText, PerformImeAction, RequestFocus, SetSelection, SetText, SetTextSubstitution, ShowTextSubstitution]
+          | MergeDescendants = 'true'
+          |-Node #45 at (l=911.0, t=2070.0, r=1046.0, b=2205.0)px
+            IsContainer = 'true'
+             |-Node #46 at (l=911.0, t=2070.0, r=1046.0, b=2205.0)px
+               ContentDescription = '[Send]'
+               Role = 'Button'
+               [Disabled]
+               Actions = [OnClick]
+               MergeDescendants = 'true'

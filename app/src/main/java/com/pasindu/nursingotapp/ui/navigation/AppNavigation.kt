@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -120,9 +121,24 @@ fun AppNavigation(
     fun navigateTo(route: String) {
         if (currentRoute == route) return
 
-        navController.navigate(route) {
-            launchSingleTop = true
-            restoreState = false
+        val isRootDestination = route in setOf(
+            "home",
+            "claim_period",
+            "clinical_calculators",
+            "advanced_finance_hub",
+            "more_tools"
+        )
+        if (isRootDestination) {
+            navController.navigate(route) {
+                popUpTo("home") { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        } else {
+            navController.navigate(route) {
+                launchSingleTop = true
+                restoreState = false
+            }
         }
     }
 
@@ -176,7 +192,8 @@ fun AppNavigation(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding)
-                .consumeWindowInsets(scaffoldPadding),
+                .consumeWindowInsets(scaffoldPadding)
+                .imePadding(),
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Left,
@@ -605,14 +622,17 @@ fun AppNavigation(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
+                            .consumeWindowInsets(padding)
+                            .imePadding(),
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }
-            composable("dosage_calc") { DosageCalculatorScreen() }
-            composable("weight_infusion") { WeightInfusionScreen() }
-            composable("bsa_calc") { BsaCalculatorScreen() }
-            composable("pediatric_rules") { PediatricRulesScreen() }
-            composable("unit_conversions") { UnitConversionsScreen() }
+            composable("dosage_calc") { DosageCalculatorScreen(onNavigateBack = { navController.popBackStack() }) }
+            composable("weight_infusion") { WeightInfusionScreen(onNavigateBack = { navController.popBackStack() }) }
+            composable("bsa_calc") { BsaCalculatorScreen(onNavigateBack = { navController.popBackStack() }) }
+            composable("pediatric_rules") { PediatricRulesScreen(onNavigateBack = { navController.popBackStack() }) }
+            composable("unit_conversions") { UnitConversionsScreen(onNavigateBack = { navController.popBackStack() }) }
             composable("special_calcs") {
                 HighAlertClinicalWorkspaceScreen(onNavigateBack = { navController.popBackStack() })
             }
@@ -667,74 +687,72 @@ private fun generateOtPdf(
     viewModel: NursingViewModel,
     start: String,
     end: String
-): File? {
+): PdfGenerationResult {
     val dbLogs = viewModel.dailyLogs.value
     val dbProfile = viewModel.userProfile.value
-    if (dbProfile == null) return null
+    if (dbProfile == null) return PdfGenerationResult.Failed("Profile not found")
 
     val resolvedRates = runBlocking { viewModel.payRateResolver.resolve(dbProfile) }
     if (resolvedRates == null) {
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(
-                context,
-                "Salary step not matched. Check grade and basic salary in Profile.",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-        return null
+        return PdfGenerationResult.SalaryNotMatched
     }
 
-    val configuredOtRate = viewModel.configuredOtRate.value
-    val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 } ?: dbProfile.otRate.coerceAtLeast(0.0)
-    val profile = UserProfile(
-        dbProfile.fullName,
-        dbProfile.serviceNo,
-        dbProfile.unit,
-        dbProfile.paySheetNo,
-        dbProfile.grade,
-        dbProfile.basicSalary,
-        effectiveOtRate
-    )
-    val logs = dbLogs.map { entity ->
-        DailyLog(
-            id = entity.id,
-            date = entity.date,
-            isPH = entity.isPH,
-            isDO = entity.isDO,
-            isLeave = entity.isLeave,
-            leaveType = entity.leaveType,
-            reason = entity.reason,
-            wardOverride = entity.wardOverride,
-            normalTimeInStr = entity.normalTimeIn,
-            normalTimeOutStr = entity.normalTimeOut,
-            computedNormalHours = entity.normalHours,
-            otTimeInStr = entity.otTimeIn,
-            otTimeOutStr = entity.otTimeOut,
-            computedOtHours = entity.otHours
+    return try {
+        val configuredOtRate = viewModel.configuredOtRate.value
+        val effectiveOtRate = configuredOtRate.takeIf { it > 0.0 } ?: dbProfile.otRate.coerceAtLeast(0.0)
+        val profile = UserProfile(
+            dbProfile.fullName,
+            dbProfile.serviceNo,
+            dbProfile.unit,
+            dbProfile.paySheetNo,
+            dbProfile.grade,
+            dbProfile.basicSalary,
+            effectiveOtRate
         )
+        val logs = dbLogs.map { entity ->
+            DailyLog(
+                id = entity.id,
+                date = entity.date,
+                isPH = entity.isPH,
+                isDO = entity.isDO,
+                isLeave = entity.isLeave,
+                leaveType = entity.leaveType,
+                reason = entity.reason,
+                wardOverride = entity.wardOverride,
+                normalTimeInStr = entity.normalTimeIn,
+                normalTimeOutStr = entity.normalTimeOut,
+                computedNormalHours = entity.normalHours,
+                otTimeInStr = entity.otTimeIn,
+                otTimeOutStr = entity.otTimeOut,
+                computedOtHours = entity.otHours
+            )
+        }
+        val period = Period(LocalDate.parse(start), LocalDate.parse(end))
+        val workingDayRate = resolvedRates.phRate
+        val calculation = WeeklyOtCalculator.calculate(
+            logs = logs,
+            claimStart = period.claimStart,
+            claimEnd = period.claimEnd,
+            otRate = profile.otRate.coerceAtLeast(0.0),
+            dayRate = workingDayRate,
+            doRate = workingDayRate
+        )
+        val summary = PeriodSummary(
+            totalNormalHours = calculation.totalNormalHours.toFloat(),
+            totalOTHours = calculation.totalOtHours.toFloat(),
+            totalPHDays = calculation.phDays,
+            totalDODays = calculation.doDays,
+            otAmountRs = calculation.otAmountRs,
+            phAmountRs = calculation.phAmountRs,
+            doAmountRs = calculation.doAmountRs,
+            totalAmountRs = calculation.totalAmountRs,
+            ratesMissing = false
+        )
+        val file = PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
+        if (file != null) PdfGenerationResult.Success(file) else PdfGenerationResult.Failed("Failed to generate PDF")
+    } catch (e: Exception) {
+        PdfGenerationResult.Failed(e.message)
     }
-    val period = Period(LocalDate.parse(start), LocalDate.parse(end))
-    val workingDayRate = resolvedRates.phRate
-    val calculation = WeeklyOtCalculator.calculate(
-        logs = logs,
-        claimStart = period.claimStart,
-        claimEnd = period.claimEnd,
-        otRate = profile.otRate.coerceAtLeast(0.0),
-        dayRate = workingDayRate,
-        doRate = workingDayRate
-    )
-    val summary = PeriodSummary(
-        totalNormalHours = calculation.totalNormalHours.toFloat(),
-        totalOTHours = calculation.totalOtHours.toFloat(),
-        totalPHDays = calculation.phDays,
-        totalDODays = calculation.doDays,
-        otAmountRs = calculation.otAmountRs,
-        phAmountRs = calculation.phAmountRs,
-        doAmountRs = calculation.doAmountRs,
-        totalAmountRs = calculation.totalAmountRs,
-        ratesMissing = false
-    )
-    return PdfGenerator(context).generateAndReturnFile(profile, logs, period, summary)
 }
 
 private fun shareSavedPdf(context: Context, uri: Uri) {

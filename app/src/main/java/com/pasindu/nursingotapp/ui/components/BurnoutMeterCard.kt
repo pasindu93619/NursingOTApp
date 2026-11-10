@@ -73,17 +73,23 @@ fun BurnoutMeterCard(
         avgWeeklyHours <= 48f -> Amber
         else -> CriticalRed
     }
+    val isNightShiftCritical = consecutiveNightShifts > 3
+    val statusColor = when {
+        avgWeeklyHours > 48f -> CriticalRed
+        avgWeeklyHours > 40f || isNightShiftCritical -> Amber
+        else -> Emerald
+    }
     val statusText = when {
-        avgWeeklyHours <= 40f -> "Optimal / Safe"
-        avgWeeklyHours <= 48f -> "Caution: High OT"
-        else -> "Danger: Burnout Risk"
+        avgWeeklyHours > 48f -> "Danger: Burnout Risk"
+        avgWeeklyHours > 40f -> "Caution: High OT"
+        isNightShiftCritical -> "Caution: Night Shifts"
+        else -> "Optimal / Safe"
     }
     val animatedProgress by animateFloatAsState(
         targetValue = (avgWeeklyHours / 60f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 900),
         label = "burnout_gauge"
     )
-    val isNightShiftCritical = consecutiveNightShifts > 3
     var showInfoDialog by remember { mutableStateOf(false) }
 
     val scopeLabel = if (isWeeklyView) "Selected week" else "Full claim period"
@@ -196,7 +202,7 @@ fun BurnoutMeterCard(
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("${avgWeeklyHours.toInt()}h", color = Slate, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                        Text(statusText, color = gaugeColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(statusText, color = statusColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
@@ -259,7 +265,13 @@ fun BurnoutMeterCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(if (avgWeeklyHours > 40f) Amber.copy(alpha = 0.12f) else Emerald.copy(alpha = 0.10f))
+                    .background(
+                        when {
+                            avgWeeklyHours > 48f -> CriticalRed.copy(alpha = 0.12f)
+                            avgWeeklyHours > 40f || isNightShiftCritical -> Amber.copy(alpha = 0.12f)
+                            else -> Emerald.copy(alpha = 0.10f)
+                        }
+                    )
                     .padding(13.dp)
             ) {
                 Text(

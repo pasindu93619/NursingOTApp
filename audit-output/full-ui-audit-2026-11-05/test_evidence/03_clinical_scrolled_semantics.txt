@@ -1,0 +1,180 @@
+=== ROOT NODE 0 ===
+Printing with useUnmergedTree = 'false'
+Node #76 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #77 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #78 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsContainer = 'true'
+       |-Node #689 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |  |-Node #690 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |     |-Node #692 at (l=51.0, t=146.0, r=175.0, b=270.0)px
+       |     | ContentDescription = '[Back]'
+       |     | Focused = 'false'
+       |     | Actions = [OnClick, RequestFocus]
+       |     | MergeDescendants = 'true'
+       |     |-Node #696 at (l=209.0, t=138.0, r=588.0, b=210.0)px
+       |     | Text = '[Clinical Tools]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #697 at (l=209.0, t=210.0, r=694.0, b=278.0)px
+       |     | Text = '[AI-assisted bedside navigation]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #698 at (l=0.0, t=306.0, r=1080.0, b=2042.0)px
+       |       CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@6c9ef43'
+       |       IsTraversalGroup = 'true'
+       |       VerticalScrollAxisRange = 'ScrollAxisRange(value=1449.0, maxValue=1549.0, reverseScrolling=false)'
+       |       Actions = [GetScrollViewportLength, IndexForKey, ScrollBy, ScrollByOffset, ScrollToIndex]
+       |        |-Node #732 at (l=45.0, t=-143.0, r=1035.0, b=371.0)px
+       |        | IsContainer = 'true'
+       |        |  |-Node #735 at (l=84.0, t=-93.0, r=198.0, b=21.0)px
+       |        |  | IsContainer = 'true'
+       |        |  |-Node #739 at (l=223.0, t=-104.0, r=625.0, b=-36.0)px
+       |        |  | Text = '[Clinical AI Assistant]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #740 at (l=223.0, t=-36.0, r=868.0, b=32.0)px
+       |        |  | Text = '[Natural-language routing • local • calculation-safe]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #741 at (l=84.0, t=60.0, r=996.0, b=218.0)px
+       |        |  | ContentDataType = 'AndroidContentDataType(androidAutofillType=1)'
+       |        |  | EditableText = ''
+       |        |  | Focused = 'false'
+       |        |  | ImeAction = 'Search'
+       |        |  | InputText = ''
+       |        |  | IsEditable = 'true'
+       |        |  | Text = '[e.g. “500 mL over 4 hours” or “නොරැඩ්‍රිනලින්”]'
+       |        |  | TextSelectionRange = 'TextRange(0, 0)'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, InsertTextAtCursor, OnAutofillText, OnClick, OnLongClick, PasteText, PerformImeAction, RequestFocus, SetSelection, SetText, SetTextSubstitution, ShowTextSubstitution]
+       |        |  | MergeDescendants = 'true'
+       |        |  |-Node #754 at (l=84.0, t=246.0, r=996.0, b=332.0)px
+       |        |    Text = '[Try: “IV drip”, “insulin”, “ICU potassium”, “BSA”, or Sinhala clinical terms.]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #758 at (l=45.0, t=410.0, r=418.0, b=478.0)px
+       |        | Text = '[Clinical engines]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #759 at (l=45.0, t=478.0, r=727.0, b=546.0)px
+       |        | Text = '[Open a workflow directly or use AI routing above.]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #760 at (l=921.0, t=421.0, r=1035.0, b=535.0)px
+       |        | IsContainer = 'true'
+       |        |-Node #763 at (l=45.0, t=585.0, r=1035.0, b=809.0)px
+       |        | Focused = 'false'
+       |        | IsContainer = 'true'
+       |        | Text = '[🚨, Crash Cart Engine, Arrest • anaphylaxis • defibrillation]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        | MergeDescendants = 'true'
+       |        |  |-Node #773 at (l=868.0, t=640.0, r=990.0, b=754.0)px
+       |        |    Focused = 'false'
+       |        |    IsContainer = 'true'
+       |        |    Text = '[OPEN]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        |    MergeDescendants = 'true'
+       |        |-Node #776 at (l=45.0, t=848.0, r=1035.0, b=1072.0)px
+       |        | Focused = 'false'
+       |        | IsContainer = 'true'
+       |        | Text = '[🫀, ICU Critical Care, Vasoactive • sedation • fluids • renal]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        | MergeDescendants = 'true'
+       |        |  |-Node #786 at (l=868.0, t=903.0, r=990.0, b=1017.0)px
+       |        |    Focused = 'false'
+       |        |    IsContainer = 'true'
+       |        |    Text = '[OPEN]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        |    MergeDescendants = 'true'
+       |        |-Node #789 at (l=45.0, t=1111.0, r=1035.0, b=1335.0)px
+       |        | Focused = 'false'
+       |        | IsContainer = 'true'
+       |        | Text = '[💊, Advanced Dosage, Standard • dilution • percentage • vial]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        | MergeDescendants = 'true'
+       |        |  |-Node #799 at (l=868.0, t=1166.0, r=990.0, b=1280.0)px
+       |        |    Focused = 'false'
+       |        |    IsContainer = 'true'
+       |        |    Text = '[OPEN]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        |    MergeDescendants = 'true'
+       |        |-Node #801 at (l=45.0, t=1374.0, r=1035.0, b=1598.0)px
+       |        | Focused = 'false'
+       |        | IsContainer = 'true'
+       |        | Text = '[💧, IV Drip Sync, Gravity drip • pump • titration]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        | MergeDescendants = 'true'
+       |        |  |-Node #811 at (l=868.0, t=1429.0, r=990.0, b=1543.0)px
+       |        |    Focused = 'false'
+       |        |    IsContainer = 'true'
+       |        |    Text = '[OPEN]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        |    MergeDescendants = 'true'
+       |        |-Node #814 at (l=45.0, t=1637.0, r=1035.0, b=1861.0)px
+       |        | Focused = 'false'
+       |        | IsContainer = 'true'
+       |        | Text = '[🩸, High-Alert Specials, Insulin • heparin • PCA]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        | MergeDescendants = 'true'
+       |        |  |-Node #824 at (l=868.0, t=1692.0, r=990.0, b=1806.0)px
+       |        |    Focused = 'false'
+       |        |    IsContainer = 'true'
+       |        |    Text = '[OPEN]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        |    MergeDescendants = 'true'
+       |        |-Node #826 at (l=45.0, t=1900.0, r=1035.0, b=2124.0)px
+       |        | Focused = 'false'
+       |        | IsContainer = 'true'
+       |        | Text = '[⚖️, Weight & Infusions, mg/kg • mcg/kg/min • pump rate]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        | MergeDescendants = 'true'
+       |        |  |-Node #836 at (l=868.0, t=1955.0, r=990.0, b=2069.0)px
+       |        |    Focused = 'false'
+       |        |    IsContainer = 'true'
+       |        |    Text = '[OPEN]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |        |    MergeDescendants = 'true'
+       |        |-Node #839 at (l=0.0, t=306.0, r=990.0, b=530.0)px
+       |          Focused = 'false'
+       |          IsContainer = 'true'
+       |          Text = '[🔄, Unit Conversions, Mass • volume • mEq]'
+       |          Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |          MergeDescendants = 'true'
+       |           |-Node #849 at (l=0.0, t=306.0, r=122.0, b=420.0)px
+       |             Focused = 'false'
+       |             IsContainer = 'true'
+       |             Text = '[OPEN]'
+       |             Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |             MergeDescendants = 'true'
+       |-Node #226 at (l=0.0, t=2042.0, r=1080.0, b=2400.0)px
+         IsContainer = 'true'
+          |-Node #227 at (l=0.0, t=2042.0, r=1080.0, b=2267.0)px
+            [SelectableGroup]
+             |-Node #228 at (l=0.0, t=2042.0, r=197.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Home]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #237 at (l=220.0, t=2042.0, r=417.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Work]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #246 at (l=440.0, t=2042.0, r=638.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'true'
+             | Text = '[Clinical]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #255 at (l=661.0, t=2042.0, r=859.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Finance]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #264 at (l=882.0, t=2042.0, r=1080.0, b=2267.0)px
+               Focused = 'false'
+               Role = 'Tab'
+               Selected = 'false'
+               Text = '[More]'
+               Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+               MergeDescendants = 'true'

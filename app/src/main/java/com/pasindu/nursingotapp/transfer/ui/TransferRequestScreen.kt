@@ -15,12 +15,17 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -88,6 +93,7 @@ import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import com.pasindu.nursingotapp.ui.theme.TransferBlueSoft
+import com.pasindu.nursingotapp.ui.theme.TransferCardBorder
 import com.pasindu.nursingotapp.ui.theme.TransferInk
 import com.pasindu.nursingotapp.ui.theme.TransferMintSoft
 import com.pasindu.nursingotapp.ui.theme.TransferPurpleSoft
@@ -103,7 +109,89 @@ import sh.calvin.reorderable.ReorderableItem
  * Small, dependency-free edit-distance matcher for short hospital-search tokens.
  * Only tolerates a small number of edits so unrelated hospitals are not broadly matched.
  */
-private fun isFuzzyTokenMatch(queryToken: String, candidateToken: String): Boolean {
+internal object HospitalPickerFilterEngine {
+    fun normalizeSearchText(value: String): String =
+        value
+            .trim()
+            .lowercase()
+            .replace(Regex("\\s+"), " ")
+
+    fun matchesCategory(hospital: HospitalReference, categoryFilter: String): Boolean {
+        if (categoryFilter.isBlank() || categoryFilter.equals("ALL", ignoreCase = true)) return true
+        val cat = hospital.category.trim()
+        return when (categoryFilter.uppercase()) {
+            "TH" -> cat.contains("TH", ignoreCase = true)
+            "PGH" -> cat.contains("PGH", ignoreCase = true)
+            "DGH" -> cat.contains("DGH", ignoreCase = true)
+            "BH" -> cat.startsWith("BH", ignoreCase = true)
+            "DH" -> cat.startsWith("DH", ignoreCase = true)
+            else -> cat.equals(categoryFilter, ignoreCase = true) || cat.startsWith(categoryFilter, ignoreCase = true)
+        }
+    }
+
+    fun matchesSearch(hospital: HospitalReference, normalizedQuery: String): Boolean {
+        if (normalizedQuery.isBlank()) return true
+        val searchableText = listOf(
+            hospital.name,
+            hospital.province,
+            hospital.rdhsDivision,
+            hospital.category,
+            hospital.categoryFullName,
+            hospital.hospitalId,
+            hospital.district ?: ""
+        )
+            .joinToString(" ")
+            .let(::normalizeSearchText)
+
+        val queryTokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
+        val searchableTokens = searchableText.split(" ").filter { it.isNotBlank() }
+        return queryTokens.all { queryToken ->
+            searchableTokens.any { candidateToken ->
+                isFuzzyTokenMatch(queryToken, candidateToken)
+            } || searchableText.contains(queryToken)
+        }
+    }
+
+    fun filterHospitals(
+        hospitals: List<HospitalReference>,
+        query: String,
+        selectedCategory: String = "ALL"
+    ): List<HospitalReference> {
+        val normalizedQuery = normalizeSearchText(query)
+        return hospitals.filter { hospital ->
+            matchesCategory(hospital, selectedCategory) &&
+                matchesSearch(hospital, normalizedQuery)
+        }
+    }
+
+    fun deriveAvailableCategories(hospitals: List<HospitalReference>): List<String> {
+        val standardOrder = listOf("ALL", "TH", "PGH", "DGH", "BH", "DH")
+        val available = mutableListOf("ALL")
+
+        for (std in standardOrder.drop(1)) {
+            if (hospitals.any { matchesCategory(it, std) }) {
+                available.add(std)
+            }
+        }
+
+        val remaining = hospitals
+            .map { it.category.trim().uppercase() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .filter { cat ->
+                !available.any { std -> std != "ALL" && matchesCategory(HospitalReference(category = cat), std) }
+            }
+            .sorted()
+        available.addAll(remaining)
+
+        return available
+    }
+}
+
+internal fun isFuzzyTokenMatch(queryToken: String, candidateToken: String): Boolean {
+    if (queryToken.length < 3 || candidateToken.length < 3) {
+        return candidateToken.equals(queryToken, ignoreCase = true)
+    }
     if (candidateToken.contains(queryToken) || queryToken.contains(candidateToken)) return true
     if (queryToken.length < 4 || candidateToken.length < 4) return false
     val allowedDistance = if (queryToken.length >= 8) 2 else 1
@@ -231,6 +319,7 @@ fun TransferRequestScreen(
             .background(AppBackground)
             .statusBarsPadding()
             .navigationBarsPadding()
+            .imePadding()
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -1457,47 +1546,21 @@ private fun HospitalPickerDialog(
     onSelect: (HospitalReference) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("ALL") }
 
-    fun normalizeSearchText(value: String): String =
-        value
-            .trim()
-            .lowercase()
-            .replace(Regex("\\s+"), " ")
-
-    val normalizedQuery = normalizeSearchText(query)
-
-    val matchingHospitals = hospitals.filter { hospital ->
-        if (normalizedQuery.isBlank()) {
-            true
-        } else {
-            val searchableText = listOf(
-                hospital.name,
-                hospital.province,
-                hospital.rdhsDivision,
-                hospital.category,
-                hospital.categoryFullName,
-                hospital.hospitalId,
-                hospital.district ?: ""
-            )
-                .joinToString(" ")
-                .let(::normalizeSearchText)
-
-            val queryTokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
-            val searchableTokens = searchableText.split(" ").filter { it.isNotBlank() }
-            queryTokens.all { queryToken ->
-                searchableTokens.any { candidateToken ->
-                    isFuzzyTokenMatch(queryToken, candidateToken)
-                } || searchableText.contains(queryToken)
-            }
-        }
+    val availableCategories = remember(hospitals) {
+        HospitalPickerFilterEngine.deriveAvailableCategories(hospitals)
     }
 
-    val visibleHospitals = matchingHospitals.take(80)
+    val matchingHospitals = remember(hospitals, query, selectedCategory) {
+        HospitalPickerFilterEngine.filterHospitals(hospitals, query, selectedCategory)
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .padding(horizontal = 4.dp),
             shape = RoundedCornerShape(30.dp),
             color = Color.White,
@@ -1526,7 +1589,7 @@ private fun HospitalPickerDialog(
                             fontWeight = FontWeight.Black
                         )
                         Text(
-                            "Choose from the official reference list",
+                            "Choose from verified healthcare facilities",
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
@@ -1553,75 +1616,104 @@ private fun HospitalPickerDialog(
                     }
                 }
 
-                Spacer(Modifier.height(13.dp))
+                Spacer(Modifier.height(10.dp))
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    color = TransferBlueSoft,
-                    border = BorderStroke(
-                        1.dp,
-                        ClinicalPrimaryColor.copy(alpha = 0.18f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(start = 10.dp, end = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            modifier = Modifier.size(38.dp),
-                            shape = CircleShape,
-                            color = ClinicalPrimaryColor
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp, max = 64.dp),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = ClinicalPrimaryColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    placeholder = {
+                        Text(
+                            "Search hospital, district or province",
+                            color = TextSecondary.copy(alpha = 0.75f),
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(
+                                onClick = { query = "" },
+                                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                            ) {
                                 Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(19.dp)
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear search",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
+                    },
+                    shape = RoundedCornerShape(NursingDimensions.Radius.large),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceWhite,
+                        unfocusedContainerColor = SurfaceWhite,
+                        focusedBorderColor = ClinicalPrimaryColor,
+                        unfocusedBorderColor = TransferCardBorder,
+                        focusedLeadingIconColor = ClinicalPrimaryColor,
+                        unfocusedLeadingIconColor = ClinicalPrimaryColor,
+                        focusedTrailingIconColor = TextSecondary,
+                        unfocusedTrailingIconColor = TextSecondary,
+                        focusedTextColor = TransferInk,
+                        unfocusedTextColor = TransferInk,
+                        cursorColor = ClinicalPrimaryColor
+                    )
+                )
 
-                        Spacer(Modifier.width(7.dp))
-
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            placeholder = {
-                                Text(
-                                    "Hospital, district, province, RDHS",
-                                    color = TextSecondary.copy(alpha = .78f),
-                                    fontSize = 11.sp
+                if (availableCategories.size > 1) {
+                    Spacer(Modifier.height(10.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(availableCategories) { category ->
+                            val isSelected = selectedCategory == category
+                            val label = when (category) {
+                                "ALL" -> "All"
+                                "TH" -> "Teaching (TH)"
+                                "PGH" -> "Provincial Gen (PGH)"
+                                "DGH" -> "District Gen (DGH)"
+                                "BH" -> "Base Hospital (BH)"
+                                "DH" -> "Divisional (DH)"
+                                else -> category
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum)
+                                    .clickable { selectedCategory = category },
+                                shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                                color = if (isSelected) ClinicalPrimaryColor else SurfaceMuted,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) ClinicalPrimaryColor else BorderMuted.copy(alpha = 0.6f)
                                 )
-                            },
-                            trailingIcon = {
-                                if (query.isNotEmpty()) {
-                                    IconButton(
-                                        onClick = { query = "" },
-                                        modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Clear search",
-                                            tint = TextSecondary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color.White else TransferInk,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
                                 }
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ClinicalPrimaryColor,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedContainerColor = Color.White.copy(alpha = .72f),
-                                unfocusedContainerColor = Color.White.copy(alpha = .72f),
-                                focusedTextColor = TransferInk,
-                                unfocusedTextColor = TransferInk
-                            )
-                        )
+                            }
+                        }
                     }
                 }
 
@@ -1636,11 +1728,7 @@ private fun HospitalPickerDialog(
                         color = TransferPurpleSoft
                     ) {
                         Text(
-                            if (query.isBlank()) {
-                                "${hospitals.size} hospitals"
-                            } else {
-                                "${matchingHospitals.size} matches"
-                            },
+                            if (matchingHospitals.size == 1) "1 hospital" else "${matchingHospitals.size} hospitals",
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             color = AiAccentColor,
                             fontSize = 11.sp,
@@ -1651,9 +1739,11 @@ private fun HospitalPickerDialog(
                     Spacer(Modifier.width(8.dp))
 
                     Text(
-                        if (query.isBlank()) "Type hospital name, district, or province"
-                        else if (matchingHospitals.size > 80) "Showing first 80 results"
-                        else "Tap a hospital to select",
+                        text = when {
+                            query.isNotBlank() -> "Matches for \"$query\""
+                            selectedCategory != "ALL" -> "Filtered by $selectedCategory"
+                            else -> "Tap a hospital to select"
+                        },
                         color = TextSecondary,
                         fontSize = 11.sp
                     )
@@ -1749,43 +1839,6 @@ private fun HospitalPickerDialog(
                         }
                     }
 
-                    normalizedQuery.isBlank() -> {
-                        Surface(
-                            Modifier.fillMaxWidth(),
-                            RoundedCornerShape(20.dp),
-                            SurfaceMuted
-                        ) {
-                            Column(Modifier.padding(16.dp)) {
-                                Surface(
-                                    Modifier.size(42.dp),
-                                    CircleShape,
-                                    TransferBlueSoft
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Default.Search,
-                                            null,
-                                            tint = ClinicalPrimaryColor,
-                                            modifier = Modifier.size(21.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(9.dp))
-                                Text(
-                                    "Search the hospital directory",
-                                    color = TransferInk,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    "Type a hospital name, district, province or RDHS division to find eligible transfer destinations.",
-                                    color = TextSecondary,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                    }
-
                     hospitals.isEmpty() -> {
                         Surface(
                             Modifier.fillMaxWidth(),
@@ -1809,17 +1862,13 @@ private fun HospitalPickerDialog(
                                 }
                                 Spacer(Modifier.height(9.dp))
                                 Text(
-                                    if (query.isBlank()) "No hospitals available" else "No hospital found",
+                                    "No hospitals available",
                                     color = TransferInk,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Black
                                 )
                                 Text(
-                                    if (query.isBlank()) {
-                                        "The hospital directory loaded successfully but contains no selectable records."
-                                    } else {
-                                        "Try a hospital name, district, province or RDHS division."
-                                    },
+                                    "The hospital directory loaded successfully but contains no selectable records.",
                                     color = TextSecondary,
                                     fontSize = 11.sp
                                 )
@@ -1833,7 +1882,10 @@ private fun HospitalPickerDialog(
                             RoundedCornerShape(20.dp),
                             SurfaceMuted
                         ) {
-                            Column(Modifier.padding(16.dp)) {
+                            Column(
+                                Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
                                 Surface(
                                     Modifier.size(42.dp),
                                     CircleShape,
@@ -1852,14 +1904,40 @@ private fun HospitalPickerDialog(
                                 Text(
                                     "No hospital found",
                                     color = TransferInk,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Black
                                 )
+                                Spacer(Modifier.height(3.dp))
                                 Text(
-                                    "No hospital matches \"$query\". Try a hospital name, district, province or RDHS division.",
+                                    when {
+                                        query.isNotBlank() && selectedCategory != "ALL" ->
+                                            "No hospital matches \"$query\" in category $selectedCategory."
+                                        query.isNotBlank() ->
+                                            "No hospital matches \"$query\". Try a hospital name, district, province or RDHS division."
+                                        else ->
+                                            "No hospital found in category $selectedCategory."
+                                    },
                                     color = TextSecondary,
-                                    fontSize = 11.sp
+                                    fontSize = 11.sp,
+                                    textAlign = TextAlign.Center
                                 )
+                                Spacer(Modifier.height(10.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        query = ""
+                                        selectedCategory = "ALL"
+                                    },
+                                    modifier = Modifier.defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum),
+                                    shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                                    border = BorderStroke(1.dp, ClinicalPrimaryColor)
+                                ) {
+                                    Text(
+                                        "Reset search & filters",
+                                        color = ClinicalPrimaryColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -1868,10 +1946,11 @@ private fun HospitalPickerDialog(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(320.dp),
+                                .heightIn(max = 320.dp)
+                                .weight(1f, fill = false),
                             verticalArrangement = Arrangement.spacedBy(7.dp)
                         ) {
-                            items(visibleHospitals, key = { it.hospitalId }) { hospital ->
+                            items(matchingHospitals, key = { it.hospitalId }) { hospital ->
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1940,7 +2019,7 @@ private fun HospitalPickerDialog(
                                             Text(
                                                 hospital.name,
                                                 color = TransferInk,
-                                                fontSize = 12.sp,
+                                                fontSize = 12.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis

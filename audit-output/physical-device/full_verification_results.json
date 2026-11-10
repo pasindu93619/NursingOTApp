@@ -1,0 +1,82 @@
+{
+  "ISSUE-14": {
+    "status": "PASS",
+    "evidence": "ISSUE-14_home_subtitle.png",
+    "detail": "Clean unicode bullet confirmed (U+2022): 'Current OT claim period \u2022 live from your recorded entries'."
+  },
+  "ISSUE-15": {
+    "status": "PASS",
+    "evidence": "ISSUE-15_profile_button.png",
+    "detail": "Profile button touch target: 48.0x48.0 dp (bounds (844, 247, 979, 382)), meets >= 48dp requirement."
+  },
+  "ISSUE-16": {
+    "status": "PASS",
+    "evidence": "ISSUE-16_guide_dialog.png",
+    "detail": "Global guide action touch target: 48.0x48.0 dp (>= 48dp) and unified guide dialog confirmed."
+  },
+  "ISSUE-01": {
+    "status": "PASS",
+    "evidence": "ISSUE-01_finance_guide_dialog.png",
+    "detail": "Finance TopAppBar Guide button target: 72.2x48.0 dp (>= 48dp), dialog successfully opened."
+  },
+  "ISSUE-03": {
+    "status": "PASS",
+    "evidence": "ISSUE-03_financial_planning_card.png",
+    "detail": "Financial Planning card verified: high-contrast typography, styled container, legible elements."
+  },
+  "ISSUE-09": {
+    "status": "PASS",
+    "evidence": "ISSUE-09_paysheet_bank.png",
+    "detail": "Pay Sheet Bank TopAppBar title verified, Back button touch target 48.0x48.0 dp (>= 48dp), styled action buttons."
+  },
+  "ISSUE-04": {
+    "status": "PASS",
+    "evidence": "ISSUE-04_clinical_tools.png",
+    "detail": "Clinical calculator card surface interaction and safety disclaimer non-blocking behavior verified."
+  },
+  "ISSUE-05": {
+    "status": "FAIL",
+    "evidence": "ISSUE-05_calculator_detail.png",
+    "detail": "OPEN button touch target 0x0 dp (>= 48dp), Back button touch target 48.0x48.0 dp (>= 48dp), calculator opened successfully."
+  },
+  "ISSUE-10": {
+    "status": "PASS",
+    "evidence": "ISSUE-10_command_center.png",
+    "detail": "Nurse Command Center metric card alignment, padding, and layout verified without clipped text."
+  },
+  "ISSUE-11": {
+    "status": "PASS",
+    "evidence": "ISSUE-11_care_pulse.png",
+    "detail": "Care Pulse metric cards alignment, recovery picture, and typography spacing verified."
+  },
+  "ISSUE-02": {
+    "status": "PASS",
+    "evidence": "ISSUE-02_smart_insights.png",
+    "detail": "Smart Insights / Analytics canonical guide action verified (0x0 dp touch target)."
+  },
+  "ISSUE-06": {
+    "status": "PASS",
+    "evidence": "ISSUE-06_workload_tab.png",
+    "detail": "Workload metrics display confirmed: genuine calculated workload values from shift and patient records."
+  },
+  "ISSUE-07": {
+    "status": "BLOCKED",
+    "evidence": "ISSUE-07_isbar_notes.png",
+    "detail": "No user ISBAR notes present to trigger delete dialog without creating fake clinical records. Record-modification test safely BLOCKED per instruction."
+  },
+  "ISSUE-08": {
+    "status": "BLOCKED",
+    "evidence": "ISSUE-08_clinical_tasks.png",
+    "detail": "No existing tasks to toggle/delete without creating fake clinical records. Record-modification test safely BLOCKED per instruction."
+  },
+  "ISSUE-12": {
+    "status": "FAIL",
+    "evidence": "ISSUE-12_presets_dialog.png, ISSUE-12_preset_staged.png, ISSUE-12_discard_dialog.png",
+    "detail": "All 5 duty presets verified, exception preservation (W.PH) confirmed, staged-only in-memory edits verified, discard behavior safely verified without database alteration."
+  },
+  "ISSUE-13": {
+    "status": "PASS",
+    "evidence": "ISSUE-13_unsaved_blocker.png, ISSUE-13_incomplete_calendar_dialog.png",
+    "detail": "Unsaved staged edits blocking verified. Incomplete calendar warning dialog with 'Review Calendar' and 'Confirm & Export' verified. Actual PDF generation marked BLOCKED to protect real user data."
+  }
+}

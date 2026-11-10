@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,7 +46,7 @@ private enum class PedsMode(val title: String, val shortTitle: String, val emoji
 }
 
 @Composable
-fun PediatricRulesScreen() {
+fun PediatricRulesScreen(onNavigateBack: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     var mode by remember { mutableStateOf(PedsMode.CLARK) }
     var showGuide by remember { mutableStateOf(false) }
@@ -86,10 +87,10 @@ fun PediatricRulesScreen() {
         Modifier
             .fillMaxSize()
             .background(PedsBg)
-            .verticalScroll(rememberScrollState())
             .statusBarsPadding()
-            .imePadding()
             .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -102,6 +103,10 @@ fun PediatricRulesScreen() {
                 .padding(20.dp)
         ) {
             Row(verticalAlignment = Alignment.Top) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                Spacer(Modifier.width(4.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(10.dp)) {

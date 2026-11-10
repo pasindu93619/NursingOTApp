@@ -696,6 +696,74 @@ private fun OtCalendarDay(
     }
 }
 
+
+/**
+ * Coordinates claim-period creation, deduplication, validation and navigation
+ * to the Duty Calendar from ClaimPeriodModernScreen.
+ */
+class ClaimPeriodNavigationCoordinator(
+    private val createPeriod: (LocalDate, LocalDate, String, (Long) -> Unit, (Throwable) -> Unit) -> Unit,
+    private val onNavigate: (Long, String, String, String) -> Unit,
+    private val onDismissPicker: () -> Unit,
+    private val onError: (String) -> Unit
+) {
+    var isSubmitting = false
+        private set
+
+    fun handleUseRange(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        wardType: String,
+        existingPeriods: List<ClaimPeriodEntity>,
+        fromPicker: Boolean
+    ) {
+        if (endDate.isBefore(startDate)) {
+            onError("Claim period end date cannot be before start date.")
+            return
+        }
+        if (isSubmitting) return
+        isSubmitting = true
+
+        val existing = existingPeriods.firstOrNull {
+            it.startDate == startDate &&
+            it.endDate == endDate &&
+            it.wardType.equals(wardType.trim(), ignoreCase = true)
+        }
+
+        if (existing != null) {
+            isSubmitting = false
+            if (fromPicker) onDismissPicker()
+            onNavigate(
+                existing.id,
+                existing.startDate.toString(),
+                existing.endDate.toString(),
+                existing.wardType
+            )
+            return
+        }
+
+        createPeriod(
+            startDate,
+            endDate,
+            wardType.trim(),
+            { newId ->
+                isSubmitting = false
+                if (fromPicker) onDismissPicker()
+                onNavigate(
+                    newId,
+                    startDate.toString(),
+                    endDate.toString(),
+                    wardType.trim()
+                )
+            },
+            { throwable ->
+                isSubmitting = false
+                onError(throwable.message ?: "Unable to create claim period.")
+            }
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClaimPeriodModernScreen(
@@ -748,6 +816,21 @@ fun ClaimPeriodModernScreen(
 
     var showDeleteAll by remember {
         mutableStateOf(false)
+    }
+
+    var actionError by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val coordinator = remember(periods, wardType) {
+        ClaimPeriodNavigationCoordinator(
+            createPeriod = { start, end, ward, onCreated, onError ->
+                viewModel.createClaimPeriod(start, end, ward, onCreated, onError)
+            },
+            onNavigate = onNavigateToDailyEntry,
+            onDismissPicker = { showStartPicker = false },
+            onError = { actionError = it }
+        )
     }
 
     Scaffold(
@@ -1332,18 +1415,12 @@ fun ClaimPeriodModernScreen(
                      */
                     Button(
                         onClick = {
-                            viewModel.createClaimPeriod(
+                            coordinator.handleUseRange(
                                 startDate = selectedSuggestion.startDate,
                                 endDate = selectedSuggestion.endDate,
                                 wardType = wardType,
-                                onCreated = { id ->
-                                    onNavigateToDailyEntry(
-                                        id,
-                                        selectedSuggestion.startDate.toString(),
-                                        selectedSuggestion.endDate.toString(),
-                                        wardType
-                                    )
-                                }
+                                existingPeriods = periods,
+                                fromPicker = false
                             )
                         },
                         modifier = Modifier
@@ -1513,7 +1590,13 @@ fun ClaimPeriodModernScreen(
                 confirmButton = {
                     Surface(
                         onClick = {
-                            showStartPicker = false
+                            coordinator.handleUseRange(
+                                startDate = selectedSuggestion.startDate,
+                                endDate = selectedSuggestion.endDate,
+                                wardType = wardType,
+                                existingPeriods = periods,
+                                fromPicker = true
+                            )
                         },
                         modifier = Modifier.height(48.dp),
                         shape = NursingShapes.pill,
@@ -1546,6 +1629,39 @@ fun ClaimPeriodModernScreen(
                         Text(
                             "Cancel",
                             color = MedicalBlue,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            )
+        }
+
+        /*
+         * CLAIM PERIOD ACTION ERROR DIALOG
+         */
+        actionError?.let { errorText ->
+            AlertDialog(
+                onDismissRequest = {
+                    actionError = null
+                },
+                title = {
+                    Text(
+                        "Claim Period",
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                },
+                text = {
+                    Text(errorText)
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            actionError = null
+                        }
+                    ) {
+                        Text(
+                            "OK",
+                            color = ClinicalPrimaryColor,
                             fontWeight = FontWeight.Bold
                         )
                     }

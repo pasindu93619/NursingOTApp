@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 
+internal val SEDATION_INPUT_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal
+
 @Composable
 fun SedationAnalgesiaCalculatorCard(modifier: Modifier = Modifier) {
     // State variables for inputs
@@ -76,7 +78,7 @@ fun SedationAnalgesiaCalculatorCard(modifier: Modifier = Modifier) {
                     value = weightInput,
                     onValueChange = { weightInput = it },
                     label = { Text("Weight (kg)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = SEDATION_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -89,7 +91,7 @@ fun SedationAnalgesiaCalculatorCard(modifier: Modifier = Modifier) {
                     value = doseInput,
                     onValueChange = { doseInput = it },
                     label = { Text("Dose (mg/kg/hr)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = SEDATION_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -105,7 +107,7 @@ fun SedationAnalgesiaCalculatorCard(modifier: Modifier = Modifier) {
                     value = drugMassInput,
                     onValueChange = { drugMassInput = it },
                     label = { Text("Drug Mass (mg)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = SEDATION_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -118,7 +120,7 @@ fun SedationAnalgesiaCalculatorCard(modifier: Modifier = Modifier) {
                     value = volumeInput,
                     onValueChange = { volumeInput = it },
                     label = { Text("Volume (mL)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = SEDATION_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,

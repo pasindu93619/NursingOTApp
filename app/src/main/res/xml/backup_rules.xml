@@ -3,4 +3,5 @@
     <!-- Exclude sensitive nurse salary, profile, patient ISBAR notes, and transfer data from Google Auto Backup (Android 11 and below) -->
     <exclude domain="database" path="." />
     <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="paysheet_vault" />
 </full-backup-content>

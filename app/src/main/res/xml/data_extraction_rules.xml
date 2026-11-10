@@ -4,10 +4,13 @@
         <!-- Exclude sensitive nurse salary, profile, patient ISBAR notes, and transfer data from cloud backup -->
         <exclude domain="database" path="." />
         <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="paysheet_vault" />
     </cloud-backup>
     <device-transfer>
         <!-- Allow direct device-to-device migration when user sets up a new phone -->
         <include domain="database" path="." />
         <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+        <exclude domain="file" path="paysheet_vault" />
     </device-transfer>
 </data-extraction-rules>

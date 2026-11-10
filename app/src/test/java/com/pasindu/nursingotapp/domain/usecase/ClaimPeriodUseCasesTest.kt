@@ -125,6 +125,9 @@ class ClaimPeriodUseCasesTest {
             flowOf(entries.value.filter { it.claimPeriodId == claimPeriodId })
         override fun observeAllEntries(): Flow<List<DailyEntryEntity>> = entries
         override suspend fun getEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? = null
+        override suspend fun deleteEntryById(id: Long) {
+            entries.value = entries.value.filterNot { it.id == id }
+        }
         override suspend fun deleteEntriesForPeriod(claimPeriodId: Long) {
             deletePeriodCalls++
             entries.value = entries.value.filterNot { it.claimPeriodId == claimPeriodId }

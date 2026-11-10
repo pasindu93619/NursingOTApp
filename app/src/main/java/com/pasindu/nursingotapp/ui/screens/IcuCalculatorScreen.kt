@@ -473,6 +473,8 @@ private fun PairInput(
     }
 }
 
+internal val ICU_CALCULATOR_INPUT_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal
+
 @Composable
 private fun NumberInput(
     label: String,
@@ -484,7 +486,7 @@ private fun NumberInput(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = ICU_CALCULATOR_INPUT_KEYBOARD_TYPE),
         singleLine = true,
         modifier = modifier,
         shape = RoundedCornerShape(15.dp)

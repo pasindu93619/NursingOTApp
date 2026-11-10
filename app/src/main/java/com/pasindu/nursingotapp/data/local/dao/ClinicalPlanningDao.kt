@@ -1,9 +1,11 @@
 package com.pasindu.nursingotapp.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.IsbarNoteEntity
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +16,12 @@ interface ClinicalPlanningDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIsbarNote(note: IsbarNoteEntity)
 
+    @Update
+    suspend fun updateIsbarNote(note: IsbarNoteEntity)
+
+    @Delete
+    suspend fun deleteIsbarNote(note: IsbarNoteEntity)
+
     @Query("SELECT * FROM isbar_notes ORDER BY timestamp DESC")
     fun getAllIsbarNotes(): Flow<List<IsbarNoteEntity>>
 
@@ -23,6 +31,12 @@ interface ClinicalPlanningDao {
     // Clinical Tasks
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: ClinicalTaskEntity)
+
+    @Update
+    suspend fun updateTask(task: ClinicalTaskEntity)
+
+    @Delete
+    suspend fun deleteTask(task: ClinicalTaskEntity)
 
     @Query("SELECT * FROM clinical_tasks ORDER BY triggerTime ASC")
     fun getAllTasks(): Flow<List<ClinicalTaskEntity>>

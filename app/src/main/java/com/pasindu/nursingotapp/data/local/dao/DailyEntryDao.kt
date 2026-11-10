@@ -36,6 +36,9 @@ interface DailyEntryDao {
     @Query("SELECT * FROM daily_entry WHERE claimPeriodId = :claimPeriodId AND date = :date LIMIT 1")
     suspend fun getEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity?
 
+    @Query("DELETE FROM daily_entry WHERE id = :id")
+    suspend fun deleteEntryById(id: Long)
+
     @Query("DELETE FROM daily_entry WHERE claimPeriodId = :claimPeriodId")
     suspend fun deleteEntriesForPeriod(claimPeriodId: Long)
 

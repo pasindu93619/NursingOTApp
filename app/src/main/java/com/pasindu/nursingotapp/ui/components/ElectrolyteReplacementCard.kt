@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.cos
 import kotlin.math.sin
 
+internal val ELECTROLYTE_INPUT_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal
+
 @Composable
 fun ElectrolyteReplacementCard(modifier: Modifier = Modifier) {
     // Shared App Palette (Mandate: Cool Tech Blue & Crisp Slate-White)
@@ -159,7 +161,7 @@ fun ElectrolyteReplacementCard(modifier: Modifier = Modifier) {
                     value = doseInput,
                     onValueChange = { doseInput = it },
                     label = { Text(if (isPotassium) "Dose (mEq)" else "Dose (grams)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = ELECTROLYTE_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(focusedIndicatorColor = activeColor, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White),
                     singleLine = true
@@ -168,7 +170,7 @@ fun ElectrolyteReplacementCard(modifier: Modifier = Modifier) {
                     value = volumeInput,
                     onValueChange = { volumeInput = it },
                     label = { Text("Diluent (mL)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = ELECTROLYTE_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(focusedIndicatorColor = activeColor, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White),
                     singleLine = true
@@ -179,7 +181,7 @@ fun ElectrolyteReplacementCard(modifier: Modifier = Modifier) {
                 value = timeHoursInput,
                 onValueChange = { timeHoursInput = it },
                 label = { Text("Duration (Hours)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = ELECTROLYTE_INPUT_KEYBOARD_TYPE),
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(focusedIndicatorColor = activeColor, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White),
                 singleLine = true

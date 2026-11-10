@@ -19,6 +19,7 @@ import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.CreateClaimPeriodUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeleteAllClaimPeriodsUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeleteClaimPeriodUseCase
+import com.pasindu.nursingotapp.domain.usecase.DeleteDailyEntryByIdUseCase
 import com.pasindu.nursingotapp.domain.usecase.DeletePaySheetDocumentUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.FindPaySheetDocumentUseCase
@@ -75,6 +76,7 @@ object UseCaseModule {
     @Provides fun provideObserveClaimDailyEntriesUseCase(dao: DailyEntryDao) = ObserveClaimDailyEntriesUseCase(dao)
     @Provides fun provideSaveDailyEntryUseCase(dao: DailyEntryDao) = SaveDailyEntryUseCase(dao)
     @Provides fun provideGetDailyEntryForDateUseCase(dao: DailyEntryDao) = GetDailyEntryForDateUseCase(dao)
+    @Provides fun provideDeleteDailyEntryByIdUseCase(dao: DailyEntryDao) = DeleteDailyEntryByIdUseCase(dao)
     @Provides fun provideObserveCpdLogsUseCase(dao: KnowledgeHubDao) = ObserveCpdLogsUseCase(dao)
     @Provides fun provideAddCpdLogUseCase(dao: KnowledgeHubDao) = AddCpdLogUseCase(dao)
     @Provides fun provideObserveAllDailyEntriesUseCase(dao: DailyEntryDao) = ObserveAllDailyEntriesUseCase(dao)

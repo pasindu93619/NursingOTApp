@@ -1,0 +1,17 @@
+{
+  "ISSUE-14": {
+    "status": "FAIL",
+    "evidence": "b1_issue_14_home_subtitle.png",
+    "detail": "Bullet corruption detected: 'Current OT claim period \u00e2\u20ac\u00a2 live from your recorded entries'"
+  },
+  "ISSUE-15": {
+    "status": "PASS",
+    "evidence": "b1_issue_15_home_profile.png",
+    "detail": "Profile button clickable bounds 48.0x48.0 dp (>= 48dp required)."
+  },
+  "ISSUE-16": {
+    "status": "PASS",
+    "evidence": "b1_issue_16_guide_dialog.png",
+    "detail": "Guide action bounds 48.0x48.0 dp (>= 48dp) and dialog successfully opened."
+  }
+}

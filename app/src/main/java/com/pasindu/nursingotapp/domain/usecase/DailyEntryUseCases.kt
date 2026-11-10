@@ -18,3 +18,7 @@ class GetDailyEntryForDateUseCase(private val dao: DailyEntryDao) {
     suspend operator fun invoke(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? =
         dao.getEntryForDate(claimPeriodId, date)
 }
+
+class DeleteDailyEntryByIdUseCase(private val dao: DailyEntryDao) {
+    suspend operator fun invoke(id: Long) = dao.deleteEntryById(id)
+}

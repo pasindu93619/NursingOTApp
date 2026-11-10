@@ -2,6 +2,7 @@ package com.pasindu.nursingotapp.ui.screens
 
 import android.content.Context
 import android.os.Environment
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -141,7 +142,8 @@ fun PaySheetDownloadCenterDialog(
                                         }
                                     },
                                 color = if (saved) Color(0xFFEEF2FF) else Color(0xFFF8FAFC),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(14.dp),
+                                border = if (saved) null else BorderStroke(1.dp, Color(0xFFE2E8F0))
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -152,15 +154,15 @@ fun PaySheetDownloadCenterDialog(
                                 ) {
                                     Text(
                                         label,
-                                        color = if (saved) Color(0xFF4338CA) else Color(0xFF94A3B8),
+                                        color = if (saved) Color(0xFF4338CA) else Color(0xFF475569),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Black
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         if (saved) "DOWNLOAD" else "EMPTY",
-                                        color = if (saved) Color(0xFF0891B2) else Color(0xFFCBD5E1),
-                                        fontSize = 7.sp,
+                                        color = if (saved) Color(0xFF0891B2) else Color(0xFF64748B),
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }

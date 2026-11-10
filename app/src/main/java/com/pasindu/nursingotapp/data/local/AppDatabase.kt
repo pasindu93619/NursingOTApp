@@ -18,6 +18,20 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileDao
 import com.pasindu.nursingotapp.data.local.dao.SalaryStep2027Dao
 import com.pasindu.nursingotapp.data.local.dao.PaySheetDocumentDao
 import com.pasindu.nursingotapp.data.local.dao.TransferActiveCacheDao
+import com.pasindu.nursingotapp.data.local.dao.KnowledgeArticleDao
+import com.pasindu.nursingotapp.data.local.dao.KnowledgeBookmarkDao
+import com.pasindu.nursingotapp.data.local.dao.KnowledgeNoteDao
+import com.pasindu.nursingotapp.data.local.dao.KnowledgeOfflineCacheDao
+import com.pasindu.nursingotapp.data.local.dao.KnowledgeReadingDao
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeSourceEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeCategoryEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeArticleEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeTagEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.ArticleTagCrossRef
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeBookmarkEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgePersonalNoteEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeReadingHistoryEntity
+import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeOfflineCacheEntity
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.ClinicalTaskEntity
 import com.pasindu.nursingotapp.data.local.entity.CpdLogEntity
@@ -49,8 +63,17 @@ import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
         SalaryStep2027Entity::class,
         PaySheetDocumentEntity::class,
         TransferActiveCacheEntity::class,
+        KnowledgeSourceEntity::class,
+        KnowledgeCategoryEntity::class,
+        KnowledgeArticleEntity::class,
+        KnowledgeTagEntity::class,
+        ArticleTagCrossRef::class,
+        KnowledgeBookmarkEntity::class,
+        KnowledgePersonalNoteEntity::class,
+        KnowledgeReadingHistoryEntity::class,
+        KnowledgeOfflineCacheEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -61,6 +84,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun financialDao(): FinancialDao
     abstract fun clinicalPlanningDao(): ClinicalPlanningDao
     abstract fun knowledgeHubDao(): KnowledgeHubDao
+    abstract fun knowledgeArticleDao(): KnowledgeArticleDao
+    abstract fun knowledgeBookmarkDao(): KnowledgeBookmarkDao
+    abstract fun knowledgeNoteDao(): KnowledgeNoteDao
+    abstract fun knowledgeReadingDao(): KnowledgeReadingDao
+    abstract fun knowledgeOfflineCacheDao(): KnowledgeOfflineCacheDao
     abstract fun payRateSettingsDao(): PayRateSettingsDao
     abstract fun profileCompensationDao(): ProfileCompensationDao
     abstract fun profileAdditionalAllowanceDao(): ProfileAdditionalAllowanceDao
@@ -322,6 +350,142 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 1. knowledge_sources
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_sources` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `shortCode` TEXT NOT NULL,
+                        `trustTier` TEXT NOT NULL,
+                        `websiteUrl` TEXT,
+                        `isSystemDefault` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                """.trimIndent())
+
+                // 2. knowledge_categories
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_categories` (
+                        `id` TEXT NOT NULL,
+                        `displayName` TEXT NOT NULL,
+                        `displayOrder` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                """.trimIndent())
+
+                // 3. knowledge_tags
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_tags` (
+                        `tag` TEXT NOT NULL,
+                        PRIMARY KEY(`tag`)
+                    )
+                """.trimIndent())
+
+                // 4. knowledge_articles
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_articles` (
+                        `id` TEXT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `sourceInstitution` TEXT NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `clinicalSummary` TEXT NOT NULL,
+                        `recommendationsJson` TEXT NOT NULL,
+                        `evidenceGrade` TEXT NOT NULL,
+                        `year` INTEGER NOT NULL,
+                        `lastReviewed` TEXT NOT NULL,
+                        `sourceUrl` TEXT,
+                        `circularNumber` TEXT,
+                        `effectiveDate` TEXT,
+                        `isFullTextAvailable` INTEGER NOT NULL,
+                        `licenseNotice` TEXT,
+                        `sourceUrlDisclaimer` TEXT,
+                        `isSuperseded` INTEGER NOT NULL,
+                        `supersededByArticleId` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`sourceInstitution`) REFERENCES `knowledge_sources`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_articles_sourceInstitution` ON `knowledge_articles` (`sourceInstitution`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_articles_category` ON `knowledge_articles` (`category`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_articles_evidenceGrade` ON `knowledge_articles` (`evidenceGrade`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_articles_year` ON `knowledge_articles` (`year`)")
+
+                // 5. article_tag_cross_ref
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `article_tag_cross_ref` (
+                        `articleId` TEXT NOT NULL,
+                        `tag` TEXT NOT NULL,
+                        PRIMARY KEY(`articleId`, `tag`),
+                        FOREIGN KEY(`articleId`) REFERENCES `knowledge_articles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`tag`) REFERENCES `knowledge_tags`(`tag`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_article_tag_cross_ref_tag` ON `article_tag_cross_ref` (`tag`)")
+
+                // 6. knowledge_bookmarks
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_bookmarks` (
+                        `articleId` TEXT NOT NULL,
+                        `bookmarkedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`articleId`),
+                        FOREIGN KEY(`articleId`) REFERENCES `knowledge_articles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+
+                // 7. knowledge_personal_notes
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_personal_notes` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `articleId` TEXT,
+                        `originalArticleId` TEXT NOT NULL,
+                        `noteContent` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`articleId`) REFERENCES `knowledge_articles`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_personal_notes_articleId` ON `knowledge_personal_notes` (`articleId`)")
+
+                // 8. knowledge_reading_history
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_reading_history` (
+                        `articleId` TEXT NOT NULL,
+                        `lastReadAt` INTEGER NOT NULL,
+                        `readingProgressPercent` INTEGER NOT NULL,
+                        `isCompleted` INTEGER NOT NULL,
+                        `completedAt` INTEGER,
+                        `linkedCpdLogId` INTEGER,
+                        PRIMARY KEY(`articleId`),
+                        FOREIGN KEY(`articleId`) REFERENCES `knowledge_articles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`linkedCpdLogId`) REFERENCES `cpd_logs`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_knowledge_reading_history_linkedCpdLogId` ON `knowledge_reading_history` (`linkedCpdLogId`)")
+
+                // 9. knowledge_offline_cache
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `knowledge_offline_cache` (
+                        `articleId` TEXT NOT NULL,
+                        `localRelativePath` TEXT,
+                        `mimeType` TEXT NOT NULL,
+                        `fileSizeBytes` INTEGER NOT NULL,
+                        `sha256Hash` TEXT NOT NULL,
+                        `cachedAt` INTEGER NOT NULL,
+                        `lastAccessedAt` INTEGER NOT NULL,
+                        `isFullTextCached` INTEGER NOT NULL,
+                        PRIMARY KEY(`articleId`),
+                        FOREIGN KEY(`articleId`) REFERENCES `knowledge_articles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_knowledge_offline_cache_localRelativePath` ON `knowledge_offline_cache` (`localRelativePath`)")
+            }
+        }
 
         private fun createSuperAppTables(database: SupportSQLiteDatabase) {
             createFinancialRecordsTable(database)

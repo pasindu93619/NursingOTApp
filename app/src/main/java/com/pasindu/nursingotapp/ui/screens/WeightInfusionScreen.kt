@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,7 +45,7 @@ private enum class WeightMode(val title: String, val shortTitle: String, val emo
 }
 
 @Composable
-fun WeightInfusionScreen() {
+fun WeightInfusionScreen(onNavigateBack: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     var mode by remember { mutableStateOf(WeightMode.SIMPLE) }
     var showGuide by remember { mutableStateOf(false) }
@@ -88,6 +89,9 @@ fun WeightInfusionScreen() {
         Modifier
             .fillMaxSize()
             .background(WeightBg)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -96,6 +100,10 @@ fun WeightInfusionScreen() {
             Modifier.fillMaxWidth().background(WeightHeroGradient, RoundedCornerShape(26.dp)).padding(20.dp)
         ) {
             Row(verticalAlignment = Alignment.Top) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                Spacer(Modifier.width(4.dp))
                 Column(Modifier.weight(1f)) {
                     Text("CLINICAL TOOL", color = Color.White.copy(alpha = 0.74f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
                     Spacer(Modifier.height(4.dp))

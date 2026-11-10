@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Medication
@@ -49,7 +50,7 @@ enum class CalcMode(val title: String, val shortTitle: String) {
 }
 
 @Composable
-fun DosageCalculatorScreen() {
+fun DosageCalculatorScreen(onNavigateBack: () -> Unit) {
     var mode by remember { mutableStateOf(CalcMode.STANDARD) }
     var showInfo by remember { mutableStateOf(false) }
 
@@ -90,12 +91,13 @@ fun DosageCalculatorScreen() {
         Modifier
             .fillMaxSize()
             .background(DoseBg)
-            .verticalScroll(rememberScrollState())
             .windowInsetsPadding(WindowInsets.safeDrawing)
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        DoseHero(mode, onInfo = { showInfo = true })
+        DoseHero(mode, onInfo = { showInfo = true }, onNavigateBack = onNavigateBack)
         ModeRail(mode) { mode = it }
         WorkflowLabel(mode)
 
@@ -113,7 +115,7 @@ fun DosageCalculatorScreen() {
 }
 
 @Composable
-private fun DoseHero(mode: CalcMode, onInfo: () -> Unit) {
+private fun DoseHero(mode: CalcMode, onInfo: () -> Unit, onNavigateBack: () -> Unit) {
     Card(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -122,6 +124,10 @@ private fun DoseHero(mode: CalcMode, onInfo: () -> Unit) {
     ) {
         Box(Modifier.fillMaxWidth().background(DoseHero, RoundedCornerShape(28.dp)).padding(20.dp)) {
             Row(verticalAlignment = Alignment.Top) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                Spacer(Modifier.width(4.dp))
                 Column(Modifier.weight(1f)) {
                     Text("MEDICATION CALCULATION", color = Color.White.copy(.72f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
                     Spacer(Modifier.height(5.dp))

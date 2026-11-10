@@ -1,0 +1,195 @@
+=== ROOT NODE 0 ===
+Printing with useUnmergedTree = 'false'
+Node #76 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #77 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #78 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsContainer = 'true'
+       |-Node #2667 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |  |-Node #2668 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |    CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@b7f785f'
+       |    IsTraversalGroup = 'true'
+       |    VerticalScrollAxisRange = 'ScrollAxisRange(value=1484.0, maxValue=1584.0, reverseScrolling=false)'
+       |    Actions = [GetScrollViewportLength, IndexForKey, ScrollBy, ScrollByOffset, ScrollToIndex]
+       |     |-Node #2670 at (l=45.0, t=-329.0, r=1035.0, b=1010.0)px
+       |     | IsContainer = 'true'
+       |     |  |-Node #2675 at (l=96.0, t=-278.0, r=297.0, b=-210.0)px
+       |     |  | Text = '[NURSINGOS]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2677 at (l=96.0, t=-206.0, r=567.0, b=-124.0)px
+       |     |  | Text = '[Shift snapshot]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2679 at (l=587.0, t=-210.0, r=677.0, b=-120.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #2680 at (l=607.0, t=-199.0, r=657.0, b=-131.0)px
+       |     |  |    Text = '[LIVE]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2681 at (l=96.0, t=-120.0, r=871.0, b=16.0)px
+       |     |  | Text = '[Current OT claim period • live from your recorded entries]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2682 at (l=871.0, t=-187.0, r=984.0, b=-74.0)px
+       |     |  | ContentDescription = '[Open NursingOS Guide]'
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Actions = [OnClick, RequestFocus]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #2687 at (l=96.0, t=61.0, r=376.0, b=426.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[Duty, 0 h, Current claim period]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #2699 at (l=399.0, t=61.0, r=680.0, b=426.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[OT, 0 h, 36h rule included]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #2711 at (l=703.0, t=61.0, r=984.0, b=455.0)px
+       |     |  | Focused = 'false'
+       |     |  | IsContainer = 'true'
+       |     |  | Text = '[Net, —, After recorded deductions]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #2724 at (l=96.0, t=489.0, r=984.0, b=675.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |  |-Node #2729 at (l=195.0, t=514.0, r=366.0, b=582.0)px
+       |     |  |  | Text = '[OT calculation]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #2730 at (l=195.0, t=582.0, r=745.0, b=650.0)px
+       |     |  |  | Text = '[Sunday–Saturday duty hours above 36h are OT]'
+       |     |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |  |-Node #2731 at (l=887.0, t=548.0, r=953.0, b=616.0)px
+       |     |  |    Text = '[= 0 h]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2735 at (l=96.0, t=712.0, r=345.0, b=780.0)px
+       |     |  | Text = '[Workload pressure]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2736 at (l=96.0, t=780.0, r=484.0, b=848.0)px
+       |     |  | Text = '[Low workload pressure]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2737 at (l=96.0, t=848.0, r=588.0, b=916.0)px
+       |     |  | Text = '[Higher score = less recorded workload pressure]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2738 at (l=778.0, t=780.0, r=910.0, b=848.0)px
+       |     |  | Text = '[100/100]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2740 at (l=933.0, t=789.0, r=984.0, b=840.0)px
+       |     |  | ContentDescription = '[Open Command Center]'
+       |     |  | Focused = 'false'
+       |     |  | Role = 'Image'
+       |     |  | Actions = [OnClick, RequestFocus]
+       |     |  | MergeDescendants = 'true'
+       |     |  |-Node #2742 at (l=96.0, t=936.0, r=984.0, b=959.0)px
+       |     |    Focused = 'false'
+       |     |    Actions = [OnClick, RequestFocus]
+       |     |    MergeDescendants = 'true'
+       |     |-Node #2746 at (l=45.0, t=1049.0, r=316.0, b=1102.0)px
+       |     | Text = '[Quick access]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #2747 at (l=45.0, t=1102.0, r=595.0, b=1141.0)px
+       |     | Text = '[The four workspaces you use most]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #2751 at (l=45.0, t=1180.0, r=528.0, b=1361.0)px
+       |     | Focused = 'false'
+       |     | IsContainer = 'true'
+       |     | Text = '[OT & Claims]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #2759 at (l=551.0, t=1180.0, r=1035.0, b=1361.0)px
+       |     | Focused = 'false'
+       |     | IsContainer = 'true'
+       |     | Text = '[Finance]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #2768 at (l=45.0, t=1384.0, r=528.0, b=1565.0)px
+       |     | Focused = 'false'
+       |     | IsContainer = 'true'
+       |     | Text = '[Clinical]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #2776 at (l=551.0, t=1384.0, r=1035.0, b=1565.0)px
+       |     | Focused = 'false'
+       |     | IsContainer = 'true'
+       |     | Text = '[Planning]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #2785 at (l=45.0, t=1604.0, r=1035.0, b=1830.0)px
+       |     | IsContainer = 'true'
+       |     |  |-Node #2788 at (l=90.0, t=1654.0, r=217.0, b=1781.0)px
+       |     |  | IsContainer = 'true'
+       |     |  |-Node #2793 at (l=251.0, t=1649.0, r=518.0, b=1717.0)px
+       |     |  | Text = '[Today's focus]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2794 at (l=251.0, t=1717.0, r=508.0, b=1785.0)px
+       |     |  | Text = '[CPD progress: 0/10]'
+       |     |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |-Node #2795 at (l=820.0, t=1661.0, r=990.0, b=1774.0)px
+       |     |    Focused = 'false'
+       |     |    Role = 'Button'
+       |     |    Text = '[Learn]'
+       |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |    MergeDescendants = 'true'
+       |     |-Node #2800 at (l=45.0, t=1869.0, r=252.0, b=1922.0)px
+       |     | Text = '[Your tools]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #2801 at (l=45.0, t=1922.0, r=596.0, b=1961.0)px
+       |     | Text = '[Everything else stays one tap away]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #2804 at (l=45.0, t=2000.0, r=359.0, b=2328.0)px
+       |     | Focused = 'false'
+       |     | IsContainer = 'true'
+       |     | Text = '[Knowledge, CPD]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #2811 at (l=382.0, t=2000.0, r=697.0, b=2328.0)px
+       |     | Focused = 'false'
+       |     | IsContainer = 'true'
+       |     | Text = '[Pay Sheets, Saved]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     | MergeDescendants = 'true'
+       |     |-Node #2818 at (l=720.0, t=2000.0, r=1035.0, b=2328.0)px
+       |       Focused = 'false'
+       |       IsContainer = 'true'
+       |       Text = '[Command, Full view]'
+       |       Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |       MergeDescendants = 'true'
+       |-Node #2492 at (l=0.0, t=2042.0, r=1080.0, b=2400.0)px
+         IsContainer = 'true'
+          |-Node #2493 at (l=0.0, t=2042.0, r=1080.0, b=2267.0)px
+            [SelectableGroup]
+             |-Node #2494 at (l=0.0, t=2042.0, r=197.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'true'
+             | Text = '[Home]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #2503 at (l=220.0, t=2042.0, r=417.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Work]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #2512 at (l=440.0, t=2042.0, r=638.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Clinical]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #2521 at (l=661.0, t=2042.0, r=859.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Finance]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #2530 at (l=882.0, t=2042.0, r=1080.0, b=2267.0)px
+               Focused = 'false'
+               Role = 'Tab'
+               Selected = 'false'
+               Text = '[More]'
+               Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+               MergeDescendants = 'true'

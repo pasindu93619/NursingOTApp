@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.cos
 import kotlin.math.sin
 
+internal val INSULIN_INPUT_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InsulinCalculatorCard(modifier: Modifier = Modifier) {
@@ -103,7 +105,7 @@ fun InsulinCalculatorCard(modifier: Modifier = Modifier) {
                     value = cbgInput,
                     onValueChange = { cbgInput = it },
                     label = { Text("Blood Glucose (mg/dL)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = INSULIN_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1.5f),
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -120,7 +122,7 @@ fun InsulinCalculatorCard(modifier: Modifier = Modifier) {
                     value = totalUnitsInput,
                     onValueChange = { totalUnitsInput = it },
                     label = { Text("Actrapid (Units)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = INSULIN_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(16.dp)
                 )
@@ -128,7 +130,7 @@ fun InsulinCalculatorCard(modifier: Modifier = Modifier) {
                     value = totalVolumeInput,
                     onValueChange = { totalVolumeInput = it },
                     label = { Text("Diluent (mL)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = INSULIN_INPUT_KEYBOARD_TYPE),
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(16.dp)
                 )

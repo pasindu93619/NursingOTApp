@@ -2,13 +2,20 @@ package com.pasindu.nursingotapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pasindu.nursingotapp.data.local.dao.MANAGED_DEDUCTION_NAME_APIT
+import com.pasindu.nursingotapp.data.local.dao.MANAGED_DEDUCTION_NAME_LOAN
+import com.pasindu.nursingotapp.data.local.dao.MANAGED_DEDUCTION_NAME_OTHER
+import com.pasindu.nursingotapp.data.local.dao.MANAGED_DEDUCTION_NAME_WOP
+import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
+import com.pasindu.nursingotapp.data.local.dao.isManagedCommitmentDeductionName
+import com.pasindu.nursingotapp.data.local.dao.mergeManagedCommitmentDeductionRows
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
-import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileEntity
 import com.pasindu.nursingotapp.data.model.PeriodSummary
+import com.pasindu.nursingotapp.domain.usecase.ApplyFinancePolicyRatesUseCase
 import com.pasindu.nursingotapp.domain.usecase.CalculateFinanceSummaryUseCase
 import com.pasindu.nursingotapp.domain.usecase.EnsureManualPayRateRecordUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveClaimDailyEntriesUseCase
@@ -18,15 +25,88 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveProfileCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveProfileUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceCompensationUseCase
 import com.pasindu.nursingotapp.domain.usecase.SaveFinanceRatesUseCase
-import com.pasindu.nursingotapp.domain.usecase.ApplyFinancePolicyRatesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.DayOfWeek
 import javax.inject.Inject
+import kotlin.math.abs
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+
+internal const val DEDUCTION_NAME_APIT = MANAGED_DEDUCTION_NAME_APIT
+internal const val DEDUCTION_NAME_WOP = MANAGED_DEDUCTION_NAME_WOP
+internal const val DEDUCTION_NAME_LOAN = MANAGED_DEDUCTION_NAME_LOAN
+internal const val DEDUCTION_NAME_OTHER = MANAGED_DEDUCTION_NAME_OTHER
+
+internal data class CommitmentAmounts(
+    val apit: Double = 0.0,
+    val wop: Double = 0.0,
+    val loanDeduction: Double = 0.0,
+    val otherDeduction: Double = 0.0
+)
+
+internal fun formatCommitmentInput(value: Double): String {
+    if (!value.isFinite() || value <= 0.0) return ""
+    return if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+}
+
+internal fun parseStrictMoneyOrNull(value: String): Double? {
+    val cleaned = value.trim().replace(",", "")
+    if (cleaned.isEmpty()) return null
+    val parsed = cleaned.toDoubleOrNull() ?: return null
+    if (!parsed.isFinite() || parsed < 0.0) return null
+    return parsed
+}
+
+internal fun isManagedCommitmentName(name: String): Boolean =
+    isManagedCommitmentDeductionName(name)
+
+internal fun findManagedDeductionAmount(
+    deductions: List<ProfileDeductionEntity>,
+    canonicalName: String
+): Double =
+    deductions
+        .firstOrNull { it.name.trim().equals(canonicalName, ignoreCase = true) }
+        ?.amount
+        ?.coerceAtLeast(0.0)
+        ?: 0.0
+
+internal fun mergeManagedCommitmentDeductions(
+    claimPeriodId: Long,
+    existingRows: List<ProfileDeductionEntity>,
+    commitments: CommitmentAmounts,
+    nowMillis: Long = System.currentTimeMillis()
+): List<ProfileDeductionEntity> =
+    mergeManagedCommitmentDeductionRows(
+        claimPeriodId = claimPeriodId,
+        existingRows = existingRows,
+        apit = commitments.apit,
+        wop = commitments.wop,
+        loanDeduction = commitments.loanDeduction,
+        otherDeduction = commitments.otherDeduction,
+        nowMillis = nowMillis
+    )
+
+internal fun resolveCommitmentInputText(
+    currentInput: String,
+    newAmount: Double
+): String {
+    if (currentInput.isEmpty()) {
+        return formatCommitmentInput(newAmount)
+    }
+    val parsedCurrent = parseStrictMoneyOrNull(currentInput)
+    if (parsedCurrent != null && abs(parsedCurrent - newAmount) < 0.0001) {
+        return currentInput
+    }
+    return formatCommitmentInput(newAmount)
+}
 
 data class AdvancedFinanceUiState(
     val isLoading: Boolean = true,
@@ -43,6 +123,11 @@ data class AdvancedFinanceUiState(
     val wop: Double = 0.0,
     val loanDeduction: Double = 0.0,
     val otherDeduction: Double = 0.0,
+    val apitInput: String = formatCommitmentInput(apit),
+    val wopInput: String = formatCommitmentInput(wop),
+    val loanDeductionInput: String = formatCommitmentInput(loanDeduction),
+    val otherDeductionInput: String = formatCommitmentInput(otherDeduction),
+    val loadedDeductionsClaimPeriodId: Long? = null,
     val errorMessage: String? = null
 ) {
     val currentBasicSalary: Double
@@ -103,6 +188,14 @@ class AdvancedFinanceViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AdvancedFinanceUiState())
     val uiState: StateFlow<AdvancedFinanceUiState> = _uiState.asStateFlow()
 
+    private var deductionObservationJob: Job? = null
+    private var deductionWriteJob: Job? = null
+    private val deductionWriteMutex = Mutex()
+    private var activeClaimPeriodId: Long? = null
+    private val inFlightWriteCountByPeriod = mutableMapOf<Long, Int>()
+    private val writeVersionByPeriod = mutableMapOf<Long, Long>()
+    private val latestCommitmentsByPeriod = mutableMapOf<Long, CommitmentAmounts>()
+
     init {
         observeProfile().collectInViewModel { profile ->
             _uiState.value = _uiState.value.copy(profile = profile)
@@ -117,7 +210,33 @@ class AdvancedFinanceViewModel @Inject constructor(
             }
         }
         observeClaimPeriod().collectInViewModel { periods ->
-            _uiState.value = _uiState.value.copy(claimPeriod = periods.firstOrNull())
+            val current = periods.firstOrNull()
+            val newPeriodId = current?.id
+            val periodChanged = newPeriodId != activeClaimPeriodId
+            activeClaimPeriodId = newPeriodId
+
+            if (periodChanged) {
+                deductionObservationJob?.cancel()
+                deductionObservationJob = null
+                _uiState.value = _uiState.value.copy(
+                    claimPeriod = current,
+                    deductions = emptyList(),
+                    apit = 0.0,
+                    wop = 0.0,
+                    loanDeduction = 0.0,
+                    otherDeduction = 0.0,
+                    apitInput = "",
+                    wopInput = "",
+                    loanDeductionInput = "",
+                    otherDeductionInput = "",
+                    loadedDeductionsClaimPeriodId = null
+                )
+                if (newPeriodId != null) {
+                    observeDeductionsForClaimPeriod(newPeriodId)
+                }
+            } else {
+                _uiState.value = _uiState.value.copy(claimPeriod = current)
+            }
             recalculate()
         }
         observePayRates().collectInViewModel { settings ->
@@ -128,14 +247,54 @@ class AdvancedFinanceViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(compensation = compensation)
             recalculate()
         }
-        observeClaimPeriod().collectInViewModel { periods ->
-            val current = periods.firstOrNull()
-            viewModelScope.launch {
-                val deductions = current?.let { profileDeductionDao.observeForClaimPeriod(it.id).first() } ?: emptyList()
-                _uiState.value = _uiState.value.copy(deductions = deductions)
-                recalculate()
+    }
+
+    private fun observeDeductionsForClaimPeriod(claimPeriodId: Long) {
+        deductionObservationJob?.cancel()
+        deductionObservationJob = viewModelScope.launch {
+            profileDeductionDao.observeForClaimPeriod(claimPeriodId).collect { deductions ->
+                if ((inFlightWriteCountByPeriod[claimPeriodId] ?: 0) > 0 ||
+                    activeClaimPeriodId != claimPeriodId
+                ) {
+                    return@collect
+                }
+                applyObservedDeductions(claimPeriodId, deductions)
             }
         }
+    }
+
+    private fun applyObservedDeductions(
+        claimPeriodId: Long,
+        deductions: List<ProfileDeductionEntity>
+    ) {
+        val currentState = _uiState.value
+        if (currentState.claimPeriod?.id != claimPeriodId || activeClaimPeriodId != claimPeriodId) return
+
+        val apitAmount = findManagedDeductionAmount(deductions, DEDUCTION_NAME_APIT)
+        val wopAmount = findManagedDeductionAmount(deductions, DEDUCTION_NAME_WOP)
+        val loanAmount = findManagedDeductionAmount(deductions, DEDUCTION_NAME_LOAN)
+        val otherAmount = findManagedDeductionAmount(deductions, DEDUCTION_NAME_OTHER)
+
+        latestCommitmentsByPeriod[claimPeriodId] = CommitmentAmounts(
+            apit = apitAmount,
+            wop = wopAmount,
+            loanDeduction = loanAmount,
+            otherDeduction = otherAmount
+        )
+
+        _uiState.value = currentState.copy(
+            deductions = deductions,
+            apit = apitAmount,
+            wop = wopAmount,
+            loanDeduction = loanAmount,
+            otherDeduction = otherAmount,
+            apitInput = resolveCommitmentInputText(currentState.apitInput, apitAmount),
+            wopInput = resolveCommitmentInputText(currentState.wopInput, wopAmount),
+            loanDeductionInput = resolveCommitmentInputText(currentState.loanDeductionInput, loanAmount),
+            otherDeductionInput = resolveCommitmentInputText(currentState.otherDeductionInput, otherAmount),
+            loadedDeductionsClaimPeriodId = claimPeriodId
+        )
+        recalculate()
     }
 
     private fun recalculate() {
@@ -180,10 +339,135 @@ class AdvancedFinanceViewModel @Inject constructor(
     }
 
     fun refresh() = recalculate()
-    fun updateApit(value: String) { _uiState.value = _uiState.value.copy(apit = parseMoney(value)) }
-    fun updateWop(value: String) { _uiState.value = _uiState.value.copy(wop = parseMoney(value)) }
-    fun updateLoanDeduction(value: String) { _uiState.value = _uiState.value.copy(loanDeduction = parseMoney(value)) }
-    fun updateOtherDeduction(value: String) { _uiState.value = _uiState.value.copy(otherDeduction = parseMoney(value)) }
+
+    fun updateApit(value: String) = updateManagedCommitment(value) { state, parsedAmount ->
+        state.copy(
+            apit = parsedAmount ?: state.apit,
+            apitInput = value
+        )
+    }
+
+    fun updateWop(value: String) = updateManagedCommitment(value) { state, parsedAmount ->
+        state.copy(
+            wop = parsedAmount ?: state.wop,
+            wopInput = value
+        )
+    }
+
+    fun updateLoanDeduction(value: String) = updateManagedCommitment(value) { state, parsedAmount ->
+        state.copy(
+            loanDeduction = parsedAmount ?: state.loanDeduction,
+            loanDeductionInput = value
+        )
+    }
+
+    fun updateOtherDeduction(value: String) = updateManagedCommitment(value) { state, parsedAmount ->
+        state.copy(
+            otherDeduction = parsedAmount ?: state.otherDeduction,
+            otherDeductionInput = value
+        )
+    }
+
+    private fun updateManagedCommitment(
+        rawInput: String,
+        reducer: (AdvancedFinanceUiState, Double?) -> AdvancedFinanceUiState
+    ) {
+        val parsedOrCleared: Double? = when {
+            rawInput.isBlank() -> 0.0
+            else -> parseStrictMoneyOrNull(rawInput)
+        }
+        val updatedState = reducer(_uiState.value, parsedOrCleared)
+        _uiState.value = updatedState
+
+        if (parsedOrCleared == null) return
+        val targetClaimPeriodId = updatedState.claimPeriod?.id ?: return
+        if (activeClaimPeriodId != targetClaimPeriodId) return
+
+        val nextVersion = (writeVersionByPeriod[targetClaimPeriodId] ?: 0L) + 1L
+        writeVersionByPeriod[targetClaimPeriodId] = nextVersion
+        latestCommitmentsByPeriod[targetClaimPeriodId] = CommitmentAmounts(
+            apit = updatedState.apit,
+            wop = updatedState.wop,
+            loanDeduction = updatedState.loanDeduction,
+            otherDeduction = updatedState.otherDeduction
+        )
+        persistCommitmentDeductions(targetClaimPeriodId)
+    }
+
+    private fun persistCommitmentDeductions(targetClaimPeriodId: Long) {
+        inFlightWriteCountByPeriod[targetClaimPeriodId] =
+            (inFlightWriteCountByPeriod[targetClaimPeriodId] ?: 0) + 1
+        deductionWriteJob = viewModelScope.launch {
+            try {
+                deductionWriteMutex.withLock {
+                    val commitments = latestCommitmentsByPeriod[targetClaimPeriodId] ?: return@withLock
+                    val writeVersion = writeVersionByPeriod[targetClaimPeriodId] ?: 0L
+                    runCatching {
+                        val persistedRows = withContext(NonCancellable) {
+                            profileDeductionDao.replaceManagedCommitmentsForClaimPeriod(
+                                claimPeriodId = targetClaimPeriodId,
+                                apit = commitments.apit,
+                                wop = commitments.wop,
+                                loanDeduction = commitments.loanDeduction,
+                                otherDeduction = commitments.otherDeduction,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        }
+                        val isLatestWriteForPeriod =
+                            (writeVersionByPeriod[targetClaimPeriodId] ?: 0L) == writeVersion
+                        if (isLatestWriteForPeriod &&
+                            activeClaimPeriodId == targetClaimPeriodId &&
+                            _uiState.value.claimPeriod?.id == targetClaimPeriodId
+                        ) {
+                            applyObservedDeductions(targetClaimPeriodId, persistedRows)
+                        }
+                    }.onFailure { error ->
+                        val rolledBackRows = runCatching {
+                            profileDeductionDao.getForClaimPeriodOnce(targetClaimPeriodId)
+                        }.getOrNull()
+                        if (rolledBackRows != null) {
+                            val apitAmount = findManagedDeductionAmount(rolledBackRows, DEDUCTION_NAME_APIT)
+                            val wopAmount = findManagedDeductionAmount(rolledBackRows, DEDUCTION_NAME_WOP)
+                            val loanAmount = findManagedDeductionAmount(rolledBackRows, DEDUCTION_NAME_LOAN)
+                            val otherAmount = findManagedDeductionAmount(rolledBackRows, DEDUCTION_NAME_OTHER)
+                            latestCommitmentsByPeriod[targetClaimPeriodId] = CommitmentAmounts(
+                                apit = apitAmount,
+                                wop = wopAmount,
+                                loanDeduction = loanAmount,
+                                otherDeduction = otherAmount
+                            )
+                            if (activeClaimPeriodId == targetClaimPeriodId &&
+                                _uiState.value.claimPeriod?.id == targetClaimPeriodId
+                            ) {
+                                _uiState.value = _uiState.value.copy(
+                                    deductions = rolledBackRows,
+                                    apit = apitAmount,
+                                    wop = wopAmount,
+                                    loanDeduction = loanAmount,
+                                    otherDeduction = otherAmount,
+                                    apitInput = formatCommitmentInput(apitAmount),
+                                    wopInput = formatCommitmentInput(wopAmount),
+                                    loanDeductionInput = formatCommitmentInput(loanAmount),
+                                    otherDeductionInput = formatCommitmentInput(otherAmount),
+                                    loadedDeductionsClaimPeriodId = targetClaimPeriodId
+                                )
+                            }
+                        }
+                        if (activeClaimPeriodId == targetClaimPeriodId) {
+                            setError(error, "Unable to save financial commitments.")
+                        }
+                    }
+                }
+            } finally {
+                val remaining = (inFlightWriteCountByPeriod[targetClaimPeriodId] ?: 1) - 1
+                if (remaining <= 0) {
+                    inFlightWriteCountByPeriod.remove(targetClaimPeriodId)
+                } else {
+                    inFlightWriteCountByPeriod[targetClaimPeriodId] = remaining
+                }
+            }
+        }
+    }
 
     fun updateOtRate(value: String) = saveRates(parseMoney(value), _uiState.value.phRate, _uiState.value.doRate, _uiState.value.basisSalary2027, "2027_BASIC_SALARY_DIV_30")
     fun updatePhRate(value: String) = saveRates(_uiState.value.otRate, parseMoney(value), _uiState.value.doRate, _uiState.value.basisSalary2027, "MANUAL")

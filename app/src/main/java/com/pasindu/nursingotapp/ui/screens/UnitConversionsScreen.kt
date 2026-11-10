@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,7 +64,7 @@ private enum class Electrolyte(val symbol: String, val formulaWeight: Double, va
 }
 
 @Composable
-fun UnitConversionsScreen() {
+fun UnitConversionsScreen(onNavigateBack: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     var mode by remember { mutableStateOf(ConvMode.METRIC) }
     var showGuide by remember { mutableStateOf(false) }
@@ -91,13 +92,17 @@ fun UnitConversionsScreen() {
     if (showGuide) ConversionGuideDialog(mode) { showGuide = false }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(ConvBg).verticalScroll(rememberScrollState())
-            .statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 18.dp),
+        modifier = Modifier.fillMaxSize().background(ConvBg)
+            .statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().background(ConvHeroGradient, RoundedCornerShape(28.dp)).padding(20.dp)) {
             Row(verticalAlignment = Alignment.Top) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                Spacer(Modifier.width(4.dp))
                 Column(Modifier.weight(1f)) {
                     Text("CLINICAL TOOL", color = Color.White.copy(alpha = 0.74f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
                     Spacer(Modifier.height(4.dp))

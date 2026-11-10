@@ -34,21 +34,265 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import android.os.SystemClock
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA & STATE
 // ─────────────────────────────────────────────────────────────────────────────
+fun interface MonotonicClock {
+    fun elapsedRealtimeMillis(): Long
+}
+
+object SystemMonotonicClock : MonotonicClock {
+    override fun elapsedRealtimeMillis(): Long = SystemClock.elapsedRealtime()
+}
+
+fun formatInfusionDuration(remainingSeconds: Int): String {
+    val safeSeconds = remainingSeconds.coerceAtLeast(0)
+    val hours = safeSeconds / 3600
+    val minutes = (safeSeconds % 3600) / 60
+    val seconds = safeSeconds % 60
+    return if (hours > 0) {
+        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.US, "%d:%02d", minutes, seconds)
+    }
+}
+
+fun calculateInfusionDurationSeconds(volumeML: Float, rateMLPerHour: Float): Int {
+    if (volumeML <= 0f || rateMLPerHour <= 0f || !volumeML.isFinite() || !rateMLPerHour.isFinite()) {
+        return 0
+    }
+    return ((volumeML.toDouble() / rateMLPerHour.toDouble()) * 3600.0)
+        .roundToInt()
+        .coerceAtLeast(0)
+}
+
 data class SyringePumpState(
     val rateMLPerHour: Float = 0.0f,
     val volumeML: Float = 50.0f,
-    val timeHours: Int = 0,
-    val timeMinutes: Int = 0,
+    val remainingSeconds: Int = 0,
     val isRunning: Boolean = false,
     val infusionProgress: Float = 0.0f
-)
+) {
+    constructor(
+        rateMLPerHour: Float,
+        volumeML: Float,
+        timeHours: Int,
+        timeMinutes: Int,
+        timeSeconds: Int = 0,
+        isRunning: Boolean = false,
+        infusionProgress: Float = 0.0f
+    ) : this(
+        rateMLPerHour = rateMLPerHour,
+        volumeML = volumeML,
+        remainingSeconds = (timeHours * 3600 + timeMinutes * 60 + timeSeconds).coerceAtLeast(0),
+        isRunning = isRunning,
+        infusionProgress = infusionProgress
+    )
+
+    val safeRemainingSeconds: Int
+        get() = remainingSeconds.coerceAtLeast(0)
+
+    val timeHours: Int
+        get() = safeRemainingSeconds / 3600
+
+    val timeMinutes: Int
+        get() = (safeRemainingSeconds % 3600) / 60
+
+    val timeSeconds: Int
+        get() = safeRemainingSeconds % 60
+
+    val formattedTime: String
+        get() = formatInfusionDuration(safeRemainingSeconds)
+}
+
+class VasoactiveInfusionTimerController(
+    private val scope: CoroutineScope,
+    private val clock: MonotonicClock = SystemMonotonicClock,
+    private val tickIntervalMillis: Long = 1_000L
+) {
+    private val _state = MutableStateFlow(SyringePumpState())
+    val state: StateFlow<SyringePumpState> = _state.asStateFlow()
+
+    private var initialVolumeML: Float = 50.0f
+    private var configuredRateMLPerHour: Float = 0.0f
+    private var initialDurationMillis: Long = 0L
+    private var remainingMillis: Long = 0L
+    private var targetElapsedRealtimeMillis: Long? = null
+    private var tickJob: Job? = null
+
+    var activeLoopCount: Int = 0
+        private set
+
+    fun configure(rateMLPerHour: Float, volumeML: Float) {
+        val safeRate = rateMLPerHour.takeIf { it.isFinite() && it > 0f } ?: 0f
+        val safeVolume = volumeML.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        val durationSeconds = calculateInfusionDurationSeconds(safeVolume, safeRate)
+        configureDurationSeconds(
+            durationSeconds = durationSeconds,
+            rateMLPerHour = safeRate,
+            volumeML = safeVolume
+        )
+    }
+
+    fun configureDurationSeconds(
+        durationSeconds: Int,
+        rateMLPerHour: Float = 0f,
+        volumeML: Float = 50f
+    ) {
+        cancelTickJob()
+        val safeSeconds = durationSeconds.coerceAtLeast(0)
+        val safeVolume = volumeML.coerceAtLeast(0f)
+        val safeRate = rateMLPerHour.coerceAtLeast(0f)
+        initialVolumeML = safeVolume
+        configuredRateMLPerHour = safeRate
+        initialDurationMillis = safeSeconds * 1_000L
+        remainingMillis = initialDurationMillis
+        targetElapsedRealtimeMillis = null
+        _state.value = SyringePumpState(
+            rateMLPerHour = safeRate,
+            volumeML = safeVolume,
+            remainingSeconds = safeSeconds,
+            isRunning = false,
+            infusionProgress = 0f
+        )
+    }
+
+    fun start() {
+        if (_state.value.isRunning && tickJob?.isActive == true) {
+            return
+        }
+        if (remainingMillis <= 0L) {
+            if (initialDurationMillis <= 0L) return
+            remainingMillis = initialDurationMillis
+        }
+
+        cancelTickJob()
+        val now = clock.elapsedRealtimeMillis()
+        targetElapsedRealtimeMillis = now + remainingMillis
+        _state.value = buildStateForRemainingMillis(
+            remMillis = remainingMillis,
+            running = true
+        )
+
+        tickJob = scope.launch {
+            activeLoopCount++
+            try {
+                while (currentCoroutineContext().isActive) {
+                    val target = targetElapsedRealtimeMillis ?: break
+                    val currentNow = clock.elapsedRealtimeMillis()
+                    val currentRem = (target - currentNow).coerceAtLeast(0L)
+                    val delayMs = if (currentRem <= 0L) {
+                        0L
+                    } else {
+                        val remainder = currentRem % tickIntervalMillis
+                        if (remainder == 0L) tickIntervalMillis else remainder
+                    }
+                    if (delayMs > 0L) {
+                        delay(delayMs)
+                    }
+                    val afterDelayNow = clock.elapsedRealtimeMillis()
+                    val activeTarget = targetElapsedRealtimeMillis ?: break
+                    val updatedRem = (activeTarget - afterDelayNow).coerceAtLeast(0L)
+                    remainingMillis = updatedRem
+                    if (updatedRem <= 0L) {
+                        targetElapsedRealtimeMillis = null
+                        _state.value = buildStateForRemainingMillis(
+                            remMillis = 0L,
+                            running = false
+                        )
+                        break
+                    } else {
+                        _state.value = buildStateForRemainingMillis(
+                            remMillis = updatedRem,
+                            running = true
+                        )
+                    }
+                }
+            } finally {
+                activeLoopCount--
+            }
+        }
+    }
+
+    fun pause() {
+        if (!_state.value.isRunning) return
+        val target = targetElapsedRealtimeMillis
+        if (target != null) {
+            val now = clock.elapsedRealtimeMillis()
+            remainingMillis = (target - now).coerceAtLeast(0L)
+        }
+        targetElapsedRealtimeMillis = null
+        cancelTickJob()
+        _state.value = buildStateForRemainingMillis(
+            remMillis = remainingMillis,
+            running = false
+        )
+    }
+
+    fun reset() {
+        cancelTickJob()
+        targetElapsedRealtimeMillis = null
+        remainingMillis = initialDurationMillis
+        val initialSeconds = ((initialDurationMillis + 999L) / 1_000L).toInt().coerceAtLeast(0)
+        _state.value = SyringePumpState(
+            rateMLPerHour = configuredRateMLPerHour,
+            volumeML = initialVolumeML,
+            remainingSeconds = initialSeconds,
+            isRunning = false,
+            infusionProgress = 0f
+        )
+    }
+
+    private fun cancelTickJob() {
+        tickJob?.cancel()
+        tickJob = null
+    }
+
+    private fun buildStateForRemainingMillis(remMillis: Long, running: Boolean): SyringePumpState {
+        val clampedMillis = remMillis.coerceIn(0L, initialDurationMillis.coerceAtLeast(0L))
+        val displaySeconds = if (clampedMillis <= 0L) {
+            0
+        } else {
+            ((clampedMillis + 999L) / 1_000L).toInt()
+        }
+        val progress = if (initialDurationMillis > 0L) {
+            (1.0 - (clampedMillis.toDouble() / initialDurationMillis.toDouble()))
+                .toFloat()
+                .coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        val currentVolume = if (initialDurationMillis > 0L) {
+            (initialVolumeML * (clampedMillis.toDouble() / initialDurationMillis.toDouble()))
+                .toFloat()
+                .coerceIn(0f, initialVolumeML)
+        } else {
+            initialVolumeML
+        }
+        return SyringePumpState(
+            rateMLPerHour = configuredRateMLPerHour,
+            volumeML = currentVolume,
+            remainingSeconds = displaySeconds,
+            isRunning = running && clampedMillis > 0L,
+            infusionProgress = progress
+        )
+    }
+}
 
 data class ClinicalProtocol(val name: String, val drugMg: String, val volumeMl: String, val defaultTarget: String)
 
@@ -92,43 +336,21 @@ fun VasoactiveInfusionsScreen(
         (doseNum * weightNum * 60f) / concentrationMcgMl
     } else 0f
 
-    val totalTimeHoursRemaining = if (calculatedRateMlHr > 0f) volMlNum / calculatedRateMlHr else 0f
-    val hrs = totalTimeHoursRemaining.toInt()
-    val mins = ((totalTimeHoursRemaining - hrs) * 60).toInt()
-
-    var pumpState by remember { mutableStateOf(SyringePumpState()) }
+    val coroutineScope = rememberCoroutineScope()
+    val timerController = remember(coroutineScope) {
+        VasoactiveInfusionTimerController(
+            scope = coroutineScope,
+            clock = SystemMonotonicClock
+        )
+    }
+    val pumpState by timerController.state.collectAsState()
 
     LaunchedEffect(calculatedRateMlHr, volMlNum) {
         if (!pumpState.isRunning) {
-            pumpState = pumpState.copy(
+            timerController.configure(
                 rateMLPerHour = calculatedRateMlHr,
-                volumeML = volMlNum,
-                timeHours = hrs,
-                timeMinutes = mins,
-                infusionProgress = 0f
+                volumeML = volMlNum
             )
-        }
-    }
-
-    LaunchedEffect(pumpState.isRunning) {
-        if (pumpState.isRunning && pumpState.rateMLPerHour > 0) {
-            val initialVolume = pumpState.volumeML
-            while (pumpState.isRunning) {
-                delay(1000)
-                val totalSecRemaining = pumpState.timeHours * 3600 + pumpState.timeMinutes * 60
-                val newSec = (totalSecRemaining - 1).coerceAtLeast(0)
-
-                val newVolume = (pumpState.volumeML - pumpState.rateMLPerHour / 3600f).coerceAtLeast(0f)
-                val progress = if (initialVolume > 0) 1f - (newVolume / initialVolume) else 1f
-
-                pumpState = pumpState.copy(
-                    timeHours = newSec / 3600,
-                    timeMinutes = (newSec % 3600) / 60,
-                    volumeML = newVolume,
-                    infusionProgress = progress.coerceIn(0f, 1f)
-                )
-                if (newSec == 0) pumpState = pumpState.copy(isRunning = false)
-            }
         }
     }
 
@@ -156,6 +378,8 @@ fun VasoactiveInfusionsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -284,7 +508,7 @@ fun VasoactiveInfusionsScreen(
                                     else listOf(Color(0xFF00C853), Color(0xFF009624))
                                 )
                             )
-                            .clickable { if (calculatedRateMlHr > 0) pumpState = pumpState.copy(isRunning = !isRunning) },
+                            .clickable { if (isRunning) timerController.pause() else if (calculatedRateMlHr > 0f) timerController.start() },
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -316,6 +540,8 @@ fun VasoactiveInfusionsScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 // REUSABLE UI COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
+internal val VASOACTIVE_INPUT_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClinicalInputField(
@@ -339,7 +565,7 @@ fun ClinicalInputField(
                 modifier = Modifier.size(20.dp)
             )
         },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = VASOACTIVE_INPUT_KEYBOARD_TYPE),
         modifier = modifier.height(64.dp),
         enabled = enabled,
         shape = RoundedCornerShape(16.dp),
@@ -424,7 +650,7 @@ fun SyringePumpPerfectLive(
         val textTop = dispTop + h * 0.015f
         drawText(textMeasurer, "RT: ${"%.1f".format(state.rateMLPerHour)} ml/h", Offset(textLeft, textTop), style = textStyle)
         drawText(textMeasurer, "VL: ${"%.1f".format(state.volumeML)} ml", Offset(textLeft, textTop + dispH * 0.25f), style = textStyle)
-        drawText(textMeasurer, "TM: %02d:%02d".format(state.timeHours, state.timeMinutes), Offset(textLeft, textTop + dispH * 0.50f), style = textStyle)
+        drawText(textMeasurer, "TM: ${state.formattedTime}", Offset(textLeft, textTop + dispH * 0.50f), style = textStyle)
 
         if (state.isRunning) {
             val statusColor = if (blink) Color(0xFF00FF88) else DisplayWhite

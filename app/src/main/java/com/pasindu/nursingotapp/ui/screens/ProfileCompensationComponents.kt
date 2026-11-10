@@ -43,6 +43,9 @@ import com.pasindu.nursingotapp.ui.theme.MedicalBlue
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import com.pasindu.nursingotapp.ui.theme.Slate
 
+internal val PROFILE_IDENTIFIER_KEYBOARD_TYPE: KeyboardType = KeyboardType.Number
+internal val PROFILE_MONEY_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal
+
 @Composable
 fun ProfileSectionCard(
     icon: ImageVector,
@@ -156,7 +159,7 @@ fun AllowanceField(
                 label = label,
                 value = value,
                 onValueChange = onValueChange,
-                keyboardType = KeyboardType.Number,
+                keyboardType = PROFILE_MONEY_KEYBOARD_TYPE,
                 leadingText = "Rs."
             )
         }
@@ -194,7 +197,7 @@ fun AllowanceEditorRow(
                 value = row.amount,
                 onValueChange = onAmountChange,
                 modifier = Modifier.width(130.dp),
-                keyboardType = KeyboardType.Number,
+                keyboardType = PROFILE_MONEY_KEYBOARD_TYPE,
                 leadingText = "Rs."
             )
             IconButton(onClick = onDelete) {

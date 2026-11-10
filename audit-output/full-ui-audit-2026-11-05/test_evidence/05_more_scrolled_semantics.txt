@@ -1,0 +1,132 @@
+=== ROOT NODE 0 ===
+Printing with useUnmergedTree = 'false'
+Node #76 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #77 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #78 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsContainer = 'true'
+       |-Node #1698 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |  |-Node #1699 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |    IsContainer = 'true'
+       |     |-Node #1717 at (l=0.0, t=290.0, r=1080.0, b=2042.0)px
+       |     | CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@9dc2518'
+       |     | IsTraversalGroup = 'true'
+       |     | VerticalScrollAxisRange = 'ScrollAxisRange(value=1515.0, maxValue=1515.0, reverseScrolling=false)'
+       |     | Actions = [GetScrollViewportLength, IndexForKey, ScrollBy, ScrollByOffset, ScrollToIndex]
+       |     |  |-Node #1727 at (l=45.0, t=62.0, r=1035.0, b=275.0)px
+       |     |  |  |-Node #1728 at (l=45.0, t=62.0, r=1035.0, b=275.0)px
+       |     |  |    ContentDescription = '[Open Nurse Command Center]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Nurse Command Center, Your daily workload, wellness and next-action view.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1741 at (l=45.0, t=309.0, r=1035.0, b=522.0)px
+       |     |  |  |-Node #1742 at (l=45.0, t=309.0, r=1035.0, b=522.0)px
+       |     |  |    ContentDescription = '[Open Care Pulse]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Care Pulse, Review your wellness signals and recovery picture.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1755 at (l=45.0, t=556.0, r=1035.0, b=769.0)px
+       |     |  |  |-Node #1756 at (l=45.0, t=556.0, r=1035.0, b=769.0)px
+       |     |  |    ContentDescription = '[Open Smart Insights]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Smart Insights, Explore OT patterns, claims and workload trends.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1769 at (l=45.0, t=803.0, r=1035.0, b=1041.0)px
+       |     |  |  |-Node #1770 at (l=45.0, t=803.0, r=1035.0, b=1041.0)px
+       |     |  |    ContentDescription = '[Open Knowledge & CPD]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Knowledge & CPD, Circulars, study resources and professional development.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1783 at (l=45.0, t=1075.0, r=1035.0, b=1288.0)px
+       |     |  |  |-Node #1784 at (l=45.0, t=1075.0, r=1035.0, b=1288.0)px
+       |     |  |    ContentDescription = '[Open Clinical Planning]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Clinical Planning, ISBAR notes, clinical tasks and bedside planning.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1797 at (l=45.0, t=1322.0, r=1035.0, b=1535.0)px
+       |     |  |  |-Node #1798 at (l=45.0, t=1322.0, r=1035.0, b=1535.0)px
+       |     |  |    ContentDescription = '[Open Pay Sheet Bank]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Pay Sheet Bank, Open your saved payment and document records.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1811 at (l=45.0, t=1569.0, r=1035.0, b=1782.0)px
+       |     |  |  |-Node #1812 at (l=45.0, t=1569.0, r=1035.0, b=1782.0)px
+       |     |  |    ContentDescription = '[Open Profile]'
+       |     |  |    Focused = 'false'
+       |     |  |    IsContainer = 'true'
+       |     |  |    Text = '[Profile, Manage your nurse profile and core work settings.]'
+       |     |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |  |    MergeDescendants = 'true'
+       |     |  |-Node #1824 at (l=45.0, t=1816.0, r=1035.0, b=2008.0)px
+       |     |    Focused = 'false'
+       |     |    IsContainer = 'true'
+       |     |    Text = '[Navigation philosophy, Why are some tools here instead of the bottom bar?]'
+       |     |    Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+       |     |    MergeDescendants = 'true'
+       |     |-Node #1702 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+       |       IsContainer = 'true'
+       |        |-Node #1703 at (l=0.0, t=110.0, r=1080.0, b=290.0)px
+       |           |-Node #1705 at (l=22.0, t=143.0, r=135.0, b=256.0)px
+       |           | ContentDescription = '[Back]'
+       |           | Focused = 'false'
+       |           | Role = 'Button'
+       |           | Actions = [OnClick, RequestFocus]
+       |           | MergeDescendants = 'true'
+       |           |-Node #1707 at (l=157.0, t=132.0, r=727.0, b=268.0)px
+       |              |-Node #1709 at (l=157.0, t=132.0, r=275.0, b=200.0)px
+       |              | Text = '[More]'
+       |              | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |              |-Node #1710 at (l=157.0, t=200.0, r=727.0, b=268.0)px
+       |                Text = '[Everything else in your NursingOS workspace]'
+       |                Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #1651 at (l=0.0, t=2042.0, r=1080.0, b=2400.0)px
+         IsContainer = 'true'
+          |-Node #1652 at (l=0.0, t=2042.0, r=1080.0, b=2267.0)px
+            [SelectableGroup]
+             |-Node #1653 at (l=0.0, t=2042.0, r=197.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Home]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #1662 at (l=220.0, t=2042.0, r=417.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Work]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #1671 at (l=440.0, t=2042.0, r=638.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Clinical]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #1680 at (l=661.0, t=2042.0, r=859.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Finance]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #1689 at (l=882.0, t=2042.0, r=1080.0, b=2267.0)px
+               Focused = 'false'
+               Role = 'Tab'
+               Selected = 'true'
+               Text = '[More]'
+               Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+               MergeDescendants = 'true'

@@ -30,6 +30,7 @@ object DatabaseModule {
             .build()
 
         SalaryTableSeeder.startSeeding(database)
+        com.pasindu.nursingotapp.data.local.KnowledgeTableSeeder.startSeeding(database, context)
         return database
     }
 }

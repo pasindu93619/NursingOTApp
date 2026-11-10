@@ -1,0 +1,77 @@
+{
+  "device": {
+    "model": "Redmi Note 14 5G (citrine_global / 24094RAD4G)",
+    "os": "Android 16 / HyperOS",
+    "display": "1080 x 2400 (450 dpi)",
+    "ip": "10.150.55.191:5555"
+  },
+  "packages": {
+    "production": "com.pasindu.nursingotapp",
+    "verification": "com.pasindu.nursingotapp.verification"
+  },
+  "isbar_steps": {
+    "01_created": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_ISBAR_01_created.png",
+      "patient": "TEST-PT-901",
+      "location": "Bed 14 - Post-Op Laparotomy"
+    },
+    "02_edited": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_ISBAR_02_edited.png",
+      "updated_situation": "Pain score reduced to 2/10 following analgesia, patient resting comfortably."
+    },
+    "03_delete_dialog": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_ISBAR_03_delete_dialog.png"
+    },
+    "04_delete_cancelled": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_ISBAR_04_delete_cancelled.png"
+    },
+    "05_deleted": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_ISBAR_05_deleted.png"
+    }
+  },
+  "task_steps": {
+    "01_created": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_TASK_01_created.png",
+      "task_name": "Administer IV Ceftriaxone 1g",
+      "priority": "HIGH",
+      "bypass_dnd": true
+    },
+    "02_completed": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_TASK_02_completed.png",
+      "is_completed": true
+    },
+    "03_edited": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_TASK_03_edited.png",
+      "updated_task_name": "Administer IV Ceftriaxone 1g + Gentamicin 80mg",
+      "priority": "MED",
+      "persisted_completion": true,
+      "persisted_dnd_bypass": true
+    },
+    "04_delete_dialog": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_TASK_04_delete_dialog.png"
+    },
+    "05_delete_cancelled": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_TASK_05_delete_cancelled.png"
+    },
+    "06_deleted": {
+      "status": "PASS",
+      "screenshot": "audit-output/physical-device/screenshots/B4B_TASK_06_deleted.png"
+    }
+  },
+  "isolation": {
+    "verification_db": "-rw-rw---- 1 u0_a643 u0_a643 204800 2026-11-06 05:49 databases/nursing_ot_app.db",
+    "production_db_before": "-rw-rw---- 1 u0_a639 u0_a639 204800 2026-11-06 02:32 databases/nursing_ot_app.db",
+    "production_db_after": "-rw-rw---- 1 u0_a639 u0_a639 204800 2026-11-06 02:32 databases/nursing_ot_app.db",
+    "isolated": true
+  }
+}

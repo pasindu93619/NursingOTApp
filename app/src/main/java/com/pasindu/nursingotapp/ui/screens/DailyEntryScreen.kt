@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -31,6 +32,15 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Warning
+import com.pasindu.nursingotapp.domain.export.ClaimExportValidator
+import com.pasindu.nursingotapp.domain.export.ExportReadinessState
+import com.pasindu.nursingotapp.domain.preset.DutyPreset
+import com.pasindu.nursingotapp.domain.preset.DutyPresetId
+import com.pasindu.nursingotapp.domain.usecase.PayRateResolver
+import com.pasindu.nursingotapp.ui.theme.CriticalRed
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.*
@@ -59,6 +69,7 @@ import com.pasindu.nursingotapp.ui.theme.MedicalBlue
 import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.Slate
 import com.pasindu.nursingotapp.ui.theme.WarningCriticalGradient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -69,7 +80,7 @@ import java.time.LocalDate
 import java.util.Locale
 
 val weekend_background_highlight = Color(0xFFF1F3F5)
-data class StagedEdit(val shift: String? = null, val ot: String? = null, val leave: String? = null)
+data class StagedEdit(val shift: String? = null, val ot: String? = null, val leave: String? = null, val customIn: String? = null, val customOut: String? = null, val customHrs: String? = null)
 
 private val DailyInk = Slate
 private val DailyBlue = MedicalBlue
@@ -106,6 +117,12 @@ private const val CATEGORY_OVERTIME = "Overtime"
 
 private const val UNWORKED_DO_LEAVE_TYPE = "DO_UNPAID"
 
+sealed interface PdfGenerationResult {
+    data class Success(val file: File) : PdfGenerationResult
+    object SalaryNotMatched : PdfGenerationResult
+    data class Failed(val message: String? = null) : PdfGenerationResult
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyEntryScreen(
@@ -114,7 +131,7 @@ fun DailyEntryScreen(
     startDateStr: String,
     endDateStr: String,
     onNavigateBack: () -> Unit,
-    onGeneratePdfRequest: () -> File?,
+    onGeneratePdfRequest: () -> PdfGenerationResult,
     onSaveAndSharePdf: (File) -> Unit,
     viewModel: NursingViewModel = viewModel()
 ) {
@@ -140,11 +157,59 @@ fun DailyEntryScreen(
     val animatedNormalHrs by animateFloatAsState(totalCalculated.first, tween(900, easing = FastOutSlowInEasing), label = "normal_hours")
     val animatedOtHrs by animateFloatAsState(totalCalculated.second, tween(900, easing = FastOutSlowInEasing), label = "ot_hours")
     val stagedEdits = remember { mutableStateMapOf<LocalDate, StagedEdit>() }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val handleBack = {
+        if (stagedEdits.isNotEmpty()) {
+            showDiscardDialog = true
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    BackHandler(enabled = stagedEdits.isNotEmpty()) {
+        showDiscardDialog = true
+    }
+
+    val userProfile by viewModel.userProfile.collectAsState()
+    val configuredOtRate by viewModel.configuredOtRate.collectAsState()
+    var resolvedRates by remember { mutableStateOf<PayRateResolver.Rates?>(null) }
+
+    LaunchedEffect(userProfile) {
+        val prof = userProfile
+        resolvedRates = if (prof != null) {
+            viewModel.payRateResolver.resolve(prof)
+        } else {
+            null
+        }
+    }
+
+    val exportReadiness = remember(userProfile, resolvedRates, allDates, allSavedEntries, stagedEdits.size, configuredOtRate) {
+        ClaimExportValidator.validate(
+            profile = userProfile,
+            resolvedRates = resolvedRates,
+            allDates = allDates,
+            savedEntries = allSavedEntries,
+            unsavedStagedEditsCount = stagedEdits.size,
+            configuredOtRate = configuredOtRate
+        )
+    }
+
+    var showDutyPresetDialog by remember { mutableStateOf(false) }
+    var selectedPreset by remember { mutableStateOf(DutyPreset.StandardWardDay) }
+    var preserveExceptions by remember { mutableStateOf(true) }
+    var showPresetOverwriteConfirmation by remember { mutableStateOf<List<LocalDate>?>(null) }
+
+    var showUnsavedEditsExportWarning by remember { mutableStateOf(false) }
+    var showIncompleteExportConfirmation by remember { mutableStateOf(false) }
+    var showExportBlockerDialog by remember { mutableStateOf<String?>(null) }
+
     var isSavingBulk by remember { mutableStateOf(false) }
     var isAutoFillMode by remember { mutableStateOf(false) }
     var showAutoFillDialog by remember { mutableStateOf(false) }
     var isGeneratingPdf by remember { mutableStateOf(false) }
     var previewPdfFile by remember { mutableStateOf<File?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val completedCount = remember(allSavedEntries, allDates) {
         allDates.count { date ->
             allSavedEntries.find { it.date == date }?.let {
@@ -177,30 +242,121 @@ fun DailyEntryScreen(
 
     fun applyEdit(date: LocalDate) {
         val current = stagedEdits[date] ?: StagedEdit()
+        val isCustomShift = selectedBrush == "Custom Shift"
+        val isCustomOt = selectedBrush == "Custom OT"
+        val isCustomLeave = selectedBrush in setOf("CL/2", "SL (Short)")
         val next = when (brushCategory) {
-            CATEGORY_SHIFT_DUTY -> current.copy(shift = if (current.shift == selectedBrush) null else selectedBrush)
-            CATEGORY_OVERTIME -> current.copy(ot = if (current.ot == selectedBrush) null else selectedBrush)
-            CATEGORY_LEAVE_REST, CATEGORY_SERVICE_DAYS -> current.copy(leave = if (current.leave == selectedBrush) null else selectedBrush)
+            CATEGORY_SHIFT_DUTY -> {
+                if (current.shift == selectedBrush && (!isCustomShift || (current.customIn == customIn && current.customOut == customOut && current.customHrs == customHrs))) {
+                    current.copy(shift = null, customIn = if (current.ot == "Custom OT" || current.leave in setOf("CL/2", "SL (Short)")) current.customIn else null, customOut = if (current.ot == "Custom OT" || current.leave in setOf("CL/2", "SL (Short)")) current.customOut else null, customHrs = if (current.ot == "Custom OT" || current.leave in setOf("CL/2", "SL (Short)")) current.customHrs else null)
+                } else {
+                    current.copy(
+                        shift = selectedBrush,
+                        customIn = if (isCustomShift) customIn else current.customIn,
+                        customOut = if (isCustomShift) customOut else current.customOut,
+                        customHrs = if (isCustomShift) customHrs else current.customHrs
+                    )
+                }
+            }
+            CATEGORY_OVERTIME -> {
+                if (current.ot == selectedBrush && (!isCustomOt || (current.customIn == customIn && current.customOut == customOut && current.customHrs == customHrs))) {
+                    current.copy(ot = null, customIn = if (current.shift == "Custom Shift" || current.leave in setOf("CL/2", "SL (Short)")) current.customIn else null, customOut = if (current.shift == "Custom Shift" || current.leave in setOf("CL/2", "SL (Short)")) current.customOut else null, customHrs = if (current.shift == "Custom Shift" || current.leave in setOf("CL/2", "SL (Short)")) current.customHrs else null)
+                } else {
+                    current.copy(
+                        ot = selectedBrush,
+                        customIn = if (isCustomOt) customIn else current.customIn,
+                        customOut = if (isCustomOt) customOut else current.customOut,
+                        customHrs = if (isCustomOt) customHrs else current.customHrs
+                    )
+                }
+            }
+            CATEGORY_LEAVE_REST, CATEGORY_SERVICE_DAYS -> {
+                if (current.leave == selectedBrush && (!isCustomLeave || (current.customIn == customIn && current.customOut == customOut && current.customHrs == customHrs))) {
+                    current.copy(leave = null, customIn = if (current.shift == "Custom Shift" || current.ot == "Custom OT") current.customIn else null, customOut = if (current.shift == "Custom Shift" || current.ot == "Custom OT") current.customOut else null, customHrs = if (current.shift == "Custom Shift" || current.ot == "Custom OT") current.customHrs else null)
+                } else {
+                    current.copy(
+                        leave = selectedBrush,
+                        customIn = if (isCustomLeave) customIn else current.customIn,
+                        customOut = if (isCustomLeave) customOut else current.customOut,
+                        customHrs = if (isCustomLeave) customHrs else current.customHrs
+                    )
+                }
+            }
             else -> current
         }
         if (next.shift == null && next.ot == null && next.leave == null) stagedEdits.remove(date) else stagedEdits[date] = next
     }
 
+    fun applyPresetToDates(dates: List<LocalDate>, preset: DutyPreset) {
+        dates.forEach { date ->
+            val spec = preset.getShiftForDate(date, isPublicHoliday = false)
+            val current = stagedEdits[date] ?: StagedEdit()
+            stagedEdits[date] = current.copy(
+                shift = spec.brushLabel,
+                customIn = spec.timeIn,
+                customOut = spec.timeOut,
+                customHrs = spec.hours.toString()
+            )
+        }
+        isAutoFillMode = true
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar("Applied ${preset.title} to ${dates.size} day(s). Tap 'Save selected days' to commit.")
+        }
+    }
+
+    fun triggerPdfGeneration() {
+        if (isGeneratingPdf) return
+        isGeneratingPdf = true
+        coroutineScope.launch {
+            try {
+                delay(150)
+                val result = withContext(Dispatchers.IO) { onGeneratePdfRequest() }
+                when (result) {
+                    is PdfGenerationResult.Success -> {
+                        previewPdfFile = result.file
+                    }
+                    is PdfGenerationResult.SalaryNotMatched -> {
+                        snackbarHostState.showSnackbar("Salary step not matched. Check grade and basic salary in Profile.")
+                    }
+                    is PdfGenerationResult.Failed -> {
+                        snackbarHostState.showSnackbar("Could not create the PDF.")
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                snackbarHostState.showSnackbar("Could not create the PDF.")
+            } finally {
+                isGeneratingPdf = false
+            }
+        }
+    }
+
+    val handleExportRequest: () -> Unit = {
+        when {
+            exportReadiness.hasUnsavedStagedEdits -> {
+                showUnsavedEditsExportWarning = true
+            }
+            !exportReadiness.isProfileComplete || !exportReadiness.isSalaryScaleMatched -> {
+                showExportBlockerDialog = exportReadiness.blockerReason
+            }
+            exportReadiness.requiresIncompleteConfirmation -> {
+                showIncompleteExportConfirmation = true
+            }
+            else -> {
+                triggerPdfGeneration()
+            }
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, "Back", tint = DailyInk) } },
+                navigationIcon = { IconButton(onClick = handleBack) { Icon(Icons.Default.ArrowBack, "Back", tint = DailyInk) } },
                 title = { Column { Text("$wardType Planner", color = DailyInk, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp); Text("Build your duty calendar", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) } },
-                actions = { IconButton(onClick = {
-                    isGeneratingPdf = true
-                    coroutineScope.launch {
-                        delay(150)
-                        val file = withContext(Dispatchers.IO) { onGeneratePdfRequest() }
-                        if (file != null) previewPdfFile = file else Toast.makeText(context, "Error generating file", Toast.LENGTH_SHORT).show()
-                        isGeneratingPdf = false
-                    }
-                }) { Icon(Icons.Default.PictureAsPdf, "Preview PDF", tint = DailyCyan) } },
+                actions = { IconButton(onClick = handleExportRequest) { Icon(Icons.Default.PictureAsPdf, "Preview PDF", tint = DailyCyan) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -211,14 +367,14 @@ fun DailyEntryScreen(
                         "Morn (7-13)", "Eve (13-19)" -> 6.0
                         "Night (19-7)" -> 12.0
                         "Day (7-16)" -> if (wardType == "Normal") 6.0 else 9.0
-                        "Custom Shift" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+                        "Custom Shift" -> (edit.customHrs ?: customHrs).toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
                         else -> 0.0
                     }
 
                     fun otHours(edit: StagedEdit): Double = when (edit.ot) {
                         "Morn OT", "Eve OT" -> 6.0
                         "Night OT" -> 12.0
-                        "Custom OT" -> customHrs.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+                        "Custom OT" -> (edit.customHrs ?: customHrs).toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
                         else -> 0.0
                     }
 
@@ -333,12 +489,15 @@ fun DailyEntryScreen(
                                         var oHrs = existing?.otHours ?: 0f
                                         fun getLeaveHrs(): Float = if (wardType == "Normal") 6f else if (isWknd) 6f else 8f
                                         val isShortDay = isWknd || edit.leave == "PH" || edit.leave == "Work PH" || (edit.leave == null && isP)
+                                        val effCustomIn = edit.customIn ?: customIn
+                                        val effCustomOut = edit.customOut ?: customOut
+                                        val effCustomHrs = edit.customHrs ?: customHrs
                                         when (edit.shift) {
                                             "Morn (7-13)" -> { nIn = "07.00"; nOut = "13.00"; nHrs = 6f; isL = false; lType = null }
                                             "Eve (13-19)" -> { nIn = "13.00"; nOut = "19.00"; nHrs = 6f; isL = false; lType = null }
                                             "Night (19-7)" -> { nIn = "19.00"; nOut = "07.00"; nHrs = 12f; isL = false; lType = null }
                                             "Day (7-16)" -> { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
-                                            "Custom Shift" -> { nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }
+                                            "Custom Shift" -> { nIn = effCustomIn; nOut = effCustomOut; nHrs = effCustomHrs.toFloatOrNull() ?: 0f; isL = false; lType = null }
                                             "Clear Shift" -> { nIn = ""; nOut = ""; nHrs = 0f; isL = false; lType = null }
                                             null -> if (isAutoFillMode && nIn.isEmpty() && edit.leave == null && !isL) { nIn = "07.00"; nOut = if (isShortDay) "13.00" else "16.00"; nHrs = if (isShortDay) 6f else 9f; isL = false; lType = null }
                                         }
@@ -348,8 +507,8 @@ fun DailyEntryScreen(
                                             "PH — not worked" -> { isL = true; lType = "PH"; isP = true; isD = false; nIn = ""; nOut = ""; nHrs = getLeaveHrs(); oIn = ""; oOut = ""; oHrs = 0f }
                                             "SD" -> { isL = true; lType = "SD"; isD = false; isP = false; nIn = ""; nOut = ""; nHrs = 0f }
                                             "AB" -> { isL = true; lType = "Absent"; nIn = ""; nOut = ""; nHrs = 0f; oIn = ""; oOut = ""; oHrs = 0f }
-                                            "CL/2" -> { isL = false; lType = "Half Casual Leave"; nIn = customIn; nOut = customOut; nHrs = getLeaveHrs() }
-                                            "SL (Short)" -> { isL = false; lType = "Short Leave"; nIn = customIn; nOut = customOut; nHrs = customHrs.toFloatOrNull() ?: 0f }
+                                            "CL/2" -> { isL = false; lType = "Half Casual Leave"; nIn = effCustomIn; nOut = effCustomOut; nHrs = getLeaveHrs() }
+                                            "SL (Short)" -> { isL = false; lType = "Short Leave"; nIn = effCustomIn; nOut = effCustomOut; nHrs = effCustomHrs.toFloatOrNull() ?: 0f }
                                             "Work DO" -> { isD = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = if (isWknd) "13.00" else "16.00"; nHrs = if (isWknd) 6f else 9f } }
                                             "Work PH" -> { isP = true; isL = false; lType = null; if (wardType == "Special" && nIn.isEmpty()) { nIn = "07.00"; nOut = "13.00"; nHrs = 6f } }
                                             "Clear Leave", "Clear Exceptions" -> { isD = false; isP = false; isL = false; lType = null }
@@ -359,7 +518,7 @@ fun DailyEntryScreen(
                                             "Morn OT" -> { oIn = "07.00"; oOut = "13.00"; oHrs = 6f }
                                             "Eve OT" -> { oIn = "13.00"; oOut = "19.00"; oHrs = 6f }
                                             "Night OT" -> { oIn = "19.00"; oOut = "07.00"; oHrs = 12f }
-                                            "Custom OT" -> { oIn = customIn; oOut = customOut; oHrs = customHrs.toFloatOrNull() ?: 0f }
+                                            "Custom OT" -> { oIn = effCustomIn; oOut = effCustomOut; oHrs = effCustomHrs.toFloatOrNull() ?: 0f }
                                             "Clear OT" -> { oIn = ""; oOut = ""; oHrs = 0f }
                                             null -> Unit
                                         }
@@ -386,8 +545,6 @@ fun DailyEntryScreen(
                                         )
                                     }
                                 }
-                                delay(300)
-                                viewModel.loadEntriesForClaim(claimPeriodId)
                                 isSavingBulk = false
                                 isAutoFillMode = false
                                 stagedEdits.clear()
@@ -413,7 +570,7 @@ fun DailyEntryScreen(
             }
         }
     ) { paddingValues ->
-        Column(Modifier.fillMaxSize().padding(paddingValues).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Spacer(Modifier.height(4.dp))
             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(27.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
                 Box(Modifier.fillMaxWidth().background(DailyHeroGradient, RoundedCornerShape(27.dp)).padding(20.dp)) {
@@ -470,20 +627,16 @@ fun DailyEntryScreen(
                         }
                     }
                     Surface(
-                        Modifier.fillMaxWidth().clickable {
-                            isAutoFillMode = true
-                            setCategory(CATEGORY_SHIFT_DUTY)
-                            selectedBrush = if (wardType == "Normal") "Morn (7-13)" else "Day (7-16)"
-                        },
+                        Modifier.fillMaxWidth().clickable { showDutyPresetDialog = true },
                         shape = RoundedCornerShape(15.dp),
                         color = DailyMintSoft
                     ) {
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF2BA977), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Tune, null, tint = Color(0xFF2BA977), modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(7.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("Apply to remaining days", color = DailyEmerald, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
-                                Text("Keep planned exceptions • fill the rest in one tap", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.5.sp)
+                                Text("Duty Presets & Auto-Fill", color = DailyEmerald, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Select clinical shift pattern (Standard Ward, ICU 12h, Night-heavy) to fill", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.5.sp)
                             }
                             Icon(Icons.Default.ArrowForward, null, tint = DailyEmerald, modifier = Modifier.size(17.dp))
                         }
@@ -491,19 +644,11 @@ fun DailyEntryScreen(
                 }
             }
 
-            if (wardType == "Special") {
-                Card(Modifier.fillMaxWidth().clickable { showAutoFillDialog = true }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = DailyPurpleSoft)) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = Color.White.copy(alpha = .8f), shape = RoundedCornerShape(13.dp)) { Icon(Icons.Default.AutoAwesome, null, tint = DailyPurple, modifier = Modifier.padding(9.dp)) }
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Smart Auto-Fill", color = DailyInk, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("Plan exceptions first, then fill the remaining duties", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-                        }
-                        Icon(Icons.Default.CalendarMonth, null, tint = DailyPurple)
-                    }
-                }
-            }
+            // Export Center Card (ISSUE-13)
+            ExportCenterCard(
+                readiness = exportReadiness,
+                onExportClick = handleExportRequest
+            )
 
             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
@@ -662,7 +807,7 @@ fun DailyEntryScreen(
                                 staged?.shift == "Custom Shift" -> "Cus"
                                 staged?.shift == "Clear Shift" -> ""
                                 renderLeave in listOf("DO", "PH", "CL", "VL", "sL", "DL", "AB", "SD") -> ""
-                                staged?.leave == "CL/2" || staged?.leave == "SL (Short)" -> "${customIn.substringBefore(".")}-${customOut.substringBefore(".")}"
+                                staged?.leave == "CL/2" || staged?.leave == "SL (Short)" -> "${(staged.customIn ?: customIn).substringBefore(".")}-${(staged.customOut ?: customOut).substringBefore(".")}"
                                 staged?.leave == "Work DO" && wardType == "Special" && dbShift.isEmpty() -> if (isWknd) "7-13" else "7-16"
                                 staged?.leave == "Work PH" && wardType == "Special" && dbShift.isEmpty() -> "7-13"
                                 else -> dbShift
@@ -747,14 +892,53 @@ fun DailyEntryScreen(
                                             onDoubleTap = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 cleared = true
-                                                stagedEdits.remove(date)
+                                                val dateText = "${date.dayOfMonth} ${date.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())}"
+                                                val previousStaged = stagedEdits.remove(date)
                                                 val eId = existing?.id ?: 0L
-                                                if (eId != 0L) coroutineScope.launch {
-                                                    withContext(Dispatchers.IO) {
-                                                        viewModel.saveDailyEntry(id = eId, claimPeriodId = claimPeriodId, date = date, isPH = false, isDO = false, isLeave = false, leaveType = null, normalTimeIn = "", normalTimeOut = "", normalHours = 0f, otTimeIn = "", otTimeOut = "", otHours = 0f, wardOverride = "", reason = "Need for service")
+                                                if (eId != 0L && existing != null) {
+                                                    val backupExisting = existing
+                                                    coroutineScope.launch {
+                                                        withContext(Dispatchers.IO) {
+                                                            viewModel.deleteDailyEntry(eId)
+                                                        }
+                                                        val result = snackbarHostState.showSnackbar(
+                                                            message = "Cleared $dateText",
+                                                            actionLabel = "Undo",
+                                                            duration = SnackbarDuration.Short
+                                                        )
+                                                        if (result == SnackbarResult.ActionPerformed) {
+                                                            withContext(Dispatchers.IO) {
+                                                                viewModel.saveDailyEntry(
+                                                                    id = backupExisting.id,
+                                                                    claimPeriodId = backupExisting.claimPeriodId,
+                                                                    date = backupExisting.date,
+                                                                    isPH = backupExisting.isPH,
+                                                                    isDO = backupExisting.isDO,
+                                                                    isLeave = backupExisting.isLeave,
+                                                                    leaveType = backupExisting.leaveType,
+                                                                    normalTimeIn = backupExisting.normalTimeIn,
+                                                                    normalTimeOut = backupExisting.normalTimeOut,
+                                                                    normalHours = backupExisting.normalHours,
+                                                                    otTimeIn = backupExisting.otTimeIn,
+                                                                    otTimeOut = backupExisting.otTimeOut,
+                                                                    otHours = backupExisting.otHours,
+                                                                    wardOverride = backupExisting.wardOverride,
+                                                                    reason = backupExisting.reason
+                                                                )
+                                                            }
+                                                        }
                                                     }
-                                                    delay(100)
-                                                    viewModel.loadEntriesForClaim(claimPeriodId)
+                                                } else if (previousStaged != null) {
+                                                    coroutineScope.launch {
+                                                        val result = snackbarHostState.showSnackbar(
+                                                            message = "Cleared staged edit for $dateText",
+                                                            actionLabel = "Undo",
+                                                            duration = SnackbarDuration.Short
+                                                        )
+                                                        if (result == SnackbarResult.ActionPerformed) {
+                                                            stagedEdits[date] = previousStaged
+                                                        }
+                                                    }
                                                 }
                                             }
                                         )
@@ -797,12 +981,12 @@ fun DailyEntryScreen(
         if (showCustomDialog) {
             Dialog(onDismissRequest = { showCustomDialog = false }) {
                 Surface(shape = RoundedCornerShape(24.dp), color = Color.White) {
-                    Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text("Configure custom entry", color = DailyInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                         Text("Set the time range and hours used for this brush.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-                        OutlinedTextField(value = customIn, onValueChange = { customIn = it }, label = { Text("Time in (e.g. 07.00)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = customOut, onValueChange = { customOut = it }, label = { Text("Time out (e.g. 17.00)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = customHrs, onValueChange = { customHrs = it }, label = { Text("Total hours (e.g. 10.0)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = customIn, onValueChange = { customIn = it }, label = { Text("Time in (e.g. 07.00)") }, keyboardOptions = KeyboardOptions(keyboardType = DAILY_ENTRY_CUSTOM_BRUSH_KEYBOARD_TYPE), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = customOut, onValueChange = { customOut = it }, label = { Text("Time out (e.g. 17.00)") }, keyboardOptions = KeyboardOptions(keyboardType = DAILY_ENTRY_CUSTOM_BRUSH_KEYBOARD_TYPE), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = customHrs, onValueChange = { customHrs = it }, label = { Text("Total hours (e.g. 10.0)") }, keyboardOptions = KeyboardOptions(keyboardType = DAILY_ENTRY_CUSTOM_BRUSH_KEYBOARD_TYPE), singleLine = true, modifier = Modifier.fillMaxWidth())
                         Button(onClick = { showCustomDialog = false }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)) {
                             Text("Apply brush", fontWeight = FontWeight.ExtraBold)
                         }
@@ -841,6 +1025,459 @@ fun DailyEntryScreen(
                         Text("Generating Form...", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
                 }
+            }
+        }
+        if (showDiscardDialog) {
+            AlertDialog(
+                onDismissRequest = { showDiscardDialog = false },
+                title = { Text("Discard changes?") },
+                text = { Text("You have unsaved calendar edits.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDiscardDialog = false
+                            onNavigateBack()
+                        }
+                    ) {
+                        Text("Discard")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDiscardDialog = false }) {
+                        Text("Keep editing")
+                    }
+                }
+            )
+        }
+
+        // ISSUE-12: Duty Preset Selector Dialog
+        if (showDutyPresetDialog) {
+            val exceptionDates = remember(allDates, allSavedEntries, stagedEdits.toMap()) {
+                allDates.filter { date ->
+                    val staged = stagedEdits[date]
+                    val existing = allSavedEntries.find { it.date == date }
+                    (staged?.leave != null && staged.leave !in listOf("Clear Leave", "Clear Exceptions")) ||
+                        (existing?.isLeave == true || existing?.isDO == true || existing?.isPH == true)
+                }
+            }
+            val targetDates = if (preserveExceptions) allDates - exceptionDates.toSet() else allDates
+            val existingShiftDates = remember(targetDates, allSavedEntries, stagedEdits.toMap()) {
+                targetDates.filter { date ->
+                    val staged = stagedEdits[date]
+                    val existing = allSavedEntries.find { it.date == date }
+                    staged?.shift != null || (existing != null && existing.normalTimeIn.isNotBlank())
+                }
+            }
+
+            AlertDialog(
+                onDismissRequest = { showDutyPresetDialog = false },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Tune, contentDescription = null, tint = DailyCyan)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Configurable Duty Presets", fontWeight = FontWeight.ExtraBold)
+                    }
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            "Select a standard shift rotation pattern to apply across this claim period:",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        DutyPreset.allPresets.forEach { preset ->
+                            val isSelected = selectedPreset.id == preset.id
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedPreset = preset },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) DailyBlueSoft else Color(0xFFF8FAFC),
+                                border = if (isSelected) BorderStroke(1.5.dp, DailyCyan) else BorderStroke(1.dp, Color(0xFFE2E8F0))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { selectedPreset = preset },
+                                        colors = RadioButtonDefaults.colors(selectedColor = DailyCyan)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            preset.title,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.5.sp,
+                                            color = DailyInk
+                                        )
+                                        Text(
+                                            preset.subtitle,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+                        Surface(
+                            color = Color(0xFFF1F5F9),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Preserve Leaves & Off Days", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text(
+                                        "Keep pre-planned CL, VL, DO, PH, and special leaves",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = preserveExceptions,
+                                    onCheckedChange = { preserveExceptions = it }
+                                )
+                            }
+                        }
+
+                        // Preview summary
+                        Surface(
+                            color = DailyMintSoft,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "Preset Preview Summary:",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp,
+                                    color = DailyEmerald
+                                )
+                                Text(
+                                    "• Will apply to ${targetDates.size} days in ${startDate.month.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                                    fontSize = 10.5.sp,
+                                    color = DailyInk
+                                )
+                                if (preserveExceptions) {
+                                    Text(
+                                        "• Preserving ${exceptionDates.size} planned exception day(s)",
+                                        fontSize = 10.5.sp,
+                                        color = DailyEmerald
+                                    )
+                                }
+                                if (existingShiftDates.isNotEmpty()) {
+                                    Text(
+                                        "• ${existingShiftDates.size} day(s) already have shifts recorded",
+                                        fontSize = 10.5.sp,
+                                        color = Amber,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (existingShiftDates.isNotEmpty()) {
+                                showPresetOverwriteConfirmation = existingShiftDates
+                            } else {
+                                applyPresetToDates(targetDates, selectedPreset)
+                                showDutyPresetDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+                    ) {
+                        Text("Apply Preset", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDutyPresetDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Preset Overwrite Confirmation Dialog
+        showPresetOverwriteConfirmation?.let { overwriteDates ->
+            AlertDialog(
+                onDismissRequest = { showPresetOverwriteConfirmation = null },
+                title = { Text("Update Existing Shifts?", fontWeight = FontWeight.Bold) },
+                text = {
+                    Text("${overwriteDates.size} day(s) in this period already have shift entries recorded. Do you want to update them with ${selectedPreset.title}?")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val targetDates = if (preserveExceptions) allDates.filter { date ->
+                                val staged = stagedEdits[date]
+                                val existing = allSavedEntries.find { it.date == date }
+                                (staged?.leave == null || staged.leave in listOf("Clear Leave", "Clear Exceptions")) &&
+                                    (existing?.isLeave != true && existing?.isDO != true && existing?.isPH != true)
+                            } else allDates
+                            applyPresetToDates(targetDates, selectedPreset)
+                            showPresetOverwriteConfirmation = null
+                            showDutyPresetDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+                    ) {
+                        Text("Yes, Update Shifts", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPresetOverwriteConfirmation = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // ISSUE-13: Unsaved Edits Export Warning Dialog
+        if (showUnsavedEditsExportWarning) {
+            AlertDialog(
+                onDismissRequest = { showUnsavedEditsExportWarning = false },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Amber)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Unsaved Changes", fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Text("You have ${exportReadiness.unsavedEditsCount} unsaved calendar edit(s). Please tap 'Save selected days' at the bottom before exporting, so your updates are included in the official PDF claim.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showUnsavedEditsExportWarning = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+                    ) {
+                        Text("OK, I'll Save First")
+                    }
+                }
+            )
+        }
+
+        // ISSUE-13: Export Blocker Dialog
+        showExportBlockerDialog?.let { blockerMsg ->
+            AlertDialog(
+                onDismissRequest = { showExportBlockerDialog = null },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = CriticalRed)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Export Blocked", fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Text(blockerMsg)
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showExportBlockerDialog = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+                    ) {
+                        Text("Understood")
+                    }
+                }
+            )
+        }
+
+        // ISSUE-13: Incomplete Calendar Confirmation Dialog
+        if (showIncompleteExportConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showIncompleteExportConfirmation = false },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Amber)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Incomplete Calendar", fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Text("Your calendar has ${exportReadiness.missingDaysCount} unlogged day(s) (${exportReadiness.completedDaysCount} of ${exportReadiness.totalPeriodDays} days recorded).\n\nDo you want to review and generate the official PDF form with unassigned days blank, or keep editing?")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showIncompleteExportConfirmation = false
+                            triggerPdfGeneration()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+                    ) {
+                        Text("Generate with Blanks", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showIncompleteExportConfirmation = false }) {
+                        Text("Keep Editing")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ExportCenterCard(
+    readiness: ExportReadinessState,
+    onExportClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        color = DailyBlueSoft,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PictureAsPdf,
+                            contentDescription = null,
+                            tint = DailyCyan,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Export Center",
+                            color = DailyInk,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            "Pre-export verification & PDF form generation",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                    color = if (readiness.canExportImmediately) DailyMintSoft else if (readiness.hasUnsavedStagedEdits || !readiness.isProfileComplete || !readiness.isSalaryScaleMatched) Color(0xFFFEE2E2) else Color(0xFFFEF3C7)
+                ) {
+                    Text(
+                        text = if (readiness.canExportImmediately) "Ready to Export" else if (readiness.hasUnsavedStagedEdits) "Save Required" else if (!readiness.isProfileComplete || !readiness.isSalaryScaleMatched) "Action Required" else "Incomplete",
+                        color = if (readiness.canExportImmediately) DailyEmerald else if (readiness.hasUnsavedStagedEdits || !readiness.isProfileComplete || !readiness.isSalaryScaleMatched) CriticalRed else Amber,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // Readiness Checklist Grid (2x2)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ReadinessItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Profile & Scale",
+                        status = if (readiness.isProfileComplete && readiness.isSalaryScaleMatched) "Verified" else if (!readiness.isProfileComplete) "Incomplete" else "Unmatched",
+                        isPassed = readiness.isProfileComplete && readiness.isSalaryScaleMatched
+                    )
+                    ReadinessItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Claim Rate",
+                        status = "Rs. ${String.format(java.util.Locale.US, "%.0f", readiness.resolvedOtRate)}/h",
+                        isPassed = readiness.resolvedOtRate > 0.0
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ReadinessItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Calendar Days",
+                        status = "${readiness.completedDaysCount}/${readiness.totalPeriodDays} logged",
+                        isPassed = readiness.isCalendarComplete
+                    )
+                    ReadinessItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Edits Status",
+                        status = if (readiness.hasUnsavedStagedEdits) "${readiness.unsavedEditsCount} unsaved" else "Saved",
+                        isPassed = !readiness.hasUnsavedStagedEdits
+                    )
+                }
+            }
+
+            Button(
+                onClick = onExportClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = NursingDimensions.TouchTarget.minimum),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
+            ) {
+                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Review & Export PDF Form", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadinessItem(
+    modifier: Modifier,
+    title: String,
+    status: String,
+    isPassed: Boolean
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFFF8FAFC),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                if (isPassed) Icons.Default.CheckCircle else Icons.Default.Warning,
+                contentDescription = null,
+                tint = if (isPassed) DailyEmerald else Amber,
+                modifier = Modifier.size(14.dp)
+            )
+            Column {
+                Text(title, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text(status, fontSize = 10.sp, color = DailyInk, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -899,3 +1536,5 @@ private fun KeyItem(brush: Brush, label: String) {
         Text(label, Modifier.padding(start = 6.dp), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
     }
 }
+
+internal val DAILY_ENTRY_CUSTOM_BRUSH_KEYBOARD_TYPE: KeyboardType = KeyboardType.Decimal

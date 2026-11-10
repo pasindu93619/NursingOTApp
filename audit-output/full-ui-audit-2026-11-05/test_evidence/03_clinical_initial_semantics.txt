@@ -1,0 +1,142 @@
+=== ROOT NODE 0 ===
+Printing with useUnmergedTree = 'false'
+Node #76 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+ |-Node #77 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+   IsContainer = 'true'
+    |-Node #78 at (l=0.0, t=0.0, r=1080.0, b=2400.0)px
+      IsContainer = 'true'
+       |-Node #689 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |  |-Node #690 at (l=0.0, t=110.0, r=1080.0, b=2042.0)px
+       |     |-Node #692 at (l=51.0, t=146.0, r=175.0, b=270.0)px
+       |     | ContentDescription = '[Back]'
+       |     | Focused = 'false'
+       |     | Actions = [OnClick, RequestFocus]
+       |     | MergeDescendants = 'true'
+       |     |-Node #696 at (l=209.0, t=138.0, r=588.0, b=210.0)px
+       |     | Text = '[Clinical Tools]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #697 at (l=209.0, t=210.0, r=694.0, b=278.0)px
+       |     | Text = '[AI-assisted bedside navigation]'
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #698 at (l=0.0, t=306.0, r=1080.0, b=2042.0)px
+       |       CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo@c2c239'
+       |       IsTraversalGroup = 'true'
+       |       VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=100.0, reverseScrolling=false)'
+       |       Actions = [GetScrollViewportLength, IndexForKey, ScrollBy, ScrollByOffset, ScrollToIndex]
+       |        |-Node #700 at (l=107.0, t=368.0, r=973.0, b=978.0)px
+       |        |  |-Node #704 at (l=107.0, t=368.0, r=471.0, b=436.0)px
+       |        |  | Text = '[CLINICAL AI WORKSPACE]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #705 at (l=107.0, t=436.0, r=837.0, b=612.0)px
+       |        |  | Text = '[Find the right clinical tool]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #706 at (l=107.0, t=612.0, r=837.0, b=747.0)px
+       |        |  | Text = '[Describe the task in plain English or Sinhala. AI only routes you to an existing deterministic clinical engine.]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #707 at (l=837.0, t=368.0, r=973.0, b=504.0)px
+       |        |  | IsContainer = 'true'
+       |        |  |-Node #710 at (l=107.0, t=786.0, r=381.0, b=978.0)px
+       |        |  | IsContainer = 'true'
+       |        |  |  |-Node #712 at (l=135.0, t=814.0, r=199.0, b=882.0)px
+       |        |  |  | Text = '[TOOLS]'
+       |        |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |  |-Node #713 at (l=135.0, t=882.0, r=157.0, b=950.0)px
+       |        |  |    Text = '[9]'
+       |        |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #714 at (l=404.0, t=786.0, r=677.0, b=978.0)px
+       |        |  | IsContainer = 'true'
+       |        |  |  |-Node #716 at (l=432.0, t=814.0, r=520.0, b=882.0)px
+       |        |  |  | Text = '[ROUTING]'
+       |        |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |  |-Node #717 at (l=432.0, t=882.0, r=548.0, b=950.0)px
+       |        |  |    Text = '[LOCAL]'
+       |        |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #718 at (l=700.0, t=786.0, r=973.0, b=978.0)px
+       |        |    IsContainer = 'true'
+       |        |     |-Node #720 at (l=728.0, t=814.0, r=833.0, b=882.0)px
+       |        |     | Text = '[LANGUAGE]'
+       |        |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |     |-Node #721 at (l=728.0, t=882.0, r=864.0, b=950.0)px
+       |        |       Text = '[EN + සිං]'
+       |        |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #723 at (l=45.0, t=1079.0, r=1035.0, b=1307.0)px
+       |        | IsContainer = 'true'
+       |        |  |-Node #725 at (l=82.0, t=1116.0, r=196.0, b=1230.0)px
+       |        |  | IsContainer = 'true'
+       |        |  |-Node #729 at (l=224.0, t=1116.0, r=520.0, b=1184.0)px
+       |        |  | Text = '[AI safety boundary]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #730 at (l=224.0, t=1184.0, r=998.0, b=1270.0)px
+       |        |    Text = '[AI finds and explains tools; it does not create medication doses or replace the calculator's deterministic math.]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #732 at (l=45.0, t=1346.0, r=1035.0, b=1860.0)px
+       |        | IsContainer = 'true'
+       |        |  |-Node #735 at (l=84.0, t=1396.0, r=198.0, b=1510.0)px
+       |        |  | IsContainer = 'true'
+       |        |  |-Node #739 at (l=223.0, t=1385.0, r=625.0, b=1453.0)px
+       |        |  | Text = '[Clinical AI Assistant]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #740 at (l=223.0, t=1453.0, r=868.0, b=1521.0)px
+       |        |  | Text = '[Natural-language routing • local • calculation-safe]'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |  |-Node #741 at (l=84.0, t=1549.0, r=996.0, b=1707.0)px
+       |        |  | ContentDataType = 'AndroidContentDataType(androidAutofillType=1)'
+       |        |  | EditableText = ''
+       |        |  | Focused = 'false'
+       |        |  | ImeAction = 'Search'
+       |        |  | InputText = ''
+       |        |  | IsEditable = 'true'
+       |        |  | Text = '[e.g. “500 mL over 4 hours” or “නොරැඩ්‍රිනලින්”]'
+       |        |  | TextSelectionRange = 'TextRange(0, 0)'
+       |        |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, InsertTextAtCursor, OnAutofillText, OnClick, OnLongClick, PasteText, PerformImeAction, RequestFocus, SetSelection, SetText, SetTextSubstitution, ShowTextSubstitution]
+       |        |  | MergeDescendants = 'true'
+       |        |  |-Node #754 at (l=84.0, t=1735.0, r=996.0, b=1821.0)px
+       |        |    Text = '[Try: “IV drip”, “insulin”, “ICU potassium”, “BSA”, or Sinhala clinical terms.]'
+       |        |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #758 at (l=45.0, t=1899.0, r=418.0, b=1967.0)px
+       |        | Text = '[Clinical engines]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #759 at (l=45.0, t=1967.0, r=727.0, b=2035.0)px
+       |        | Text = '[Open a workflow directly or use AI routing above.]'
+       |        | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |        |-Node #760 at (l=921.0, t=1910.0, r=1035.0, b=2024.0)px
+       |          IsContainer = 'true'
+       |-Node #226 at (l=0.0, t=2042.0, r=1080.0, b=2400.0)px
+         IsContainer = 'true'
+          |-Node #227 at (l=0.0, t=2042.0, r=1080.0, b=2267.0)px
+            [SelectableGroup]
+             |-Node #228 at (l=0.0, t=2042.0, r=197.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Home]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #237 at (l=220.0, t=2042.0, r=417.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Work]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #246 at (l=440.0, t=2042.0, r=638.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'true'
+             | Text = '[Clinical]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #255 at (l=661.0, t=2042.0, r=859.0, b=2267.0)px
+             | Focused = 'false'
+             | Role = 'Tab'
+             | Selected = 'false'
+             | Text = '[Finance]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+             | MergeDescendants = 'true'
+             |-Node #264 at (l=882.0, t=2042.0, r=1080.0, b=2267.0)px
+               Focused = 'false'
+               Role = 'Tab'
+               Selected = 'false'
+               Text = '[More]'
+               Actions = [ClearTextSubstitution, GetTextLayoutResult, OnClick, RequestFocus, SetTextSubstitution, ShowTextSubstitution]
+               MergeDescendants = 'true'

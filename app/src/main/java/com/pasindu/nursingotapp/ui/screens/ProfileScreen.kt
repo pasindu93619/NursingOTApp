@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -333,8 +334,10 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = NursingDimensions.Spacing.lg, vertical = NursingDimensions.Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.lg)
         ) {
@@ -421,7 +424,7 @@ fun ProfileScreen(
                         value = serviceNo,
                         onValueChange = { serviceNo = it },
                         modifier = Modifier.weight(1f),
-                        keyboardType = KeyboardType.Number
+                        keyboardType = PROFILE_IDENTIFIER_KEYBOARD_TYPE
                     )
                     Surface(
                         modifier = Modifier
@@ -482,7 +485,7 @@ fun ProfileScreen(
                         value = paySheetNo,
                         onValueChange = { paySheetNo = it },
                         modifier = Modifier.weight(1f),
-                        keyboardType = KeyboardType.Number
+                        keyboardType = PROFILE_IDENTIFIER_KEYBOARD_TYPE
                     )
                 }
             }
@@ -561,7 +564,7 @@ fun ProfileScreen(
                     label = "Current Basic Salary (2026)",
                     value = basicSalary,
                     onValueChange = { basicSalary = it },
-                    keyboardType = KeyboardType.Number,
+                    keyboardType = PROFILE_MONEY_KEYBOARD_TYPE,
                     leadingText = "Rs."
                 )
 
@@ -802,7 +805,7 @@ fun ProfileScreen(
                     label = "Total Paysheet Deductions",
                     value = totalDeductions,
                     onValueChange = { totalDeductions = it },
-                    keyboardType = KeyboardType.Number,
+                    keyboardType = PROFILE_MONEY_KEYBOARD_TYPE,
                     leadingText = "Rs."
                 )
                 Text(
@@ -984,7 +987,7 @@ fun ProfileScreen(
     }
 }
 
-private fun parsedMoney(value: String): Double =
+internal fun parsedMoney(value: String): Double =
     value.trim().replace(",", "").toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
 
 private fun cleanNumber(value: Double): String =
@@ -1046,7 +1049,7 @@ private fun DeductionEditorRow(
                     onValueChange = onAmountChange,
                     modifier = Modifier.weight(0.7f),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = PROFILE_MONEY_KEYBOARD_TYPE),
                     label = { Text("Amount", fontSize = 12.sp) },
                     shape = RoundedCornerShape(NursingDimensions.Radius.medium),
                     leadingIcon = { Text("Rs.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
