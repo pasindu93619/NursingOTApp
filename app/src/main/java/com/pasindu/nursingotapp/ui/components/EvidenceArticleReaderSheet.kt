@@ -76,7 +76,7 @@ fun EvidenceArticleReaderSheet(
                         Text(
                             text = article.source.displayName,
                             color = ClinicalPrimaryColor,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
@@ -88,10 +88,10 @@ fun EvidenceArticleReaderSheet(
                             color = Color(0xFFFEF3C7)
                         ) {
                             Text(
-                                text = "SIMULATION",
+                                text = "Simulation",
                                 color = Color(0xFF92400E),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -152,13 +152,13 @@ fun EvidenceArticleReaderSheet(
                         Text(
                             text = "Published: ${article.publicationDate}",
                             color = TextSecondary,
-                            fontSize = 11.sp
+                            fontSize = 12.sp
                         )
                         article.doiOrPmid?.let {
                             Text(
                                 text = "•  $it",
                                 color = TextSecondary,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         }
                     }
@@ -186,19 +186,18 @@ fun EvidenceArticleReaderSheet(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = "CLINICAL SIMULATION — UNVERIFIED DRAFT",
+                                    text = "Clinical Simulation — Unverified Draft",
                                     color = Color(0xFFB45309),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 0.8.sp
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                             Text(
                                 text = article.sourceUrlDisclaimer
                                     ?: "This protocol is an illustrative clinical simulation prototype for educational and training purposes. It is NOT an officially indexed Ministry of Health publication and must not be treated as approved institutional policy.",
                                 color = Color(0xFF92400E),
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp,
+                                fontSize = 13.sp,
+                                lineHeight = 19.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -216,17 +215,16 @@ fun EvidenceArticleReaderSheet(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "AT-A-GLANCE CLINICAL SUMMARY",
+                            text = "At-a-glance clinical summary",
                             color = ClinicalPrimaryColor,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold
                         )
                         Text(
                             text = article.summary,
                             color = TextPrimary,
-                            fontSize = 12.5.sp,
-                            lineHeight = 18.sp
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp
                         )
                     }
                 }
@@ -253,19 +251,18 @@ fun EvidenceArticleReaderSheet(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "SAFETY WARNINGS & CONTRAINDICATIONS",
+                                    text = "Safety warnings & contraindications",
                                     color = Color(0xFFDC2626),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 1.sp
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                             article.safetyWarnings.forEach { warning ->
                                 Text(
                                     text = "•  $warning",
                                     color = Color(0xFF991B1B),
-                                    fontSize = 11.5.sp,
-                                    lineHeight = 16.sp
+                                    fontSize = 13.sp,
+                                    lineHeight = 19.sp
                                 )
                             }
                         }
@@ -289,13 +286,13 @@ fun EvidenceArticleReaderSheet(
                                 Surface(
                                     color = ClinicalPrimaryColor.copy(alpha = 0.12f),
                                     shape = CircleShape,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = "${index + 1}",
                                             color = ClinicalPrimaryColor,
-                                            fontSize = 10.sp,
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -303,8 +300,8 @@ fun EvidenceArticleReaderSheet(
                                 Text(
                                     text = rec,
                                     color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    lineHeight = 17.sp,
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -335,8 +332,8 @@ fun EvidenceArticleReaderSheet(
                                 Text(
                                     text = action,
                                     color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    lineHeight = 17.sp,
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -356,8 +353,8 @@ fun EvidenceArticleReaderSheet(
                     Text(
                         text = article.fullTextOrAbstract,
                         color = TextSecondary,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp
                     )
                 }
 
@@ -371,9 +368,9 @@ fun EvidenceArticleReaderSheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "SOURCE ATTRIBUTION & PROVENANCE",
+                            text = "Source Attribution & Provenance",
                             color = Slate,
-                            fontSize = 9.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
@@ -383,21 +380,21 @@ fun EvidenceArticleReaderSheet(
                                 "Official Issuing Body: ${article.source.displayName}"
                             },
                             color = TextSecondary,
-                            fontSize = 10.sp
+                            fontSize = 12.sp
                         )
                         if (article.isSimulationOrUnverified) {
                             Text(
                                 text = "Verification Status: UNVERIFIED DRAFT (Educational Prototype)",
                                 color = Color(0xFFB45309),
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             article.sourceUrlDisclaimer?.let { disclaimer ->
                                 Text(
                                     text = "Disclaimer: $disclaimer",
                                     color = Color(0xFF92400E),
-                                    fontSize = 9.5.sp,
-                                    lineHeight = 14.sp
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
                                 )
                             }
                         }
@@ -405,7 +402,7 @@ fun EvidenceArticleReaderSheet(
                             Text(
                                 text = "Licence: $it",
                                 color = TextSecondary,
-                                fontSize = 10.sp
+                                fontSize = 12.sp
                             )
                         }
                     }

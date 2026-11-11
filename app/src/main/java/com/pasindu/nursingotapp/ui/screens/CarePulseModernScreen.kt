@@ -129,7 +129,7 @@ private val CareMintSoft = Color(0xFFEAFBF5)
 
 private val CareAmberSoft = Color(0xFFFFF6E7)
 
-private val CarePurpleSoft = Color(0xFFF3EEFF)
+private val CarePurpleSoft = Color(0xFFEEF2FB)
 
 
 

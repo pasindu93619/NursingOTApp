@@ -24,12 +24,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
 import com.pasindu.nursingotapp.ui.ClaimPeriodViewModel
+import com.pasindu.nursingotapp.ui.components.NursingAdaptiveTopBar
 import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
@@ -54,10 +56,14 @@ import java.util.Locale
 
 private val OtModernInk = Color(0xFF12204A)
 private val OtModernBlueSoft = Color(0xFFEAF6FF)
-private val OtModernPurpleSoft = Color(0xFFF3EEFF)
+private val OtModernPurpleSoft = Color(0xFFEEF2FB)
+
 private val OtModernMintSoft = Color(0xFFEAFBF5)
+
 private val OtModernAmberSoft = Color(0xFFFFF7E6)
+
 private val OtModernSlateSoft = Color(0xFFF1F5F9)
+
 private val OtModernHero = Brush.horizontalGradient(
     listOf(
         Color(0xFF075985),
@@ -836,19 +842,22 @@ fun ClaimPeriodModernScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            NursingAdaptiveTopBar(
                 title = {
                     Column {
                         Text(
                             "OT & Claims",
                             color = OtModernInk,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 2
                         )
 
                         Text(
                             "Plan, record and review duty",
                             color = TextSecondary,
-                            fontSize = 11.sp
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            maxLines = 2
                         )
                     }
                 },
@@ -873,9 +882,7 @@ fun ClaimPeriodModernScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                containerColor = MaterialTheme.colorScheme.background
             )
         }
     ) { innerPadding ->
@@ -918,9 +925,11 @@ fun ClaimPeriodModernScreen(
                         Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 "NURSINGOS • DUTY",
@@ -941,6 +950,8 @@ fun ClaimPeriodModernScreen(
                                         fontSize = 7.5.sp,
                                         fontWeight = FontWeight.Black,
                                         letterSpacing = 0.8.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }

@@ -643,6 +643,128 @@ class AdvancedFinanceUiStateTest {
         }
     }
 
+    @Test
+    fun k28_deletingDailyEntry_updatesPeriodSummaryAndNetTotalsImmediately() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val env = createTestEnvironment(initialPeriods = listOf(periodSept2026))
+            fun nightEntry(id: Long, day: Int) = DailyEntryEntity(
+                id = id,
+                claimPeriodId = periodSept2026.id,
+                date = LocalDate.of(2026, 9, day),
+                isPH = false,
+                isDO = false,
+                isLeave = false,
+                leaveType = null,
+                normalTimeIn = "19.00",
+                normalTimeOut = "07.00",
+                normalHours = 12f,
+                otTimeIn = "",
+                otTimeOut = "",
+                otHours = 0f,
+                wardOverride = "Normal",
+                reason = ""
+            )
+            val phFridayEntry = DailyEntryEntity(
+                id = 5L,
+                claimPeriodId = periodSept2026.id,
+                date = LocalDate.of(2026, 9, 11),
+                isPH = true,
+                isDO = false,
+                isLeave = false,
+                leaveType = null,
+                normalTimeIn = "07.00",
+                normalTimeOut = "15.00",
+                normalHours = 8f,
+                otTimeIn = "15.00",
+                otTimeOut = "19.00",
+                otHours = 4f,
+                wardOverride = "Normal",
+                reason = "Holiday cover"
+            )
+            env.dailyEntryDao.setEntries(
+                listOf(
+                    nightEntry(1L, 6),  // Sun
+                    nightEntry(2L, 7),  // Mon
+                    nightEntry(3L, 8),  // Tue
+                    nightEntry(4L, 9),  // Wed (48h total -> 36h normal + 12h OT)
+                    phFridayEntry       // Fri PH (+12h OT, +1 PH day)
+                )
+            )
+
+            val vm = env.createViewModel()
+            advanceUntilIdle()
+
+            val beforeState = vm.uiState.value
+            assertEquals(36.0, beforeState.totalNormalHours, 0.001)
+            assertEquals(24.0, beforeState.totalOTHours, 0.001)
+            assertEquals(1, beforeState.totalPHDays)
+            val grossBefore = beforeState.grossEarnings
+            val netBefore = beforeState.estimatedNetSalary
+
+            // User deletes Friday PH entry while Finance tab stays cached in backstack
+            env.dailyEntryDao.deleteEntryById(phFridayEntry.id)
+            advanceUntilIdle()
+
+            val afterState = vm.uiState.value
+            assertEquals(36.0, afterState.totalNormalHours, 0.001)
+            assertEquals(12.0, afterState.totalOTHours, 0.001)
+            assertEquals(0, afterState.totalPHDays)
+            assertEquals(0.0, afterState.phAmountRs, 0.001)
+            assertTrue(afterState.grossEarnings < grossBefore)
+            assertTrue(afterState.estimatedNetSalary < netBefore)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun k28_deletingActiveClaimPeriod_clearsStalePeriodTotalsAndUpdatesNetPay() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val env = createTestEnvironment(initialPeriods = listOf(periodSept2026))
+            fun nightEntry(id: Long, day: Int) = DailyEntryEntity(
+                id = id,
+                claimPeriodId = periodSept2026.id,
+                date = LocalDate.of(2026, 9, day),
+                isPH = false,
+                isDO = false,
+                isLeave = false,
+                leaveType = null,
+                normalTimeIn = "19.00",
+                normalTimeOut = "07.00",
+                normalHours = 12f,
+                otTimeIn = "",
+                otTimeOut = "",
+                otHours = 0f,
+                wardOverride = "Normal",
+                reason = ""
+            )
+            env.dailyEntryDao.setEntries(
+                listOf(nightEntry(10L, 6), nightEntry(11L, 7), nightEntry(12L, 8), nightEntry(13L, 9))
+            )
+
+            val vm = env.createViewModel()
+            advanceUntilIdle()
+            assertEquals(12.0, vm.uiState.value.totalOTHours, 0.001)
+            assertTrue(vm.uiState.value.otAmountRs > 0.0)
+
+            env.claimPeriodDao.deleteClaimPeriod(periodSept2026)
+            env.dailyEntryDao.deleteEntriesForPeriod(periodSept2026.id)
+            advanceUntilIdle()
+
+            val clearedState = vm.uiState.value
+            assertEquals(null, clearedState.claimPeriod)
+            assertEquals(null, clearedState.periodSummary)
+            assertEquals(0.0, clearedState.totalOTHours, 0.001)
+            assertEquals(0.0, clearedState.otAmountRs, 0.001)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private val periodSept2026 = ClaimPeriodEntity(
         id = 101L,
         startDate = LocalDate.of(2026, 9, 1),
@@ -860,14 +982,31 @@ class AdvancedFinanceUiStateTest {
     }
 
     private class FakeDailyEntryDao : DailyEntryDao {
-        override suspend fun insertEntry(entry: DailyEntryEntity) = Unit
-        override suspend fun updateEntry(entry: DailyEntryEntity) = Unit
-        override suspend fun upsertDailyEntry(entry: DailyEntryEntity) = Unit
-        override fun observeEntriesForPeriod(claimPeriodId: Long): Flow<List<DailyEntryEntity>> = flowOf(emptyList())
-        override fun observeAllEntries(): Flow<List<DailyEntryEntity>> = flowOf(emptyList())
-        override suspend fun getEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? = null
-        override suspend fun deleteEntryById(id: Long) = Unit
-        override suspend fun deleteEntriesForPeriod(claimPeriodId: Long) = Unit
-        override suspend fun deleteAllEntries() = Unit
+        private val flow = MutableStateFlow<List<DailyEntryEntity>>(emptyList())
+
+        fun setEntries(entries: List<DailyEntryEntity>) {
+            flow.value = entries
+        }
+
+        override suspend fun insertEntry(entry: DailyEntryEntity) {
+            flow.value = flow.value.filterNot { it.id == entry.id && entry.id != 0L } + entry
+        }
+
+        override suspend fun updateEntry(entry: DailyEntryEntity) = insertEntry(entry)
+        override suspend fun upsertDailyEntry(entry: DailyEntryEntity) = insertEntry(entry)
+        override fun observeEntriesForPeriod(claimPeriodId: Long): Flow<List<DailyEntryEntity>> =
+            flow.map { list -> list.filter { it.claimPeriodId == claimPeriodId } }
+        override fun observeAllEntries(): Flow<List<DailyEntryEntity>> = flow
+        override suspend fun getEntryForDate(claimPeriodId: Long, date: LocalDate): DailyEntryEntity? =
+            flow.value.firstOrNull { it.claimPeriodId == claimPeriodId && it.date == date }
+        override suspend fun deleteEntryById(id: Long) {
+            flow.value = flow.value.filterNot { it.id == id }
+        }
+        override suspend fun deleteEntriesForPeriod(claimPeriodId: Long) {
+            flow.value = flow.value.filterNot { it.claimPeriodId == claimPeriodId }
+        }
+        override suspend fun deleteAllEntries() {
+            flow.value = emptyList()
+        }
     }
 }

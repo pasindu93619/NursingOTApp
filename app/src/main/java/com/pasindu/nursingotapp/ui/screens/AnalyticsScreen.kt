@@ -53,8 +53,12 @@ import com.pasindu.nursingotapp.domain.calculation.ShiftEntry
 import com.pasindu.nursingotapp.domain.calculation.WeeklyCalculationEngine
 import com.pasindu.nursingotapp.ui.AnalyticsViewModel
 import com.pasindu.nursingotapp.ui.components.BurnoutMeterCard
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
 import com.pasindu.nursingotapp.ui.theme.Amber
 import com.pasindu.nursingotapp.ui.theme.AppBackground
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.Emerald
@@ -391,7 +395,7 @@ fun AnalyticsScreen(
                         )
                         Text(
                             if (selectedDutyType == "Special") "Special Unit Mode" else "Normal Ward Mode",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = ClinicalPrimaryColor,
                             fontWeight = FontWeight.Bold
                         )
@@ -472,12 +476,8 @@ fun AnalyticsScreen(
                 }
             }
 
-            AnimatedVisibility(
-                visible = guideBar,
-                enter = fadeIn(tween(180)) + slideInVertically(tween(180)) { -12 },
-                exit = fadeOut(tween(150)) + slideOutVertically(tween(150)) { -12 }
-            ) {
-                SmartInsightsGuideCard()
+            if (guideBar) {
+                SmartInsightsGuideDialog(onDismiss = { guideBar = false })
             }
 
             AnalyticsSectionTitle(
@@ -584,11 +584,10 @@ private fun SmartInsightsHero(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Text(
-                "SMART INSIGHTS",
-                color = SurfaceWhite.copy(alpha = 0.76f),
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.6.sp
+                "Smart Insights",
+                color = SurfaceWhite.copy(alpha = 0.85f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 "Your duty patterns",
@@ -598,9 +597,9 @@ private fun SmartInsightsHero(
             )
             Text(
                 "${if (selectedDutyType == "Special") "Special unit" else "Normal ward"} analytics from your existing claim data.",
-                color = SurfaceWhite.copy(alpha = 0.84f),
-                fontSize = 10.sp,
-                lineHeight = 14.sp
+                color = SurfaceWhite.copy(alpha = 0.90f),
+                fontSize = 13.sp,
+                lineHeight = 18.sp
             )
             Spacer(Modifier.height(5.dp))
             Row(
@@ -608,17 +607,17 @@ private fun SmartInsightsHero(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 InsightsGlassTile(
-                    label = "SHIFTS",
+                    label = "Shifts",
                     value = totalShifts.toString(),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(0.9f)
                 )
                 InsightsGlassTile(
-                    label = "AVG OT / CLAIM",
+                    label = "Avg OT/Claim",
                     value = "${averageOtHours.toInt()}h",
-                    modifier = Modifier.weight(1.15f)
+                    modifier = Modifier.weight(1.25f)
                 )
                 InsightsGlassTile(
-                    label = "CLAIM",
+                    label = "Claim",
                     value = selectedPeriod?.let { period ->
                         "${period.startDate.format(DateTimeFormatter.ofPattern("MMM d"))} – ${
                             period.endDate.format(DateTimeFormatter.ofPattern("MMM d"))
@@ -647,130 +646,59 @@ private fun InsightsGlassTile(
         color = SurfaceWhite.copy(alpha = 0.15f)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-            verticalArrangement = Arrangement.spacedBy(1.dp)
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 label,
-                color = SurfaceWhite.copy(alpha = 0.70f),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.8.sp,
-                maxLines = 1
+                color = SurfaceWhite.copy(alpha = 0.84f),
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2
             )
             Text(
                 value,
                 color = SurfaceWhite,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Black,
-                maxLines = 1
+                maxLines = 2
             )
         }
     }
 }
 
 @Composable
-private fun SmartInsightsGuideCard() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = NursingShapes.large,
-        color = OtModernBlueSoft
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(ClinicalPrimaryColor.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = ClinicalPrimaryColor,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
-                Spacer(Modifier.width(9.dp))
-                Column {
-                    Text(
-                        "How to read these numbers",
-                        color = md_theme_light_onPrimaryContainer,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        "All values come from your saved claim data.",
-                        color = md_theme_light_onPrimaryContainer.copy(alpha = 0.72f),
-                        fontSize = 9.sp
-                    )
-                }
-            }
-
-            InsightDefinitionRow(
-                icon = Icons.Default.AccessTime,
-                title = "SHIFTS",
-                body = "Number of recorded duty entries in the selected analytics period. Changing Full Month to a week changes this count."
-            )
-            InsightDefinitionRow(
-                icon = Icons.Default.ArrowDropDown,
-                title = "AVG OT / CLAIM",
-                body = "Total calculated OT hours across the displayed claim periods ÷ number of displayed claims. Each claim includes OT created after the weekly 36-hour duty threshold plus separately recorded OT."
-            )
-            InsightDefinitionRow(
-                icon = Icons.Default.CalendarMonth,
-                title = "CLAIM",
-                body = "A saved claim period. OT totals use complete Sunday–Saturday weeks inside that claim period, matching the existing 36-hour weekly rule."
-            )
-        }
-    }
-}
-
-@Composable
-private fun InsightDefinitionRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    body: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .clip(CircleShape)
-                .background(SurfaceWhite.copy(alpha = 0.70f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = ClinicalPrimaryColor,
-                modifier = Modifier.size(15.dp)
-            )
-        }
-        Spacer(Modifier.width(9.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                color = md_theme_light_onPrimaryContainer,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.7.sp
-            )
-            Text(
-                body,
-                color = md_theme_light_onPrimaryContainer.copy(alpha = 0.78f),
-                fontSize = 9.sp,
-                lineHeight = 13.sp
-            )
-        }
-    }
+private fun SmartInsightsGuideDialog(onDismiss: () -> Unit) {
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = "Smart Insights Guide",
+            subtitle = "All values come from your saved claim data.",
+            sections = listOf(
+                NursingGuideSection(
+                    stepLabel = "Metric 01",
+                    title = "Shifts",
+                    body = "Number of recorded duty entries in the selected analytics period. Changing Full Month to a week changes this count.",
+                    accent = ClinicalPrimaryColor
+                ),
+                NursingGuideSection(
+                    stepLabel = "Metric 02",
+                    title = "Avg OT / Claim",
+                    body = "Total calculated OT hours across the displayed claim periods ÷ number of displayed claims. Each claim includes OT created after the weekly 36-hour duty threshold plus separately recorded OT.",
+                    accent = BrandIndigo
+                ),
+                NursingGuideSection(
+                    stepLabel = "Metric 03",
+                    title = "Claim",
+                    body = "A saved claim period. OT totals use complete Sunday–Saturday weeks inside that claim period, matching the existing 36-hour weekly rule.",
+                    accent = MedicalBlue
+                )
+            ),
+            safetyTitle = "Calculation & data note",
+            safetyBody = "Analytics read strictly from your saved local entries and existing weekly 36-hour overtime rules without altering any claim totals."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 private enum class ShiftDistributionViewMode { FULL_PERIOD, WEEK_BY_WEEK }
@@ -784,7 +712,7 @@ private data class BurnoutCalculation(
     val weeksEquivalent: Float
 )
 
-private data class ClaimPeriodOtChartPoint(
+internal data class ClaimPeriodOtChartPoint(
     val periodId: Long,
     val startDate: LocalDate,
     val endDate: LocalDate,
@@ -825,7 +753,7 @@ private fun calculateClaimWeekOtBreakdown(
     }
 }
 
-private fun calculateClaimPeriodOtBreakdown(
+internal fun calculateClaimPeriodOtBreakdown(
     period: com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity,
     allEntries: List<com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity>
 ): ClaimPeriodOtChartPoint {
@@ -874,7 +802,7 @@ private fun AnalyticsSectionTitle(
         Text(
             subtitle,
             color = TextSecondary,
-            fontSize = 10.sp
+            fontSize = 12.sp
         )
     }
 }
@@ -938,7 +866,7 @@ private fun OtHoursChartCard(
                     "Total OT hours per claim • duty OT + additional OT"
                 },
                 color = TextSecondary,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -953,7 +881,7 @@ private fun OtHoursChartCard(
                         val weekPoint = weekData.getOrNull(index)
                         Surface(
                             modifier = Modifier
-                                .width(86.dp)
+                                .widthIn(min = 96.dp)
                                 .clickable { onWeekSelected(index) },
                             shape = NursingShapes.large,
                             color = if (index == selectedWeekIndex) OtModernBlueSoft else AppBackground,
@@ -963,26 +891,26 @@ private fun OtHoursChartCard(
                             )
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
                                     "W${index + 1}",
                                     color = if (index == selectedWeekIndex) MedicalBlue else TextSecondary,
-                                    fontSize = 9.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Black
                                 )
                                 Text(
                                     "${week.first.format(DateTimeFormatter.ofPattern("MMM d"))} – ${week.second.format(DateTimeFormatter.ofPattern("MMM d"))}",
                                     color = TextSecondary,
-                                    fontSize = 8.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
                                     "${weekPoint?.totalOtHours?.toInt() ?: 0}h",
                                     color = TextPrimary,
-                                    fontSize = 13.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Black
                                 )
                             }
@@ -1001,13 +929,14 @@ private fun OtHoursChartCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 "Selected week • ${selectedWeekPoint.weekStart.format(DateTimeFormatter.ofPattern("MMM d"))} – ${selectedWeekPoint.weekEnd.format(DateTimeFormatter.ofPattern("MMM d"))}",
                                 color = ClinicalPrimaryColor,
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -1035,7 +964,8 @@ private fun OtHoursChartCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             "Σ",
@@ -1043,18 +973,17 @@ private fun OtHoursChartCard(
                             fontSize = 27.sp,
                             fontWeight = FontWeight.Black
                         )
-                        Spacer(Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 "This Claim • Total OT Hours",
                                 color = TextPrimary,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
                                 "${point.startDate.format(DateTimeFormatter.ofPattern("MMM d"))} – ${point.endDate.format(DateTimeFormatter.ofPattern("MMM d"))}",
                                 color = ClinicalPrimaryColor,
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -1155,7 +1084,7 @@ private fun OtHoursChartCard(
                             Text(
                                 point.weekStart.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
                                     point.weekEnd.format(DateTimeFormatter.ofPattern("MMM d")),
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 color = ClinicalPrimaryColor,
                                 fontWeight = FontWeight.ExtraBold,
                                 textAlign = TextAlign.Center,
@@ -1168,7 +1097,7 @@ private fun OtHoursChartCard(
                             Text(
                                 point.startDate.format(DateTimeFormatter.ofPattern("MMM d")) + "\n" +
                                     point.endDate.format(DateTimeFormatter.ofPattern("MMM d")),
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 color = if (isCurrent) ClinicalPrimaryColor else TextSecondary,
                                 fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold,
                                 textAlign = TextAlign.Center,
@@ -1215,7 +1144,7 @@ private fun OtBreakdownLegendRow(
         Spacer(Modifier.width(5.dp))
         Text(
             label,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color = TextSecondary,
             fontWeight = FontWeight.SemiBold
         )
@@ -1223,7 +1152,7 @@ private fun OtBreakdownLegendRow(
             Spacer(Modifier.width(5.dp))
             Text(
                 "${it.toInt()}h",
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 color = TextPrimary,
                 fontWeight = FontWeight.Black
             )
@@ -1289,7 +1218,7 @@ private fun AnimatedOtBar(
                 Text(
                     "${totalOtHours.toInt()}h",
                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
                     color = if (isCurrent) ClinicalPrimaryColor else TextPrimary
                 )
@@ -1351,7 +1280,7 @@ private fun AnimatedOtBar(
                                 Text(
                                     "${additionalOtHours.toInt()}h",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                    fontSize = 10.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Purple
                                 )
@@ -1389,7 +1318,7 @@ private fun AnimatedOtBar(
                                     Text(
                                         "${dutyOtHours.toInt()}h",
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                        fontSize = 10.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Black,
                                         color = MedicalBlue
                                     )
@@ -1543,7 +1472,7 @@ private fun ShiftDistributionCard(
                         else "Selected week • ${week.first.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))} – ${week.second.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))}"
                     }
                 },
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = ClinicalPrimaryColor,
                 modifier = Modifier.fillMaxWidth()
@@ -1705,13 +1634,13 @@ private fun ShiftDistributionCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 if (isSpecial) {
-                    LegendItem(day_color, "Weekday", 11.sp)
-                    LegendItem(eve_color, "Weekend", 11.sp)
-                    LegendItem(night_color, "Holiday", 11.sp)
+                    LegendItem(day_color, "Weekday", 12.sp)
+                    LegendItem(eve_color, "Weekend", 12.sp)
+                    LegendItem(night_color, "Holiday", 12.sp)
                 } else {
-                    LegendItem(day_color, "Day", 11.sp)
-                    LegendItem(eve_color, "Eve", 11.sp)
-                    LegendItem(night_color, "Night", 11.sp)
+                    LegendItem(day_color, "Day", 12.sp)
+                    LegendItem(eve_color, "Eve", 12.sp)
+                    LegendItem(night_color, "Night", 12.sp)
                 }
             }
         }
@@ -1738,7 +1667,7 @@ private fun FilterPill(
         ) {
             Text(
                 text,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = contentColor
             )
@@ -1839,7 +1768,7 @@ fun MiniStat(label: String, value: Int) {
         )
         Text(
             label,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color = TextSecondary,
             fontWeight = FontWeight.Bold
         )

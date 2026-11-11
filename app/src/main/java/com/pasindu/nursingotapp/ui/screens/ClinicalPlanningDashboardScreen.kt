@@ -1014,8 +1014,8 @@ private fun IsbarCard(
                 if (note.background.isNotBlank()) {
                     IsbarSectionRow(
                         badge = "B",
-                        badgeBg = Color(0xFFEDE9FE),
-                        badgeFg = Purple,
+                        badgeBg = Color(0xFFEEF2FB),
+                        badgeFg = Color(0xFF27187E),
                         label = "Background",
                         content = note.background
                     )

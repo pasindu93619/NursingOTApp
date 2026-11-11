@@ -10,16 +10,18 @@ internal object ClinicalToolDesignTokens {
     val slate = Color(0xFF64748B)
     val blue = Color(0xFF1769E8)
     val cyan = Color(0xFF149FE3)
-    val indigo = Color(0xFF4B78F2)
-    val purple = Color(0xFF7B5CEB)
+    val indigo = Color(0xFF27187E)
+    val purple = Color(0xFF27187E)
     val red = Color(0xFFD92D4F)
     val amber = Color(0xFFE88A00)
     val green = Color(0xFF0E9F73)
     val softBlue = Color(0xFFEAF6FF)
-    val softPurple = Color(0xFFF3EEFF)
+    val softPurple = Color(0xFFEEF2FB)
     val softGreen = Color(0xFFEAFBF5)
     val softAmber = Color(0xFFFFF6E7)
     val softRed = Color(0xFFFFEEF1)
 
-    val hero = Brush.horizontalGradient(listOf(blue, cyan, indigo, purple))
+    val hero = Brush.horizontalGradient(
+        listOf(blue, cyan, Color(0xFF4B78F2), Color(0xFF7B5CEB))
+    )
 }

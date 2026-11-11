@@ -43,6 +43,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.pasindu.nursingotapp.ui.components.NursingAdaptiveTopBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -82,7 +83,7 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 private val OtBlueSoft = Color(0xFFEAF6FF)
-private val OtPurpleSoft = Color(0xFFF3EEFF)
+private val OtPurpleSoft = Color(0xFFEEF2FB)
 private val OtMintSoft = Color(0xFFEAFBF5)
 private val OtInk = Color(0xFF12204A)
 
@@ -90,8 +91,8 @@ private val OtHeroGradient = Brush.horizontalGradient(
     listOf(
         Color(0xFF1769E8),
         Color(0xFF149FE3),
-        Color(0xFF4B78F2),
-        Color(0xFF7B5CEB)
+        Color(0xFF1D4ED8),
+        Color(0xFF27187E)
     )
 )
 
@@ -140,11 +141,22 @@ fun ClaimPeriodScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            NursingAdaptiveTopBar(
                 title = {
                     Column {
-                        Text("OT & Claims", fontWeight = FontWeight.ExtraBold, color = OtInk)
-                        Text("Claim periods and daily duty", fontSize = 11.sp, color = TextSecondary)
+                        Text(
+                            "OT & Claims",
+                            fontWeight = FontWeight.ExtraBold,
+                            color = OtInk,
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 2
+                        )
+                        Text(
+                            "Claim periods and daily duty",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            maxLines = 2
+                        )
                     }
                 },
                 actions = {
@@ -155,7 +167,7 @@ fun ClaimPeriodScreen(
                         Icon(Icons.Default.Edit, contentDescription = "Profile", tint = ClinicalPrimaryColor)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                containerColor = MaterialTheme.colorScheme.background
             )
         }
     ) { paddingValues ->

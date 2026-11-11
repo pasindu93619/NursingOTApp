@@ -240,11 +240,10 @@ fun CurrentBasicCard(value: Double) {
             Spacer(modifier = Modifier.width(NursingDimensions.Spacing.md))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "CURRENT BASIC SALARY (2026)",
+                    text = "Current Basic Salary (2026)",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Rs. ${formatMoney(value)}",
@@ -258,12 +257,11 @@ fun CurrentBasicCard(value: Double) {
                 shape = RoundedCornerShape(NursingDimensions.Radius.pill)
             ) {
                 Text(
-                    text = "CONFIRMED",
+                    text = "Confirmed",
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -289,11 +287,10 @@ fun SalaryMatchCard(grade: String, step: Int, currentBasic: Double, basic2027: D
             ) {
                 Column {
                     Text(
-                        text = "SALARY TABLE MATCH",
+                        text = "Salary Table Match",
                         color = MaterialTheme.colorScheme.secondary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Grade $grade • Step $step",
@@ -318,9 +315,9 @@ fun SalaryMatchCard(grade: String, step: Int, currentBasic: Double, basic2027: D
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "MATCHED",
+                            text = "Matched",
                             color = MaterialTheme.colorScheme.secondary,
-                            fontSize = 9.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -330,7 +327,7 @@ fun SalaryMatchCard(grade: String, step: Int, currentBasic: Double, basic2027: D
             Text(
                 text = "2026 basic: Rs. ${formatMoney(currentBasic)}",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp
+                fontSize = 12.sp
             )
             Text(
                 text = "2027 basic: Rs. ${formatMoney(basic2027)}",

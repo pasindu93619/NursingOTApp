@@ -1,7 +1,8 @@
 package com.pasindu.nursingotapp.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,8 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -18,6 +21,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,10 +33,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.BrandIndigoSoft
+import com.pasindu.nursingotapp.ui.theme.CoolCyanSoft
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
+import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import java.util.Locale
 
 @Composable
@@ -63,18 +74,20 @@ fun PaySheetVaultSearchPanel(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(NursingDimensions.Spacing.lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
                         .size(42.dp)
-                        .background(Color(0xFFEEF2FF), RoundedCornerShape(13.dp)),
+                        .background(BrandIndigoSoft, RoundedCornerShape(13.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Search, null, tint = Color(0xFF4338CA))
+                    Icon(Icons.Default.Search, null, tint = BrandIndigo)
                 }
                 Spacer(Modifier.size(10.dp))
                 Column {
@@ -82,12 +95,12 @@ fun PaySheetVaultSearchPanel(
                         "Find a paysheet",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF0F172A)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "Search your archive instantly",
-                        fontSize = 10.sp,
-                        color = Color(0xFF64748B)
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -106,8 +119,11 @@ fun PaySheetVaultSearchPanel(
 
             if (years.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    YearChip("ALL", selectedYear == null) { selectedYear = null }
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    YearChip("All", selectedYear == null) { selectedYear = null }
                     years.take(5).forEach { year ->
                         YearChip(year.toString(), selectedYear == year) { selectedYear = year }
                     }
@@ -117,40 +133,56 @@ fun PaySheetVaultSearchPanel(
             Spacer(Modifier.height(10.dp))
 
             if (filtered.isEmpty()) {
-                Text("No paysheet found.", color = Color(0xFF64748B), fontSize = 11.sp)
+                Text("No paysheet found.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             } else {
                 filtered.take(6).forEach { document ->
                     Surface(
+                        onClick = { onDocumentSelected(document) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 3.dp)
-                            .clickable { onDocumentSelected(document) },
+                            .padding(vertical = 4.dp)
+                            .heightIn(min = NursingDimensions.TouchTarget.minimum),
                         color = Color(0xFFF8FAFC),
-                        shape = RoundedCornerShape(12.dp)
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        shape = RoundedCornerShape(NursingDimensions.Radius.medium)
                     ) {
                         Row(
                             Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     document.displayMonth,
-                                    fontSize = 13.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A)
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     formatVaultBytes(document.fileSizeBytes),
-                                    fontSize = 9.sp,
-                                    color = Color(0xFF64748B)
+                                    style = TextStyle(
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontFeatureSettings = "tnum"
+                                    )
                                 )
                             }
-                            Text(
-                                "OPEN",
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color(0xFF4338CA)
-                            )
+                            Surface(
+                                color = BrandIndigoSoft,
+                                shape = RoundedCornerShape(50.dp)
+                            ) {
+                                Text(
+                                    "Open",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandIndigo,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         }
                     }
                 }
@@ -162,17 +194,25 @@ fun PaySheetVaultSearchPanel(
 @Composable
 private fun YearChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        color = if (selected) Color(0xFF4338CA) else Color(0xFFF1F5F9),
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = NursingDimensions.TouchTarget.minimum),
+        color = if (selected) BrandIndigo else Color(0xFFF1F5F9),
+        border = if (selected) null else BorderStroke(1.dp, Color(0xFFE2E8F0)),
         shape = RoundedCornerShape(50.dp)
     ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-            color = if (selected) Color.White else Color(0xFF475569),
-            fontSize = 8.sp,
-            fontWeight = FontWeight.Black
-        )
+        Box(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                label,
+                color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
     }
 }
 
@@ -185,25 +225,51 @@ fun PaySheetVaultStorageCard(documents: List<PaySheetDocumentEntity>) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))
+        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.BarChart, null, tint = Color(0xFF0891B2))
-                Spacer(Modifier.size(8.dp))
+        Column(Modifier.padding(NursingDimensions.Spacing.lg)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(CoolCyanSoft, RoundedCornerShape(11.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.BarChart, null, tint = Color(0xFF0E7490))
+                }
                 Text(
                     "Vault intelligence",
-                    fontSize = 16.sp,
+                    modifier = Modifier.weight(1f),
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF0F172A)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Surface(
+                    color = BrandIndigoSoft,
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        "${documents.size} saved",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BrandIndigo,
+                        maxLines = 1
+                    )
+                }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatBox(Modifier.weight(1f), documents.size.toString(), "PAY SHEETS", Color(0xFF4338CA))
-                StatBox(Modifier.weight(1f), formatVaultBytes(bytes), "STORAGE USED", Color(0xFF0891B2))
-                StatBox(Modifier.weight(1f), years.toString(), "YEARS", Color(0xFF10B981))
+                StatBox(Modifier.weight(1f), documents.size.toString(), "Pay sheets", BrandIndigo)
+                StatBox(Modifier.weight(1.15f), formatVaultBytes(bytes), "Storage", Color(0xFF0E7490))
+                StatBox(Modifier.weight(0.9f), years.toString(), "Years", Color(0xFF059669))
             }
         }
     }
@@ -211,10 +277,32 @@ fun PaySheetVaultStorageCard(documents: List<PaySheetDocumentEntity>) {
 
 @Composable
 private fun StatBox(modifier: Modifier, value: String, label: String, accent: Color) {
-    Surface(modifier, color = accent.copy(alpha = 0.08f), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(12.dp)) {
-            Text(value, color = accent, fontSize = 17.sp, fontWeight = FontWeight.Black)
-            Text(label, color = Color(0xFF64748B), fontSize = 7.sp, fontWeight = FontWeight.Bold)
+    Surface(
+        modifier = modifier,
+        color = accent.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.16f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                value,
+                style = TextStyle(
+                    color = accent,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                    fontFeatureSettings = "tnum"
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

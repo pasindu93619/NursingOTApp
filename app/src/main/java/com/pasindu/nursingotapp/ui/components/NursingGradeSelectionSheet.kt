@@ -66,7 +66,8 @@ fun NursingGradeSelectionSheet(
             Text(
                 text = "Select your current Nursing Service grade. The official OT rate is assigned automatically.",
                 color = SheetSecondary,
-                fontSize = 11.sp
+                fontSize = 13.sp,
+                lineHeight = 18.sp
             )
 
             NursingOtRatePolicy.grades.forEach { grade ->
@@ -116,15 +117,15 @@ fun NursingGradeSelectionSheet(
                             Text(
                                 text = "Nursing Service OT rate • Rs. " + NumberFormat.getNumberInstance(Locale.US).format(rate) + " / hour",
                                 color = if (selected) SheetBlue else SheetSecondary,
-                                fontSize = 10.sp
+                                fontSize = 12.sp
                             )
                         }
 
                         if (selected) {
                             Text(
-                                text = "SELECTED",
+                                text = "Selected",
                                 color = SheetBlue,
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Black
                             )
                         }

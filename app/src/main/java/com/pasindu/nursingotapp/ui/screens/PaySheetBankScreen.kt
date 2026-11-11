@@ -20,6 +20,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 
 import androidx.activity.result.contract.ActivityResultContracts
 
+import androidx.compose.foundation.BorderStroke
+
 import androidx.compose.foundation.background
 
 import androidx.compose.foundation.clickable
@@ -32,9 +34,15 @@ import androidx.compose.foundation.layout.PaddingValues
 
 import androidx.compose.foundation.layout.Column
 
+import androidx.compose.foundation.layout.IntrinsicSize
+
 import androidx.compose.foundation.layout.Row
 
 import androidx.compose.foundation.layout.Spacer
+
+import androidx.compose.foundation.layout.defaultMinSize
+
+import androidx.compose.foundation.layout.fillMaxHeight
 
 import androidx.compose.foundation.layout.fillMaxSize
 
@@ -51,6 +59,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 
 import androidx.compose.foundation.layout.width
+
+import androidx.compose.foundation.rememberScrollState
+
+import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.foundation.lazy.LazyColumn
 
@@ -130,11 +142,17 @@ import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.ui.platform.LocalDensity
+
 import androidx.compose.ui.text.font.FontWeight
 
 import androidx.compose.ui.text.style.TextAlign
 
+import androidx.compose.ui.text.style.TextOverflow
+
 import androidx.compose.ui.unit.dp
+
+import androidx.compose.ui.unit.sp
 
 import androidx.core.content.ContextCompat
 
@@ -148,9 +166,17 @@ import com.pasindu.nursingotapp.data.paysheet.PaySheetVaultManager
 
 import com.pasindu.nursingotapp.ui.PaySheetBankViewModel
 
+import com.pasindu.nursingotapp.ui.components.NursingAdaptiveTopBar
+
+import com.pasindu.nursingotapp.ui.components.shouldUseCompactMonthGridText
+
 import com.pasindu.nursingotapp.ui.theme.AdvancedGradient
 
 import com.pasindu.nursingotapp.ui.theme.AppBackground
+
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+
+import com.pasindu.nursingotapp.ui.theme.BrandIndigoSoft
 
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 
@@ -158,9 +184,9 @@ import com.pasindu.nursingotapp.ui.theme.Emerald
 
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 
-import com.pasindu.nursingotapp.ui.theme.Purple
-
 import com.pasindu.nursingotapp.ui.theme.Slate
+
+import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 
@@ -436,9 +462,9 @@ fun PaySheetBankScreen(
 
 
 
-    Column(Modifier.fillMaxSize().background(AppBackground)) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
 
-        TopAppBar(
+        NursingAdaptiveTopBar(
 
             title = {
 
@@ -448,11 +474,15 @@ fun PaySheetBankScreen(
 
                         "Pay Sheet Bank",
 
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
 
                         style = MaterialTheme.typography.titleLarge,
 
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+
+                        maxLines = 2,
+
+                        overflow = TextOverflow.Ellipsis
 
                     )
 
@@ -460,9 +490,13 @@ fun PaySheetBankScreen(
 
                         "Your private monthly paysheet vault",
 
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
 
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+
+                        maxLines = 2,
+
+                        overflow = TextOverflow.Ellipsis
 
                     )
 
@@ -480,7 +514,7 @@ fun PaySheetBankScreen(
 
                         contentDescription = "Back",
 
-                        tint = Slate
+                        tint = MaterialTheme.colorScheme.onBackground
 
                     )
 
@@ -530,13 +564,17 @@ fun PaySheetBankScreen(
 
                         Text(
 
-                            "PRIVATE",
+                            "Private",
 
                             color = Emerald,
 
                             style = MaterialTheme.typography.labelSmall,
 
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+
+                            maxLines = 1,
+
+                            softWrap = false
 
                         )
 
@@ -546,7 +584,7 @@ fun PaySheetBankScreen(
 
             },
 
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground)
+            containerColor = MaterialTheme.colorScheme.background
 
         )
 
@@ -573,41 +611,56 @@ fun PaySheetBankScreen(
                 item { PaySheetVaultSearchPanel(documents = documents, onDocumentSelected = { document: PaySheetDocumentEntity -> selected = document }) }
 
                 item {
-
                     Row(
-
-                        Modifier.fillMaxWidth().padding(vertical = NursingDimensions.Spacing.xs),
-
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = NursingDimensions.Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically
-
                     ) {
-
                         Box(
-
-                            Modifier.size(NursingDimensions.Icon.featured).clip(RoundedCornerShape(NursingDimensions.Radius.medium)).background(Purple.copy(alpha = 0.10f)),
-
+                            Modifier
+                                .size(NursingDimensions.Icon.featured)
+                                .clip(RoundedCornerShape(NursingDimensions.Radius.medium))
+                                .background(BrandIndigoSoft),
                             contentAlignment = Alignment.Center
-
-                        ) { Icon(Icons.Default.Folder, contentDescription = null, tint = Purple) }
-
+                        ) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = BrandIndigo)
+                        }
                         Spacer(Modifier.width(NursingDimensions.Spacing.sm))
-
                         Column(Modifier.weight(1f)) {
-
-                            Text("Paysheet Archive", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
-
-                            Text("Choose any month and year when adding", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
-
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "Paysheet Archive",
+                                    color = TextPrimary,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Surface(
+                                    color = BrandIndigoSoft,
+                                    shape = RoundedCornerShape(50.dp)
+                                ) {
+                                    Text(
+                                        "${sortedDocuments.size}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        color = BrandIndigo,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Text(
+                                "Choose any month and year when adding",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
                         }
-
                         IconButton(onClick = { showDownloadCenter = true }) {
-
-                            Icon(Icons.Default.Download, contentDescription = "Download", tint = Purple)
-
+                            Icon(Icons.Default.Download, contentDescription = "Download", tint = BrandIndigo)
                         }
-
                     }
-
                 }
 
                 items(sortedDocuments, key = { document: PaySheetDocumentEntity -> document.id }) { document: PaySheetDocumentEntity ->
@@ -710,11 +763,11 @@ fun PaySheetBankScreen(
 
                     }
 
-                }) { Text("DELETE", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Black) }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
 
             },
 
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("CANCEL") } }
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } }
 
         )
 
@@ -948,7 +1001,7 @@ private fun VaultHero(onAdd: () -> Unit) {
 
                     containerColor = Color.White,
 
-                    contentColor = Slate
+                    contentColor = BrandIndigo
 
                 )
 
@@ -968,11 +1021,15 @@ private fun VaultHero(onAdd: () -> Unit) {
 
                 Text(
 
-                    "ADD PAY SHEET",
+                    "Add Pay Sheet",
 
                     style = MaterialTheme.typography.titleSmall,
 
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+
+                    maxLines = 1,
+
+                    overflow = TextOverflow.Ellipsis
 
                 )
 
@@ -988,7 +1045,96 @@ private fun VaultHero(onAdd: () -> Unit) {
 
 @Composable
 
-private fun VaultMonthCard(document: PaySheetDocumentEntity, onOpen: () -> Unit, onReplace: () -> Unit, onDelete: () -> Unit) { Surface(Modifier.fillMaxWidth().clickable(onClick = onOpen), color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(NursingDimensions.Radius.large), tonalElevation = NursingDimensions.Elevation.card, shadowElevation = NursingDimensions.Elevation.card) { Row(Modifier.padding(NursingDimensions.Spacing.lg), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(NursingDimensions.Icon.featured).clip(RoundedCornerShape(NursingDimensions.Radius.medium)).background(Purple.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = Purple) }; Spacer(Modifier.width(NursingDimensions.Spacing.md)); Column(Modifier.weight(1f)) { Text(document.displayMonth, color = TextPrimary, style = MaterialTheme.typography.titleMedium); Text(formatBytes(document.fileSizeBytes), color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; IconButton(onClick = onReplace) { Icon(Icons.Default.PhotoCamera, contentDescription = "Replace paysheet", tint = MaterialTheme.colorScheme.primary) }; IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, contentDescription = "Delete paysheet", tint = MaterialTheme.colorScheme.error) }; TextButton(onClick = onOpen) { Text("OPEN") } } } }
+private fun VaultMonthCard(
+    document: PaySheetDocumentEntity,
+    onOpen: () -> Unit,
+    onReplace: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        color = SurfaceWhite,
+        shape = RoundedCornerShape(NursingDimensions.Radius.large),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        tonalElevation = 0.dp,
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = NursingDimensions.Spacing.lg, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(NursingDimensions.Icon.featured)
+                    .clip(RoundedCornerShape(NursingDimensions.Radius.medium))
+                    .background(BrandIndigoSoft),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ReceiptLong,
+                    contentDescription = null,
+                    tint = BrandIndigo
+                )
+            }
+            Spacer(Modifier.width(NursingDimensions.Spacing.md))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    document.displayMonth,
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    formatBytes(document.fileSizeBytes),
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(onClick = onReplace) {
+                Icon(
+                    Icons.Default.PhotoCamera,
+                    contentDescription = "Replace paysheet",
+                    tint = ClinicalPrimaryColor
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = "Delete paysheet",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+            TextButton(
+                onClick = onOpen,
+                modifier = Modifier.defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum),
+                shape = RoundedCornerShape(50.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    containerColor = BrandIndigoSoft,
+                    contentColor = BrandIndigo
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    "Open",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
 
 
 
@@ -1018,6 +1164,8 @@ private fun MonthYearPickerDialog(
 
 
 
+    val useCompactMonthText = shouldUseCompactMonthGridText(LocalDensity.current.fontScale)
+
     AlertDialog(
 
         onDismissRequest = onDismiss,
@@ -1026,7 +1174,17 @@ private fun MonthYearPickerDialog(
 
         text = {
 
-            Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)) {
+            Column(
+
+                modifier = Modifier
+
+                    .fillMaxWidth()
+
+                    .verticalScroll(rememberScrollState()),
+
+                verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)
+
+            ) {
 
                 Row(
 
@@ -1106,15 +1264,19 @@ private fun MonthYearPickerDialog(
 
                 )
 
-                Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)) {
+                Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)) {
 
                     months.chunked(3).forEachIndexed { rowIndex, rowMonths ->
 
                         Row(
 
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
 
-                            horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.xs)
+                                .fillMaxWidth()
+
+                                .height(IntrinsicSize.Min),
+
+                            horizontalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.sm)
 
                         ) {
 
@@ -1126,19 +1288,21 @@ private fun MonthYearPickerDialog(
 
                                 Surface(
 
+                                    onClick = { month = index },
+
                                     modifier = Modifier
 
                                         .weight(1f)
 
-                                        .heightIn(min = NursingDimensions.TouchTarget.minimum)
+                                        .fillMaxHeight()
 
-                                        .clickable { month = index },
+                                        .heightIn(min = NursingDimensions.TouchTarget.minimum),
 
                                     shape = RoundedCornerShape(NursingDimensions.Radius.medium),
 
                                     color = if (isSelected) ClinicalPrimaryColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
 
-                                    contentColor = if (isSelected) Color.White else TextPrimary
+                                    contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
 
                                 ) {
 
@@ -1146,9 +1310,11 @@ private fun MonthYearPickerDialog(
 
                                         modifier = Modifier
 
-                                            .fillMaxSize()
+                                            .fillMaxWidth()
 
-                                            .padding(NursingDimensions.Spacing.xs),
+                                            .defaultMinSize(minHeight = NursingDimensions.TouchTarget.minimum)
+
+                                            .padding(horizontal = NursingDimensions.Spacing.xs, vertical = NursingDimensions.Spacing.sm),
 
                                         contentAlignment = Alignment.Center
 
@@ -1158,13 +1324,19 @@ private fun MonthYearPickerDialog(
 
                                             text = monthLabel,
 
-                                            style = MaterialTheme.typography.labelLarge,
+                                            style = if (useCompactMonthText) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
 
                                             fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
 
-                                            color = if (isSelected) Color.White else TextPrimary,
+                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
 
-                                            textAlign = TextAlign.Center
+                                            textAlign = TextAlign.Center,
+
+                                            maxLines = 1,
+
+                                            softWrap = false,
+
+                                            overflow = TextOverflow.Ellipsis
 
                                         )
 
@@ -1184,9 +1356,29 @@ private fun MonthYearPickerDialog(
 
         },
 
-        confirmButton = { TextButton(onClick = { onConfirm(year, month) }) { Text("CONTINUE") } },
+        confirmButton = {
 
-        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } }
+            TextButton(
+
+                onClick = { onConfirm(year, month) },
+
+                modifier = Modifier.heightIn(min = NursingDimensions.TouchTarget.minimum)
+
+            ) { Text("Continue", fontWeight = FontWeight.Bold) }
+
+        },
+
+        dismissButton = {
+
+            TextButton(
+
+                onClick = onDismiss,
+
+                modifier = Modifier.heightIn(min = NursingDimensions.TouchTarget.minimum)
+
+            ) { Text("Cancel") }
+
+        }
 
     )
 
@@ -1196,13 +1388,13 @@ private fun MonthYearPickerDialog(
 
 @Composable
 
-private fun AddSourceDialog(monthKey: String, onDismiss: () -> Unit, onCamera: (String) -> Unit, onGallery: (String) -> Unit, onChangeMonth: () -> Unit) { AlertDialog(onDismissRequest = onDismiss, title = { Text("Add paysheet", fontWeight = FontWeight.Black) }, text = { Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)) { Surface(onClick = onChangeMonth, color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(NursingDimensions.Radius.medium), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(NursingDimensions.Spacing.md)) { Text("ARCHIVE MONTH", color = TextSecondary, style = MaterialTheme.typography.labelSmall); Text(displayMonthText(monthKey), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge); Text("Tap to change month / year", color = TextSecondary, style = MaterialTheme.typography.bodySmall) } }; Button(onClick = { onCamera(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(NursingDimensions.Radius.medium)) { Icon(Icons.Default.CameraAlt, contentDescription = null); Spacer(Modifier.width(NursingDimensions.Spacing.sm)); Text("TAKE PHOTO") }; Button(onClick = { onGallery(monthKey) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(NursingDimensions.Radius.medium), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)) { Icon(Icons.Default.PhotoCamera, contentDescription = null); Spacer(Modifier.width(NursingDimensions.Spacing.sm)); Text("CHOOSE FROM GALLERY") } } }, confirmButton = { TextButton(onClick = onDismiss) { Text("CANCEL") } }) }
+private fun AddSourceDialog(monthKey: String, onDismiss: () -> Unit, onCamera: (String) -> Unit, onGallery: (String) -> Unit, onChangeMonth: () -> Unit) { AlertDialog(onDismissRequest = onDismiss, title = { Text("Add paysheet", fontWeight = FontWeight.Black) }, text = { Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)) { Surface(onClick = onChangeMonth, color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(NursingDimensions.Radius.medium), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(NursingDimensions.Spacing.md)) { Text("Archive month", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall); Text(displayMonthText(monthKey), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge); Text("Tap to change month / year", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) } }; Button(onClick = { onCamera(monthKey) }, modifier = Modifier.fillMaxWidth().heightIn(min = NursingDimensions.TouchTarget.minimum), shape = RoundedCornerShape(NursingDimensions.Radius.medium)) { Icon(Icons.Default.CameraAlt, contentDescription = null); Spacer(Modifier.width(NursingDimensions.Spacing.sm)); Text("Take Photo", fontWeight = FontWeight.Bold) }; Button(onClick = { onGallery(monthKey) }, modifier = Modifier.fillMaxWidth().heightIn(min = NursingDimensions.TouchTarget.minimum), shape = RoundedCornerShape(NursingDimensions.Radius.medium), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)) { Icon(Icons.Default.PhotoCamera, contentDescription = null); Spacer(Modifier.width(NursingDimensions.Spacing.sm)); Text("Choose from Gallery", fontWeight = FontWeight.Bold) } } }, confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }) }
 
 
 
 @Composable
 
-private fun PaySheetViewerDialog(document: PaySheetDocumentEntity, onDismiss: () -> Unit, onShare: () -> Unit, onDownload: () -> Unit) { AlertDialog(onDismissRequest = onDismiss, title = { Text(document.displayMonth, fontWeight = FontWeight.Black) }, text = { Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)) { Text("Private paysheet document", color = TextSecondary, style = MaterialTheme.typography.bodyMedium); Text(formatBytes(document.fileSizeBytes), color = TextSecondary, style = MaterialTheme.typography.bodySmall) } }, confirmButton = { Row { TextButton(onClick = onShare) { Text("SHARE") }; TextButton(onClick = onDownload) { Text("DOWNLOAD") } } }, dismissButton = { TextButton(onClick = onDismiss) { Text("CLOSE") } }) }
+private fun PaySheetViewerDialog(document: PaySheetDocumentEntity, onDismiss: () -> Unit, onShare: () -> Unit, onDownload: () -> Unit) { AlertDialog(onDismissRequest = onDismiss, title = { Text(document.displayMonth, fontWeight = FontWeight.Black) }, text = { Column(verticalArrangement = Arrangement.spacedBy(NursingDimensions.Spacing.md)) { Text("Private paysheet document", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium); Text(formatBytes(document.fileSizeBytes), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) } }, confirmButton = { Row { TextButton(onClick = onShare) { Text("Share", fontWeight = FontWeight.Bold) }; TextButton(onClick = onDownload) { Text("Download", fontWeight = FontWeight.Bold) } } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }) }
 
 
 

@@ -26,13 +26,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.Emerald
 import kotlin.math.sqrt
 
-private val BsaBg = Color(0xFFF8FAFC)
+private val BsaBg = Color(0xFFF6F8FC)
 private val BsaInk = Color(0xFF12204A)
 private val BsaSlate = Color(0xFF64748B)
 private val BsaBlue = Color(0xFF1769E8)
-private val BsaPurple = Color(0xFF7B5CEB)
+private val BsaPurple = BrandIndigo
 private val BsaBlueSoft = Color(0xFFEAF6FF)
 private val BsaMintSoft = Color(0xFFEAFBF5)
 private val BsaAmberSoft = Color(0xFFFFF6E7)
@@ -215,24 +220,30 @@ private fun BsaInput(label: String, unit: String, value: String, onValueChange: 
 
 @Composable
 private fun BsaClinicalGuideDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.78f), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("📐  BSA clinical guide", color = BsaInk, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                Text("Mosteller formula", color = BsaBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                Surface(color = BsaBlueSoft, shape = RoundedCornerShape(16.dp)) {
-                    Text("BSA (m²) = √[(height in cm × weight in kg) ÷ 3600]", Modifier.padding(15.dp), color = BsaInk, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                Text("The current calculator retains the existing Mosteller method and calculates a target drug dose only when a prescription is entered in mg/m².", color = BsaSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                Surface(color = BsaAmberSoft, shape = RoundedCornerShape(16.dp)) {
-                    Text("Do not use this calculator to select a drug, regimen, dose cap, renal/hepatic adjustment or patient-specific treatment plan. Verify the prescription and institutional protocol independently.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
-                }
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = BsaBlue)) {
-                    Text("Close", fontWeight = FontWeight.ExtraBold)
-                }
-            }
-        }
-    }
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = "BSA Clinical Guide",
+            subtitle = "Mosteller body surface area calculation and target dose reference.",
+            badge = "NursingOS Guide • Clinical Calculators",
+            sections = listOf(
+                NursingGuideSection(
+                    title = "Mosteller formula",
+                    body = "BSA (m²) = √[(height in cm × weight in kg) ÷ 3600]",
+                    accent = BsaBlue,
+                    stepLabel = "Formula"
+                ),
+                NursingGuideSection(
+                    title = "Scope of calculation",
+                    body = "The current calculator retains the existing Mosteller method and calculates a target drug dose only when a prescription is entered in mg/m².",
+                    accent = Emerald,
+                    stepLabel = "How it works"
+                )
+            ),
+            safetyBody = "Do not use this calculator to select a drug, regimen, dose cap, renal/hepatic adjustment or patient-specific treatment plan. Verify the prescription and institutional protocol independently.",
+            footerTip = "Verify height (cm), weight (kg), and ordered mg/m² dose before administering."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 private fun formatBsa(value: Double): String = String.format(java.util.Locale.US, "%.2f", value)

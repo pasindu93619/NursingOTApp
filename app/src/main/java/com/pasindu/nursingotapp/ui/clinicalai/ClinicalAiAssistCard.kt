@@ -48,12 +48,12 @@ fun ClinicalAiAssistCard(
                 Spacer(Modifier.width(8.dp))
                 Text(suggestion.title, color = Color(0xFF12204A), fontSize = 13.sp, fontWeight = FontWeight.Black)
             }
-            Text(suggestion.message, color = Color(0xFF64748B), fontSize = 10.sp, lineHeight = 15.sp)
+            Text(suggestion.message, color = Color(0xFF64748B), fontSize = 12.sp, lineHeight = 17.sp)
             if (suggestion.severity == AiSeverity.HIGH_ALERT) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("High-alert pathway: AI does not calculate or authorize the dose.", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("High-alert pathway: AI does not calculate or authorize the dose.", color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
             suggestion.actions.firstOrNull()?.let { route ->
@@ -74,10 +74,10 @@ fun ClinicalAiAssistCard(
                     shape = RoundedCornerShape(12.dp),
                     onClick = { onOpen(route) }
                 ) {
-                    Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }

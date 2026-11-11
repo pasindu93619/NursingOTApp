@@ -87,21 +87,21 @@ fun NursingOsDecisionCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            "NURSINGOS • NEXT ACTION",
+                            "NursingOS • Next Action",
                             color = Color(0xFF27187E),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                         Surface(
                             color = Color(0xFFECFDF5),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
-                                "LIVE",
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                "Live",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 color = Color(0xFF059669),
-                                fontSize = 7.sp,
-                                fontWeight = FontWeight.Black
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -164,7 +164,7 @@ fun NursingOsDecisionCard(
                             Text(
                                 currentDecision.priority.name,
                                 color = currentAccent,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Black
                             )
                         }
@@ -194,7 +194,7 @@ fun NursingOsDecisionCard(
             Text(
                 decision.actionLabel,
                 color = accent,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.ExtraBold
             )
         }

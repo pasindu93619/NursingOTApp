@@ -46,10 +46,12 @@ import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.BrandIndigoSoft
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
+import com.pasindu.nursingotapp.ui.theme.CoolCyanSoft
 import com.pasindu.nursingotapp.ui.theme.Emerald
-import com.pasindu.nursingotapp.ui.theme.Purple
 import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
@@ -77,8 +79,8 @@ fun MoreToolsScreen(
                 "Nurse Command Center",
                 "Your daily workload, wellness and next-action view.",
                 Icons.Default.AutoAwesome,
-                AiAccentColor,
-                Color(0xFFF2EDFF),
+                BrandIndigo,
+                BrandIndigoSoft,
                 "nurse_command_center"
             ),
             MoreTool(
@@ -101,8 +103,8 @@ fun MoreToolsScreen(
                 "Knowledge & CPD",
                 "Circulars, study resources and professional development.",
                 Icons.Default.School,
-                Purple,
-                Color(0xFFF2EDFF),
+                BrandIndigo,
+                BrandIndigoSoft,
                 "knowledge_hub"
             ),
             MoreTool(
@@ -125,8 +127,8 @@ fun MoreToolsScreen(
                 "Profile",
                 "Manage your nurse profile and core work settings.",
                 Icons.Default.Person,
-                Purple,
-                Color(0xFFF2EDFF),
+                Color(0xFF0E7490),
+                CoolCyanSoft,
                 "profile"
             )
         )
@@ -151,7 +153,7 @@ fun MoreToolsScreen(
                         Text(
                             "Everything else in your NursingOS workspace",
                             color = TextSecondary,
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -181,11 +183,10 @@ fun MoreToolsScreen(
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
-                            "NURSINGOS WORKSPACE",
-                            color = SurfaceWhite.copy(alpha = 0.72f),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.4.sp
+                            "NursingOS Workspace",
+                            color = SurfaceWhite.copy(alpha = 0.85f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             "Find your next workspace",
@@ -195,9 +196,9 @@ fun MoreToolsScreen(
                         )
                         Text(
                             "Use the five main destinations for everyday work. This space keeps supporting tools close without overcrowding the main navigation.",
-                            color = SurfaceWhite.copy(alpha = 0.86f),
-                            fontSize = 10.sp,
-                            lineHeight = 15.sp
+                            color = SurfaceWhite.copy(alpha = 0.90f),
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp
                         )
                     }
                 }
@@ -254,8 +255,8 @@ fun MoreToolsScreen(
                                 if (expanded) "Main destinations stay stable; deeper tools open only when needed. This keeps clinical workflows focused and reduces back-stack clutter."
                                 else "Why are some tools here instead of the bottom bar?",
                                 color = TextSecondary,
-                                fontSize = 10.sp,
-                                lineHeight = 14.sp
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp
                             )
                         }
                         Icon(
@@ -310,8 +311,8 @@ private fun MoreToolCard(tool: MoreTool, onClick: () -> Unit) {
                 Text(
                     tool.description,
                     color = TextSecondary,
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp
                 )
             }
             Icon(

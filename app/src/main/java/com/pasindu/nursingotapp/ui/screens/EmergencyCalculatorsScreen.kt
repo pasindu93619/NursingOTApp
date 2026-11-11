@@ -24,15 +24,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.CoolBlueSoft
 import kotlin.math.min
 import java.util.Locale
 
-private val CrashBg = Color(0xFFF7FAFF)
+private val CrashBg = Color(0xFFF6F8FC)
 private val CrashInk = Color(0xFF12204A)
 private val CrashSlate = Color(0xFF64748B)
 private val CrashBlue = Color(0xFF1769E8)
 private val CrashCyan = Color(0xFF149FE3)
-private val CrashPurple = Color(0xFF7B5CEB)
+private val CrashPurple = BrandIndigo
 private val CrashRed = Color(0xFFD92D4F)
 private val CrashOrange = Color(0xFFE88A00)
 private val CrashGreen = Color(0xFF0A8F6A)
@@ -40,7 +45,7 @@ private val CrashSoftBlue = Color(0xFFEAF6FF)
 private val CrashSoftRed = Color(0xFFFFEEF1)
 private val CrashSoftAmber = Color(0xFFFFF6E7)
 private val CrashSoftGreen = Color(0xFFEAFBF5)
-private val CrashHero = Brush.horizontalGradient(listOf(CrashBlue, CrashCyan, Color(0xFF4B78F2), CrashPurple))
+private val CrashHero = Brush.horizontalGradient(listOf(CrashBlue, CrashCyan, Color(0xFF4B78F2), Color(0xFF7B5CEB)))
 
 private enum class EmergencyMode(val title: String, val short: String) {
     ADULT("Adult Arrest", "Adult"),
@@ -410,52 +415,45 @@ private fun MetricChip(title: String, value: String, background: Color, accent: 
 
 @Composable
 private fun EmergencyGuideDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(
-            Modifier.fillMaxWidth(.94f).fillMaxHeight(.8f),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(21.dp),
-                verticalArrangement = Arrangement.spacedBy(13.dp)
-            ) {
-                Text("🚨  Emergency guide", color = CrashInk, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                Text("2025 AHA/AAP resuscitation framework", color = CrashBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                GuideLine("Adult arrest", "Epinephrine 1 mg IV/IO every 3–5 min. Shockable rhythms require defibrillation according to the algorithm and device recommendation.")
-                GuideLine("Paediatric arrest", "Epinephrine 0.01 mg/kg IV/IO, max 1 mg; amiodarone 5 mg/kg max 300 mg or lidocaine 1 mg/kg.")
-                GuideLine("Paediatric shocks", "2 J/kg first, 4 J/kg second, subsequent ≥4 J/kg up to 10 J/kg or adult dose.")
-                GuideLine("Anaphylaxis", "IM epinephrine 0.01 mg/kg of 1 mg/mL solution, maximum 0.5 mg in adults and 0.3 mg in prepubertal children. Confirm the local protocol and repeat-dose timing.")
-                Surface(color = CrashSoftRed, shape = RoundedCornerShape(16.dp)) {
-                    Text(
-                        "CONCENTRATION SAFETY  •  1 mg/mL is the anaphylaxis IM concentration used by this calculator. Cardiac-arrest epinephrine is 0.1 mg/mL. Always read the actual ampoule/syringe label.",
-                        Modifier.padding(14.dp),
-                        color = CrashRed,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 18.sp
-                    )
-                }
-                Button(
-                    onClick = onDismiss,
-                    Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CrashBlue)
-                ) {
-                    Text("Close", fontWeight = FontWeight.ExtraBold)
-                }
-            }
-        }
-    }
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = "Emergency Guide",
+            subtitle = "2025 AHA/AAP resuscitation framework reference.",
+            badge = "NursingOS Guide • Resuscitation Aid",
+            sections = listOf(
+                NursingGuideSection(
+                    title = "Adult arrest",
+                    body = "Epinephrine 1 mg IV/IO every 3–5 min. Shockable rhythms require defibrillation according to the algorithm and device recommendation.",
+                    accent = CrashRed,
+                    stepLabel = "Protocol"
+                ),
+                NursingGuideSection(
+                    title = "Paediatric arrest",
+                    body = "Epinephrine 0.01 mg/kg IV/IO, max 1 mg; amiodarone 5 mg/kg max 300 mg or lidocaine 1 mg/kg.",
+                    accent = CrashBlue,
+                    stepLabel = "Protocol"
+                ),
+                NursingGuideSection(
+                    title = "Paediatric shocks",
+                    body = "2 J/kg first, 4 J/kg second, subsequent ≥4 J/kg up to 10 J/kg or adult dose.",
+                    accent = BrandIndigo,
+                    stepLabel = "Energy"
+                ),
+                NursingGuideSection(
+                    title = "Anaphylaxis",
+                    body = "IM epinephrine 0.01 mg/kg of 1 mg/mL solution, maximum 0.5 mg in adults and 0.3 mg in prepubertal children. Confirm the local protocol and repeat-dose timing.",
+                    accent = CrashGreen,
+                    stepLabel = "IM Dose"
+                )
+            ),
+            safetyTitle = "Concentration safety check",
+            safetyBody = "1 mg/mL is the anaphylaxis IM concentration used by this calculator. Cardiac-arrest epinephrine is 0.1 mg/mL. Always read the actual ampoule/syringe label.",
+            isSafetyCritical = true,
+            footerTip = "Follow institutional emergency protocols and team lead orders during active resuscitation."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
-@Composable
-private fun GuideLine(title: String, body: String) {
-    Column {
-        Text(title, color = CrashInk, fontSize = 13.sp, fontWeight = FontWeight.Black)
-        Text(body, color = CrashSlate, fontSize = 12.sp, lineHeight = 18.sp)
-    }
-}
-
-private fun CrashSoftPurple(): Color = Color(0xFFF3EEFF)
+private fun CrashSoftPurple(): Color = CoolBlueSoft
 private fun fmt(value: Double): String = String.format(Locale.US, "%.2f", value).trimEnd('0').trimEnd('.')

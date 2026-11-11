@@ -27,18 +27,23 @@ import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.CoolBlueSoft
 import kotlin.math.round
 
-private val PedsBg = Color(0xFFF7FAFF)
+private val PedsBg = Color(0xFFF6F8FC)
 private val PedsInk = Color(0xFF12204A)
 private val PedsSlate = Color(0xFF64748B)
 private val PedsBlue = Color(0xFF1769E8)
 private val PedsCyan = Color(0xFF149FE3)
-private val PedsPurple = Color(0xFF7B5CEB)
+private val PedsPurple = BrandIndigo
 private val PedsSoftBlue = Color(0xFFEAF6FF)
-private val PedsSoftPurple = Color(0xFFF3EEFF)
+private val PedsSoftPurple = Color(0xFFEEF2FB)
 private val PedsSoftAmber = Color(0xFFFFF6E7)
-private val PedsHeroGradient = Brush.horizontalGradient(listOf(PedsBlue, PedsCyan, Color(0xFF4B78F2), PedsPurple))
+private val PedsHeroGradient = Brush.horizontalGradient(listOf(PedsBlue, PedsCyan, Color(0xFF4B78F2), Color(0xFF7B5CEB)))
 
 private enum class PedsMode(val title: String, val shortTitle: String, val emoji: String) {
     CLARK("Clark's Rule", "Clark", "⚖️"),
@@ -235,23 +240,29 @@ private fun ruleDescription(mode: PedsMode): String = when (mode) {
 
 @Composable
 private fun PedsGuideDialog(mode: PedsMode, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(Modifier.fillMaxWidth(0.93f).fillMaxHeight(0.78f), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("${mode.emoji} ${mode.title}", color = PedsInk, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Surface(color = PedsSoftBlue, shape = RoundedCornerShape(16.dp)) {
-                    Text(ruleFormula(mode), Modifier.fillMaxWidth().padding(15.dp), color = PedsBlue, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 20.sp)
-                }
-                Text(ruleNote(mode), color = PedsSlate, fontSize = 13.sp, lineHeight = 20.sp)
-                Surface(color = PedsSoftAmber, shape = RoundedCornerShape(16.dp)) {
-                    Text("Safety: legacy dose-estimation rules are not a substitute for a current patient-specific paediatric prescription. Verify the drug-specific dose and maximum dose independently.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
-                }
-                Button(onClick = onDismiss, Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) {
-                    Text("Close", fontWeight = FontWeight.ExtraBold)
-                }
-            }
-        }
-    }
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = mode.title,
+            subtitle = "Legacy paediatric dose estimation formula and clinical context.",
+            badge = "NursingOS Guide • Paediatric Rules",
+            sections = listOf(
+                NursingGuideSection(
+                    title = "Rule formula",
+                    body = ruleFormula(mode),
+                    accent = PedsBlue,
+                    stepLabel = "Formula"
+                ),
+                NursingGuideSection(
+                    title = "Clinical context",
+                    body = ruleNote(mode),
+                    accent = BrandIndigo,
+                    stepLabel = "Usage"
+                )
+            ),
+            safetyBody = "Legacy dose-estimation rules are not a substitute for a current patient-specific paediatric prescription. Verify the drug-specific dose and maximum dose independently."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 private fun ruleFormula(mode: PedsMode): String = when (mode) {

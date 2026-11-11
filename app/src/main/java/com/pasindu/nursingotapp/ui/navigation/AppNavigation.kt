@@ -9,6 +9,8 @@ import android.widget.Toast
 import kotlinx.coroutines.runBlocking
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,12 +21,8 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
@@ -35,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.compose.runtime.remember
@@ -52,6 +52,8 @@ import com.pasindu.nursingotapp.domain.ot.WeeklyOtCalculator
 import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
 import com.pasindu.nursingotapp.ui.NursingViewModel
 import com.pasindu.nursingotapp.ui.components.IvDripCalculatorCard
+import com.pasindu.nursingotapp.ui.components.NursingAdaptiveBottomBar
+import com.pasindu.nursingotapp.ui.components.NursingBottomNavItem
 import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
@@ -72,25 +74,19 @@ import com.pasindu.nursingotapp.transfer.ui.TransferPoolStatusScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestScreen
 import com.pasindu.nursingotapp.transfer.ui.TransferRequestViewModel
 import com.pasindu.nursingotapp.ui.theme.AppBackground
-import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 import com.pasindu.nursingotapp.ui.theme.NursingMotion
-import com.pasindu.nursingotapp.ui.theme.Slate
 import java.io.File
 import java.time.LocalDate
 
-private data class RootDestination(
-    val route: String,
-    val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
+private val rootDestinations = listOf(
+    NursingBottomNavItem("home", "Home", Icons.Default.Home),
+    NursingBottomNavItem("claim_period", "Work", Icons.Default.Assignment),
+    NursingBottomNavItem("clinical_calculators", "Clinical", Icons.Default.LocalHospital),
+    NursingBottomNavItem("advanced_finance_hub", "Finance", Icons.Default.AccountBalance),
+    NursingBottomNavItem("more_tools", "More", Icons.Default.MoreHoriz)
 )
 
-private val rootDestinations = listOf(
-    RootDestination("home", "Home", Icons.Default.Home),
-    RootDestination("claim_period", "Work", Icons.Default.Assignment),
-    RootDestination("clinical_calculators", "Clinical", Icons.Default.LocalHospital),
-    RootDestination("advanced_finance_hub", "Finance", Icons.Default.AccountBalance),
-    RootDestination("more_tools", "More", Icons.Default.MoreHoriz)
-)
+private val rootDestinationRoutes = rootDestinations.mapTo(hashSetOf()) { it.route }
 
 @Composable
 fun AppNavigation(
@@ -103,8 +99,11 @@ fun AppNavigation(
     val context = LocalContext.current
     val animDuration = NursingMotion.pageTransitionDurationMs
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val showRootNavigation = rootDestinations.any { it.route == currentRoute }
+    val currentDestination = backStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val showRootNavigation = currentDestination?.hierarchy?.any {
+        it.route in rootDestinationRoutes
+    } == true
 
     LaunchedEffect(notificationIntent) {
         val targetIntent = notificationIntent ?: return@LaunchedEffect
@@ -118,26 +117,23 @@ fun AppNavigation(
         onNotificationIntentConsumed()
     }
 
-    fun navigateTo(route: String) {
-        if (currentRoute == route) return
-
-        val isRootDestination = route in setOf(
-            "home",
-            "claim_period",
-            "clinical_calculators",
-            "advanced_finance_hub",
-            "more_tools"
-        )
-        if (isRootDestination) {
-            navController.navigate(route) {
-                popUpTo("home") { saveState = true }
-                launchSingleTop = true
-                restoreState = true
-            }
-        } else {
-            navController.navigate(route) {
-                launchSingleTop = true
-                restoreState = false
+    // Stabilize root navigation callback across recompositions and read the live NavController
+    // destination at tap time so rapid taps never drop against a stale composed currentRoute.
+    val navigateTo: (String) -> Unit = remember(navController) {
+        { route ->
+            if (navController.currentDestination?.route != route) {
+                if (route in rootDestinationRoutes) {
+                    navController.navigate(route) {
+                        popUpTo("home") { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                } else {
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                }
             }
         }
     }
@@ -153,39 +149,33 @@ fun AppNavigation(
         },
         bottomBar = {
             if (showRootNavigation) {
-                NavigationBar(
+                NursingAdaptiveBottomBar(
+                    items = rootDestinations,
+                    currentRoute = currentRoute,
+                    onNavigate = navigateTo,
                     containerColor = AppBackground,
-                    contentColor = Slate,
-                    tonalElevation = 0.dp,
                     windowInsets = NavigationBarDefaults.windowInsets
-                ) {
-                    rootDestinations.forEach { destination ->
-                        val selected = currentRoute == destination.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = { navigateTo(destination.route) },
-                            icon = {
-                                Icon(
-                                    destination.icon,
-                                    contentDescription = destination.label
-                                )
-                            },
-                            label = {
-                                Text(destination.label)
-                            },
-                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                selectedIconColor = ClinicalPrimaryColor,
-                                selectedTextColor = ClinicalPrimaryColor,
-                                indicatorColor = ClinicalPrimaryColor.copy(alpha = 0.12f),
-                                unselectedIconColor = Slate.copy(alpha = 0.62f),
-                                unselectedTextColor = Slate.copy(alpha = 0.68f)
-                            )
-                        )
-                    }
-                }
+                )
             }
         }
     ) { scaffoldPadding ->
+        val isRootTabSwitch: AnimatedContentTransitionScope<NavBackStackEntry>.() -> Boolean = {
+            initialState.destination.route in rootDestinationRoutes &&
+                targetState.destination.route in rootDestinationRoutes
+        }
+        val rootTabFadeIn = fadeIn(
+            animationSpec = tween(
+                durationMillis = NursingMotion.inputAnimationDurationMs,
+                easing = NursingMotion.standardEasing
+            )
+        )
+        val rootTabFadeOut = fadeOut(
+            animationSpec = tween(
+                durationMillis = NursingMotion.microInteractionDurationMs,
+                easing = NursingMotion.standardEasing
+            )
+        )
+
         NavHost(
             navController = navController,
             startDestination = "home",
@@ -195,42 +185,58 @@ fun AppNavigation(
                 .consumeWindowInsets(scaffoldPadding)
                 .imePadding(),
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(animDuration)
-                ) + androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
+                if (isRootTabSwitch()) {
+                    rootTabFadeIn
+                } else {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(animDuration)
+                    ) + fadeIn(animationSpec = tween(animDuration))
+                }
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(animDuration)
-                ) + androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
+                if (isRootTabSwitch()) {
+                    rootTabFadeOut
+                } else {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(animDuration)
+                    ) + fadeOut(animationSpec = tween(animDuration))
+                }
             },
             popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(animDuration)
-                ) + androidx.compose.animation.fadeIn(animationSpec = tween(animDuration))
+                if (isRootTabSwitch()) {
+                    rootTabFadeIn
+                } else {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(animDuration)
+                    ) + fadeIn(animationSpec = tween(animDuration))
+                }
             },
             popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(animDuration)
-                ) + androidx.compose.animation.fadeOut(animationSpec = tween(animDuration))
+                if (isRootTabSwitch()) {
+                    rootTabFadeOut
+                } else {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(animDuration)
+                    ) + fadeOut(animationSpec = tween(animDuration))
+                }
             }
         ) {
             composable("home") {
-                HomeScreen(viewModel = viewModel, onNavigate = ::navigateTo)
+                HomeScreen(viewModel = viewModel, onNavigate = navigateTo)
             }
             composable("nurse_command_center") {
                 NurseCommandCenterScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigate = ::navigateTo
+                    onNavigate = navigateTo
                 )
             }
             composable("care_pulse") {
                 CarePulseModernScreen(
-                    onNavigate = ::navigateTo,
+                    onNavigate = navigateTo,
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -582,7 +588,7 @@ fun AppNavigation(
                 val advancedFinanceViewModel: AdvancedFinanceViewModel = hiltViewModel()
                 AdvancedFinanceHubScreen(
                     viewModel = advancedFinanceViewModel,
-                    onNavigate = ::navigateTo,
+                    onNavigate = navigateTo,
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -597,7 +603,7 @@ fun AppNavigation(
             }
             composable("more_tools") {
                 MoreToolsScreen(
-                    onNavigate = ::navigateTo,
+                    onNavigate = navigateTo,
                     onNavigateBack = { navigateTo("home") }
                 )
             }

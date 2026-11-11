@@ -26,15 +26,19 @@ import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
 import kotlin.math.round
 
-private val ConvBg = Color(0xFFF7FAFF)
+private val ConvBg = Color(0xFFF6F8FC)
 private val ConvInk = Color(0xFF12204A)
 private val ConvSlate = Color(0xFF64748B)
 private val ConvBlue = Color(0xFF1769E8)
-private val ConvPurple = Color(0xFF7B5CEB)
+private val ConvPurple = BrandIndigo
 private val ConvBlueSoft = Color(0xFFEAF6FF)
-private val ConvPurpleSoft = Color(0xFFF3EEFF)
+private val ConvPurpleSoft = Color(0xFFEEF2FB)
 private val ConvAmberSoft = Color(0xFFFFF6E7)
 private val ConvHeroGradient = Brush.horizontalGradient(listOf(Color(0xFF1769E8), Color(0xFF149FE3), Color(0xFF4B78F2), Color(0xFF7B5CEB)))
 
@@ -295,22 +299,37 @@ private fun ResultHero(title: String, value: String, unit: String, background: C
 
 @Composable
 private fun ConversionGuideDialog(mode: ConvMode, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.78f), shape = RoundedCornerShape(27.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(21.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("${mode.emoji} ${mode.title}", color = ConvInk, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                when (mode) {
-                    ConvMode.METRIC -> Text("Metric mass is based on powers of ten: 1 mg = 1000 µg, 1 g = 1000 mg and 1 kg = 1000 g.", color = ConvSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                    ConvMode.HOUSEHOLD -> Text("Household volume output uses defined US customary factors. A calibrated mL device should be used when precise medication measurement is required.", color = ConvSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                    ConvMode.ELECTROLYTE -> Text("mEq = mg × valence ÷ formula weight, therefore mg = mEq × formula weight ÷ valence.", color = ConvSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                }
-                Surface(color = ConvAmberSoft, shape = RoundedCornerShape(16.dp)) {
-                    Text("Verify formulation, unit, concentration and prescription independently before administration.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
-                }
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) { Text("Close", fontWeight = FontWeight.ExtraBold) }
-            }
-        }
+    val detailSection = when (mode) {
+        ConvMode.METRIC -> NursingGuideSection(
+            title = "Metric mass & volume",
+            body = "Metric mass is based on powers of ten: 1 mg = 1000 µg, 1 g = 1000 mg and 1 kg = 1000 g.",
+            accent = ConvBlue,
+            stepLabel = "Conversion factor"
+        )
+        ConvMode.HOUSEHOLD -> NursingGuideSection(
+            title = "Household volume factors",
+            body = "Household volume output uses defined US customary factors. A calibrated mL device should be used when precise medication measurement is required.",
+            accent = ConvBlue,
+            stepLabel = "Measurement device"
+        )
+        ConvMode.ELECTROLYTE -> NursingGuideSection(
+            title = "Electrolyte equivalence",
+            body = "mEq = mg × valence ÷ formula weight, therefore mg = mEq × formula weight ÷ valence.",
+            accent = BrandIndigo,
+            stepLabel = "Formula"
+        )
     }
+
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = mode.title,
+            subtitle = "Unit conversion methodology and bedside verification.",
+            badge = "NursingOS Guide • Unit Conversions",
+            sections = listOf(detailSection),
+            safetyBody = "Verify formulation, unit, concentration and prescription independently before administration."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 private fun roundDecimal(value: Double, places: Int): Double {

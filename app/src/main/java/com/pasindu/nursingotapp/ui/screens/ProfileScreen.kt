@@ -291,7 +291,7 @@ fun ProfileScreen(
                                 else -> "Complete required fields to continue"
                             },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp
+                            fontSize = 12.sp
                         )
                     }
                     Spacer(modifier = Modifier.width(NursingDimensions.Spacing.md))
@@ -375,12 +375,11 @@ fun ProfileScreen(
                             shape = RoundedCornerShape(NursingDimensions.Radius.pill)
                         ) {
                             Text(
-                                text = "NURSING SERVICE PROFILE",
+                                text = "Nursing Service Profile",
                                 color = MaterialTheme.colorScheme.primary,
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.8.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -452,7 +451,7 @@ fun ProfileScreen(
                                 Text(
                                     text = "Current Grade",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp
+                                    fontSize = 12.sp
                                 )
                                 Text(
                                     text = grade.ifBlank { "Select grade" },
@@ -519,11 +518,10 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.width(NursingDimensions.Spacing.md))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "NURSING SERVICE OT RATE",
+                                text = "Nursing Service OT Rate",
                                 color = MaterialTheme.colorScheme.primary,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.6.sp
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour",
@@ -534,7 +532,7 @@ fun ProfileScreen(
                             Text(
                                 text = "$grade • Assigned automatically by service grade",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         }
                         Icon(
@@ -601,7 +599,7 @@ fun ProfileScreen(
                             text = "No exact salary-table match was found for $displayGrade and Rs. ${formatCompact(parsedBasic)}.",
                             modifier = Modifier.padding(NursingDimensions.Spacing.md),
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -637,11 +635,10 @@ fun ProfileScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "NURSING SERVICE OT RATE",
+                                            text = "Nursing Service OT Rate",
                                             color = MaterialTheme.colorScheme.primary,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = 0.6.sp
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
                                         )
                                         Text(
                                             text = "Rs. ${formatMoney(selectedOtRate ?: 0.0)} / hour",
@@ -652,7 +649,7 @@ fun ProfileScreen(
                                         Text(
                                             text = "$grade • automatically assigned",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 11.sp
+                                            fontSize = 12.sp
                                         )
                                     }
                                     Icon(
@@ -666,7 +663,7 @@ fun ProfileScreen(
                             Text(
                                 text = "Select your current nursing grade to assign the OT rate automatically.",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         }
 
@@ -679,11 +676,10 @@ fun ProfileScreen(
                             ) {
                                 Column(modifier = Modifier.padding(NursingDimensions.Spacing.md)) {
                                     Text(
-                                        text = "2027 PH / DO RATE",
+                                        text = "2027 PH / DO Rate",
                                         color = MaterialTheme.colorScheme.secondary,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.6.sp
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = "2027 basic Rs. ${formatMoney(matched2027Basic ?: 0.0)} ÷ 30 = Rs. ${formatMoney(rate)} / day",
@@ -749,7 +745,7 @@ fun ProfileScreen(
                             Text(
                                 text = "Add other paysheet allowances one by one.",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         }
                         Switch(
@@ -811,7 +807,7 @@ fun ProfileScreen(
                 Text(
                     text = "Enter only the total deduction printed on your paysheet.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp
+                    fontSize = 12.sp
                 )
             }
 
@@ -833,7 +829,7 @@ fun ProfileScreen(
                             text = "No itemised deductions entered yet for this claim period.",
                             modifier = Modifier.padding(NursingDimensions.Spacing.md),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp
+                            fontSize = 12.sp
                         )
                     }
                 } else {
@@ -904,11 +900,10 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.width(NursingDimensions.Spacing.md))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "PAY PREVIEW",
-                                color = Color.White.copy(alpha = 0.65f),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.8.sp
+                                text = "Pay Preview",
+                                color = Color.White.copy(alpha = 0.78f),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Estimated Monthly Breakdown",
@@ -940,11 +935,10 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "ESTIMATED NET PAY",
+                                text = "Estimated Net Pay",
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.6.sp
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Rs. ${formatMoney(netPay)}",
@@ -976,7 +970,7 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.padding(NursingDimensions.Spacing.md),
                         color = MaterialTheme.colorScheme.onErrorContainer,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -1052,7 +1046,7 @@ private fun DeductionEditorRow(
                     keyboardOptions = KeyboardOptions(keyboardType = PROFILE_MONEY_KEYBOARD_TYPE),
                     label = { Text("Amount", fontSize = 12.sp) },
                     shape = RoundedCornerShape(NursingDimensions.Radius.medium),
-                    leadingIcon = { Text("Rs.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+                    leadingIcon = { Text("Rs.", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)

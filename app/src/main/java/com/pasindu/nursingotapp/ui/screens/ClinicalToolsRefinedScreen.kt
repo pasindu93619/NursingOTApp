@@ -296,15 +296,23 @@ fun ClinicalToolsRefinedScreen(
 
         ) {
 
-            Box(
+            Surface(
 
-                Modifier.size(48.dp).background(Color.White, CircleShape).clickable(role = Role.Button, onClick = onNavigateBack),
+                onClick = onNavigateBack,
 
-                contentAlignment = Alignment.Center
+                modifier = Modifier.size(48.dp),
+
+                shape = CircleShape,
+
+                color = Color.White
 
             ) {
 
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ClinicalToolDesignTokens.ink)
+                Box(contentAlignment = Alignment.Center) {
+
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ClinicalToolDesignTokens.ink)
+
+                }
 
             }
 
@@ -342,11 +350,11 @@ fun ClinicalToolsRefinedScreen(
 
                             Column(Modifier.weight(1f)) {
 
-                                Text("CLINICAL AI WORKSPACE", color = Color.White.copy(alpha = .76f), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                                Text("Clinical AI Workspace", color = Color.White.copy(alpha = .84f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                                 Text("Find the right clinical tool", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp)
 
-                                Text("Describe the task in plain English or Sinhala. AI only routes you to an existing deterministic clinical engine.", color = Color.White.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 16.sp)
+                                Text("Describe the task in plain English or Sinhala. AI only routes you to an existing deterministic clinical engine.", color = Color.White.copy(alpha = .92f), fontSize = 13.sp, lineHeight = 19.sp)
 
                             }
 
@@ -392,9 +400,9 @@ fun ClinicalToolsRefinedScreen(
 
                         Column(Modifier.weight(1f)) {
 
-                            Text("AI safety boundary", color = ClinicalToolDesignTokens.ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("AI safety boundary", color = ClinicalToolDesignTokens.ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
 
-                            Text("AI finds and explains tools; it does not create medication doses or replace the calculator's deterministic math.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                            Text("AI finds and explains tools; it does not create medication doses or replace the calculator's deterministic math.", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 17.sp)
 
                         }
 
@@ -444,7 +452,7 @@ fun ClinicalToolsRefinedScreen(
 
                         Text(if (query.isBlank()) "Clinical engines" else "Matching tools", color = ClinicalToolDesignTokens.ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
 
-                        Text(if (query.isBlank()) "Open a workflow directly or use AI routing above." else "${filtered.size} matching workflow(s)", color = ClinicalToolDesignTokens.slate, fontSize = 11.sp)
+                        Text(if (query.isBlank()) "Open a workflow directly or use AI routing above." else "${filtered.size} matching workflow(s)", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp)
 
                     }
 
@@ -470,7 +478,7 @@ fun ClinicalToolsRefinedScreen(
 
                             Text("No verified in-app match", color = ClinicalToolDesignTokens.ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
 
-                            Text("No deterministic clinical engine is mapped to “$query”. Use a verified clinical reference rather than guessing.", color = ClinicalToolDesignTokens.slate, fontSize = 11.sp, lineHeight = 16.sp)
+                            Text("No deterministic clinical engine is mapped to “$query”. Use a verified clinical reference rather than guessing.", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 17.sp)
 
                         }
 
@@ -524,9 +532,9 @@ private fun HeroStat(title: String, value: String, modifier: Modifier) {
 
         Column(Modifier.padding(10.dp)) {
 
-            Text(title, color = Color.White.copy(alpha = .72f), fontSize = 7.sp, fontWeight = FontWeight.Black)
+            Text(title, color = Color.White.copy(alpha = .82f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-            Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
 
         }
 
@@ -552,7 +560,9 @@ private fun RefinedToolCard(
 
     Card(
 
-        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onOpen),
+        onClick = onOpen,
+
+        modifier = Modifier.fillMaxWidth(),
 
         shape = RoundedCornerShape(22.dp),
 
@@ -578,7 +588,7 @@ private fun RefinedToolCard(
 
                     Text(tool.title, color = ClinicalToolDesignTokens.ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
 
-                    Text(tool.subtitle, color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                    Text(tool.subtitle, color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 17.sp)
 
                 }
 
@@ -608,6 +618,8 @@ private fun RefinedToolCard(
 
                 Surface(
 
+                    onClick = onOpen,
+
                     color = tool.accent,
 
                     shape = CircleShape,
@@ -616,13 +628,11 @@ private fun RefinedToolCard(
 
                         .defaultMinSize(minWidth = 56.dp, minHeight = 48.dp)
 
-                        .clickable(role = Role.Button, onClick = onOpen)
-
                 ) {
 
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
 
-                        Text("OPEN", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Text("Open", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                     }
 
@@ -640,7 +650,7 @@ private fun RefinedToolCard(
 
                         Spacer(Modifier.width(8.dp))
 
-                        Text("Verified deterministic engine. Review indication, units, patient data and local protocol before use.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                        Text("Verified deterministic engine. Review indication, units, patient data and local protocol before use.", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 17.sp)
 
                     }
 
@@ -700,7 +710,7 @@ private fun ClinicalAiAssistantCard(
 
                     Text("Clinical AI Assistant", color = ClinicalToolDesignTokens.ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
 
-                    Text("Natural-language routing • local • calculation-safe", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp)
+                    Text("Natural-language routing • local • calculation-safe", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp)
 
                 }
 
@@ -738,13 +748,13 @@ private fun ClinicalAiAssistantCard(
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
 
-                    Text("Recent", color = ClinicalToolDesignTokens.slate, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("Recent", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                     history.take(4).forEach { value ->
 
                         Surface(onClick = { onHistoryClick(value) }, modifier = Modifier.fillMaxWidth(), color = ClinicalToolDesignTokens.background, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) {
 
-                            Text(value, Modifier.padding(horizontal = 11.dp, vertical = 9.dp), color = ClinicalToolDesignTokens.ink, fontSize = 11.sp)
+                            Text(value, Modifier.padding(horizontal = 12.dp, vertical = 10.dp), color = ClinicalToolDesignTokens.ink, fontSize = 13.sp)
 
                         }
 
@@ -768,17 +778,26 @@ private fun ClinicalAiAssistantCard(
 
                         Column(Modifier.weight(1f)) {
 
-                            Text("AI suggestion", color = ClinicalToolDesignTokens.slate, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text("AI suggestion", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-                            Text(best.title, color = ClinicalToolDesignTokens.ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(best.title, color = ClinicalToolDesignTokens.ink, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
 
-                            Text(best.subtitle, color = best.accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(best.subtitle, color = best.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
 
                         }
 
-                        Surface(onClick = { onOpen(best) }, color = best.accent, shape = CircleShape) {
+                        Surface(
+                            onClick = { onOpen(best) },
+                            color = best.accent,
+                            shape = CircleShape,
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                        ) {
 
-                            Text("OPEN", Modifier.padding(horizontal = 10.dp, vertical = 8.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+
+                                Text("Open", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                            }
 
                         }
 
@@ -790,7 +809,7 @@ private fun ClinicalAiAssistantCard(
 
             if (query.isBlank()) {
 
-                Text("Try: “IV drip”, “insulin”, “ICU potassium”, “BSA”, or Sinhala clinical terms.", color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                Text("Try: “IV drip”, “insulin”, “ICU potassium”, “BSA”, or Sinhala clinical terms.", color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 17.sp)
 
             }
 

@@ -31,7 +31,16 @@ private val LightColors = lightColorScheme(
     onSurface = md_theme_light_onSurface,
     surfaceVariant = md_theme_light_surfaceVariant,
     onSurfaceVariant = md_theme_light_onSurfaceVariant,
-    outline = md_theme_light_outline
+    surfaceTint = Color.Transparent,
+    surfaceBright = SurfaceWhite,
+    surfaceDim = Color(0xFFE6ECF5),
+    surfaceContainerLowest = SurfaceWhite,
+    surfaceContainerLow = Color(0xFFF8FAFC),
+    surfaceContainer = Color(0xFFF1F5F9),
+    surfaceContainerHigh = Color(0xFFEEF2F8),
+    surfaceContainerHighest = Color(0xFFE6ECF5),
+    outline = md_theme_light_outline,
+    outlineVariant = Color(0xFFE2E8F0)
 )
 
 private val DarkColors = darkColorScheme(

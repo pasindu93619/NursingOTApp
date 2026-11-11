@@ -160,9 +160,19 @@ import com.pasindu.nursingotapp.ui.AdvancedFinanceViewModel
 
 import com.pasindu.nursingotapp.ui.parseStrictMoneyOrNull
 
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+
 import com.pasindu.nursingotapp.ui.theme.Amber
 
 import com.pasindu.nursingotapp.ui.theme.AppBackground
+
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+
+import com.pasindu.nursingotapp.ui.theme.BrandIndigoSoft
 
 import com.pasindu.nursingotapp.ui.theme.ClinicalPrimaryColor
 
@@ -196,7 +206,7 @@ import kotlin.math.max
 
 private val FinanceBlueSoft = Color(0xFFEAF6FF)
 
-private val FinancePurpleSoft = Color(0xFFF3EEFF)
+private val FinancePurpleSoft = BrandIndigoSoft
 
 private val FinanceMintSoft = Color(0xFFEAFBF5)
 
@@ -262,7 +272,7 @@ fun AdvancedFinanceHubScreen(
 
                         Text("Advanced Finance", color = FinanceInk, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
 
-                        Text("Duty • Earnings • Loans • Pay Sheet", color = TextSecondary, fontSize = 11.sp)
+                        Text("Duty • Earnings • Loans • Pay Sheet", color = TextSecondary, fontSize = 12.sp)
 
                     }
 
@@ -278,7 +288,7 @@ fun AdvancedFinanceHubScreen(
 
                             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
 
-                        color = Purple.copy(alpha = 0.10f),
+                        color = BrandIndigoSoft,
 
                         shape = RoundedCornerShape(50.dp),
 
@@ -286,13 +296,13 @@ fun AdvancedFinanceHubScreen(
 
                     ) {
 
-                        Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
 
-                            Icon(Icons.Default.Info, null, tint = Purple, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Info, null, tint = BrandIndigo, modifier = Modifier.size(16.dp))
 
                             Spacer(Modifier.width(5.dp))
 
-                            Text("Guide", color = Purple, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Guide", color = BrandIndigo, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                         }
 
@@ -414,7 +424,7 @@ private fun FinanceHeroCard(state: AdvancedFinanceUiState) {
 
                     Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(50.dp)) {
 
-                        Text("THIS CLAIM PERIOD", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("This claim period", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
 
                     }
 
@@ -444,7 +454,7 @@ private fun FinanceHeroCard(state: AdvancedFinanceUiState) {
 
                 Spacer(Modifier.height(10.dp))
 
-                Text("Calculated from the current saved finance data.", color = Color.White.copy(alpha = 0.76f), fontSize = 10.sp)
+                Text("Calculated from the current saved finance data.", color = Color.White.copy(alpha = 0.84f), fontSize = 12.sp)
 
             }
 
@@ -460,11 +470,11 @@ private fun FinanceHeroCard(state: AdvancedFinanceUiState) {
 
 private fun HeroAmount(modifier: Modifier, title: String, value: Double) {
 
-    Surface(modifier, color = Color.White.copy(alpha = 0.12f), shape = RoundedCornerShape(NursingDimensions.Radius.large)) {
+    Surface(modifier, color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(NursingDimensions.Radius.large)) {
 
         Column(Modifier.padding(12.dp)) {
 
-            Text(title, color = Color.White.copy(alpha = 0.72f), fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(title, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
 
             Text(formatRs(value), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
 
@@ -538,11 +548,11 @@ private fun FinanceMetric(
 
             Spacer(Modifier.height(5.dp))
 
-            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Text(title, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-            Text(if (empty) "—" else formatRs(value), color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(if (empty) "—" else formatRs(value), color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
 
-            Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+            Text(subtitle, color = TextSecondary, fontSize = 12.sp)
 
         }
 
@@ -570,13 +580,13 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
 
                 Text("Workload Pulse", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
-                Text("${state.fullWeeks} full Sunday–Saturday week(s) • 36h standard each", color = TextSecondary, fontSize = 10.sp)
+                Text("${state.fullWeeks} full Sunday–Saturday week(s) • 36h standard each", color = TextSecondary, fontSize = 12.sp)
 
             }
 
             Surface(color = ClinicalPrimaryColor.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
 
-                Text("${formatHours(state.workloadTargetHours)} target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("${formatHours(state.workloadTargetHours)} target", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = ClinicalPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
             }
 
@@ -586,7 +596,7 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
 
         if (state.fullWeeks == 0) {
 
-            Text("No full Sunday–Saturday week is inside this claim period.", color = TextSecondary, fontSize = 10.sp)
+            Text("No full Sunday–Saturday week is inside this claim period.", color = TextSecondary, fontSize = 12.sp)
 
         } else {
 
@@ -602,7 +612,7 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
 
             Spacer(Modifier.height(8.dp))
 
-            Text("Target = 36h × ${state.fullWeeks} full week(s) = ${formatHours(state.workloadTargetHours)}", color = TextSecondary, fontSize = 9.sp)
+            Text("Target = 36h × ${state.fullWeeks} full week(s) = ${formatHours(state.workloadTargetHours)}", color = TextSecondary, fontSize = 12.sp)
 
         }
 
@@ -612,7 +622,7 @@ private fun WorkloadPulse(state: AdvancedFinanceUiState) {
 
             PulseMetric(Modifier.weight(1f), "Normal Duty", "${state.totalNormalHours.oneDecimal()} h", ClinicalPrimaryColor, FinanceBlueSoft)
 
-            PulseMetric(Modifier.weight(1f), "Overtime", "${state.totalOTHours.oneDecimal()} h", Purple, FinancePurpleSoft)
+            PulseMetric(Modifier.weight(1f), "Overtime", "${state.totalOTHours.oneDecimal()} h", BrandIndigo, FinancePurpleSoft)
 
         }
 
@@ -640,11 +650,11 @@ private fun PulseMetric(modifier: Modifier, title: String, value: String, accent
 
         Column(Modifier.padding(11.dp)) {
 
-            Text(title, color = TextSecondary, fontSize = 8.sp)
+            Text(title, color = TextSecondary, fontSize = 12.sp)
 
             Spacer(Modifier.height(3.dp))
 
-            Text(value, color = accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            Text(value, color = accent, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
 
         }
 
@@ -672,7 +682,7 @@ private fun FinanceTools(state: AdvancedFinanceUiState, onSalary: () -> Unit, on
 
             ToolCard(Modifier.weight(1f), "Loan / Advance", "Commitment inputs", Icons.Default.Calculate, Amber, FinanceAmberSoft, onCommitments)
 
-            ToolCard(Modifier.weight(1f), "Pay Sheet Bank", "Saved documents", Icons.Default.Description, Purple, FinancePurpleSoft, onPaySheets)
+            ToolCard(Modifier.weight(1f), "Pay Sheet Bank", "Saved documents", Icons.Default.Description, BrandIndigo, FinancePurpleSoft, onPaySheets)
 
         }
 
@@ -696,9 +706,9 @@ private fun ToolCard(modifier: Modifier, title: String, subtitle: String, icon: 
 
             Column(Modifier.weight(1f)) {
 
-                Text(title, color = FinanceInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(title, color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.Bold)
 
-                Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+                Text(subtitle, color = TextSecondary, fontSize = 12.sp)
 
             }
 
@@ -720,7 +730,7 @@ private fun QuickInsights(state: AdvancedFinanceUiState) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
 
-            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) { Icon(Icons.Default.Lightbulb, null, tint = Purple, modifier = Modifier.padding(8.dp)) }
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) { Icon(Icons.Default.Lightbulb, null, tint = BrandIndigo, modifier = Modifier.padding(8.dp)) }
 
             Spacer(Modifier.width(9.dp))
 
@@ -728,7 +738,7 @@ private fun QuickInsights(state: AdvancedFinanceUiState) {
 
                 Text("Quick Insights", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
-                Text("Facts from the current saved state", color = TextSecondary, fontSize = 10.sp)
+                Text("Facts from the current saved state", color = TextSecondary, fontSize = 12.sp)
 
             }
 
@@ -740,9 +750,9 @@ private fun QuickInsights(state: AdvancedFinanceUiState) {
 
             Column(Modifier.padding(12.dp)) {
 
-                Text("Estimated net pay: ${formatRs(state.estimatedNetSalary)}", color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Estimated net pay: ${formatRs(state.estimatedNetSalary)}", color = FinanceInk, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
 
-                Text("OT contributes ${formatRs(state.otAmountRs)}. Listed paysheet deductions are ${formatRs(state.paysheetDeductions)}.", color = TextSecondary, fontSize = 10.sp)
+                Text("OT contributes ${formatRs(state.otAmountRs)}. Listed paysheet deductions are ${formatRs(state.paysheetDeductions)}.", color = TextSecondary, fontSize = 12.5.sp)
 
             }
 
@@ -750,7 +760,7 @@ private fun QuickInsights(state: AdvancedFinanceUiState) {
 
         Spacer(Modifier.height(8.dp))
 
-        Text("No percentage trend is shown because this state does not provide a previous-period comparison.", color = TextSecondary, fontSize = 9.sp)
+        Text("No percentage trend is shown because this state does not provide a previous-period comparison.", color = TextSecondary, fontSize = 12.sp)
 
     }
 
@@ -784,13 +794,13 @@ private fun MoneyMovement(state: AdvancedFinanceUiState) {
 
                 Text("How Your Money Moves", color = FinanceInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
 
-                Text("Gross → deductions → estimated net", color = TextSecondary, fontSize = 10.sp)
+                Text("Gross → deductions → estimated net", color = TextSecondary, fontSize = 12.5.sp)
 
             }
 
-            Surface(color = Purple.copy(alpha = 0.10f), shape = RoundedCornerShape(50.dp)) {
+            Surface(color = BrandIndigoSoft, shape = RoundedCornerShape(50.dp)) {
 
-                Text("LIVE", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("Live", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = BrandIndigo, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
             }
 
@@ -850,13 +860,13 @@ private fun MoneyFlowRow(label: String, value: Double, accent: Color, positive: 
 
         Column(Modifier.weight(1f)) {
 
-            Text(label, color = FinanceInk, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(label, color = FinanceInk, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 
-            Text(if (empty) "Not entered" else if (positive) "Added to gross" else "Subtracted from gross", color = TextSecondary, fontSize = 8.sp)
+            Text(if (empty) "Not entered" else if (positive) "Added to gross" else "Subtracted from gross", color = TextSecondary, fontSize = 12.sp)
 
         }
 
-        Text(if (empty) "—" else if (positive) formatRs(value) else "− ${formatRs(value)}", color = accent, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+        Text(if (empty) "—" else if (positive) formatRs(value) else "− ${formatRs(value)}", color = accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
 
     }
 
@@ -876,7 +886,7 @@ private fun WaterfallTotal(label: String, value: Double, gradient: Brush) {
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
 
-                Text(label, color = Color.White.copy(alpha = 0.82f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(label, color = Color.White.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                 Text(formatRs(value), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
 
@@ -896,7 +906,7 @@ private fun PayRatesSummary(state: AdvancedFinanceUiState) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 
-            RateBox(Modifier.weight(1f), "OT", formatRs(state.otRate), "per hour", Purple, FinancePurpleSoft)
+            RateBox(Modifier.weight(1f), "OT", formatRs(state.otRate), "per hour", BrandIndigo, FinancePurpleSoft)
 
             RateBox(
 
@@ -936,11 +946,11 @@ private fun PayRatesSummary(state: AdvancedFinanceUiState) {
 
         Text("Grade ${state.profile?.grade.orEmpty()} • Step ${state.profile?.salaryStep ?: "—"}", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
 
-        Text("OT • From ${state.profile?.grade.orEmpty()}, Step ${state.profile?.salaryStep ?: "grade policy"}", color = TextSecondary, fontSize = 10.sp)
+        Text("OT • From ${state.profile?.grade.orEmpty()}, Step ${state.profile?.salaryStep ?: "grade policy"}", color = TextSecondary, fontSize = 12.sp)
 
-        Text("PH / Working DO • From 2027 basic ÷ 30", color = TextSecondary, fontSize = 10.sp)
+        Text("PH / Working DO • From 2027 basic ÷ 30", color = TextSecondary, fontSize = 12.sp)
 
-        state.basisSalary2027?.let { Spacer(Modifier.height(5.dp)); Text("2027 basic used: ${formatRs(it)}", color = TextSecondary, fontSize = 10.sp) }
+        state.basisSalary2027?.let { Spacer(Modifier.height(5.dp)); Text("2027 basic used: ${formatRs(it)}", color = TextSecondary, fontSize = 12.sp) }
 
     }
 
@@ -1078,7 +1088,7 @@ private fun PayRatesDetailsCard(state: AdvancedFinanceUiState, viewModel: Advanc
 
             color = TextSecondary,
 
-            fontSize = 9.sp
+            fontSize = 12.sp
 
         )
 
@@ -1154,7 +1164,7 @@ private fun CommitmentsEditorCard(state: AdvancedFinanceUiState, viewModel: Adva
 
         Text("Additional Financial Commitments", color = FinanceInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
-        Text("Enter your monthly deductions to see your estimated take-home pay.", color = TextSecondary, fontSize = 10.sp)
+        Text("Enter your monthly deductions to see your estimated take-home pay.", color = TextSecondary, fontSize = 12.sp)
 
         FinanceInput("APIT", apit, imeAction = ImeAction.Next) { apit = it; viewModel.updateApit(it) }
 
@@ -1200,15 +1210,15 @@ private fun PaySheetSummaryCard(state: AdvancedFinanceUiState, onClick: () -> Un
 
         Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
 
-            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) { Icon(Icons.Default.Description, null, tint = Purple, modifier = Modifier.padding(9.dp)) }
+            Surface(color = FinancePurpleSoft, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) { Icon(Icons.Default.Description, null, tint = BrandIndigo, modifier = Modifier.padding(9.dp)) }
 
             Spacer(Modifier.width(10.dp))
 
             Column(Modifier.weight(1f)) {
 
-                Text("Pay Sheet Bank", color = FinanceInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Pay Sheet Bank", color = FinanceInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
 
-                Text(listOfNotNull(state.profile?.fullName?.takeIf { it.isNotBlank() }, state.profile?.serviceNo?.takeIf { it.isNotBlank() }, state.profile?.paySheetNo?.takeIf { it.isNotBlank() }).joinToString(" • ").ifBlank { "Open saved pay sheets" }, color = TextSecondary, fontSize = 9.sp)
+                Text(listOfNotNull(state.profile?.fullName?.takeIf { it.isNotBlank() }, state.profile?.serviceNo?.takeIf { it.isNotBlank() }, state.profile?.paySheetNo?.takeIf { it.isNotBlank() }).joinToString(" • ").ifBlank { "Open saved pay sheets" }, color = TextSecondary, fontSize = 12.sp)
 
             }
 
@@ -1308,9 +1318,9 @@ private fun DetailRow(label: String, value: Double, emphasis: Boolean = false) {
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
-        Text(label, color = TextSecondary, fontSize = 10.sp)
+        Text(label, color = TextSecondary, fontSize = 13.sp)
 
-        Text(formatRs(value), color = if (emphasis) Emerald else FinanceInk, fontSize = if (emphasis) 13.sp else 11.sp, fontWeight = if (emphasis) FontWeight.ExtraBold else FontWeight.Bold)
+        Text(formatRs(value), color = if (emphasis) Emerald else FinanceInk, fontSize = if (emphasis) 14.sp else 13.sp, fontWeight = if (emphasis) FontWeight.ExtraBold else FontWeight.Bold)
 
     }
 
@@ -1324,9 +1334,9 @@ private fun CommitmentRow(label: String, value: Double, emphasis: Boolean = fals
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
-        Text(label, color = TextSecondary, fontSize = 10.sp)
+        Text(label, color = TextSecondary, fontSize = 13.sp)
 
-        Text(formatRs(value), color = if (emphasis) Emerald else FinanceInk, fontSize = if (emphasis) 13.sp else 10.sp, fontWeight = if (emphasis) FontWeight.ExtraBold else FontWeight.Bold)
+        Text(formatRs(value), color = if (emphasis) Emerald else FinanceInk, fontSize = if (emphasis) 14.sp else 13.sp, fontWeight = if (emphasis) FontWeight.ExtraBold else FontWeight.Bold)
 
     }
 
@@ -1342,13 +1352,13 @@ private fun RateBox(modifier: Modifier, title: String, value: String, subtitle: 
 
         Column(Modifier.padding(11.dp)) {
 
-            Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Text(title, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
             Spacer(Modifier.height(4.dp))
 
-            Text(value, color = FinanceInk, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(value, color = FinanceInk, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
 
-            Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+            Text(subtitle, color = TextSecondary, fontSize = 12.sp)
 
         }
 
@@ -1366,11 +1376,11 @@ private fun FinanceSectionHeader(eyebrow: String, title: String, subtitle: Strin
 
     Column(Modifier.padding(horizontal = 2.dp)) {
 
-        Text(eyebrow, color = Purple, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+        Text(eyebrow, color = BrandIndigo, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
         Text(title, color = FinanceInk, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
 
-        Text(subtitle, color = TextSecondary, fontSize = 10.sp)
+        Text(subtitle, color = TextSecondary, fontSize = 12.5.sp)
 
     }
 
@@ -1412,7 +1422,7 @@ private fun FinanceLoadingCard() {
 
 private fun ErrorFinanceCard(message: String) {
 
-    Surface(Modifier.fillMaxWidth(), color = FinanceAmberSoft, shape = RoundedCornerShape(NursingDimensions.Radius.large)) { Text(message, Modifier.padding(14.dp), color = FinanceInk, fontSize = 10.sp) }
+    Surface(Modifier.fillMaxWidth(), color = FinanceAmberSoft, shape = RoundedCornerShape(NursingDimensions.Radius.large)) { Text(message, Modifier.padding(14.dp), color = FinanceInk, fontSize = 12.5.sp) }
 
 }
 
@@ -1422,53 +1432,97 @@ private fun ErrorFinanceCard(message: String) {
 
 private fun FinanceGuideDialog(onDismiss: () -> Unit) {
 
-    AlertDialog(
+    NursingGuideDialog(
 
-        onDismissRequest = onDismiss,
+        spec = NursingGuideSpec(
 
-        title = { Text("Finance Dashboard Guide", fontWeight = FontWeight.ExtraBold) },
+            title = "Finance Dashboard Guide",
 
-        text = {
+            subtitle = "Understand your estimated net pay, overtime earnings, and commitments.",
 
-            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            badge = "NursingOS Guide • Advanced Finance",
 
-                GuideItem("Estimated Net Pay", "Current estimated take-home result from the saved finance state.")
+            sections = listOf(
 
-                GuideItem("Earnings Overview", "Separates gross earnings, OT, deductions and net pay.")
+                NursingGuideSection(
 
-                GuideItem("Workload Pulse", "Shows normal duty, overtime, PH and DO inputs for this period.")
+                    title = "Estimated Net Pay",
 
-                GuideItem("Finance Tools", "Expand salary, pay-rate and commitment details, or open Pay Sheet Bank.")
+                    body = "Current estimated take-home result from the saved finance state.",
 
-                GuideItem("Money Movement", "Compares the deterministic earnings components used by the summary.")
+                    accent = ClinicalPrimaryColor
 
-                GuideItem("Pay Rates Used", "Shows the configured OT, PH and Working DO rates and their source.")
+                ),
 
-                GuideItem("Financial Commitments", "Shows paysheet deductions plus external loan and other commitments.")
+                NursingGuideSection(
 
-            }
+                    title = "Earnings Overview",
 
-        },
+                    body = "Separates gross earnings, OT, deductions and net pay.",
 
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } }
+                    accent = BrandIndigo
+
+                ),
+
+                NursingGuideSection(
+
+                    title = "Workload Pulse",
+
+                    body = "Shows normal duty, overtime, PH and DO inputs for this period.",
+
+                    accent = ClinicalPrimaryColor
+
+                ),
+
+                NursingGuideSection(
+
+                    title = "Finance Tools",
+
+                    body = "Expand salary, pay-rate and commitment details, or open Pay Sheet Bank.",
+
+                    accent = Emerald
+
+                ),
+
+                NursingGuideSection(
+
+                    title = "Money Movement",
+
+                    body = "Compares the deterministic earnings components used by the summary.",
+
+                    accent = BrandIndigo
+
+                ),
+
+                NursingGuideSection(
+
+                    title = "Pay Rates Used",
+
+                    body = "Shows the configured OT, PH and Working DO rates and their source.",
+
+                    accent = ClinicalPrimaryColor
+
+                ),
+
+                NursingGuideSection(
+
+                    title = "Financial Commitments",
+
+                    body = "Shows paysheet deductions plus external loan and other commitments.",
+
+                    accent = Emerald
+
+                )
+
+            ),
+
+            safetyBody = "All totals are derived from saved claim, profile compensation, and paysheet deduction records. Review source entries if a value looks incomplete."
+
+        ),
+
+        onDismiss = onDismiss
 
     )
-
-}
-
-
-
-@Composable
-
-private fun GuideItem(title: String, description: String) {
-
-    Column {
-
-        Text(title, color = FinanceInk, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-
-        Text(description, color = TextSecondary, fontSize = 9.sp)
-
-    }
 
 }
 

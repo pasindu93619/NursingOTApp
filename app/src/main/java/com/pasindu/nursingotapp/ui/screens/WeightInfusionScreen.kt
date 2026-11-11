@@ -26,13 +26,17 @@ import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
 import kotlin.math.round
 
-private val WeightBg = Color(0xFFF8FAFC)
+private val WeightBg = Color(0xFFF6F8FC)
 private val WeightInk = Color(0xFF12204A)
 private val WeightSlate = Color(0xFF64748B)
 private val WeightBlue = Color(0xFF1769E8)
-private val WeightPurple = Color(0xFF7B5CEB)
+private val WeightPurple = BrandIndigo
 private val WeightBlueSoft = Color(0xFFEAF6FF)
 private val WeightMintSoft = Color(0xFFEAFBF5)
 private val WeightAmberSoft = Color(0xFFFFF6E7)
@@ -215,24 +219,32 @@ private fun WeightResultCard(title: String, value: String, unit: String, backgro
 
 @Composable
 private fun WeightGuideDialog(mode: WeightMode, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.72f), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("${mode.emoji} ${mode.title}", color = WeightInk, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                if (mode == WeightMode.SIMPLE) {
-                    Text("Dose workflow", color = WeightBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                    Text("Weight × prescribed mg/kg = target dose (mg).\n\nTarget dose ÷ available dose × supplied volume = draw volume.", color = WeightSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                } else {
-                    Text("Infusion workflow", color = WeightBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                    Text("Weight × mcg/kg/min gives mcg/min. Convert to mg/hr, then divide by prepared concentration (mg/mL) to obtain mL/hr.", color = WeightSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                }
-                Surface(color = WeightAmberSoft, shape = RoundedCornerShape(16.dp)) {
-                    Text("Always independently verify the prescription, concentration and local protocol.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) { Text("Close", fontWeight = FontWeight.ExtraBold) }
-            }
-        }
+    val workflowSection = if (mode == WeightMode.SIMPLE) {
+        NursingGuideSection(
+            title = "Dose workflow",
+            body = "Weight × prescribed mg/kg = target dose (mg).\n\nTarget dose ÷ available dose × supplied volume = draw volume.",
+            accent = WeightBlue,
+            stepLabel = "Calculation steps"
+        )
+    } else {
+        NursingGuideSection(
+            title = "Infusion workflow",
+            body = "Weight × mcg/kg/min gives mcg/min. Convert to mg/hr, then divide by prepared concentration (mg/mL) to obtain mL/hr.",
+            accent = BrandIndigo,
+            stepLabel = "Calculation steps"
+        )
     }
+
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = mode.title,
+            subtitle = "Weight-based dose and continuous infusion calculation steps.",
+            badge = "NursingOS Guide • Weight & Infusion",
+            sections = listOf(workflowSection),
+            safetyBody = "Always independently verify the prescription, concentration and local protocol."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 private fun formatWeight(value: Float): String = when {

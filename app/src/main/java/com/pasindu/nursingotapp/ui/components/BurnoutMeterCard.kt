@@ -151,13 +151,13 @@ fun BurnoutMeterCard(
                     Text(
                         "${startDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))} – ${endDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))}",
                         color = ClinicalPrimaryColor,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         scopeLabel,
                         color = TextSecondary,
-                        fontSize = 9.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -170,7 +170,7 @@ fun BurnoutMeterCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Brush.horizontalGradient(listOf(Color(0xFFEAF6FF), Color(0xFFF3EEFF))))
+                    .background(Brush.horizontalGradient(listOf(Color(0xFFEAF6FF), Color(0xFFEEF2FB))))
                     .padding(vertical = 18.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -218,19 +218,19 @@ fun BurnoutMeterCard(
                     Text(
                         "How this value is calculated",
                         color = Slate,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
                         calculationText,
                         color = TextSecondary,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
                     )
                     Text(
                         "Describes workload pressure for the selected scope, not a medical diagnosis.",
                         color = TextSecondary,
-                        fontSize = 10.sp
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -277,8 +277,8 @@ fun BurnoutMeterCard(
                 Text(
                     text = suggestionText,
                     color = Slate,
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Start
                 )

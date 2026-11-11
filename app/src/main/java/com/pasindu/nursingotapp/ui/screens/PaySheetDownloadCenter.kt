@@ -3,7 +3,6 @@ package com.pasindu.nursingotapp.ui.screens
 import android.content.Context
 import android.os.Environment
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,8 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,10 +35,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pasindu.nursingotapp.data.local.entity.PaySheetDocumentEntity
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.BrandIndigoSoft
+import com.pasindu.nursingotapp.ui.theme.SurfaceWhite
 import java.io.File
 import java.io.FileOutputStream
 
@@ -50,10 +59,10 @@ fun PaySheetDownloadCenterDialog(
 
     val months = remember {
         listOf(
-            "JAN" to "01", "FEB" to "02", "MAR" to "03",
-            "APR" to "04", "MAY" to "05", "JUN" to "06",
-            "JUL" to "07", "AUG" to "08", "SEP" to "09",
-            "OCT" to "10", "NOV" to "11", "DEC" to "12"
+            "Jan" to "01", "Feb" to "02", "Mar" to "03",
+            "Apr" to "04", "May" to "05", "Jun" to "06",
+            "Jul" to "07", "Aug" to "08", "Sep" to "09",
+            "Oct" to "10", "Nov" to "11", "Dec" to "12"
         )
     }
 
@@ -65,29 +74,31 @@ fun PaySheetDownloadCenterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = SurfaceWhite,
         title = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.Download,
                         contentDescription = null,
-                        tint = Color(0xFF4338CA)
+                        tint = BrandIndigo
                     )
-                    Spacer(Modifier.padding(horizontal = 4.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("Find & Download", fontWeight = FontWeight.Black)
                 }
                 Text(
                     "Choose a year, then tap a saved month.",
-                    color = Color(0xFF64748B),
-                    fontSize = 10.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp
                 )
             }
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFF8FAFC),
+                    color = Color(0xFFF1F5F9),
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
@@ -101,20 +112,23 @@ fun PaySheetDownloadCenterDialog(
                             Icon(
                                 Icons.Default.ArrowBackIosNew,
                                 contentDescription = "Previous year",
-                                tint = Color(0xFF4338CA)
+                                tint = BrandIndigo
                             )
                         }
                         Text(
                             selectedYear.toString(),
-                            color = Color(0xFF0F172A),
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black
+                            style = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFeatureSettings = "tnum"
+                            )
                         )
                         IconButton(onClick = { selectedYear++ }) {
                             Icon(
                                 Icons.Default.ArrowForwardIos,
                                 contentDescription = "Next year",
-                                tint = Color(0xFF4338CA)
+                                tint = BrandIndigo
                             )
                         }
                     }
@@ -133,37 +147,44 @@ fun PaySheetDownloadCenterDialog(
                             val saved = document != null
 
                             Surface(
+                                onClick = {
+                                    document?.let {
+                                        onMessage(downloadPaysheet(context, it))
+                                    }
+                                },
+                                enabled = saved,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(68.dp)
-                                    .clickable(enabled = saved) {
-                                        document?.let {
-                                            onMessage(downloadPaysheet(context, it))
-                                        }
-                                    },
-                                color = if (saved) Color(0xFFEEF2FF) else Color(0xFFF8FAFC),
+                                    .heightIn(min = 72.dp),
+                                color = if (saved) BrandIndigoSoft else Color(0xFFF8FAFC),
                                 shape = RoundedCornerShape(14.dp),
-                                border = if (saved) null else BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (saved) BrandIndigo.copy(alpha = 0.25f) else Color(0xFFE2E8F0)
+                                )
                             ) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(8.dp),
+                                        .padding(horizontal = 6.dp, vertical = 8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Text(
                                         label,
-                                        color = if (saved) Color(0xFF4338CA) else Color(0xFF475569),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Black
+                                        color = if (saved) BrandIndigo else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        if (saved) "DOWNLOAD" else "EMPTY",
-                                        color = if (saved) Color(0xFF0891B2) else Color(0xFF64748B),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
+                                        if (saved) "Download" else "Empty",
+                                        color = if (saved) Color(0xFF0E7490) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
@@ -174,7 +195,9 @@ fun PaySheetDownloadCenterDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("DONE") }
+            TextButton(onClick = onDismiss) {
+                Text("Done", fontWeight = FontWeight.Bold, color = BrandIndigo)
+            }
         }
     )
 }

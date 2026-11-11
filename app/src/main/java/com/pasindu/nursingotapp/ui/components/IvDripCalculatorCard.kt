@@ -31,16 +31,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.pasindu.nursingotapp.ui.theme.AppBackground
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+import com.pasindu.nursingotapp.ui.theme.Emerald
 import kotlin.math.roundToInt
 
 enum class InfusionMode(val title: String, val emoji: String) { GRAVITY("Gravity Drip", "💧"), PUMP("IV Pump", "📟") }
 enum class PumpCalcMode(val title: String) { BASIC("Vol / Time"), DOSE("Dose"), TITRATION("Titrate") }
 
-private val IvSurface = Color(0xFFF8FAFC)
+private val IvSurface = AppBackground
 private val IvInk = Color(0xFF0F172A)
 private val IvSlate = Color(0xFF64748B)
 private val IvBlue = Color(0xFF1769E8)
-private val IvPurple = Color(0xFF7B5CEB)
+private val IvPurple = BrandIndigo
 private val IvBlueSoft = Color(0xFFEAF6FF)
 private val IvMintSoft = Color(0xFFEAFBF5)
 private val IvHeroGradient = Brush.horizontalGradient(listOf(Color(0xFF1769E8), Color(0xFF149FE3), Color(0xFF4B78F2), Color(0xFF7B5CEB)))
@@ -287,38 +290,59 @@ private fun ResultPanel(eyebrow: String, value: String, unit: String, background
 
 @Composable
 private fun GravityScienceDialog(dropsPerMinute: Int, onDismiss: () -> Unit) {
-    SimpleIvDialog(title = "Gravity drip science", onDismiss = onDismiss) {
-        Text("Deterministic formula", color = IvBlue, fontWeight = FontWeight.ExtraBold)
-        Text("drops/min = (volume mL × drop factor) ÷ total minutes", color = IvInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Text("Current result: $dropsPerMinute drops/min", color = IvInk, fontWeight = FontWeight.ExtraBold)
-        Text("Verify the prescription, printed giving-set factor and local protocol before administration.", color = IvSlate, fontSize = 13.sp, lineHeight = 19.sp)
-    }
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = "Gravity drip science",
+            subtitle = "Deterministic gravity infusion drop-rate formula.",
+            badge = "NursingOS Guide • Infusion Science",
+            sections = listOf(
+                NursingGuideSection(
+                    title = "Deterministic formula",
+                    body = "drops/min = (volume mL × drop factor) ÷ total minutes",
+                    accent = IvBlue,
+                    stepLabel = "Formula",
+                    badgeValue = "$dropsPerMinute drops/min"
+                )
+            ),
+            safetyBody = "Verify the prescription, printed giving-set factor and local protocol before administration."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 @Composable
 private fun InfusionGuideDialog(mode: InfusionMode, onDismiss: () -> Unit) {
-    SimpleIvDialog(title = "${mode.emoji} ${mode.title} guide", onDismiss = onDismiss) {
-        Text("1. Confirm the prescription.", color = IvInk, fontWeight = FontWeight.ExtraBold)
-        Text("2. Confirm the giving-set drop factor or pump concentration.", color = IvSlate)
-        Text("3. Enter only verified values using the displayed units.", color = IvSlate)
-        Text("4. Review the result against the prescription and local protocol.", color = IvSlate)
-        Surface(color = Color(0xFFFFF6E7), shape = RoundedCornerShape(16.dp)) {
-            Text("This calculator supports arithmetic and workflow checks; it does not replace clinical assessment or an independent medication check.", Modifier.padding(14.dp), color = Color(0xFF7A4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
-        }
-    }
-}
-
-@Composable
-private fun SimpleIvDialog(title: String, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Card(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.72f), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(title, fontSize = 23.sp, fontWeight = FontWeight.Black, color = IvInk)
-                content()
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) { Text("Close", fontWeight = FontWeight.ExtraBold) }
-            }
-        }
-    }
+    NursingGuideDialog(
+        spec = NursingGuideSpec(
+            title = "${mode.title} guide",
+            subtitle = "Step-by-step infusion rate verification checklist.",
+            badge = "NursingOS Guide • IV Infusion",
+            sections = listOf(
+                NursingGuideSection(
+                    title = "Confirm the prescription",
+                    body = "Verify ordered fluid or medication, dose units, and target infusion duration against the chart.",
+                    accent = IvBlue
+                ),
+                NursingGuideSection(
+                    title = "Confirm set factor or concentration",
+                    body = "Confirm the giving-set drop factor (drops/mL) or pump bag concentration (mg/mL).",
+                    accent = BrandIndigo
+                ),
+                NursingGuideSection(
+                    title = "Enter verified values",
+                    body = "Enter only verified values using the displayed units.",
+                    accent = IvBlue
+                ),
+                NursingGuideSection(
+                    title = "Review against local protocol",
+                    body = "Compare the computed rate against the prescription and institutional infusion protocol.",
+                    accent = Emerald
+                )
+            ),
+            safetyBody = "This calculator supports arithmetic and workflow checks; it does not replace clinical assessment or an independent medication check."
+        ),
+        onDismiss = onDismiss
+    )
 }
 
 @Composable

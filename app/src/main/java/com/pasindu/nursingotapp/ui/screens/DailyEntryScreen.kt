@@ -39,6 +39,7 @@ import com.pasindu.nursingotapp.domain.export.ExportReadinessState
 import com.pasindu.nursingotapp.domain.preset.DutyPreset
 import com.pasindu.nursingotapp.domain.preset.DutyPresetId
 import com.pasindu.nursingotapp.domain.usecase.PayRateResolver
+import com.pasindu.nursingotapp.ui.components.NursingAdaptiveTopBar
 import com.pasindu.nursingotapp.ui.theme.CriticalRed
 import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.material.icons.filled.WbSunny
@@ -58,6 +59,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -85,13 +87,13 @@ data class StagedEdit(val shift: String? = null, val ot: String? = null, val lea
 private val DailyInk = Slate
 private val DailyBlue = MedicalBlue
 private val DailyCyan = MedicalBlue
-private val DailyPurple = Purple
+private val DailyPurple = Color(0xFF27187E)
 private val DailyBlueSoft = Color(0xFFDDF5FF)
-private val DailyPurpleSoft = Color(0xFFF5F0FF)
+private val DailyPurpleSoft = Color(0xFFEEF2FB)
 private val DailyMintSoft = Color(0xFFE8FAF2)
 private val DailyEmerald = Emerald
 private val DailyAmber = Amber
-private val DailyPurpleSoft2 = Color(0xFFF3EEFF)
+private val DailyPurpleSoft2 = Color(0xFFEEF2FB)
 private val DailySlateSoft = Color(0xFFF1F5F9)
 private val DailyWarningGradient = Brush.horizontalGradient(listOf(Color(0xFFFFB45C), Color(0xFFFF8A6A)))
 private val DailyHeroGradient = Brush.horizontalGradient(listOf(Color(0xFF2AA7D6), Color(0xFF6F78D8)))
@@ -354,15 +356,69 @@ fun DailyEntryScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                navigationIcon = { IconButton(onClick = handleBack) { Icon(Icons.Default.ArrowBack, "Back", tint = DailyInk) } },
-                title = { Column { Text("$wardType Planner", color = DailyInk, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp); Text("Build your duty calendar", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) } },
-                actions = { IconButton(onClick = handleExportRequest) { Icon(Icons.Default.PictureAsPdf, "Preview PDF", tint = DailyCyan) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            NursingAdaptiveTopBar(
+                navigationIcon = {
+                    IconButton(onClick = handleBack) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            "Back",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                },
+                title = {
+                    Column {
+                        Text(
+                            "$wardType Planner",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            "Build your duty calendar",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                actions = {
+                    FilledTonalButton(
+                        onClick = handleExportRequest,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .heightIn(min = NursingDimensions.TouchTarget.minimum),
+                        shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = DailyBlueSoft,
+                            contentColor = DailyCyan
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.PictureAsPdf,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Preview PDF",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.background,
+                stackWideActionsAtLargeFont = true
             )
         },
         bottomBar = {
-            Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = Color.White) {
+            Surface(modifier = Modifier.navigationBarsPadding(), shadowElevation = 24.dp, color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     fun shiftHours(edit: StagedEdit): Double = when (edit.shift) {
                         "Morn (7-13)", "Eve (13-19)" -> 6.0
@@ -440,8 +496,8 @@ fun DailyEntryScreen(
                             Modifier.weight(1f),
                             "36h OT",
                             String.format(Locale.US, "%.1fh", weeklyDutyOtHours),
-                            Purple,
-                            Color(0xFFF3EEFF)
+                            Color(0xFF27187E),
+                            Color(0xFFEEF2FB)
                         )
                         DutySummaryCard(
                             Modifier.weight(1f),
@@ -615,12 +671,19 @@ fun DailyEntryScreen(
                                 else -> MedicalBlue
                             }
                             Surface(
-                                Modifier.weight(1f).clickable { setCategory(CATEGORY_SHIFT_DUTY); chooseBrush(brush) },
+                                onClick = { setCategory(CATEGORY_SHIFT_DUTY); chooseBrush(brush) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = NursingDimensions.TouchTarget.minimum),
                                 shape = RoundedCornerShape(16.dp),
                                 color = if (active) brushColor else brushColor.copy(alpha = .12f),
                                 border = if (active) BorderStroke(1.dp, brushColor.copy(alpha = .45f)) else null
                             ) {
-                                Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(
+                                    Modifier.padding(vertical = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
                                     Text(brush.substringBefore(" "), color = if (active) Color.White else brushColor, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                     Text(brush.substringAfter(" ", "").replace("(", "").replace(")", ""), color = if (active) Color.White else DailyInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
@@ -628,7 +691,10 @@ fun DailyEntryScreen(
                         }
                     }
                     Surface(
-                        Modifier.fillMaxWidth().clickable { showDutyPresetDialog = true },
+                        onClick = { showDutyPresetDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = NursingDimensions.TouchTarget.minimum),
                         shape = RoundedCornerShape(15.dp),
                         color = DailyMintSoft
                     ) {
@@ -710,12 +776,13 @@ fun DailyEntryScreen(
                                 else -> Color(0xFFFFF3CD)
                             }
                             Surface(
-                                Modifier.clickable { chooseBrush(brush) },
+                                onClick = { chooseBrush(brush) },
+                                modifier = Modifier.heightIn(min = NursingDimensions.TouchTarget.minimum),
                                 shape = RoundedCornerShape(13.dp),
                                 color = if (selected) accent else surface,
                                 border = if (selected) BorderStroke(1.dp, accent.copy(alpha = 0.45f)) else null
                             ) {
-                                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                     if (brush == "DO — no-pay leave" || brush == "PH — not worked") {
                                         Text("•", color = if (selected) Color.White else DailyEmerald, fontSize = 14.sp, fontWeight = FontWeight.Black)
                                     }
@@ -1130,12 +1197,13 @@ fun DailyEntryScreen(
                         DutyPreset.allPresets.forEach { preset ->
                             val isSelected = selectedPreset.id == preset.id
                             Surface(
+                                onClick = { selectedPreset = preset },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { selectedPreset = preset },
+                                    .heightIn(min = NursingDimensions.TouchTarget.minimum),
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) DailyBlueSoft else Color(0xFFF8FAFC),
-                                border = if (isSelected) BorderStroke(1.5.dp, DailyCyan) else BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                color = if (isSelected) DailyBlueSoft else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = if (isSelected) BorderStroke(1.5.dp, DailyCyan) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(12.dp),
@@ -1479,11 +1547,18 @@ internal fun ExportCenterCard(
                     .fillMaxWidth()
                     .heightIn(min = NursingDimensions.TouchTarget.minimum),
                 shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
             ) {
                 Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Review & Export PDF Form", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                Text(
+                    "Review & Export PDF Form",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.5.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

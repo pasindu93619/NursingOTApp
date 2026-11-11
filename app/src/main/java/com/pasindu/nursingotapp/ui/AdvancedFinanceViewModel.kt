@@ -10,6 +10,7 @@ import com.pasindu.nursingotapp.data.local.dao.ProfileDeductionDao
 import com.pasindu.nursingotapp.data.local.dao.isManagedCommitmentDeductionName
 import com.pasindu.nursingotapp.data.local.dao.mergeManagedCommitmentDeductionRows
 import com.pasindu.nursingotapp.data.local.entity.ClaimPeriodEntity
+import com.pasindu.nursingotapp.data.local.entity.DailyEntryEntity
 import com.pasindu.nursingotapp.data.local.entity.PayRateSettingsEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileCompensationEntity
 import com.pasindu.nursingotapp.data.local.entity.ProfileDeductionEntity
@@ -29,6 +30,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.DayOfWeek
 import javax.inject.Inject
 import kotlin.math.abs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,9 +191,13 @@ class AdvancedFinanceViewModel @Inject constructor(
     val uiState: StateFlow<AdvancedFinanceUiState> = _uiState.asStateFlow()
 
     private var deductionObservationJob: Job? = null
+    private var dailyEntriesObservationJob: Job? = null
+    private var recalculateJob: Job? = null
     private var deductionWriteJob: Job? = null
     private val deductionWriteMutex = Mutex()
     private var activeClaimPeriodId: Long? = null
+    private var entriesLoadedClaimPeriodId: Long? = null
+    private var latestObservedEntries: List<DailyEntryEntity> = emptyList()
     private val inFlightWriteCountByPeriod = mutableMapOf<Long, Int>()
     private val writeVersionByPeriod = mutableMapOf<Long, Long>()
     private val latestCommitmentsByPeriod = mutableMapOf<Long, CommitmentAmounts>()
@@ -218,6 +224,10 @@ class AdvancedFinanceViewModel @Inject constructor(
             if (periodChanged) {
                 deductionObservationJob?.cancel()
                 deductionObservationJob = null
+                dailyEntriesObservationJob?.cancel()
+                dailyEntriesObservationJob = null
+                entriesLoadedClaimPeriodId = null
+                latestObservedEntries = emptyList()
                 _uiState.value = _uiState.value.copy(
                     claimPeriod = current,
                     deductions = emptyList(),
@@ -233,6 +243,7 @@ class AdvancedFinanceViewModel @Inject constructor(
                 )
                 if (newPeriodId != null) {
                     observeDeductionsForClaimPeriod(newPeriodId)
+                    observeDailyEntriesForClaimPeriod(newPeriodId)
                 }
             } else {
                 _uiState.value = _uiState.value.copy(claimPeriod = current)
@@ -246,6 +257,18 @@ class AdvancedFinanceViewModel @Inject constructor(
         observeCompensation().collectInViewModel { compensation ->
             _uiState.value = _uiState.value.copy(compensation = compensation)
             recalculate()
+        }
+    }
+
+    private fun observeDailyEntriesForClaimPeriod(claimPeriodId: Long) {
+        dailyEntriesObservationJob?.cancel()
+        dailyEntriesObservationJob = viewModelScope.launch {
+            observeClaimDailyEntriesUseCase(claimPeriodId).collect { entries ->
+                if (activeClaimPeriodId != claimPeriodId) return@collect
+                entriesLoadedClaimPeriodId = claimPeriodId
+                latestObservedEntries = entries
+                recalculate(entriesOverride = entries, entriesClaimPeriodId = claimPeriodId)
+            }
         }
     }
 
@@ -297,48 +320,65 @@ class AdvancedFinanceViewModel @Inject constructor(
         recalculate()
     }
 
-    private fun recalculate() {
+    private fun recalculate(
+        entriesOverride: List<DailyEntryEntity>? = null,
+        entriesClaimPeriodId: Long? = null,
+        forceReloadEntries: Boolean = false
+    ) {
         val state = _uiState.value
         val profile = state.profile ?: run {
+            recalculateJob?.cancel()
             _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, errorMessage = null)
             return
         }
         val claimPeriod = state.claimPeriod ?: run {
+            recalculateJob?.cancel()
             _uiState.value = state.copy(isLoading = false, periodSummary = null, claimStart = null, claimEnd = null, fullWeeks = 0, errorMessage = null)
             return
         }
 
-        viewModelScope.launch {
+        recalculateJob?.cancel()
+        recalculateJob = viewModelScope.launch {
             runCatching {
-                observeClaimDailyEntriesUseCase(claimPeriod.id).first()
-            }.onSuccess { entries ->
-                runCatching {
-                    calculateFinanceSummaryUseCase(
-                        profile = profile,
-                        entries = entries,
-                        claimStart = claimPeriod.startDate,
-                        claimEnd = claimPeriod.endDate,
-                        payRates = state.payRateSettings
-                    )
-                }.onSuccess { summary ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        periodSummary = summary,
-                        claimStart = claimPeriod.startDate,
-                        claimEnd = claimPeriod.endDate,
-                        fullWeeks = countFullSundaySaturdayWeeks(claimPeriod.startDate, claimPeriod.endDate),
-                        errorMessage = null
-                    )
-                }.onFailure { error ->
-                    setError(error, "Unable to calculate financial summary.")
+                val entries = when {
+                    entriesOverride != null && entriesClaimPeriodId == claimPeriod.id -> entriesOverride
+                    !forceReloadEntries && entriesLoadedClaimPeriodId == claimPeriod.id -> latestObservedEntries
+                    else -> observeClaimDailyEntriesUseCase(claimPeriod.id).first().also { fetched ->
+                        if (activeClaimPeriodId == claimPeriod.id) {
+                            entriesLoadedClaimPeriodId = claimPeriod.id
+                            latestObservedEntries = fetched
+                        }
+                    }
                 }
+                if (activeClaimPeriodId != claimPeriod.id) return@launch
+                val latestState = _uiState.value
+                val latestProfile = latestState.profile ?: return@launch
+                val latestPeriod = latestState.claimPeriod ?: return@launch
+                if (latestPeriod.id != claimPeriod.id) return@launch
+
+                val summary = calculateFinanceSummaryUseCase(
+                    profile = latestProfile,
+                    entries = entries,
+                    claimStart = latestPeriod.startDate,
+                    claimEnd = latestPeriod.endDate,
+                    payRates = latestState.payRateSettings
+                )
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    periodSummary = summary,
+                    claimStart = latestPeriod.startDate,
+                    claimEnd = latestPeriod.endDate,
+                    fullWeeks = countFullSundaySaturdayWeeks(latestPeriod.startDate, latestPeriod.endDate),
+                    errorMessage = null
+                )
             }.onFailure { error ->
-                setError(error, "Unable to load financial information.")
+                if (error is CancellationException) throw error
+                setError(error, "Unable to calculate financial summary.")
             }
         }
     }
 
-    fun refresh() = recalculate()
+    fun refresh() = recalculate(forceReloadEntries = true)
 
     fun updateApit(value: String) = updateManagedCommitment(value) { state, parsedAmount ->
         state.copy(

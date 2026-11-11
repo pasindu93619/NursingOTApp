@@ -75,7 +75,7 @@ internal fun ClinicalToolHeader(
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 19.sp, fontWeight = FontWeight.Black, color = ClinicalToolDesignTokens.ink)
-            Text(subtitle, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ClinicalToolDesignTokens.slate)
+            Text(subtitle, fontSize = 12.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold, color = ClinicalToolDesignTokens.slate)
         }
     }
 }
@@ -127,16 +127,16 @@ internal fun ClinicalResultPanel(
 ) {
     Surface(color = accent.copy(alpha = .08f), shape = RoundedCornerShape(19.dp)) {
         Column(Modifier.fillMaxWidth().padding(15.dp)) {
-            Text(label.uppercase(), color = ClinicalToolDesignTokens.slate, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
+            Text(label, color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(value, color = accent, fontSize = 31.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.width(6.dp))
-                Text(unit, color = accent.copy(alpha = .75f), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 5.dp))
+                Text(unit, color = accent.copy(alpha = .85f), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 5.dp))
             }
             if (!supporting.isNullOrBlank()) {
-                Spacer(Modifier.height(3.dp))
-                Text(supporting, color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 15.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(supporting, color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 17.sp)
             }
         }
     }
@@ -148,7 +148,7 @@ internal fun ClinicalFormulaPanel(text: String) {
         Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Default.Calculate, contentDescription = null, tint = ClinicalToolDesignTokens.blue, modifier = Modifier.size(17.dp))
             Spacer(Modifier.width(8.dp))
-            Text(text, color = ClinicalToolDesignTokens.slate, fontSize = 10.sp, lineHeight = 16.sp)
+            Text(text, color = ClinicalToolDesignTokens.slate, fontSize = 12.sp, lineHeight = 18.sp)
         }
     }
 }
@@ -159,7 +159,7 @@ internal fun ClinicalSafetyPanel(text: String, accent: Color = ClinicalToolDesig
         Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Default.Warning, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(text, color = Color(0xFF6B4A00), fontSize = 10.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+            Text(text, color = Color(0xFF6B4A00), fontSize = 12.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
         }
     }
 }
@@ -168,12 +168,12 @@ internal fun ClinicalSafetyPanel(text: String, accent: Color = ClinicalToolDesig
 internal fun ClinicalModeChip(text: String, selected: Boolean, accent: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 46.dp),
+        modifier = modifier.heightIn(min = 48.dp),
         color = if (selected) accent else ClinicalToolDesignTokens.background,
         shape = RoundedCornerShape(NursingDimensions.Radius.medium)
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text, color = if (selected) Color.White else ClinicalToolDesignTokens.slate, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+        Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Text(text, color = if (selected) Color.White else ClinicalToolDesignTokens.slate, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -200,7 +200,7 @@ internal fun ClinicalEngineListItem(
             Spacer(Modifier.width(13.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = ClinicalToolDesignTokens.ink, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                Text(subtitle, color = accent, fontSize = 12.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold)
             }
             Surface(color = accent, shape = CircleShape) {
                 Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.padding(9.dp).size(17.dp))

@@ -1,6 +1,7 @@
 package com.pasindu.nursingotapp.transfer.ui
 
 import androidx.compose.ui.graphics.Color
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
 import com.pasindu.nursingotapp.ui.theme.OnTransferDangerContainer
 import com.pasindu.nursingotapp.ui.theme.OnTransferInfoContainer
 import com.pasindu.nursingotapp.ui.theme.OnTransferSuccessContainer
@@ -37,8 +38,8 @@ class TransferThemeTokensTest {
         assertEquals(Color(0xFFE2E8F0), TransferCardBorder)
         assertEquals(Color(0xFFEFF6FF), TransferInfoContainer)
         assertEquals(Color(0xFF1E3A8A), OnTransferInfoContainer)
-        assertEquals(Color(0xFFF3E8FF), TransferThreeWayContainer)
-        assertEquals(Color(0xFF581C87), OnTransferThreeWayContainer)
+        assertEquals(Color(0xFFEAF0FA), TransferThreeWayContainer)
+        assertEquals(BrandIndigo, OnTransferThreeWayContainer)
         assertEquals(Color(0xFFECFDF5), TransferSuccessContainer)
         assertEquals(Color(0xFF065F46), OnTransferSuccessContainer)
         assertEquals(Color(0xFFFFFBEB), TransferWarningContainer)
@@ -52,8 +53,8 @@ class TransferThemeTokensTest {
         assertEquals(Color(0xFFEAF6FF), TransferBlueSoft)
         assertEquals(Color(0xFFEAFBF5), TransferMintSoft)
         assertEquals(Color(0xFFFFF7ED), TransferAmberSoft)
-        assertEquals(Color(0xFFFFF1F2), TransferRoseSoft)
-        assertEquals(Color(0xFFF3EEFF), TransferPurpleSoft)
+        assertEquals(Color(0xFFFEF2F2), TransferRoseSoft)
+        assertEquals(Color(0xFFEAF0FA), TransferPurpleSoft)
         assertEquals(Color(0xFFF1F5F9), TransferSlateSoft)
         assertEquals(Color(0xFF12204A), TransferInk)
     }

@@ -73,11 +73,10 @@ fun NurseCommandCenterCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "NURSE COMMAND CENTER",
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.6.sp
+                        text = "Nurse Command Center",
+                        color = Color.White.copy(alpha = 0.84f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -236,15 +235,14 @@ private fun MetricTile(
         )
         Text(
             text = label,
-            color = Color.White.copy(alpha = 0.55f),
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.sp
+            color = Color.White.copy(alpha = 0.78f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
         )
         Text(
             text = value,
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.ExtraBold,
             maxLines = 1
         )

@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 
 import androidx.compose.foundation.clickable
 
+import androidx.compose.foundation.horizontalScroll
+
 import androidx.compose.foundation.layout.Arrangement
 
 import androidx.compose.foundation.layout.Box
@@ -168,11 +170,21 @@ import com.pasindu.nursingotapp.ui.NurseCommandCenterViewModel
 
 import com.pasindu.nursingotapp.ui.NursingViewModel
 
+import com.pasindu.nursingotapp.ui.components.NursingGuideDialog
+
+import com.pasindu.nursingotapp.ui.components.NursingGuideSection
+
+import com.pasindu.nursingotapp.ui.components.NursingGuideSpec
+
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 
 import com.pasindu.nursingotapp.ui.theme.Amber
 
 import com.pasindu.nursingotapp.ui.theme.AppBackground
+
+import com.pasindu.nursingotapp.ui.theme.BrandIndigo
+
+import com.pasindu.nursingotapp.ui.theme.BrandIndigoSoft
 
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
 
@@ -198,11 +210,11 @@ import com.pasindu.nursingotapp.ui.theme.TextSecondary
 
 private val HomeBlueSoft = Color(0xFFEAF6FF)
 
-private val HomePurpleSoft = Color(0xFFF3EEFF)
+private val HomePurpleSoft = BrandIndigoSoft
 
 private val HomeMintSoft = Color(0xFFEAFBF5)
 
-private val TransferPurpleSoft = Color(0xFFF3EEFF)
+private val TransferPurpleSoft = BrandIndigoSoft
 
 private val HomeAmberSoft = Color(0xFFFFF6E7)
 
@@ -280,7 +292,7 @@ fun HomeScreen(
 
             HomeAction("Clinical", Icons.Default.MedicalServices, Amber, HomeAmberSoft, "clinical_calculators"),
 
-            HomeAction("Planning", Icons.AutoMirrored.Filled.Assignment, Purple, HomePurpleSoft, "clinical_planning")
+            HomeAction("Planning", Icons.AutoMirrored.Filled.Assignment, BrandIndigo, HomePurpleSoft, "clinical_planning")
 
         )
 
@@ -510,11 +522,11 @@ private fun ShiftSnapshotCard(
 
                 Column(Modifier.weight(1f)) {
 
-                    Text("NURSINGOS", color = AiAccentColor, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.8.sp)
+                    Text("NursingOS", color = BrandIndigo, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
 
-                        Text("Shift snapshot", color = HomeInk, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                        Text("Shift snapshot", color = HomeInk, fontSize = 24.sp, fontWeight = FontWeight.Black)
 
                         Spacer(Modifier.width(7.dp))
 
@@ -528,15 +540,15 @@ private fun ShiftSnapshotCard(
 
                             Text(
 
-                                "LIVE",
+                                "Live",
 
                                 color = Emerald,
 
-                                fontSize = 8.sp,
+                                fontSize = 12.sp,
 
-                                fontWeight = FontWeight.Black,
+                                fontWeight = FontWeight.Bold,
 
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
 
                             )
 
@@ -544,7 +556,7 @@ private fun ShiftSnapshotCard(
 
                     }
 
-                    Text("Current OT claim period \u2022 live from your recorded entries", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text("Current OT claim period \u2022 live from your recorded entries", color = TextSecondary, fontSize = 12.5.sp, fontWeight = FontWeight.Medium)
 
                 }
 
@@ -696,7 +708,7 @@ private fun ShiftSnapshotCard(
 
                     Column(Modifier.weight(1f)) {
 
-                        Text("OT calculation", color = HomeInk, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("OT calculation", color = HomeInk, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
 
                         Text(
 
@@ -704,13 +716,13 @@ private fun ShiftSnapshotCard(
 
                             color = TextSecondary,
 
-                            fontSize = 9.sp
+                            fontSize = 12.sp
 
                         )
 
                     }
 
-                    Text("= ${formatHours(state.otHoursThisMonth)}", color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text("= ${formatHours(state.otHoursThisMonth)}", color = Amber, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
 
                 }
 
@@ -724,9 +736,9 @@ private fun ShiftSnapshotCard(
 
                 Column(Modifier.weight(1f)) {
 
-                    Text("Workload pressure", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("Workload pressure", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-                    Text(scoreText, color = scoreAccent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(scoreText, color = scoreAccent, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
 
                     Text(
 
@@ -734,7 +746,7 @@ private fun ShiftSnapshotCard(
 
                         color = TextSecondary,
 
-                        fontSize = 8.sp
+                        fontSize = 12.sp
 
                     )
 
@@ -856,13 +868,13 @@ private fun SnapshotMetric(
 
                 Spacer(Modifier.height(7.dp))
 
-                Text(label, color = TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                 Text(value, color = HomeInk, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
                 Spacer(Modifier.height(3.dp))
 
-                Text(detail, color = TextSecondary, fontSize = 7.5.sp, lineHeight = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(detail, color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
 
             }
 
@@ -918,7 +930,7 @@ private fun QuickAccessTile(action: HomeAction, modifier: Modifier, onClick: () 
 
             Spacer(Modifier.width(9.dp))
 
-            Text(action.title, color = HomeInk, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(action.title, color = HomeInk, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
 
             Icon(Icons.Default.ChevronRight, null, tint = action.accent.copy(alpha = 0.72f), modifier = Modifier.size(16.dp))
 
@@ -948,7 +960,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
         shape = heroShape,
 
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color(0xFFEDE9FE)),
+        colors = CardDefaults.cardColors(containerColor = BrandIndigoSoft),
 
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
 
@@ -970,7 +982,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                     .fillMaxHeight()
 
-                    .background(Purple)
+                    .background(BrandIndigo)
 
             )
 
@@ -998,13 +1010,13 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                         shape = RoundedCornerShape(50.dp),
 
-                        color = Purple
+                        color = BrandIndigo
 
                     ) {
 
                         Row(
 
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
 
                             verticalAlignment = Alignment.CenterVertically
 
@@ -1024,15 +1036,13 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                             Text(
 
-                                "MUTUAL TRANSFER",
+                                "Mutual Transfer",
 
                                 color = Color.White,
 
-                                fontSize = 8.sp,
+                                fontSize = 12.sp,
 
-                                fontWeight = FontWeight.Black,
-
-                                letterSpacing = 1.05.sp
+                                fontWeight = FontWeight.Bold
 
                             )
 
@@ -1052,7 +1062,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                         shape = CircleShape,
 
-                        color = Purple
+                        color = BrandIndigo
 
                     ) {
 
@@ -1084,15 +1094,13 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                 Text(
 
-                    "FIND YOUR MOVE",
+                    "Find your move",
 
-                    color = Purple,
+                    color = BrandIndigo,
 
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
 
-                    fontWeight = FontWeight.Black,
-
-                    letterSpacing = 1.8.sp
+                    fontWeight = FontWeight.Bold
 
                 )
 
@@ -1120,9 +1128,9 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                     color = TextSecondary,
 
-                    fontSize = 10.5.sp,
+                    fontSize = 12.sp,
 
-                    lineHeight = 15.sp,
+                    lineHeight = 18.sp,
 
                     fontWeight = FontWeight.Medium
 
@@ -1138,7 +1146,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                     modifier = Modifier.fillMaxWidth(),
 
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
 
                     verticalAlignment = Alignment.CenterVertically
 
@@ -1156,7 +1164,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                     Surface(
 
-                        modifier = Modifier.size(42.dp),
+                        modifier = Modifier.size(36.dp),
 
                         shape = CircleShape,
 
@@ -1174,7 +1182,7 @@ private fun MutualTransferHomeHero(onClick: () -> Unit) {
 
                                 tint = Color.White,
 
-                                modifier = Modifier.size(23.dp)
+                                modifier = Modifier.size(20.dp)
 
                             )
 
@@ -1264,7 +1272,7 @@ private fun TransferJourneyNode(
 
         Row(
 
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
 
             verticalAlignment = Alignment.CenterVertically
 
@@ -1272,9 +1280,9 @@ private fun TransferJourneyNode(
 
             Surface(
 
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(28.dp),
 
-                shape = RoundedCornerShape(11.dp),
+                shape = RoundedCornerShape(10.dp),
 
                 color = SurfaceMuted
 
@@ -1290,7 +1298,7 @@ private fun TransferJourneyNode(
 
                         tint = ClinicalPrimaryColor,
 
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(15.dp)
 
                     )
 
@@ -1298,7 +1306,7 @@ private fun TransferJourneyNode(
 
             }
 
-            Spacer(Modifier.width(7.dp))
+            Spacer(Modifier.width(6.dp))
 
             Text(
 
@@ -1306,11 +1314,11 @@ private fun TransferJourneyNode(
 
                 color = Slate,
 
-                fontSize = 7.5.sp,
+                fontSize = 11.sp,
 
-                fontWeight = FontWeight.Black,
+                lineHeight = 14.sp,
 
-                letterSpacing = 0.55.sp,
+                fontWeight = FontWeight.Bold,
 
                 maxLines = 2,
 
@@ -1344,11 +1352,11 @@ private fun TransferTrustChip(text: String, accent: Color) {
 
             color = Color.White,
 
-            fontSize = 7.5.sp,
+            fontSize = 12.sp,
 
-            fontWeight = FontWeight.Black,
+            fontWeight = FontWeight.Bold,
 
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
 
         )
 
@@ -1410,7 +1418,7 @@ private fun FocusCard(state: NurseCommandCenterState, onNavigate: (String) -> Un
 
                     color = TextSecondary,
 
-                    fontSize = 10.sp,
+                    fontSize = 12.5.sp,
 
                     maxLines = 1,
 
@@ -1426,7 +1434,7 @@ private fun FocusCard(state: NurseCommandCenterState, onNavigate: (String) -> Un
 
             }) {
 
-                Text(if (pending > 0) "Open" else "Learn", color = Purple, fontWeight = FontWeight.Bold)
+                Text(if (pending > 0) "Open" else "Learn", color = BrandIndigo, fontWeight = FontWeight.Bold)
 
             }
 
@@ -1444,7 +1452,7 @@ private fun SecondaryToolsGrid(onNavigate: (String) -> Unit) {
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 
-        CompactTool("Knowledge", "CPD", Icons.AutoMirrored.Filled.MenuBook, AiAccentColor, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
+        CompactTool("Knowledge", "CPD", Icons.AutoMirrored.Filled.MenuBook, BrandIndigo, HomePurpleSoft, Modifier.weight(1f)) { onNavigate("knowledge_hub") }
 
         CompactTool("Pay Sheets", "Saved", Icons.Default.Description, ClinicalPrimaryColor, HomeBlueSoft, Modifier.weight(1f)) { onNavigate("pay_sheet_bank") }
 
@@ -1470,9 +1478,9 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 
             }
 
-            Text(title, color = HomeInk, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = HomeInk, fontSize = 13.sp, fontWeight = FontWeight.Bold)
 
-            Text(subtitle, color = TextSecondary, fontSize = 8.sp)
+            Text(subtitle, color = TextSecondary, fontSize = 12.sp)
 
         }
 
@@ -1498,205 +1506,289 @@ private fun DashboardGuideDialog(
 
 
 
-    Dialog(
+    val netSalaryValue = state.estimatedNetSalary?.takeIf { it > 0.0 }?.let(::moneyShort) ?: "—"
 
-        onDismissRequest = onDismiss,
+    val pressureValue = "${state.wellnessScore.coerceIn(0, 100)}/100"
 
-        properties = DialogProperties(usePlatformDefaultWidth = false)
 
-    ) {
 
-        Surface(
+    val workspaceSection = NursingGuideSection(
 
-            modifier = Modifier
+        title = "Understanding the Home Dashboard",
 
-                .fillMaxWidth(0.95f)
+        stepLabel = "Overview",
 
-                .widthIn(max = 620.dp)
+        accent = ClinicalPrimaryColor,
 
-                .fillMaxHeight(0.88f),
+        body = "Home is your central operational starting point summarizing work, finance, and wellness signals from saved on-device records without a second calculation engine.\n\n" +
 
-            shape = RoundedCornerShape(22.dp),
+            "• Live Data Aggregation: Shift Snapshot aggregates duty logs, active claim periods, saved monthly paysheets, and pending clinical tasks.\n" +
 
-            color = Color.White,
+            "• Update Events: Values refresh immediately whenever a duty entry, claim period, compensation setting, or clinical task changes.\n" +
 
-            tonalElevation = 2.dp,
+            "• Underlying Modules: Work (Daily Entry & Claims), Clinical (Planning & Calculators), Finance (Vault & Compensation), and Command Center."
 
-            shadowElevation = 14.dp
+    )
 
-        ) {
+    val dutySection = NursingGuideSection(
 
-            Column(modifier = Modifier.fillMaxSize()) {
+        title = "Duty Hours",
 
-                // 1. Compact Professional Header
+        stepLabel = "Shift Snapshot",
 
-                Row(
+        badgeValue = formatHours(state.dutyHoursThisMonth),
 
-                    modifier = Modifier
+        accent = ClinicalPrimaryColor,
 
-                        .fillMaxWidth()
+        body = "Total recorded duty-shift hours accumulated within your active OT claim period (from the claim start date through today while in progress).\n\n" +
 
-                        .background(AppBackground)
+            "• Formula: Sum of all normal shift hours recorded in Daily Entry (excluding unpaid breaks).\n" +
 
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
+            "• Source: DailyEntryEntity in local Room DB • Updates in real time as duty entries are saved.\n" +
 
-                    verticalAlignment = Alignment.CenterVertically,
+            "• What to check: Verify all shifts in the active claim period have correct start and end times.",
 
-                    horizontalArrangement = Arrangement.SpaceBetween
+        actionLabel = "Inspect in Claims & Periods",
 
-                ) {
+        onAction = {
 
-                    Row(
+            onDismiss()
 
-                        modifier = Modifier.weight(1f),
+            onNavigate("claim_period")
 
-                        verticalAlignment = Alignment.CenterVertically,
+        }
 
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    )
 
-                    ) {
+    val otSection = NursingGuideSection(
 
-                        Surface(
+        title = "Overtime (OT)",
 
-                            modifier = Modifier.size(36.dp),
+        stepLabel = "Shift Snapshot",
 
-                            shape = CircleShape,
+        badgeValue = formatHours(state.otHoursThisMonth),
 
-                            color = ClinicalPrimaryColor.copy(alpha = 0.12f)
+        accent = Amber,
 
-                        ) {
+        body = "Total payable overtime hours calculated across all weekly cycles represented in your active OT claim period.\n\n" +
 
-                            Box(contentAlignment = Alignment.Center) {
+            "• Formula: Sunday–Saturday weekly calculation with a 36.0-hour weekly normal duty threshold (WeeklyOtCalculator). Duty above 36h becomes OT; if under 36h, logged OT offsets the deficit first.\n" +
 
-                                Icon(
+            "• Source: Deterministic weekly engine (WeeklyOtCalculator) evaluated across daily entries.\n" +
 
-                                    Icons.Default.Info,
+            "• What to check: Inspect the weekly breakdown in Claims & Periods if totals differ from a simple daily sum.",
 
-                                    contentDescription = null,
+        actionLabel = "View OT Claims Breakdown",
 
-                                    tint = ClinicalPrimaryColor,
+        onAction = {
 
-                                    modifier = Modifier.size(20.dp)
+            onDismiss()
 
-                                )
+            onNavigate("claim_period")
 
-                            }
+        }
 
-                        }
+    )
 
-                        Column(modifier = Modifier.weight(1f, fill = false)) {
+    val netSection = NursingGuideSection(
 
-                            Text(
+        title = "Estimated Net Salary",
 
-                                "Dashboard & Metric Guide",
+        stepLabel = "Shift Snapshot",
 
-                                color = Slate,
+        badgeValue = netSalaryValue,
 
-                                fontSize = 16.sp,
+        accent = Emerald,
 
-                                fontWeight = FontWeight.Bold
+        body = "Estimated take-home pay for the active month after accounting for statutory deductions, distress loans, union dues, and allowances.\n\n" +
 
-                            )
+            "• Formula: Gross Earnings (Basic Salary + Risk + CLA + Uniform + OT/PH/DO) − Recorded Paysheet Deductions.\n" +
 
-                            Text(
+            "• Source: Current month's saved financial record from ProfileDeductionDao (displays '—' when unsaved).\n" +
 
-                                "Formulas, data sources & workspace navigation",
+            "• What to check: Check Advanced Finance Hub to keep deductions and pay rates up to date.",
 
-                                color = TextSecondary,
+        actionLabel = "Open Finance Hub",
 
-                                fontSize = 11.sp
+        onAction = {
 
-                            )
+            onDismiss()
 
-                        }
+            onNavigate("advanced_finance_hub")
 
-                    }
+        }
 
+    )
 
+    val pressureSection = NursingGuideSection(
 
-                    Spacer(Modifier.width(8.dp))
+        title = "Workload Pressure Indicator",
 
+        stepLabel = "Shift Snapshot",
 
+        badgeValue = pressureValue,
 
-                    IconButton(
+        accent = BrandIndigo,
 
-                        onClick = onDismiss,
+        body = "A transparent operational workload and fatigue awareness signal. Higher scores (80–100) represent lower pressure; lower scores reflect accumulated duty hours, OT, and pending tasks.\n\n" +
 
-                        modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+            "• Formula: 100 − Duty Penalty (max 25 pts: dutyHours / 220.0 × 25) − OT Penalty (max 35 pts: otHours / 50.0 × 35) − Task Penalty (max 20 pts: pendingTasks × 4).\n" +
 
-                    ) {
+            "• Source: NurseCommandCenterViewModel operational algorithm (not a medical diagnosis).\n" +
 
-                        Icon(
+            "• What to check: Prioritize recovery or clinical task delegation during heavy shift streaks.",
 
-                            Icons.Default.Close,
+        actionLabel = "Review in Command Center",
 
-                            contentDescription = "Close guide",
+        onAction = {
 
-                            tint = TextSecondary,
+            onDismiss()
 
-                            modifier = Modifier.size(20.dp)
+            onNavigate("nurse_command_center")
+
+        }
+
+    )
+
+    val navigationSection = NursingGuideSection(
+
+        title = "Using Workspaces & Navigation",
+
+        stepLabel = "Workspaces",
+
+        accent = BrandIndigo,
+
+        body = "Navigate across the Nursing Super App via the bottom navigation bar and Quick Access cards:\n\n" +
+
+            "• Work: Log daily shifts, manage OT claim periods, and inspect Smart Insights.\n" +
+
+            "• Clinical: Deterministic clinical calculators, ICU/emergency tools, and ISBAR handover notes.\n" +
+
+            "• Finance: Gross-to-net projections, deductions, and Pay Sheet Bank PDFs.\n" +
+
+            "• Command Center: Operational workload alerts, clinical tasks, CPD points, and recovery guidance."
+
+    )
+
+    val accuracySection = NursingGuideSection(
+
+        title = "Data Accuracy & Operational Rules",
+
+        stepLabel = "Accuracy & Rules",
+
+        accent = Amber,
+
+        body = "All calculations follow Sri Lankan healthcare service regulations and deterministic offline-first rules:\n\n" +
+
+            "• Accurate Shift Logging: Duty and OT totals rely on accurate shift times and duty codes in Daily Entry.\n" +
+
+            "• Claim Period Boundaries: Changing start/end dates immediately re-scopes which entries count.\n" +
+
+            "• Missing Records: Unsaved finance records display '—' rather than fabricating estimates.\n" +
+
+            "• Local Privacy: Clinical notes, salary records, and duty data stay stored locally on your device."
+
+    )
+
+
+
+    val filteredSections = buildList {
+
+        if (selectedFilter == "ALL" || selectedFilter == "WORKSPACES") add(workspaceSection)
+
+        if (selectedFilter == "ALL" || selectedFilter == "SNAPSHOT") {
+
+            add(dutySection)
+
+            add(otSection)
+
+            add(netSection)
+
+            add(pressureSection)
+
+        }
+
+        if (selectedFilter == "ALL" || selectedFilter == "WORKSPACES") add(navigationSection)
+
+        if (selectedFilter == "ALL" || selectedFilter == "RULES") add(accuracySection)
+
+    }
+
+
+
+    NursingGuideDialog(
+
+        spec = NursingGuideSpec(
+
+            title = "Dashboard & Metric Guide",
+
+            subtitle = "Formulas, data sources & workspace navigation",
+
+            badge = "NursingOS Guide • Home Dashboard",
+
+            sections = filteredSections,
+
+            safetyBody = "Offline-first • Summary cards read directly from your saved local records. Edit source entries to update calculations."
+
+        ),
+
+        onDismiss = onDismiss,
+
+        filterBar = {
+
+            Row(
+
+                modifier = Modifier
+
+                    .fillMaxWidth()
+
+                    .background(SurfaceWhite)
+
+                    .horizontalScroll(rememberScrollState())
+
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+
+            ) {
+
+                val filters = listOf(
+
+                    "ALL" to "All",
+
+                    "SNAPSHOT" to "Shift Snapshot",
+
+                    "WORKSPACES" to "Workspaces",
+
+                    "RULES" to "Accuracy & Rules"
+
+                )
+
+                filters.forEach { (key, label) ->
+
+                    val isSelected = selectedFilter == key
+
+                    Surface(
+
+                        onClick = { selectedFilter = key },
+
+                        modifier = Modifier.heightIn(min = 40.dp),
+
+                        shape = RoundedCornerShape(NursingDimensions.Radius.pill),
+
+                        color = if (isSelected) BrandIndigo else AppBackground,
+
+                        border = BorderStroke(
+
+                            1.dp,
+
+                            if (isSelected) BrandIndigo else Color(0xFFCBD5E1)
 
                         )
 
-                    }
+                    ) {
 
-                }
-
-
-
-                androidx.compose.material3.HorizontalDivider(color = Color(0xFFE2E8F0))
-
-
-
-                // 2. Filter Category Pills
-
-                Row(
-
-                    modifier = Modifier
-
-                        .fillMaxWidth()
-
-                        .background(Color(0xFFFAFAFA))
-
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-
-                ) {
-
-                    val filters = listOf(
-
-                        "ALL" to "All",
-
-                        "SNAPSHOT" to "Shift Snapshot",
-
-                        "WORKSPACES" to "Workspaces",
-
-                        "RULES" to "Accuracy & Rules"
-
-                    )
-
-                    filters.forEach { (key, label) ->
-
-                        val isSelected = selectedFilter == key
-
-                        Surface(
-
-                            modifier = Modifier.clickable { selectedFilter = key },
-
-                            shape = RoundedCornerShape(NursingDimensions.Radius.pill),
-
-                            color = if (isSelected) ClinicalPrimaryColor else SurfaceWhite,
-
-                            border = BorderStroke(
-
-                                1.dp,
-
-                                if (isSelected) ClinicalPrimaryColor else Color(0xFFCBD5E1)
-
-                            )
-
-                        ) {
+                        Box(contentAlignment = Alignment.Center) {
 
                             Text(
 
@@ -1704,11 +1796,11 @@ private fun DashboardGuideDialog(
 
                                 color = if (isSelected) Color.White else TextPrimary,
 
-                                fontSize = 11.5.sp,
+                                fontSize = 12.5.sp,
 
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
 
-                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp)
 
                             )
 
@@ -1718,761 +1810,11 @@ private fun DashboardGuideDialog(
 
                 }
 
-
-
-                androidx.compose.material3.HorizontalDivider(color = Color(0xFFE2E8F0))
-
-
-
-                // 3. Scrollable Content Body
-
-                Column(
-
-                    modifier = Modifier
-
-                        .weight(1f)
-
-                        .verticalScroll(rememberScrollState())
-
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-
-                ) {
-
-                    // Section A: Understanding Home Dashboard
-
-                    if (selectedFilter == "ALL" || selectedFilter == "WORKSPACES") {
-
-                        HelpContentCard(
-
-                            tag = "OVERVIEW",
-
-                            tagBg = ClinicalPrimaryColor.copy(alpha = 0.10f),
-
-                            tagColor = ClinicalPrimaryColor,
-
-                            title = "Understanding the Home Dashboard",
-
-                            summary = "Home is your central operational starting point. It summarizes work, finance, and wellness signals directly from your saved on-device records without creating a second calculation engine.",
-
-                            details = listOf(
-
-                                "Live Data Aggregation" to "The Shift Snapshot aggregates duty logs, active claim periods, saved monthly paysheets, and pending clinical tasks.",
-
-                                "Update Events" to "Values refresh immediately whenever a duty entry is logged, a claim period is modified, compensation settings are updated, or clinical tasks are marked complete.",
-
-                                "Underlying Modules" to "Work (Daily Entry & Claims), Clinical (Planning & Calculators), Finance (Vault & Compensation), and Command Center."
-
-                            )
-
-                        )
-
-                    }
-
-
-
-                    // Section B: Duty Hours
-
-                    if (selectedFilter == "ALL" || selectedFilter == "SNAPSHOT") {
-
-                        HelpMetricCard(
-
-                            badge = "DUTY",
-
-                            badgeColor = ClinicalPrimaryColor,
-
-                            title = "Duty Hours",
-
-                            liveValue = formatHours(state.dutyHoursThisMonth),
-
-                            whatItMeans = "Total recorded duty-shift hours accumulated within your active OT claim period (from the claim start date through today while in progress).",
-
-                            formula = "Sum of all normal shift hours recorded in Daily Entry (excluding unpaid breaks).",
-
-                            sourceAndTiming = "Sourced from DailyEntryEntity in local Room DB \u2022 Updates in real time as duty entries are saved.",
-
-                            whatToCheck = "Verify that all shifts within the active claim period are recorded in Daily Entry with correct start and end times.",
-
-                            actionLabel = "Inspect in Claims & Periods",
-
-                            onAction = {
-
-                                onDismiss()
-
-                                onNavigate("claim_period")
-
-                            }
-
-                        )
-
-                    }
-
-
-
-                    // Section C: Overtime (OT)
-
-                    if (selectedFilter == "ALL" || selectedFilter == "SNAPSHOT") {
-
-                        HelpMetricCard(
-
-                            badge = "OT",
-
-                            badgeColor = Amber,
-
-                            title = "Overtime (OT)",
-
-                            liveValue = formatHours(state.otHoursThisMonth),
-
-                            whatItMeans = "Total payable overtime hours calculated across all weekly cycles represented in your active OT claim period.",
-
-                            formula = "Sunday–Saturday weekly calculation: Overtime is calculated per calendar week (Sunday through Saturday). Standard normal duty threshold is 36.0 hours per week (WeeklyOtCalculator.WEEKLY_NORMAL_LIMIT_HOURS). Normal duty above 36h becomes OT. If normal duty is under 36h, logged OT hours first offset the deficit, and the remaining OT is credited as payable OT.",
-
-                            sourceAndTiming = "Deterministic weekly engine (WeeklyOtCalculator) \u2022 Evaluated across daily duty entries.",
-
-                            whatToCheck = "Inspect the weekly breakdown in Claims & Periods if your total OT differs from a simple daily sum.",
-
-                            actionLabel = "View OT Claims Breakdown",
-
-                            onAction = {
-
-                                onDismiss()
-
-                                onNavigate("claim_period")
-
-                            }
-
-                        )
-
-                    }
-
-
-
-                    // Section D: Net Salary
-
-                    if (selectedFilter == "ALL" || selectedFilter == "SNAPSHOT") {
-
-                        HelpMetricCard(
-
-                            badge = "NET PAY",
-
-                            badgeColor = Emerald,
-
-                            title = "Estimated Net Salary",
-
-                            liveValue = state.estimatedNetSalary?.takeIf { it > 0.0 }?.let(::moneyShort) ?: "—",
-
-                            whatItMeans = "Estimated take-home pay for the active month after accounting for statutory deductions, distress loans, union dues, and allowances.",
-
-                            formula = "Gross Earnings (Basic Salary + Risk + CLA + Uniform + OT/PH/DO) − Recorded Paysheet Deductions.",
-
-                            sourceAndTiming = "Current month's saved financial record from ProfileDeductionDao \u2022 If no net record has been saved, Home displays '—' instead of misrepresenting basic salary as net pay.",
-
-                            whatToCheck = "Check the Advanced Finance Hub to ensure your paysheet deductions and pay rates are up to date.",
-
-                            actionLabel = "Open Finance Hub",
-
-                            onAction = {
-
-                                onDismiss()
-
-                                onNavigate("advanced_finance_hub")
-
-                            }
-
-                        )
-
-                    }
-
-
-
-                    // Section E: Workload Pressure
-
-                    if (selectedFilter == "ALL" || selectedFilter == "SNAPSHOT") {
-
-                        HelpMetricCard(
-
-                            badge = "PRESSURE",
-
-                            badgeColor = Purple,
-
-                            title = "Workload Pressure Indicator",
-
-                            liveValue = "${state.wellnessScore.coerceIn(0, 100)}/100",
-
-                            whatItMeans = "A transparent operational workload and fatigue awareness signal. Higher scores (80–100) represent low workload pressure; lower scores indicate accumulated fatigue from heavy duty hours, excessive OT, and pending clinical tasks.",
-
-                            formula = "Score = 100 − Duty Penalty (max 25 pts: dutyHours / 220.0 × 25) − OT Penalty (max 35 pts: otHours / 50.0 × 35) − Task Penalty (max 20 pts: pendingTasks × 4).",
-
-                            sourceAndTiming = "NurseCommandCenterViewModel operational algorithm \u2022 Not a medical diagnosis or psychiatric burnout tool.",
-
-                            whatToCheck = "Use this score to recognize intense shift streaks and prioritize recovery or clinical task delegation.",
-
-                            actionLabel = "Review in Command Center",
-
-                            onAction = {
-
-                                onDismiss()
-
-                                onNavigate("nurse_command_center")
-
-                            }
-
-                        )
-
-                    }
-
-
-
-                    // Section F: Using the Dashboard & Workspaces
-
-                    if (selectedFilter == "ALL" || selectedFilter == "WORKSPACES") {
-
-                        HelpContentCard(
-
-                            tag = "NAVIGATION",
-
-                            tagBg = Purple.copy(alpha = 0.10f),
-
-                            tagColor = Purple,
-
-                            title = "Using Workspaces & Navigation",
-
-                            summary = "Navigate seamlessly across the Nursing Super App using the bottom navigation bar and Quick Access cards.",
-
-                            details = listOf(
-
-                                "Work Workspace" to "Log daily duty shifts, manage OT claim periods, and view smart claim analytics.",
-
-                                "Clinical Workspace" to "Access deterministic clinical calculators, ICU/emergency tools, and ISBAR bedside clinical handover notes.",
-
-                                "Finance Workspace" to "View gross-to-net salary projections, manage paysheet deductions, and store PDF records in Pay Sheet Bank.",
-
-                                "Command Center" to "Review operational workload alerts, priority clinical tasks, CPD points, and recovery guidance.",
-
-                                "Authoritative Records" to "Summary cards are read-only aggregations. To correct any figure, always edit the original source entry."
-
-                            )
-
-                        )
-
-                    }
-
-
-
-                    // Section G: Data Accuracy and Limitations
-
-                    if (selectedFilter == "ALL" || selectedFilter == "RULES") {
-
-                        HelpContentCard(
-
-                            tag = "ACCURACY",
-
-                            tagBg = Amber.copy(alpha = 0.12f),
-
-                            tagColor = Amber,
-
-                            title = "Data Accuracy & Operational Rules",
-
-                            summary = "All calculations adhere strictly to Sri Lankan healthcare service regulations and deterministic offline-first rules.",
-
-                            details = listOf(
-
-                                "Accurate Shift Logging" to "Calculated OT and duty summaries depend on accurate shift times and correct duty type codes in Daily Entry.",
-
-                                "Claim Period Boundaries" to "Changing your claim period's start and end dates immediately re-scopes which duty entries are included in the monthly totals.",
-
-                                "Missing Records" to "When paysheet or financial data has not yet been recorded, the app shows '—' rather than fabricating estimates.",
-
-                                "Local Privacy" to "All clinical notes, salary records, and duty data remain encrypted on your device. The app operates fully offline."
-
-                            )
-
-                        )
-
-                    }
-
-                }
-
-
-
-                // 4. Sticky Bottom Action Bar
-
-                androidx.compose.material3.HorizontalDivider(color = Color(0xFFE2E8F0))
-
-                Row(
-
-                    modifier = Modifier
-
-                        .fillMaxWidth()
-
-                        .background(AppBackground)
-
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-
-                    verticalAlignment = Alignment.CenterVertically,
-
-                    horizontalArrangement = Arrangement.SpaceBetween
-
-                ) {
-
-                    Text(
-
-                        "Offline-first \u2022 Source records are authoritative",
-
-                        color = TextSecondary,
-
-                        fontSize = 11.sp
-
-                    )
-
-                    androidx.compose.material3.Button(
-
-                        onClick = onDismiss,
-
-                        shape = RoundedCornerShape(NursingDimensions.Radius.pill),
-
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = ClinicalPrimaryColor),
-
-                        modifier = Modifier.heightIn(min = 48.dp)
-
-                    ) {
-
-                        Text("Got it", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-
-                    }
-
-                }
-
             }
 
         }
 
-    }
-
-}
-
-
-
-@Composable
-
-private fun HelpMetricCard(
-
-    badge: String,
-
-    badgeColor: Color,
-
-    title: String,
-
-    liveValue: String,
-
-    whatItMeans: String,
-
-    formula: String,
-
-    sourceAndTiming: String,
-
-    whatToCheck: String,
-
-    actionLabel: String,
-
-    onAction: () -> Unit
-
-) {
-
-    Card(
-
-        modifier = Modifier.fillMaxWidth(),
-
-        shape = RoundedCornerShape(16.dp),
-
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-
-    ) {
-
-        Column(
-
-            modifier = Modifier.padding(14.dp),
-
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-
-        ) {
-
-            // Header with badge, title and live value
-
-            Row(
-
-                modifier = Modifier.fillMaxWidth(),
-
-                verticalAlignment = Alignment.CenterVertically,
-
-                horizontalArrangement = Arrangement.SpaceBetween
-
-            ) {
-
-                Row(
-
-                    verticalAlignment = Alignment.CenterVertically,
-
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-
-                ) {
-
-                    Surface(
-
-                        shape = RoundedCornerShape(6.dp),
-
-                        color = badgeColor.copy(alpha = 0.12f)
-
-                    ) {
-
-                        Text(
-
-                            text = badge,
-
-                            color = badgeColor,
-
-                            fontSize = 9.sp,
-
-                            fontWeight = FontWeight.Black,
-
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-
-                        )
-
-                    }
-
-                    Text(
-
-                        text = title,
-
-                        color = TextPrimary,
-
-                        fontSize = 14.sp,
-
-                        fontWeight = FontWeight.Bold
-
-                    )
-
-                }
-
-
-
-                Surface(
-
-                    shape = RoundedCornerShape(50.dp),
-
-                    color = badgeColor.copy(alpha = 0.10f)
-
-                ) {
-
-                    Text(
-
-                        text = liveValue,
-
-                        color = badgeColor,
-
-                        fontSize = 11.sp,
-
-                        fontWeight = FontWeight.Black,
-
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
-
-                    )
-
-                }
-
-            }
-
-
-
-            Text(
-
-                text = whatItMeans,
-
-                color = TextSecondary,
-
-                fontSize = 11.5.sp,
-
-                lineHeight = 16.sp
-
-            )
-
-
-
-            // Formula box
-
-            Surface(
-
-                modifier = Modifier.fillMaxWidth(),
-
-                shape = RoundedCornerShape(10.dp),
-
-                color = Color(0xFFF8FAFC),
-
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-
-            ) {
-
-                Column(Modifier.padding(horizontal = 11.dp, vertical = 8.dp)) {
-
-                    Text(
-
-                        text = "HOW IT IS CALCULATED",
-
-                        color = TextSecondary,
-
-                        fontSize = 8.5.sp,
-
-                        fontWeight = FontWeight.Black,
-
-                        letterSpacing = 0.8.sp
-
-                    )
-
-                    Spacer(Modifier.height(2.dp))
-
-                    Text(
-
-                        text = formula,
-
-                        color = TextPrimary,
-
-                        fontSize = 10.5.sp,
-
-                        lineHeight = 15.sp
-
-                    )
-
-                }
-
-            }
-
-
-
-            // Source & Verification details
-
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-
-                Text(
-
-                    text = "\u2022 Source: $sourceAndTiming",
-
-                    color = TextSecondary,
-
-                    fontSize = 10.sp,
-
-                    lineHeight = 14.sp
-
-                )
-
-                Text(
-
-                    text = "\u2022 Verification: $whatToCheck",
-
-                    color = TextSecondary,
-
-                    fontSize = 10.sp,
-
-                    lineHeight = 14.sp
-
-                )
-
-            }
-
-
-
-            // Action link
-
-            TextButton(
-
-                onClick = onAction,
-
-                contentPadding = PaddingValues(0.dp),
-
-                modifier = Modifier.align(Alignment.End)
-
-            ) {
-
-                Text(
-
-                    text = "$actionLabel →",
-
-                    color = badgeColor,
-
-                    fontSize = 11.5.sp,
-
-                    fontWeight = FontWeight.Bold
-
-                )
-
-            }
-
-        }
-
-    }
-
-}
-
-
-
-@Composable
-
-private fun HelpContentCard(
-
-    tag: String,
-
-    tagBg: Color,
-
-    tagColor: Color,
-
-    title: String,
-
-    summary: String,
-
-    details: List<Pair<String, String>>
-
-) {
-
-    Card(
-
-        modifier = Modifier.fillMaxWidth(),
-
-        shape = RoundedCornerShape(16.dp),
-
-        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
-
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-
-    ) {
-
-        Column(
-
-            modifier = Modifier.padding(14.dp),
-
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-
-        ) {
-
-            Row(
-
-                verticalAlignment = Alignment.CenterVertically,
-
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-
-            ) {
-
-                Surface(
-
-                    shape = RoundedCornerShape(6.dp),
-
-                    color = tagBg
-
-                ) {
-
-                    Text(
-
-                        text = tag,
-
-                        color = tagColor,
-
-                        fontSize = 9.sp,
-
-                        fontWeight = FontWeight.Black,
-
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-
-                    )
-
-                }
-
-                Text(
-
-                    text = title,
-
-                    color = TextPrimary,
-
-                    fontSize = 14.sp,
-
-                    fontWeight = FontWeight.Bold
-
-                )
-
-            }
-
-
-
-            Text(
-
-                text = summary,
-
-                color = TextSecondary,
-
-                fontSize = 11.5.sp,
-
-                lineHeight = 16.sp
-
-            )
-
-
-
-            Column(
-
-                modifier = Modifier
-
-                    .fillMaxWidth()
-
-                    .background(Color(0xFFF8FAFC), RoundedCornerShape(10.dp))
-
-                    .padding(horizontal = 11.dp, vertical = 9.dp),
-
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-
-            ) {
-
-                details.forEach { (heading, explanation) ->
-
-                    Column {
-
-                        Text(
-
-                            text = heading,
-
-                            color = Slate,
-
-                            fontSize = 10.5.sp,
-
-                            fontWeight = FontWeight.Bold
-
-                        )
-
-                        Text(
-
-                            text = explanation,
-
-                            color = TextSecondary,
-
-                            fontSize = 10.sp,
-
-                            lineHeight = 14.sp
-
-                        )
-
-                    }
-
-                }
-
-            }
-
-        }
-
-    }
+    )
 
 }
 

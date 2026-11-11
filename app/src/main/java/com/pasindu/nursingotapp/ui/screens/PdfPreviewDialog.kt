@@ -5,26 +5,32 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,10 +47,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -150,20 +161,21 @@ fun PdfPreviewDialog(
                 .safeDrawingPadding()
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             shape = RoundedCornerShape(28.dp),
-            color = Color(0xFFF6F8FC),
+            color = MaterialTheme.colorScheme.background,
             tonalElevation = 4.dp,
             shadowElevation = 12.dp
         ) {
             Column(Modifier.fillMaxSize()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 3.dp
                 ) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
@@ -176,18 +188,21 @@ fun PdfPreviewDialog(
                                     modifier = Modifier.padding(9.dp)
                                 )
                             }
-                            Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     "PDF Review",
-                                    color = Color(0xFF12204A),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 20.sp,
-                                    fontWeight = FontWeight.ExtraBold
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     "Review your OT claim before saving",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 11.sp
+                                    fontSize = 12.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Surface(
@@ -195,34 +210,48 @@ fun PdfPreviewDialog(
                                 color = Color(0xFFEAFBF5)
                             ) {
                                 Text(
-                                    if (errorMessage == null) "READY" else "SAVE READY",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    if (errorMessage == null) "Ready" else "Save ready",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     color = Color(0xFF0E9F73),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
-                            IconButton(onClick = onDismiss) {
-                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            IconButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Close PDF preview",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
 
                         Spacer(Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 "OT Claim document",
-                                color = Color(0xFF12204A),
-                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 if (pages.isEmpty()) "Preparing preview…" else "${pages.size} page${if (pages.size == 1) "" else "s"}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -243,14 +272,14 @@ fun PdfPreviewDialog(
                                 CircularProgressIndicator(color = Color(0xFF14A6E0))
                                 Text(
                                     "Preparing document preview…",
-                                    color = Color(0xFF12204A),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
+                                    fontSize = 14.sp
                                 )
                                 Text(
                                     "This does not change the generated PDF.",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp
+                                    fontSize = 12.sp
                                 )
                             }
                         }
@@ -276,7 +305,7 @@ fun PdfPreviewDialog(
                                 }
                                 Text(
                                     "Preview unavailable",
-                                    color = Color(0xFF12204A),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
@@ -294,45 +323,59 @@ fun PdfPreviewDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
                                         .padding(horizontal = 14.dp, vertical = 9.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Surface(
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.surface,
                                         shape = RoundedCornerShape(50.dp),
                                         tonalElevation = 2.dp
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            IconButton(onClick = { zoom = (zoom - 0.25f).coerceAtLeast(1f) }) {
+                                            IconButton(
+                                                onClick = { zoom = (zoom - 0.25f).coerceAtLeast(1f) },
+                                                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                                            ) {
                                                 Icon(Icons.Default.Remove, contentDescription = "Zoom out")
                                             }
                                             Text(
                                                 "${(zoom * 100).toInt()}%",
-                                                modifier = Modifier.width(52.dp),
+                                                modifier = Modifier.widthIn(min = 48.dp),
                                                 textAlign = TextAlign.Center,
-                                                color = Color(0xFF12204A),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 11.sp
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                softWrap = false
                                             )
-                                            IconButton(onClick = { zoom = (zoom + 0.25f).coerceAtMost(4f) }) {
+                                            IconButton(
+                                                onClick = { zoom = (zoom + 0.25f).coerceAtMost(4f) },
+                                                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                                            ) {
                                                 Icon(Icons.Default.Add, contentDescription = "Zoom in")
                                             }
-                                            IconButton(onClick = { resetZoom() }) {
+                                            IconButton(
+                                                onClick = { resetZoom() },
+                                                modifier = Modifier.size(NursingDimensions.TouchTarget.minimum)
+                                            ) {
                                                 Icon(Icons.Default.Refresh, contentDescription = "Reset zoom")
                                             }
                                         }
                                     }
-                                    Spacer(Modifier.weight(1f))
                                     Surface(
                                         color = Color(0xFFEAF6FF),
                                         shape = RoundedCornerShape(50.dp)
                                     ) {
                                         Text(
-                                            "Pinch / drag to inspect",
+                                            "Pinch or drag to inspect",
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                             color = Color(0xFF1769E8),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            softWrap = false
                                         )
                                     }
                                 }
@@ -369,10 +412,13 @@ fun PdfPreviewDialog(
                                     ) {
                                         itemsIndexed(pages) { index, bitmap ->
                                             Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                modifier = Modifier.semantics {
+                                                    contentDescription = "PDF Preview, page ${index + 1} of ${pages.size}"
+                                                }
                                             ) {
                                                 Surface(
-                                                    shape = RoundedCornerShape(6.dp),
+                                                    shape = RoundedCornerShape(8.dp),
                                                     color = Color.White,
                                                     tonalElevation = 2.dp,
                                                     shadowElevation = 4.dp
@@ -382,14 +428,14 @@ fun PdfPreviewDialog(
                                                         contentDescription = "PDF page ${index + 1}",
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .border(1.dp, Color(0xFFD9DEE8), RoundedCornerShape(6.dp))
+                                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                                     )
                                                 }
-                                                Spacer(Modifier.height(5.dp))
+                                                Spacer(Modifier.height(6.dp))
                                                 Text(
                                                     "Page ${index + 1} of ${pages.size}",
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    fontSize = 9.sp,
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -401,14 +447,15 @@ fun PdfPreviewDialog(
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding(),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 10.dp
                 ) {
-                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                         if (errorMessage == null && !isLoading) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -429,83 +476,77 @@ fun PdfPreviewDialog(
                                 Column(Modifier.weight(1f)) {
                                     Text(
                                         "Ready to save",
-                                        color = Color(0xFF12204A),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.ExtraBold
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         "Your original PDF remains unchanged",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 9.sp
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(9.dp))
+                            Spacer(Modifier.height(10.dp))
                         }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            OutlinedActionButton(
-                                text = "Edit Data",
-                                icon = Icons.Default.Edit,
+                            OutlinedButton(
                                 onClick = onDismiss,
-                                modifier = Modifier.weight(0.85f)
-                            )
+                                modifier = Modifier
+                                    .weight(0.9f)
+                                    .heightIn(min = 52.dp),
+                                shape = RoundedCornerShape(17.dp),
+                                border = BorderStroke(1.2.dp, Color(0xFF1769E8).copy(alpha = 0.45f)),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFF1769E8)
+                                )
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Edit Data",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Button(
                                 onClick = onConfirm,
                                 enabled = !isLoading,
                                 modifier = Modifier
-                                    .weight(1.4f)
-                                    .height(54.dp),
+                                    .weight(1.3f)
+                                    .heightIn(min = 52.dp),
                                 shape = RoundedCornerShape(17.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF14A6E0)
+                                    containerColor = Color(0xFF14A6E0),
+                                    contentColor = Color.White
                                 )
                             ) {
-                                Icon(Icons.Default.Download, contentDescription = null)
+                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(7.dp))
                                 Text(
                                     "Save PDF",
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun OutlinedActionButton(
-    text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(17.dp),
-        color = Color(0xFFEAF6FF)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = Color(0xFF1769E8))
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text,
-                color = Color(0xFF1769E8),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
         }
     }
 }
