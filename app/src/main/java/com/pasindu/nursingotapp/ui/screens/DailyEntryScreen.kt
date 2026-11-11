@@ -203,6 +203,7 @@ fun DailyEntryScreen(
     var showUnsavedEditsExportWarning by remember { mutableStateOf(false) }
     var showIncompleteExportConfirmation by remember { mutableStateOf(false) }
     var showExportBlockerDialog by remember { mutableStateOf<String?>(null) }
+    var showClearSelectionsConfirmDialog by remember { mutableStateOf(false) }
 
     var isSavingBulk by remember { mutableStateOf(false) }
     var isAutoFillMode by remember { mutableStateOf(false) }
@@ -551,8 +552,8 @@ fun DailyEntryScreen(
                                 Toast.makeText(context, "Saved Successfully!", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape = RoundedCornerShape(17.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = RoundedCornerShape(NursingDimensions.Radius.large),
                         colors = ButtonDefaults.buttonColors(containerColor = DailyCyan)
                     ) {
                         Icon(if (isSavingBulk) Icons.Default.MoreHoriz else Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -572,8 +573,8 @@ fun DailyEntryScreen(
     ) { paddingValues ->
         Column(Modifier.fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Spacer(Modifier.height(4.dp))
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(27.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
-                Box(Modifier.fillMaxWidth().background(DailyHeroGradient, RoundedCornerShape(27.dp)).padding(20.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(NursingDimensions.Radius.hero), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
+                Box(Modifier.fillMaxWidth().background(DailyHeroGradient, RoundedCornerShape(NursingDimensions.Radius.hero)).padding(20.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                             Column(Modifier.weight(1f)) {
@@ -675,7 +676,7 @@ fun DailyEntryScreen(
                                 CATEGORY_SERVICE_DAYS -> DailyPurpleSoft2
                                 else -> Color(0xFFFFF3CD)
                             }
-                            Surface(Modifier.weight(1f).clickable { setCategory(category) }, shape = RoundedCornerShape(13.dp), color = if (selected) accent else surface) {
+                            Surface(onClick = { setCategory(category) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(NursingDimensions.Radius.medium), color = if (selected) accent else surface) {
                                 Text(category, Modifier.padding(vertical = 10.dp, horizontal = 2.dp), textAlign = TextAlign.Center, color = if (selected) Color.White else accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
@@ -972,7 +973,18 @@ fun DailyEntryScreen(
                 }
             }
 
-            OutlinedButton(onClick = { stagedEdits.clear(); isAutoFillMode = false; setCategory(CATEGORY_SHIFT_DUTY) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp)) {
+            OutlinedButton(
+                onClick = {
+                    if (stagedEdits.isNotEmpty()) {
+                        showClearSelectionsConfirmDialog = true
+                    } else {
+                        isAutoFillMode = false
+                        setCategory(CATEGORY_SHIFT_DUTY)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(NursingDimensions.Radius.large)
+            ) {
                 Text("Clear current selections", color = DailyCyan, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(16.dp))
@@ -993,6 +1005,32 @@ fun DailyEntryScreen(
                     }
                 }
             }
+        }
+
+        if (showClearSelectionsConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearSelectionsConfirmDialog = false },
+                title = { Text("Clear staged selections?", fontWeight = FontWeight.ExtraBold) },
+                text = { Text("Discard all unsaved shift selections for this month?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showClearSelectionsConfirmDialog = false
+                            stagedEdits.clear()
+                            isAutoFillMode = false
+                            setCategory(CATEGORY_SHIFT_DUTY)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Clear", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearSelectionsConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         if (showAutoFillDialog) {

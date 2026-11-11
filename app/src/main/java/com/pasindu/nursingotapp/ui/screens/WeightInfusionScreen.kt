@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -117,12 +118,13 @@ fun WeightInfusionScreen(onNavigateBack: () -> Unit) {
             }
         }
 
-        Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(22.dp)).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(NursingDimensions.Radius.extraLarge)).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             WeightMode.values().forEach { item ->
                 val selected = mode == item
                 Surface(
-                    Modifier.weight(1f).height(48.dp).clickable { mode = item; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
-                    shape = RoundedCornerShape(16.dp),
+                    onClick = { mode = item; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.large),
                     color = if (selected) WeightBlue else WeightBg
                 ) {
                     Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +136,7 @@ fun WeightInfusionScreen(onNavigateBack: () -> Unit) {
             }
         }
 
-        Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+        Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -149,7 +151,7 @@ fun WeightInfusionScreen(onNavigateBack: () -> Unit) {
 
         when (mode) {
             WeightMode.SIMPLE -> {
-                Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+                Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Simple weight-based dose", color = WeightInk, fontSize = 17.sp, fontWeight = FontWeight.Black)
                         Text("Calculate the target dose, then optionally convert it to a draw volume.", color = WeightSlate, fontSize = 11.sp, lineHeight = 16.sp)
@@ -157,7 +159,7 @@ fun WeightInfusionScreen(onNavigateBack: () -> Unit) {
                     }
                 }
                 WeightResultCard("TARGET DOSE", formatWeight(simpleTargetMg), "mg", WeightMintSoft, Color(0xFF087F5B))
-                Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+                Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Optional draw-volume conversion", color = WeightInk, fontSize = 16.sp, fontWeight = FontWeight.Black)
                         Text("Enter the available strength and supplied volume.", color = WeightSlate, fontSize = 11.sp)
@@ -170,7 +172,7 @@ fun WeightInfusionScreen(onNavigateBack: () -> Unit) {
                 if (simpleDrawMl > 0f) WeightResultCard("DRAW THIS VOLUME", formatWeight(simpleDrawMl), "mL", WeightBlueSoft, WeightBlue)
             }
             WeightMode.INFUSION -> {
-                Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+                Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Continuous IV rate", color = WeightInk, fontSize = 17.sp, fontWeight = FontWeight.Black)
                         Text("Convert a prescribed mcg/kg/min dose into the pump setting.", color = WeightSlate, fontSize = 11.sp, lineHeight = 16.sp)
@@ -198,7 +200,7 @@ private fun WeightInput(label: String, value: String, onValueChange: (String) ->
 
 @Composable
 private fun WeightResultCard(title: String, value: String, unit: String, background: Color, accent: Color) {
-    Surface(color = background, shape = RoundedCornerShape(22.dp)) {
+    Surface(color = background, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
         Column(Modifier.fillMaxWidth().padding(19.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(title, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(3.dp))

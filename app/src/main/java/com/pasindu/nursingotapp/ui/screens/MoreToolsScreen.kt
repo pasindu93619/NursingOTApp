@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import com.pasindu.nursingotapp.ui.theme.AiAccentColor
 import com.pasindu.nursingotapp.ui.theme.AppBackground
 import com.pasindu.nursingotapp.ui.theme.ClinicalAiGradient
@@ -169,13 +170,13 @@ fun MoreToolsScreen(
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(26.dp),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.hero),
                     color = Color.Transparent
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(ClinicalAiGradient, RoundedCornerShape(26.dp))
+                            .background(ClinicalAiGradient, RoundedCornerShape(NursingDimensions.Radius.hero))
                             .padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
@@ -225,10 +226,9 @@ fun MoreToolsScreen(
 
             item {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { expanded = !expanded },
-                    shape = RoundedCornerShape(20.dp),
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
                     colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
@@ -274,10 +274,9 @@ fun MoreToolsScreen(
 @Composable
 private fun MoreToolCard(tool: MoreTool, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -287,7 +286,7 @@ private fun MoreToolCard(tool: MoreTool, onClick: () -> Unit) {
         ) {
             Surface(
                 modifier = Modifier.size(46.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(NursingDimensions.Radius.medium),
                 color = tool.surface
             ) {
                 Box(contentAlignment = Alignment.Center) {

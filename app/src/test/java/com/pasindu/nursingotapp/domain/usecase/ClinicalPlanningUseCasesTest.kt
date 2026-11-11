@@ -288,6 +288,91 @@ class ClinicalPlanningUseCasesTest {
     }
 
     @Test
+    fun restoreIsbarNoteReinsertsNoteWithOriginalAttributes() = runTest {
+        val dao = FakeClinicalPlanningDao()
+        val note = IsbarNoteEntity(
+            id = 42,
+            patientIdentifier = "P-42",
+            identification = "Ward 3 Bed 12",
+            situation = "Post-op bleeding",
+            background = "Laparotomy",
+            assessment = "BP 90/60",
+            recommendation = "Cross match 2 units",
+            timestamp = 123456789L
+        )
+
+        RestoreIsbarNoteUseCase(dao)(note)
+
+        val restored = dao.insertedIsbar
+        assertEquals(42, restored?.id)
+        assertEquals("P-42", restored?.patientIdentifier)
+        assertEquals("Ward 3 Bed 12", restored?.identification)
+        assertEquals("Post-op bleeding", restored?.situation)
+        assertEquals("Laparotomy", restored?.background)
+        assertEquals("BP 90/60", restored?.assessment)
+        assertEquals("Cross match 2 units", restored?.recommendation)
+        assertEquals(123456789L, restored?.timestamp)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun restoreIsbarNoteRejectsNonPositiveId() = runTest {
+        val dao = FakeClinicalPlanningDao()
+        val note = IsbarNoteEntity(
+            id = 0,
+            patientIdentifier = "P-42",
+            identification = "Ward 3 Bed 12",
+            situation = "Post-op bleeding",
+            background = "Laparotomy",
+            assessment = "BP 90/60",
+            recommendation = "Cross match 2 units",
+            timestamp = 123456789L
+        )
+
+        RestoreIsbarNoteUseCase(dao)(note)
+    }
+
+    @Test
+    fun restoreClinicalTaskReinsertsTaskWithOriginalAttributes() = runTest {
+        val dao = FakeClinicalPlanningDao()
+        val task = ClinicalTaskEntity(
+            id = 99,
+            taskName = "Administer IV Vancomycin",
+            description = "1g in 250mL NS over 60 min",
+            priority = "HIGH",
+            triggerTime = 987654321L,
+            isCompleted = false,
+            bypassDnd = true
+        )
+
+        RestoreClinicalTaskUseCase(dao)(task)
+
+        val restored = dao.insertedTask
+        assertEquals(99, restored?.id)
+        assertEquals("Administer IV Vancomycin", restored?.taskName)
+        assertEquals("1g in 250mL NS over 60 min", restored?.description)
+        assertEquals("HIGH", restored?.priority)
+        assertEquals(987654321L, restored?.triggerTime)
+        assertEquals(false, restored?.isCompleted)
+        assertEquals(true, restored?.bypassDnd)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun restoreClinicalTaskRejectsNonPositiveId() = runTest {
+        val dao = FakeClinicalPlanningDao()
+        val task = ClinicalTaskEntity(
+            id = 0,
+            taskName = "Check vitals",
+            description = "Bed 2",
+            priority = "LOW",
+            triggerTime = 100L,
+            isCompleted = false,
+            bypassDnd = false
+        )
+
+        RestoreClinicalTaskUseCase(dao)(task)
+    }
+
+    @Test
     fun purgeOldIsbarNotesUses48HourRetentionWindow() = runTest {
         val dao = FakeClinicalPlanningDao()
         val now = 10_000_000L

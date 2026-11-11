@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -120,16 +121,21 @@ fun UnitConversionsScreen(onNavigateBack: () -> Unit) {
             }
         }
 
-        Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+        Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
             Column(Modifier.padding(8.dp)) {
                 Text("Choose a conversion", color = ConvSlate, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     ConvMode.values().forEach { item ->
                         val active = item == mode
-                        Surface(Modifier.weight(1f).height(52.dp).clickable {
-                            mode = item
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        }, color = if (active) ConvBlue else ConvBg, shape = RoundedCornerShape(15.dp)) {
+                        Surface(
+                            onClick = {
+                                mode = item
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                            modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                            color = if (active) ConvBlue else ConvBg,
+                            shape = RoundedCornerShape(NursingDimensions.Radius.large)
+                        ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 Text(item.emoji, fontSize = 17.sp)
                                 Text(item.shortTitle, color = if (active) Color.White else ConvSlate, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
@@ -165,7 +171,15 @@ fun UnitConversionsScreen(onNavigateBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
                         Electrolyte.values().forEach { ion ->
                             val active = ion == electrolyte
-                            Surface(Modifier.weight(1f).height(48.dp).clickable { electrolyte = ion; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }, color = if (active) ConvPurple else ConvPurpleSoft, shape = RoundedCornerShape(14.dp)) {
+                            Surface(
+                                onClick = {
+                                    electrolyte = ion
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                },
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                color = if (active) ConvPurple else ConvPurpleSoft,
+                                shape = RoundedCornerShape(NursingDimensions.Radius.medium)
+                            ) {
                                 Box(contentAlignment = Alignment.Center) { Text(ion.symbol, color = if (active) Color.White else ConvPurple, fontWeight = FontWeight.Black, fontSize = 15.sp) }
                             }
                         }
@@ -207,7 +221,7 @@ fun UnitConversionsScreen(onNavigateBack: () -> Unit) {
 private fun <T> UnitDropdownRow(selected: T, options: List<T>, label: (T) -> String, symbol: (T) -> String, onSelected: (T) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        Surface(Modifier.fillMaxWidth().clickable { expanded = true }, color = ConvBg, shape = RoundedCornerShape(14.dp)) {
+        Surface(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth(), color = ConvBg, shape = RoundedCornerShape(NursingDimensions.Radius.medium)) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Input unit", color = ConvSlate, fontSize = 10.sp, fontWeight = FontWeight.Bold)

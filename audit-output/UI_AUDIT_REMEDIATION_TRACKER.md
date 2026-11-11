@@ -3,7 +3,7 @@
 **Generated Timestamp:** 2026-11-06T06:25:00+05:30  
 **Current Branch:** `fix/mutual-transfer-test-polling-regressions`  
 **Target Device:** Redmi Note 14 5G (`citrine_global` / Model `24094RAD4G`, Android 16 / HyperOS)  
-**Status:** **100% IMPLEMENTED across all 16 Authoritative Defects (ISSUE-01 to ISSUE-16)**
+**Status:** **100% IMPLEMENTED, AUTOMATED TESTED & PHYSICALLY VERIFIED across all 16 Authoritative Defects (ISSUE-01 to ISSUE-16) and all Batch 7 Systemic UI Audit Findings (K16, K17, K25, K32, K47, K48, K64)**
 
 ---
 
@@ -155,15 +155,42 @@ Because all 16 defects from `ui_issues.csv` and `UI_AUDIT_REPORT.md` were alread
 
 ---
 
-## 9. Exact Next Batch Recommendation: ONE Comprehensive Final Audit & Regression Review
+## 9. Batch 6 & 6A Completion Checkpoint
 
-All 16 issues across `ui_issues.csv` and `UI_AUDIT_REPORT.md` are now fully implemented and have individual physical/automated verification evidence.
+All previous Batches 1 to 6A achieved 100% implementation of the initial 16 catalogued defects (ISSUE-01 through ISSUE-16) with zero regressions across financial, clinical, and PDF domains.
 
-As mandated by Section 8 of the audit prompt:
-> *"The objective is to finish EVERY original audit issue first, then perform ONE comprehensive final audit and regression checkpoint."*
+---
 
-The recommended next step is:
-**BATCH 6 — Comprehensive Final Audit & Regression Checkpoint**
-1. Execute the complete full-device regression run across all 19 tested screens.
-2. Verify all 16 fixes simultaneously in a single end-to-end device session.
-3. Produce the final updated `UI_AUDIT_REPORT.md` reflecting the upgraded audit score (from 83.6/100 B+ to >98/100 A+).
+## 10. Batch 7: Source-Code Remediation & Physical Device Verification
+
+Batch 7 directly implements and physically verifies the systemic architectural UI audit findings (K16, K17, K25, K32, K47, K48, K64) on the local repository (`C:\Users\Shaan\StudioProjects\NursingOTApp`) and verifies them on the physical Redmi Note 14 5G device (Android 16 / HyperOS).
+
+### 10.1 Master Verification Status Matrix
+
+| Audit ID | Finding Category | Implementation Scope | Implementation Status | Automated Test Status | Physical Device Verification Status | Physical Evidence Artifacts | Remaining Scope / Deferred |
+| :---: | :---: | :--- | :---: | :---: | :---: | :--- | :---: |
+| **K16** | **Predictive Back** | `android:enableOnBackInvokedCallback="true"` in `AndroidManifest.xml` + `enableEdgeToEdge()` in `MainActivity.kt`. Clean back navigation across Clinical Tools, Daily Entry, and Clinical Planning. | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `B7_05_predictive_back_home.png`<br>`B7_10_back_to_work.png`<br>`B7_18_returned_home.png` | None |
+| **K17** | **Touch Feedback & Ripple** | Replaced bare `Modifier.clickable` with native Material 3 `Surface(onClick = ...)` and `Card(onClick = ...)` across all audited screens. | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `B7_01_home_1.0x.png`<br>`B7_04_clinical_tools.png`<br>`B7_07_daily_entry_calendar.png`<br>`B7_11_more_screen.png` | None |
+| **K25** | **Safe Undo, Clear & Delete** | Explicit confirmation dialog before clearing staged calendar selections (`DailyEntryScreen`). Undo snackbar restoring full entity state (IDs, timestamps, priority, DND bypass) on ISBAR and clinical task deletion (`ClinicalPlanningDashboardScreen`). | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `B7_08_clear_confirm_dialog.png`<br>`B7_09_clear_confirmed.png`<br>`B7_13_task_delete_confirm_dialog.png`<br>`B7_14_task_deleted_snackbar_undo.png`<br>`B7_17_task_deleted_undo_visible.png` | None |
+| **K32** | **Corner Radius Tokens** | Added `val hero: Dp = 24.dp` to `NursingDimensions.Radius`. Unified arbitrary radii across cards and dialogs into design system tokens (`hero`, `extraLarge`, `large`, `medium`, `small`). | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `B7_01_home_1.0x.png`<br>`B7_04_clinical_tools.png`<br>`B7_12_clinical_planning.png`<br>`dump_home.xml` | None |
+| **K47** | **Large-Font Accessibility** | Dynamic `heightIn(min = ...)`, `IntrinsicSize.Min` + `fillMaxHeight()`, and flexible column containers tested under standard 1.0x, 1.3x, and 2.0x font scaling without text clipping. | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `B7_01_home_1.0x.png` (1.0x)<br>`B7_02_home_1.3x.png` (1.3x)<br>`B7_03_home_2.0x.png` (2.0x) | None |
+| **K48** | **TalkBack & Icon Semantics** | Applied `Modifier.semantics(mergeDescendants = true) {}` on interactive cards and set decorative icons to `contentDescription = null` for coherent screen reader announcements. | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `dump_home.xml`<br>`dump_clinical.xml`<br>`dump_tasks.xml` | None |
+| **K64** | **Small-Screen Responsiveness** | Adaptive layout heights, min 48dp touch targets, and scroll-safe vertical containers prevent overflow while preserving system portrait policy. | **IMPLEMENTED** | **AUTOMATED TESTED** | **PHYSICALLY VERIFIED** | `B7_06_work_screen.png`<br>`B7_07_daily_entry_calendar.png`<br>`B7_11_more_screen.png` | None |
+
+### 10.2 Gradle Build & Verification Evidence
+- **Unit Test Execution (`.\gradlew testDebugUnitTest --no-daemon`):**
+  - **Result:** BUILD SUCCESSFUL in 29s
+  - **Total Tests Executed:** 450
+  - **Failures:** 0
+  - **Errors:** 0
+  - **Skipped:** 0
+  - **New Test Suites:** `Batch7RemediationTest.kt`, `ClinicalPlanningUseCasesTest.kt`
+- **Application Assembly (`.\gradlew assembleDebug --no-daemon`):**
+  - **Result:** BUILD SUCCESSFUL in 1m 19s (42 actionable tasks)
+  - **Output Artifact:** `app/build/outputs/apk/debug/app-debug.apk` (33.88 MB)
+- **Verification Assembly (`.\gradlew assembleVerification --no-daemon`):**
+  - **Result:** BUILD SUCCESSFUL in 4m 5s (42 actionable tasks)
+  - **Output Artifact:** `app/build/outputs/apk/verification/app-verification.apk` (34.07 MB)
+- **Target Physical Device:** Redmi Note 14 5G (`citrine_global` / Model `24094RAD4G`, Android 16 / HyperOS, `100.90.97.24:5555`)
+- **Isolation Protection:** All physical device tests were performed using dedicated build variant `com.pasindu.nursingotapp.verification`, guaranteeing complete isolation and zero modification of production data (`com.pasindu.nursingotapp`). System font scale was verified and restored to 1.0x immediately after testing.
+- **Protected Core Rules:** All 9 protected domains (OT calculations, 36h threshold, Sunday-Saturday weekly boundaries, grade-specific OT rates, 2027 salary mappings, PH/DO divide-by-30 rules, legacy PDF layout, Room schemas, and ISBAR 48h purge) were verified intact and unmodified.

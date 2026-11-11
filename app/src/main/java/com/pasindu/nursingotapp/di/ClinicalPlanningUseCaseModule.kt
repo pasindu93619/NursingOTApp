@@ -11,6 +11,8 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveClinicalTasksUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveIsbarNotesUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveShiftWorkloadUseCase
 import com.pasindu.nursingotapp.domain.usecase.PurgeOldIsbarNotesUseCase
+import com.pasindu.nursingotapp.domain.usecase.RestoreClinicalTaskUseCase
+import com.pasindu.nursingotapp.domain.usecase.RestoreIsbarNoteUseCase
 import com.pasindu.nursingotapp.domain.usecase.SetClinicalTaskCompletedUseCase
 import com.pasindu.nursingotapp.domain.usecase.UpdateClinicalTaskUseCase
 import com.pasindu.nursingotapp.domain.usecase.UpdateIsbarNoteUseCase
@@ -27,10 +29,12 @@ object ClinicalPlanningUseCaseModule {
     @Provides fun provideAddIsbarNoteUseCase(dao: ClinicalPlanningDao) = AddIsbarNoteUseCase(dao)
     @Provides fun provideUpdateIsbarNoteUseCase(dao: ClinicalPlanningDao) = UpdateIsbarNoteUseCase(dao)
     @Provides fun provideDeleteIsbarNoteUseCase(dao: ClinicalPlanningDao) = DeleteIsbarNoteUseCase(dao)
+    @Provides fun provideRestoreIsbarNoteUseCase(dao: ClinicalPlanningDao) = RestoreIsbarNoteUseCase(dao)
     @Provides fun providePurgeOldIsbarNotesUseCase(dao: ClinicalPlanningDao) = PurgeOldIsbarNotesUseCase(dao)
     @Provides fun provideAddClinicalTaskUseCase(dao: ClinicalPlanningDao) = AddClinicalTaskUseCase(dao)
     @Provides fun provideUpdateClinicalTaskUseCase(dao: ClinicalPlanningDao) = UpdateClinicalTaskUseCase(dao)
     @Provides fun provideDeleteClinicalTaskUseCase(dao: ClinicalPlanningDao) = DeleteClinicalTaskUseCase(dao)
+    @Provides fun provideRestoreClinicalTaskUseCase(dao: ClinicalPlanningDao) = RestoreClinicalTaskUseCase(dao)
     @Provides fun provideSetClinicalTaskCompletedUseCase(dao: ClinicalPlanningDao) = SetClinicalTaskCompletedUseCase(dao)
     @Provides fun provideObserveShiftWorkloadUseCase(dailyEntryDao: DailyEntryDao, claimPeriodDao: ClaimPeriodDao) =
         ObserveShiftWorkloadUseCase(dailyEntryDao, claimPeriodDao)

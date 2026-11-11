@@ -28,6 +28,7 @@ object NursingDimensions {
         val medium: Dp = 12.dp
         val large: Dp = 16.dp
         val extraLarge: Dp = 20.dp
+        val hero: Dp = 24.dp
         val pill: Dp = 999.dp
     }
 

@@ -13,6 +13,8 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveClinicalTasksUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveIsbarNotesUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveShiftWorkloadUseCase
 import com.pasindu.nursingotapp.domain.usecase.PurgeOldIsbarNotesUseCase
+import com.pasindu.nursingotapp.domain.usecase.RestoreClinicalTaskUseCase
+import com.pasindu.nursingotapp.domain.usecase.RestoreIsbarNoteUseCase
 import com.pasindu.nursingotapp.domain.usecase.SetClinicalTaskCompletedUseCase
 import com.pasindu.nursingotapp.domain.usecase.UpdateClinicalTaskUseCase
 import com.pasindu.nursingotapp.domain.usecase.UpdateIsbarNoteUseCase
@@ -33,10 +35,12 @@ class ClinicalPlanningViewModel @Inject constructor(
     private val addIsbarNoteUseCase: AddIsbarNoteUseCase,
     private val updateIsbarNoteUseCase: UpdateIsbarNoteUseCase,
     private val deleteIsbarNoteUseCase: DeleteIsbarNoteUseCase,
+    private val restoreIsbarNoteUseCase: RestoreIsbarNoteUseCase,
     private val purgeOldIsbarNotesUseCase: PurgeOldIsbarNotesUseCase,
     private val addClinicalTaskUseCase: AddClinicalTaskUseCase,
     private val updateClinicalTaskUseCase: UpdateClinicalTaskUseCase,
     private val deleteClinicalTaskUseCase: DeleteClinicalTaskUseCase,
+    private val restoreClinicalTaskUseCase: RestoreClinicalTaskUseCase,
     private val setClinicalTaskCompletedUseCase: SetClinicalTaskCompletedUseCase
 ) : ViewModel() {
 
@@ -145,6 +149,21 @@ class ClinicalPlanningViewModel @Inject constructor(
         }
     }
 
+    fun restoreIsbarNote(
+        note: IsbarNoteEntity,
+        onSuccess: () -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) = viewModelScope.launch {
+        try {
+            restoreIsbarNoteUseCase(note)
+            onSuccess()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            onError(e)
+        }
+    }
+
     suspend fun saveIsbarNote(
         patientId: String,
         identification: String,
@@ -233,6 +252,21 @@ class ClinicalPlanningViewModel @Inject constructor(
     ) = viewModelScope.launch {
         try {
             deleteClinicalTaskUseCase(task)
+            onSuccess()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            onError(e)
+        }
+    }
+
+    fun restoreTask(
+        task: ClinicalTaskEntity,
+        onSuccess: () -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) = viewModelScope.launch {
+        try {
+            restoreClinicalTaskUseCase(task)
             onSuccess()
         } catch (e: CancellationException) {
             throw e

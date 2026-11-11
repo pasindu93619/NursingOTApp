@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -126,19 +127,20 @@ fun PediatricRulesScreen(onNavigateBack: () -> Unit) {
             }
         }
 
-        Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+        Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Choose a rule", color = PedsSlate, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
                     PedsMode.values().forEach { item ->
                         val selected = mode == item
                         Surface(
-                            Modifier.weight(1f).height(52.dp).clickable {
+                            onClick = {
                                 mode = item
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             },
+                            modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                             color = if (selected) PedsBlue else PedsBg,
-                            shape = RoundedCornerShape(15.dp)
+                            shape = RoundedCornerShape(NursingDimensions.Radius.large)
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 Text(item.emoji, fontSize = 16.sp)
@@ -161,7 +163,7 @@ fun PediatricRulesScreen(onNavigateBack: () -> Unit) {
             }
         }
 
-        Surface(color = Color.White, shape = RoundedCornerShape(22.dp)) {
+        Surface(color = Color.White, shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

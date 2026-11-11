@@ -91,6 +91,15 @@ class DeleteIsbarNoteUseCase(private val dao: ClinicalPlanningDao) {
     }
 }
 
+class RestoreIsbarNoteUseCase(private val dao: ClinicalPlanningDao) {
+    suspend operator fun invoke(note: IsbarNoteEntity) {
+        require(note.id > 0) { "ISBAR note id must be positive." }
+        require(note.patientIdentifier.isNotBlank()) { "Patient identifier cannot be blank." }
+        require(note.identification.isNotBlank()) { "Identification cannot be blank." }
+        dao.insertIsbarNote(note)
+    }
+}
+
 class PurgeOldIsbarNotesUseCase(private val dao: ClinicalPlanningDao) {
     companion object {
         const val RETENTION_HOURS = 48L
@@ -161,6 +170,14 @@ class DeleteClinicalTaskUseCase(private val dao: ClinicalPlanningDao) {
     suspend operator fun invoke(task: ClinicalTaskEntity) {
         require(task.id > 0) { "Clinical task id must be positive." }
         dao.deleteTask(task)
+    }
+}
+
+class RestoreClinicalTaskUseCase(private val dao: ClinicalPlanningDao) {
+    suspend operator fun invoke(task: ClinicalTaskEntity) {
+        require(task.id > 0) { "Clinical task id must be positive." }
+        require(task.taskName.isNotBlank()) { "Task name cannot be blank." }
+        dao.insertTask(task)
     }
 }
 

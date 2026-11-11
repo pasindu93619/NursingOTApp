@@ -48,3 +48,20 @@ Sri_Lanka_Hospitals_*.xlsx
 !/*checklist*.txt
 !/*Plan*.txt
 !/*PLAN*.txt
+
+# Google Drive Desktop sync cache and scratch automation workspace
+.tmp.driveupload/
+108580565536999786765/
+scratch/
+
+# Local verification configs, temporary build logs, APKs, patches and SQLite backups
+app/src/verification/
+audit-output/device-backup-pre-batch3/
+*.apk
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+build_errors.txt
+build_log.txt
+/*.patch

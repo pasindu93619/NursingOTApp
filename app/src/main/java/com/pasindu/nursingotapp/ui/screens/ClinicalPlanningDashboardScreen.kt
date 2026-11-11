@@ -48,6 +48,7 @@ import com.pasindu.nursingotapp.ui.theme.Slate
 import com.pasindu.nursingotapp.ui.theme.TextPrimary
 import com.pasindu.nursingotapp.ui.theme.TextSecondary
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,6 +70,9 @@ fun ClinicalPlanningDashboardScreen(
 ) {
     val isbarNotes by viewModel.isbarNotes.collectAsState()
     val tasks by viewModel.clinicalTasks.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     var selectedTab by remember { mutableStateOf(ClinicalWorkspaceTab.ISBAR) }
     var showAddNoteDialog by remember { mutableStateOf(false) }
@@ -143,6 +147,7 @@ fun ClinicalPlanningDashboardScreen(
     val highPriorityPendingCount = remember(tasks) { tasks.count { !it.isCompleted && it.priority.equals("HIGH", ignoreCase = true) } }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -562,6 +567,16 @@ fun ClinicalPlanningDashboardScreen(
                         val target = note
                         isbarNoteToDelete = null
                         viewModel.deleteIsbarNote(target)
+                        coroutineScope.launch {
+                            val res = snackbarHostState.showSnackbar(
+                                message = "Deleted handover note for ${target.patientIdentifier}",
+                                actionLabel = "Undo",
+                                duration = SnackbarDuration.Short
+                            )
+                            if (res == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreIsbarNote(target)
+                            }
+                        }
                     }
                 ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
@@ -755,6 +770,16 @@ fun ClinicalPlanningDashboardScreen(
                         val target = task
                         taskToDelete = null
                         viewModel.deleteTask(target)
+                        coroutineScope.launch {
+                            val res = snackbarHostState.showSnackbar(
+                                message = "Deleted task \"${target.taskName}\"",
+                                actionLabel = "Undo",
+                                duration = SnackbarDuration.Short
+                            )
+                            if (res == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreTask(target)
+                            }
+                        }
                     }
                 ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)

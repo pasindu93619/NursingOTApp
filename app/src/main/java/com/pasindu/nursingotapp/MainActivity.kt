@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +37,10 @@ class MainActivity : ComponentActivity() {
         // Keep the clinical app light-first while allowing Compose to control
         // content/inset behavior consistently across modern Android devices.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+
+        // AndroidX enableEdgeToEdge enables system predictive back gesture animations
+        // and uniform system insets across Android 10-15+.
+        enableEdgeToEdge()
 
         // NursingOS uses a true edge-to-edge window so the root background can
         // flow continuously behind the system bars instead of creating white

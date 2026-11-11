@@ -1,5 +1,7 @@
 package com.pasindu.nursingotapp.ui.screens
 
+import androidx.compose.foundation.layout.heightIn
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
+import com.pasindu.nursingotapp.ui.theme.NursingDimensions
 
 @Composable
 internal fun ClinicalToolCardSurface(
@@ -163,9 +167,10 @@ internal fun ClinicalSafetyPanel(text: String, accent: Color = ClinicalToolDesig
 @Composable
 internal fun ClinicalModeChip(text: String, selected: Boolean, accent: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.height(46.dp).clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 46.dp),
         color = if (selected) accent else ClinicalToolDesignTokens.background,
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(NursingDimensions.Radius.medium)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text, color = if (selected) Color.White else ClinicalToolDesignTokens.slate, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
@@ -182,8 +187,9 @@ internal fun ClinicalEngineListItem(
     onClick: () -> Unit
 ) {
     Card(
-        Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
         colors = CardDefaults.cardColors(containerColor = ClinicalToolDesignTokens.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

@@ -15,6 +15,8 @@ import com.pasindu.nursingotapp.domain.usecase.ObserveClinicalTasksUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveIsbarNotesUseCase
 import com.pasindu.nursingotapp.domain.usecase.ObserveShiftWorkloadUseCase
 import com.pasindu.nursingotapp.domain.usecase.PurgeOldIsbarNotesUseCase
+import com.pasindu.nursingotapp.domain.usecase.RestoreClinicalTaskUseCase
+import com.pasindu.nursingotapp.domain.usecase.RestoreIsbarNoteUseCase
 import com.pasindu.nursingotapp.domain.usecase.SetClinicalTaskCompletedUseCase
 import com.pasindu.nursingotapp.domain.usecase.UpdateClinicalTaskUseCase
 import com.pasindu.nursingotapp.domain.usecase.UpdateIsbarNoteUseCase
@@ -382,10 +384,12 @@ class ClinicalTaskFormValidationTest {
             addIsbarNoteUseCase = AddIsbarNoteUseCase(dao),
             updateIsbarNoteUseCase = UpdateIsbarNoteUseCase(dao),
             deleteIsbarNoteUseCase = DeleteIsbarNoteUseCase(dao),
+            restoreIsbarNoteUseCase = RestoreIsbarNoteUseCase(dao),
             purgeOldIsbarNotesUseCase = PurgeOldIsbarNotesUseCase(dao),
             addClinicalTaskUseCase = AddClinicalTaskUseCase(dao),
             updateClinicalTaskUseCase = UpdateClinicalTaskUseCase(dao),
             deleteClinicalTaskUseCase = DeleteClinicalTaskUseCase(dao),
+            restoreClinicalTaskUseCase = RestoreClinicalTaskUseCase(dao),
             setClinicalTaskCompletedUseCase = SetClinicalTaskCompletedUseCase(dao),
             observeShiftWorkloadUseCase = ObserveShiftWorkloadUseCase(StubDailyEntryDao(), StubClaimPeriodDao())
         )
