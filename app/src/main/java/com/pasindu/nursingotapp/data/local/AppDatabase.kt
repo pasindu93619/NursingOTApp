@@ -23,6 +23,8 @@ import com.pasindu.nursingotapp.data.local.dao.KnowledgeBookmarkDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeNoteDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeOfflineCacheDao
 import com.pasindu.nursingotapp.data.local.dao.KnowledgeReadingDao
+import com.pasindu.nursingotapp.statgraph.data.local.StatDatasetDao
+import com.pasindu.nursingotapp.statgraph.data.local.StatDatasetEntity
 import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeSourceEntity
 import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeCategoryEntity
 import com.pasindu.nursingotapp.data.local.entity.knowledge.KnowledgeArticleEntity
@@ -72,8 +74,9 @@ import com.pasindu.nursingotapp.data.local.entity.TransferActiveCacheEntity
         KnowledgePersonalNoteEntity::class,
         KnowledgeReadingHistoryEntity::class,
         KnowledgeOfflineCacheEntity::class,
+        StatDatasetEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -96,6 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun salaryStep2027Dao(): SalaryStep2027Dao
     abstract fun paySheetDocumentDao(): PaySheetDocumentDao
     abstract fun transferActiveCacheDao(): TransferActiveCacheDao
+    abstract fun statDatasetDao(): StatDatasetDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -484,6 +488,31 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
                 database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_knowledge_offline_cache_localRelativePath` ON `knowledge_offline_cache` (`localRelativePath`)")
+            }
+        }
+
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `stat_datasets` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `sourceLabel` TEXT NOT NULL,
+                        `schemaVersion` INTEGER NOT NULL,
+                        `datasetPayloadJson` TEXT NOT NULL,
+                        `mappingSelectionJson` TEXT NOT NULL,
+                        `activeWorkspaceSection` TEXT NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `updatedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_stat_datasets_updatedAtEpochMillis` ON `stat_datasets` (`updatedAtEpochMillis`)"
+                )
             }
         }
 

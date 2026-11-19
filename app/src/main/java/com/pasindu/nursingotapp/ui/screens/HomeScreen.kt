@@ -70,6 +70,8 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 
 import androidx.compose.material.icons.filled.AccountBalance
 
+import androidx.compose.material.icons.filled.BarChart
+
 import androidx.compose.material.icons.filled.ChevronRight
 
 import androidx.compose.material.icons.filled.Close
@@ -349,6 +351,8 @@ fun HomeScreen(
         item { SectionTitle("Your tools", "Everything else stays one tap away") }
 
         item { SecondaryToolsGrid(onNavigate) }
+
+        item { StatGraphStudioHomeCard(onClick = { onNavigate("stat_graph_studio") }) }
 
         item { Spacer(Modifier.height(8.dp)) }
 
@@ -1486,6 +1490,149 @@ private fun CompactTool(title: String, subtitle: String, icon: ImageVector, acce
 
     }
 
+}
+
+@Composable
+private fun StatGraphStudioHomeCard(onClick: () -> Unit) {
+    val deepIndigo = Color(0xFF27187E)
+    val indigoMid = Color(0xFF332294)
+    val indigoDeepest = Color(0xFF1D1163)
+    val orangePrimary = Color(0xFFFF5722)
+    val orangeWarm = Color(0xFFFF8600)
+    val miniBarHeights = listOf(14.dp, 24.dp, 19.dp, 32.dp, 26.dp, 38.dp)
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(6.dp, RoundedCornerShape(NursingDimensions.Radius.extraLarge)),
+        shape = RoundedCornerShape(NursingDimensions.Radius.extraLarge),
+        colors = CardDefaults.cardColors(containerColor = deepIndigo),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(deepIndigo, indigoMid, indigoDeepest)
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 15.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(34.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            color = orangePrimary.copy(alpha = 0.22f),
+                            border = BorderStroke(1.dp, orangeWarm.copy(alpha = 0.45f))
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.BarChart,
+                                    contentDescription = null,
+                                    tint = orangeWarm,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(50.dp),
+                            color = orangePrimary.copy(alpha = 0.24f),
+                            border = BorderStroke(1.dp, orangeWarm.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "Analytics Studio",
+                                color = Color(0xFFFFD8B2),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Stat Graph Studio",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+
+                    Text(
+                        text = "Turn clinical and operational data into meaningful statistical insights.",
+                        color = Color.White.copy(alpha = 0.86f),
+                        fontSize = 12.5.sp,
+                        lineHeight = 17.5.sp
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White.copy(alpha = 0.10f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .height(54.dp)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            miniBarHeights.forEachIndexed { index, barHeight ->
+                                val barColor = when {
+                                    index == miniBarHeights.lastIndex -> orangePrimary
+                                    index % 2 == 1 -> orangeWarm
+                                    else -> Color.White.copy(alpha = 0.78f)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .width(6.dp)
+                                        .height(barHeight)
+                                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                        .background(barColor)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "Explore",
+                            color = orangeWarm,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Open Stat Graph Studio",
+                            tint = orangeWarm,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 

@@ -58,6 +58,8 @@ import com.pasindu.nursingotapp.ui.components.NursingGuideFab
 import com.pasindu.nursingotapp.ui.otforms.FileShareUtils
 import com.pasindu.nursingotapp.ui.otforms.PdfGenerator
 import com.pasindu.nursingotapp.ui.screens.*
+import com.pasindu.nursingotapp.statgraph.ui.workspace.StatGraphStudioRoute
+import com.pasindu.nursingotapp.statgraph.ui.workspace.StatGraphStudioViewModel
 import com.pasindu.nursingotapp.transfer.notification.TransferNotificationHelper
 import com.pasindu.nursingotapp.transfer.ui.TransferChatNavigationEvent
 import com.pasindu.nursingotapp.transfer.ui.TransferChatScreen
@@ -600,6 +602,13 @@ fun AppNavigation(
             }
             composable("knowledge_hub") {
                 KnowledgeHubModernScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable("stat_graph_studio") {
+                val statGraphViewModel: StatGraphStudioViewModel = hiltViewModel()
+                StatGraphStudioRoute(
+                    viewModel = statGraphViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable("more_tools") {
                 MoreToolsScreen(

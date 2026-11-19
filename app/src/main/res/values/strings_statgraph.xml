@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Workspace Tabs -->
+    <string name="statgraph_tab_data_full">1. Add Data</string>
+    <string name="statgraph_tab_chart_full">2. Your Chart</string>
+    <string name="statgraph_tab_summary_full">3. Summary &amp; Checks</string>
+    <string name="statgraph_tab_data_short">Data</string>
+    <string name="statgraph_tab_chart_short">Chart</string>
+    <string name="statgraph_tab_summary_short">Summary</string>
+
+    <!-- Primary Actions & Headings -->
+    <string name="statgraph_cta_show_best_chart">Show my best chart</string>
+    <string name="statgraph_heading_best_chart">Best chart for your data</string>
+    <string name="statgraph_action_why_not_others">Why not the others?</string>
+    <string name="statgraph_action_hide_reasons">Hide reasons</string>
+    <string name="statgraph_heading_calculated_values">Calculated values (your numbers stay unchanged)</string>
+    <string name="statgraph_heading_data_checks_privacy">Data checks &amp; privacy</string>
+    <string name="statgraph_label_coming_soon">Coming soon</string>
+    <string name="statgraph_label_needs_fields">Needs fields</string>
+    <string name="statgraph_label_chart_ready">Ready to view</string>
+
+    <!-- Simple vs Research Mode -->
+    <string name="statgraph_mode_simple">Simple</string>
+    <string name="statgraph_mode_research">Research</string>
+
+    <!-- Plain-Language Verdicts -->
+    <string name="statgraph_verdict_great_match">Great match</string>
+    <string name="statgraph_verdict_works_well">Works well</string>
+    <string name="statgraph_verdict_be_careful">Works, but be careful</string>
+    <string name="statgraph_verdict_not_good_fit">Not a good fit</string>
+    <string name="statgraph_verdict_cant_be_drawn">Can\'t be drawn — you need %1$s</string>
+    <string name="statgraph_verdict_cant_be_drawn_generic">Can\'t be drawn for this data</string>
+
+    <!-- Column Role Dialog -->
+    <string name="statgraph_role_dialog_heading">What does this column hold?</string>
+    <string name="statgraph_role_not_sure_title">Not sure — you decide</string>
+    <string name="statgraph_role_not_sure_hint">Keep automatic detection based on your column name and values</string>
+    <string name="statgraph_role_research_options">Research options</string>
+    <string name="statgraph_role_date_or_month">Date or month</string>
+    <string name="statgraph_role_count">Count / total number</string>
+    <string name="statgraph_role_part_of_total">Part of a total</string>
+    <string name="statgraph_role_percentage_or_avg">Percentage or average</string>
+    <string name="statgraph_role_name_or_group">Name or group</string>
+    <string name="statgraph_role_series_split">Group / series split</string>
+    <string name="statgraph_role_note">Note</string>
+    <string name="statgraph_role_value_with_range">Value with range ±</string>
+    <string name="statgraph_role_time_until_event">Time until event</string>
+
+    <!-- Guided Start & Templates -->
+    <string name="statgraph_guided_start_heading">What do you want to show?</string>
+    <string name="statgraph_guided_start_subtitle">Pick a goal or a starter template. You can change columns anytime.</string>
+    <string name="statgraph_guided_start_templates_heading">Healthcare starter templates</string>
+    <string name="statgraph_guided_start_blank_title">Blank dataset</string>
+    <string name="statgraph_guided_start_blank_subtitle">Start with an empty table and add your own columns or CSV.</string>
+    <string name="statgraph_label_fictional_sample">Fictional sample data</string>
+    <string name="statgraph_menu_guided_start">Starter templates</string>
+    <string name="statgraph_menu_switch_to_research">Switch to Research mode</string>
+    <string name="statgraph_menu_switch_to_simple">Switch to Simple mode</string>
+
+    <!-- What Happens Next Guidance Strips -->
+    <string name="statgraph_next_data">Next: check your columns and choose the best chart.</string>
+    <string name="statgraph_next_chart">Next: explore your chart and customise it if needed.</string>
+    <string name="statgraph_next_summary">Next: review data checks and download your result.</string>
+
+    <!-- Chart Reading Guidance -->
+    <string name="statgraph_how_to_read_title">How to read this chart</string>
+    <string name="statgraph_how_to_read_shows">What this chart shows</string>
+    <string name="statgraph_how_to_read_look_for">What to look for</string>
+
+    <!-- First-Run 3-Card Introduction -->
+    <string name="statgraph_intro_step_of">Step %1$d of 3</string>
+    <string name="statgraph_intro_skip">Skip</string>
+    <string name="statgraph_intro_continue">Continue</string>
+    <string name="statgraph_intro_done">Get started</string>
+    <string name="statgraph_intro_card1_title">1. Add your numbers</string>
+    <string name="statgraph_intro_card1_body">Start from a healthcare template, type ward totals, or import a CSV file.</string>
+    <string name="statgraph_intro_card2_title">2. See the best chart</string>
+    <string name="statgraph_intro_card2_body">Stat Graph Studio checks your columns and recommends the clearest chart for your data.</string>
+    <string name="statgraph_intro_card3_title">3. Download your result</string>
+    <string name="statgraph_intro_card3_body">Review plain-language data checks and save or share your chart summary.</string>
+
+    <!-- Contextual Help -->
+    <string name="statgraph_help_close">Close</string>
+    <string name="statgraph_help_example_label">In your dataset</string>
+    <string name="statgraph_help_cd">Help</string>
+
+    <!-- Step D: Winner, Alternatives, More Charts, Customise -->
+    <string name="statgraph_winner_heading">Best for your data: %1$s</string>
+    <string name="statgraph_winner_because">Because %1$s</string>
+    <string name="statgraph_alternatives_heading">Other good options</string>
+    <string name="statgraph_more_charts_title">More charts</string>
+    <string name="statgraph_more_charts_subtitle">%1$d other chart types in catalogue</string>
+    <string name="statgraph_why_not_sheet_title">Why not the other charts?</string>
+    <string name="statgraph_why_not_sheet_subtitle">See why these charts were not chosen for your current data and what they need.</string>
+    <string name="statgraph_why_not_what_to_add">What to add or change: %1$s</string>
+    <string name="statgraph_customise_chart_title">Customise chart</string>
+    <string name="statgraph_customise_chart_auto">Using recommended columns</string>
+    <string name="statgraph_customise_chart_custom">Custom columns selected</string>
+
+    <!-- Step E: Chart Palette Selector -->
+    <string name="statgraph_palette_label">Chart palette</string>
+    <string name="statgraph_palette_auto_format">Auto (%1$s)</string>
+</resources>

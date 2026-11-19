@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Person
@@ -98,6 +99,14 @@ fun MoreToolsScreen(
                 ClinicalPrimaryColor,
                 Color(0xFFEAF6FF),
                 "analytics"
+            ),
+            MoreTool(
+                "Stat Graph Studio",
+                "Turn clinical and operational data into meaningful statistical insights.",
+                Icons.Default.BarChart,
+                BrandIndigo,
+                BrandIndigoSoft,
+                "stat_graph_studio"
             ),
             MoreTool(
                 "Knowledge & CPD",
